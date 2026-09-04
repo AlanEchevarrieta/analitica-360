@@ -1,0 +1,17 @@
+---
+description: Identidad visual Analítica 360 (colores, tipo, cards)
+alwaysApply: true
+---
+
+# Visual Analítica 360
+
+Toda pantalla nueva usa la identidad del login/registro. Tokens en `src/theme.ts` y variables en `src/index.css`.
+
+- Fuente: Inter
+- Fondo: degradado `#0F1B2D` → `#1A2F4A` y red de partículas en desktop
+- Card: blanco 95%, 440px, radio 8px, sombra `0 20px 60px rgba(0,0,0,0.3)`
+- Acento: `#6366F1` (hover `#4F46E5`)
+- Texto: `#1A2F4A` títulos, `#4A5568` labels
+- Bordes de input: `#E2E8F0`, foco acento con glow
+- No volver a la paleta crema `#F3ECDD` / `#3E2716` salvo que el usuario lo pida
+- Si hay que cambiar marca (color, fuente), tocar `src/theme.ts` y `@theme` en `src/index.css`, no hardcodear hex sueltos
