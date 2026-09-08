@@ -1,3 +1,5 @@
+import type { Permisos } from './lib/permisos'
+
 export type Rol = 'dueno' | 'operador' | 'visor'
 
 export type Empresa = {
@@ -15,6 +17,7 @@ export type Usuario = {
   email: string
   rol: Rol
   activo: boolean
+  permisos: Permisos
 }
 
 export type Perfil = {

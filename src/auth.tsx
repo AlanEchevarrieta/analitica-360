@@ -14,7 +14,32 @@ import {
   limpiarAltaPendiente,
 } from './lib/altaPendiente'
 import { requireSupabase, supabase, supabaseConfigured } from './lib/supabase'
+import { iniciarPeriodoPrueba, registrarAceptacionTerminos } from './lib/suscripcion'
+import { parsePermisos, PERMISOS_DUENO } from './lib/permisos'
 import type { Empresa, Perfil, Usuario } from './types'
+
+function userAgentActual() {
+  return typeof navigator === 'undefined' ? null : navigator.userAgent
+}
+
+async function rpcRegistrarEmpresa(
+  client: ReturnType<typeof requireSupabase>,
+  input: { nombreEmpresa: string; rubro: string; nombreUsuario: string },
+) {
+  const base = {
+    p_nombre_empresa: input.nombreEmpresa,
+    p_rubro: input.rubro,
+    p_nombre_usuario: input.nombreUsuario,
+  }
+  const conAgente = await client.rpc('registrar_empresa', {
+    ...base,
+    p_user_agent: userAgentActual(),
+  })
+  if (conAgente.error && /could not find the function|does not exist|PGRST202/i.test(conAgente.error.message)) {
+    return client.rpc('registrar_empresa', base)
+  }
+  return conAgente
+}
 
 type AuthContextValue = {
   listo: boolean
@@ -65,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const client = requireSupabase()
     const { data, error: qError } = await client
       .from('usuarios')
-      .select('id, empresa_id, nombre, email, rol, activo, empresas (id, nombre, rubro, plan_actual, activo)')
+      .select('id, empresa_id, nombre, email, rol, activo, permisos, empresas (id, nombre, rubro, plan_actual, activo)')
       .eq('id', userId)
       .maybeSingle()
 
@@ -94,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: data.email,
       rol: data.rol,
       activo: data.activo,
+      permisos: data.rol === 'dueno' ? { ...PERMISOS_DUENO } : parsePermisos(data.permisos),
     }
     setPerfil({ usuario, empresa })
     setError(null)
@@ -103,11 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const pendiente = leerAltaPendiente()
     if (!pendiente) return
     const client = requireSupabase()
-    const { error: rpcError } = await client.rpc('registrar_empresa', {
-      p_nombre_empresa: pendiente.nombreEmpresa,
-      p_rubro: pendiente.rubro,
-      p_nombre_usuario: pendiente.nombreUsuario,
-    })
+    const { error: rpcError } = await rpcRegistrarEmpresa(client, pendiente)
     if (rpcError) {
       if (rpcError.message.includes('YA_TIENE_EMPRESA')) {
         limpiarAltaPendiente()
@@ -117,6 +139,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
     limpiarAltaPendiente()
+    const { data: userData } = await client.auth.getUser()
+    const userId = userData.user?.id
+    if (userId) {
+      const { data: perfilNuevo } = await client
+        .from('usuarios')
+        .select('id, empresa_id')
+        .eq('id', userId)
+        .maybeSingle()
+      if (perfilNuevo) {
+        await iniciarPeriodoPrueba(client, perfilNuevo.empresa_id, perfilNuevo.id)
+        await registrarAceptacionTerminos(client, perfilNuevo.empresa_id, perfilNuevo.id)
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -189,16 +224,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const { error: rpcError } = await client.rpc('registrar_empresa', {
-        p_nombre_empresa: input.nombreEmpresa,
-        p_rubro: input.rubro,
-        p_nombre_usuario: input.nombreUsuario,
-      })
+      const { error: rpcError } = await rpcRegistrarEmpresa(client, input)
       if (rpcError && !rpcError.message.includes('YA_TIENE_EMPRESA')) {
         return { error: 'La cuenta se creó pero no la empresa. Avisame y lo vemos.', esperaConfirmacion: false }
       }
       limpiarAltaPendiente()
-      if (data.user) await cargarPerfil(data.user.id)
+      if (data.user) {
+        const { data: perfilNuevo } = await client
+          .from('usuarios')
+          .select('id, empresa_id')
+          .eq('id', data.user.id)
+          .maybeSingle()
+        if (perfilNuevo) {
+          await iniciarPeriodoPrueba(client, perfilNuevo.empresa_id, perfilNuevo.id)
+          await registrarAceptacionTerminos(client, perfilNuevo.empresa_id, perfilNuevo.id)
+        }
+        await cargarPerfil(data.user.id)
+      }
       return { error: null, esperaConfirmacion: false }
     },
     [cargarPerfil],
@@ -207,17 +249,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const completarAlta = useCallback(
     async (input: { nombreEmpresa: string; rubro: string; nombreUsuario: string }) => {
       const client = requireSupabase()
-      const { error: rpcError } = await client.rpc('registrar_empresa', {
-        p_nombre_empresa: input.nombreEmpresa,
-        p_rubro: input.rubro,
-        p_nombre_usuario: input.nombreUsuario,
-      })
+      const { error: rpcError } = await rpcRegistrarEmpresa(client, input)
       if (rpcError && !rpcError.message.includes('YA_TIENE_EMPRESA')) {
         return 'No se pudo crear la empresa'
       }
       limpiarAltaPendiente()
       const userId = session?.user.id
-      if (userId) await cargarPerfil(userId)
+      if (userId) {
+        const { data: perfilNuevo } = await client
+          .from('usuarios')
+          .select('id, empresa_id')
+          .eq('id', userId)
+          .maybeSingle()
+        if (perfilNuevo) {
+          await iniciarPeriodoPrueba(client, perfilNuevo.empresa_id, perfilNuevo.id)
+          await registrarAceptacionTerminos(client, perfilNuevo.empresa_id, perfilNuevo.id)
+        }
+        await cargarPerfil(userId)
+      }
       return null
     },
     [cargarPerfil, session],

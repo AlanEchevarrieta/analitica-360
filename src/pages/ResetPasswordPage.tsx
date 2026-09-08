@@ -1,8 +1,21 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
-import { evaluarPassword, passwordValida } from '../lib/password'
+import {
+  evaluarPassword,
+  nivelSeguridad,
+  passwordValida,
+  requisitosCumplidos,
+} from '../lib/password'
 import { AuthLayout, LockIcon, authInputWithIconClass } from './AuthLayout'
+
+const REQUISITOS: { key: keyof ReturnType<typeof evaluarPassword>; label: string }[] = [
+  { key: 'minLength', label: 'Mínimo 12 caracteres' },
+  { key: 'upper', label: 'Al menos una mayúscula' },
+  { key: 'lower', label: 'Al menos una minúscula' },
+  { key: 'number', label: 'Al menos un número' },
+  { key: 'special', label: 'Al menos un carácter especial (!@#$%^&*-_)' },
+]
 
 export function ResetPasswordPage() {
   const { listo, session, actualizarPassword } = useAuth()
@@ -13,6 +26,12 @@ export function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
 
+  const check = evaluarPassword(password)
+  const listaOk = passwordValida(check)
+  const nivel = nivelSeguridad(requisitosCumplidos(check))
+  const coinciden = confirmacion.length > 0 && password === confirmacion
+  const puedeGuardar = listaOk && coinciden
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
@@ -20,7 +39,7 @@ export function ResetPasswordPage() {
       setError('Las contraseñas no coinciden')
       return
     }
-    if (!passwordValida(evaluarPassword(password))) {
+    if (!listaOk) {
       setError('La contraseña debe tener 12 caracteres, mayúscula, minúscula, número y un especial')
       return
     }
@@ -98,13 +117,49 @@ export function ResetPasswordPage() {
               />
             </span>
           </label>
+          {confirmacion.length > 0 ? (
+            <p className={`mt-1.5 text-xs ${coinciden ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
+              {coinciden ? '✓ Las contraseñas coinciden' : '✗ Las contraseñas no coinciden'}
+            </p>
+          ) : null}
+
+          <div className="mt-3">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-xs font-medium" style={{ color: nivel.color }}>
+                {nivel.etiqueta}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+              {[1, 2, 3].map((n) => (
+                <div
+                  key={n}
+                  className="h-1.5 rounded-full bg-[#E2E8F0]"
+                  style={{
+                    backgroundColor: n <= nivel.segmentos ? nivel.color : '#E2E8F0',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <ul className="mt-3 space-y-1">
+            {REQUISITOS.map((item) => {
+              const ok = check[item.key]
+              return (
+                <li key={item.key} className={`text-xs ${ok ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
+                  {ok ? '✓' : '✗'} {item.label}
+                </li>
+              )
+            })}
+          </ul>
+
           {error ? (
             <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
           ) : null}
           <button
-            className="mt-6 h-11 w-full rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
+            className="mt-6 h-11 w-full rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:cursor-not-allowed disabled:opacity-40"
             type="submit"
-            disabled={enviando}
+            disabled={enviando || !puedeGuardar}
           >
             {enviando ? 'GUARDANDO…' : 'GUARDAR CONTRASEÑA'}
           </button>

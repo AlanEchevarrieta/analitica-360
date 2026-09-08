@@ -1,0 +1,2222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Especificación Técnica Maestra — SaaS Gestión</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F3ECDD; color: #2A211A; margin: 0; padding: 20px; }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 700; color: #3E2716; margin-bottom: 4px; }
+  .sub { font-size: 13px; color: #8a7a63; margin-bottom: 8px; }
+  .version { display: inline-block; background: #4B5D3A; color: #fff; padding: 2px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 24px; }
+  .tab-row { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  .tab { padding: 7px 16px; border-radius: 6px; border: 1px solid #c9a88a; background: transparent; color: #5C3A21; cursor: pointer; font-size: 13px; }
+  .tab.active { background: #3E2716; color: #F3ECDD; border-color: #3E2716; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card { background: #FFFDF8; border-radius: 10px; border: 1px solid rgba(92,58,33,0.12); padding: 18px 22px; margin-bottom: 14px; }
+  .card h3 { font-size: 14px; font-weight: 700; color: #3E2716; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+  .b-ok { background: #dcfce7; color: #16a34a; }
+  .b-warn { background: #fef3c7; color: #d97706; }
+  .b-crit { background: #fee2e2; color: #dc2626; }
+  .b-blue { background: #dbeafe; color: #1d4ed8; }
+  p { font-size: 13px; color: #4a3d30; line-height: 1.75; margin: 0 0 8px; }
+  ul, ol { font-size: 13px; color: #4a3d30; line-height: 1.9; padding-left: 20px; margin: 0 0 8px; }
+  pre { background: #2A211A; color: #F3ECDD; border-radius: 8px; padding: 14px 18px; font-size: 11px; overflow-x: auto; margin: 8px 0; line-height: 1.75; }
+  .kw { color: #B08D3E; font-weight: 700; }
+  .cm { color: #7a9a7a; }
+  .str { color: #86efac; }
+  .fn { color: #93c5fd; }
+  .note { background: #fef9ef; border-left: 3px solid #B08D3E; border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 13px; color: #4a3d30; margin-bottom: 14px; }
+  .danger { background: #fef2f2; border-left: 3px solid #dc2626; border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 13px; color: #7f1d1d; margin-bottom: 14px; }
+  .modulo { background: #FFFDF8; border-radius: 10px; border: 1px solid rgba(92,58,33,0.12); margin-bottom: 12px; overflow: hidden; }
+  .modulo-header { display: flex; align-items: center; gap: 12px; padding: 14px 18px; cursor: pointer; background: #fef9ef; border-bottom: 1px solid rgba(92,58,33,0.08); }
+  .modulo-header:hover { background: #fef4e8; }
+  .mod-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .modulo-title { font-size: 14px; font-weight: 700; color: #3E2716; flex: 1; }
+  .modulo-body { padding: 16px 18px; display: none; }
+  .modulo-body.open { display: block; }
+  .campo-row { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(92,58,33,0.06); font-size: 12px; }
+  .campo-row:last-child { border-bottom: none; }
+  .campo-name { font-family: 'Courier New', monospace; color: #3E2716; font-weight: 600; min-width: 160px; }
+  .campo-type { color: #8a7a63; min-width: 100px; }
+  .campo-desc { color: #4a3d30; flex: 1; }
+  .scenario { background: #F3ECDD; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; }
+  .scenario-title { font-size: 12px; font-weight: 700; color: #3E2716; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; }
+  .scenario-desc { font-size: 12px; color: #4a3d30; line-height: 1.6; }
+  .flow-step { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(92,58,33,0.06); font-size: 13px; color: #4a3d30; }
+  .flow-step:last-child { border-bottom: none; }
+  .step-n { width: 22px; height: 22px; border-radius: 50%; background: #3E2716; color: #F3ECDD; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .empresa-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .empresa-card { background: #F3ECDD; border-radius: 8px; padding: 12px 14px; }
+  .empresa-rubro { font-size: 11px; font-weight: 700; color: #8a7a63; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+  .empresa-name { font-size: 13px; font-weight: 700; color: #3E2716; margin-bottom: 6px; }
+  .empresa-item { font-size: 11px; color: #4a3d30; padding: 2px 0; }
+  @media (max-width: 600px) { .empresa-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Especificación Técnica Maestra</h1>
+  <div class="sub">SaaS de Gestión Multi-tenant — Documento para Cursor Agent</div>
+  <div class="version">v1.0 · Agosto 2026 · Alan + Belén</div>
+
+  <div class="tab-row">
+    <button class="tab active" onclick="show('contexto',this)">Contexto</button>
+    <button class="tab" onclick="show('bd',this)">Base de datos</button>
+    <button class="tab" onclick="show('roles',this)">Roles y permisos</button>
+    <button class="tab" onclick="show('modulos',this)">Módulos</button>
+    <button class="tab" onclick="show('escenarios',this)">Escenarios de prueba</button>
+    <button class="tab" onclick="show('flujo',this)">Flujo de desarrollo</button>
+    <button class="tab" onclick="show('inventario',this)">Inventario / Kardex</button>
+    <button class="tab" onclick="show('errores',this)">Errores y correcciones</button>
+    <button class="tab" onclick="show('pantallas',this)">Pantallas</button>
+    <button class="tab" onclick="show('audit_campos',this)">Auditoría campos</button>
+    <button class="tab" onclick="show('integraciones',this)">Integraciones</button>
+    <button class="tab" onclick="show('crm',this)">CRM Clientes</button>
+    <button class="tab" onclick="show('simulacion',this)">Simulación y diagnóstico</button>
+    <button class="tab" onclick="show('pagos',this)">💳 Pagos y Suscripciones</button>
+    <button class="tab" onclick="show('terminos',this)">📋 Términos y Condiciones</button>
+  </div>
+
+  <!-- CONTEXTO -->
+  <div id="contexto" class="panel active">
+    <div class="note">Este documento es la fuente de verdad del proyecto. Cursor Agent debe leerlo completo antes de generar cualquier código.</div>
+
+    <div class="card">
+      <h3>¿Qué es este producto?</h3>
+      <p>Una aplicación web SaaS multi-tenant mobile-first que permite a pequeños comercios y emprendedores registrar ventas, compras, productos y proveedores desde el celular. Los datos se almacenan en Supabase (PostgreSQL) y se analizan en Power BI. Cada cliente ve únicamente sus propios datos.</p>
+    </div>
+
+    <div class="card">
+      <h3>Stack tecnológico — no negociable</h3>
+      <ul>
+        <li><strong>Frontend:</strong> React + Tailwind CSS — mobile-first, PWA</li>
+        <li><strong>Base de datos:</strong> Supabase (PostgreSQL) con Row Level Security</li>
+        <li><strong>Autenticación:</strong> Supabase Auth (email + contraseña)</li>
+        <li><strong>Deploy:</strong> Vercel (automático en cada push)</li>
+        <li><strong>Analytics:</strong> Power BI conectado a Supabase vía PostgreSQL</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Empresas de referencia que usan este stack</h3>
+      <p>Supabase es usado en producción por Mozilla, 1Password, Replicate, y cientos de startups de Y Combinator. Es el backend preferido de AI coding tools como Cursor, Bolt y Lovable. Valoración actual: $2B USD. ARR estimado: $170M USD (mayo 2026). No es un experimento — es infraestructura probada.</p>
+    </div>
+
+    <div class="card">
+      <h3>Principios de diseño — NUNCA violar estos</h3>
+      <ul>
+        <li><strong>Nunca borrar físicamente</strong> — siempre usar <code>deleted_at TIMESTAMP</code> (borrado lógico)</li>
+        <li><strong>Nunca sobreescribir precios</strong> — siempre insertar nueva fila en <code>precios_historial</code></li>
+        <li><strong>RLS desde el día 1</strong> — cada tabla tiene política de aislación por <code>empresa_id</code></li>
+        <li><strong>Snapshot de precios en ventas</strong> — guardar <code>precio_unitario</code> y <code>costo_unitario</code> al momento de la venta</li>
+        <li><strong>Stock calculado, no almacenado</strong> — compras - ventas en Power BI, no columna de stock</li>
+        <li><strong>empresa_id en todas las tablas transaccionales</strong> — sin excepción</li>
+        <li><strong>Variables de entorno para credenciales</strong> — nunca hardcodear en el código</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Tipos de clientes reales a contemplar</h3>
+      <div class="empresa-grid">
+        <div class="empresa-card">
+          <div class="empresa-rubro">Feria / Artesanal</div>
+          <div class="empresa-name">Acacia Mates</div>
+          <div class="empresa-item">• Productos: mates, bolsos, bombillas</div>
+          <div class="empresa-item">• Variantes: color, tamaño</div>
+          <div class="empresa-item">• 1-2 usuarios (padre e hijo)</div>
+          <div class="empresa-item">• Carga desde celular en el stand</div>
+          <div class="empresa-item">• Forma de pago: efectivo + transferencia</div>
+        </div>
+        <div class="empresa-card">
+          <div class="empresa-rubro">Comercio / Ropa</div>
+          <div class="empresa-name">Tienda de Ropa</div>
+          <div class="empresa-item">• Productos: remeras, pantalones, zapatillas</div>
+          <div class="empresa-item">• Variantes: talle + color</div>
+          <div class="empresa-item">• 2-5 usuarios (dueño + empleados)</div>
+          <div class="empresa-item">• Carga desde local o tablet</div>
+          <div class="empresa-item">• Forma de pago: efectivo + débito + crédito</div>
+        </div>
+        <div class="empresa-card">
+          <div class="empresa-rubro">Servicios</div>
+          <div class="empresa-name">Concesionaria</div>
+          <div class="empresa-item">• Productos: autos por modelo y versión</div>
+          <div class="empresa-item">• Variantes: color, año, km</div>
+          <div class="empresa-item">• 3-10 usuarios (vendedores)</div>
+          <div class="empresa-item">• Carga desde PC o tablet</div>
+          <div class="empresa-item">• Forma de pago: transferencia + financiación</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BASE DE DATOS -->
+  <div id="bd" class="panel">
+    <div class="danger">RLS debe estar activado en TODAS las tablas antes del primer deploy. Sin RLS, cualquier usuario puede leer datos de cualquier empresa.</div>
+
+    <div class="card">
+      <h3>SQL completo de creación de tablas</h3>
+      <pre><span class="cm">-- ═══════════════════════════════════════════
+-- TABLA: empresas (raíz del sistema)
+-- ═══════════════════════════════════════════</span>
+<span class="kw">CREATE TABLE</span> empresas (
+  id          UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  nombre      TEXT <span class="kw">NOT NULL</span>,
+  rubro       TEXT,
+  plan_actual TEXT <span class="kw">NOT NULL DEFAULT</span> <span class="str">'starter'</span>
+              <span class="kw">CHECK</span> (plan_actual <span class="kw">IN</span> (<span class="str">'starter'</span>,<span class="str">'pro'</span>,<span class="str">'business'</span>)),
+  activo      BOOLEAN <span class="kw">NOT NULL DEFAULT</span> <span class="kw">TRUE</span>,
+  umbral_confirmacion NUMERIC(12,2), <span class="cm">-- si venta supera este monto → doble confirmación</span>
+  created_at  TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now(),
+  deleted_at  TIMESTAMPTZ
+);
+
+<span class="cm">-- ═══════════════════════════════════════════
+-- TABLA: usuarios (vinculada a Supabase Auth)
+-- ═══════════════════════════════════════════</span>
+<span class="kw">CREATE TABLE</span> usuarios (
+  id          UUID <span class="kw">PRIMARY KEY REFERENCES</span> auth.users(id),
+  empresa_id  UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  nombre      TEXT <span class="kw">NOT NULL</span>,
+  email       TEXT <span class="kw">NOT NULL</span>,
+  rol         TEXT <span class="kw">NOT NULL DEFAULT</span> <span class="str">'operador'</span>
+              <span class="kw">CHECK</span> (rol <span class="kw">IN</span> (<span class="str">'dueno'</span>,<span class="str">'operador'</span>,<span class="str">'visor'</span>)),
+  activo      BOOLEAN <span class="kw">NOT NULL DEFAULT</span> <span class="kw">TRUE</span>,
+  created_at  TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now(),
+  deleted_at  TIMESTAMPTZ
+);
+
+<span class="cm">-- ═══════════════════════════════════════════
+-- TABLA: productos (catálogo por empresa)
+-- ═══════════════════════════════════════════</span>
+<span class="kw">CREATE TABLE</span> productos (
+  id          UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  empresa_id  UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  nombre      TEXT <span class="kw">NOT NULL</span>,
+  categoria   TEXT,
+  activo      BOOLEAN <span class="kw">NOT NULL DEFAULT</span> <span class="kw">TRUE</span>,
+  created_at  TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now(),
+  deleted_at  TIMESTAMPTZ
+);
+<span class="kw">CREATE INDEX</span> idx_productos_empresa <span class="kw">ON</span> productos(empresa_id);
+
+<span class="cm">-- ═══════════════════════════════════════════
+-- TABLA: precios_historial (NUNCA sobreescribir)
+-- ═══════════════════════════════════════════</span>
+<span class="kw">CREATE TABLE</span> precios_historial (
+  id            UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  empresa_id    UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  producto_id   UUID <span class="kw">NOT NULL REFERENCES</span> productos(id),
+  variante      TEXT,
+  precio_venta  NUMERIC(12,2) <span class="kw">NOT NULL CHECK</span> (precio_venta >= 0),
+  costo         NUMERIC(12,2) <span class="kw">NOT NULL CHECK</span> (costo >= 0),
+  fecha_desde   DATE <span class="kw">NOT NULL DEFAULT CURRENT_DATE</span>,
+  moneda_costo  TEXT <span class="kw">DEFAULT</span> <span class="str">'ARS'</span> <span class="kw">CHECK</span> (moneda_costo <span class="kw">IN</span> (<span class="str">'ARS'</span>,<span class="str">'USD'</span>)),
+  tipo_cambio   NUMERIC(10,2)  <span class="cm">-- ARS por 1 USD al momento de la compra</span>
+);
+<span class="kw">CREATE INDEX</span> idx_precios_empresa_producto
+  <span class="kw">ON</span> precios_historial(empresa_id, producto_id, fecha_desde <span class="kw">DESC</span>);
+
+<span class="cm">-- ═══════════════════════════════════════════
+-- TABLA: producto_variantes (talle, color, etc.)
+-- ═══════════════════════════════════════════</span>
+<span class="kw">CREATE TABLE</span> producto_variantes (
+  id          UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  empresa_id  UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  producto_id UUID <span class="kw">NOT NULL REFERENCES</span> productos(id),
+  sku         TEXT <span class="kw">NOT NULL</span>,
+  atributos   JSONB,          <span class="cm">-- {"talle":"S","color":"blanco"}</span>
+  activo      BOOLEAN <span class="kw">DEFAULT TRUE</span>,
+  <span class="kw">UNIQUE</span>(empresa_id, sku)
+);
+<span class="kw">CREATE INDEX</span> idx_variantes_producto <span class="kw">ON</span> producto_variantes(producto_id);
+
+<span class="cm">-- ═══════════════════════════════════════════
+-- TABLA: proveedores
+-- ═══════════════════════════════════════════</span>
+<span class="kw">CREATE TABLE</span> proveedores (
+  id                UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  empresa_id        UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  nombre            TEXT <span class="kw">NOT NULL</span>,
+  contacto          TEXT,
+  condiciones_pago  TEXT,
+  notas             TEXT,
+  activo            BOOLEAN <span class="kw">NOT NULL DEFAULT</span> <span class="kw">TRUE</span>,
+  created_at        TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now(),
+  deleted_at        TIMESTAMPTZ
+);
+<span class="kw">CREATE INDEX</span> idx_proveedores_empresa <span class="kw">ON</span> proveedores(empresa_id);
+
+<span class="cm">-- ═══════════════════════════════════════════
+-- TABLA: ventas (snapshot de precio al momento)
+-- ═══════════════════════════════════════════</span>
+<span class="kw">CREATE TABLE</span> ventas (
+  id              UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  empresa_id      UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  producto_id     UUID <span class="kw">NOT NULL REFERENCES</span> productos(id),
+  usuario_id      UUID <span class="kw">NOT NULL REFERENCES</span> usuarios(id),
+  fecha           TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now(),
+  cantidad        INTEGER <span class="kw">NOT NULL CHECK</span> (cantidad > 0),
+  precio_unitario NUMERIC(12,2) <span class="kw">NOT NULL CHECK</span> (precio_unitario >= 0),
+  costo_unitario  NUMERIC(12,2) <span class="kw">NOT NULL CHECK</span> (costo_unitario >= 0),
+  descuento       NUMERIC(12,2) <span class="kw">NOT NULL DEFAULT</span> 0 <span class="kw">CHECK</span> (descuento >= 0),
+  forma_pago      TEXT <span class="kw">NOT NULL</span>
+                  <span class="kw">CHECK</span> (forma_pago <span class="kw">IN</span> (<span class="str">'efectivo'</span>,<span class="str">'transferencia'</span>,<span class="str">'debito'</span>,<span class="str">'credito'</span>,<span class="str">'qr'</span>)),
+  subtotal        NUMERIC(12,2) <span class="kw">GENERATED ALWAYS AS</span>
+                  ((precio_unitario * cantidad) - descuento) <span class="kw">STORED</span>,
+  notas           TEXT,
+  deleted_at      TIMESTAMPTZ
+);
+<span class="kw">CREATE INDEX</span> idx_ventas_empresa_fecha <span class="kw">ON</span> ventas(empresa_id, fecha <span class="kw">DESC</span>);
+
+<span class="cm">-- ═══════════════════════════════════════════
+-- TABLA: compras
+-- ═══════════════════════════════════════════</span>
+<span class="kw">CREATE TABLE</span> compras (
+  id              UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  empresa_id      UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  producto_id     UUID <span class="kw">NOT NULL REFERENCES</span> productos(id),
+  proveedor_id    UUID <span class="kw">REFERENCES</span> proveedores(id),
+  usuario_id      UUID <span class="kw">NOT NULL REFERENCES</span> usuarios(id),
+  fecha           TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now(),
+  cantidad        INTEGER <span class="kw">NOT NULL CHECK</span> (cantidad > 0),
+  costo_total     NUMERIC(12,2) <span class="kw">NOT NULL CHECK</span> (costo_total >= 0),
+  costo_unitario  NUMERIC(12,2) <span class="kw">GENERATED ALWAYS AS</span>
+                  (costo_total / cantidad) <span class="kw">STORED</span>,
+  notas           TEXT,
+  deleted_at      TIMESTAMPTZ
+);
+<span class="kw">CREATE INDEX</span> idx_compras_empresa_fecha <span class="kw">ON</span> compras(empresa_id, fecha <span class="kw">DESC</span>);
+
+<span class="cm">-- ═══════════════════════════════════════════
+-- TABLA: historial_planes (solo para el dueño del SaaS)
+-- ═══════════════════════════════════════════</span>
+<span class="kw">CREATE TABLE</span> historial_planes (
+  id            UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  empresa_id    UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  plan_anterior TEXT,
+  plan_nuevo    TEXT <span class="kw">NOT NULL</span>,
+  fecha_cambio  TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now(),
+  motivo        TEXT
+);
+
+<span class="cm">-- ═══════════════════════════════════════════
+-- TABLA: modulos_empresa (personalización por cliente)
+-- ═══════════════════════════════════════════</span>
+<span class="kw">CREATE TABLE</span> modulos_empresa (
+  empresa_id  UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  modulo      TEXT <span class="kw">NOT NULL</span>,
+  activo      BOOLEAN <span class="kw">NOT NULL DEFAULT</span> <span class="kw">TRUE</span>,
+  config      JSONB,
+  <span class="kw">PRIMARY KEY</span> (empresa_id, modulo)
+);</pre>
+    </div>
+
+
+    <div class="card">
+      <h3>Venta multi-línea — estructura correcta</h3>
+      <p>Una venta puede tener múltiples productos. Se divide en dos tablas: el encabezado y las líneas.</p>
+      <pre><span class="cm">-- ENCABEZADO DE VENTA (el "ticket")</span>
+<span class="kw">CREATE TABLE</span> ventas (
+  id              UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  empresa_id      UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  usuario_id      UUID <span class="kw">NOT NULL REFERENCES</span> usuarios(id),
+  cliente_id      UUID <span class="kw">REFERENCES</span> clientes(id), <span class="cm">-- opcional</span>
+  fecha           TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now(),
+  forma_pago      TEXT <span class="kw">NOT NULL CHECK</span> (forma_pago <span class="kw">IN</span> (
+                    <span class="str">'efectivo'</span>,<span class="str">'transferencia'</span>,<span class="str">'debito'</span>,
+                    <span class="str">'credito'</span>,<span class="str">'qr'</span>)),
+  descuento       NUMERIC(12,2) <span class="kw">NOT NULL DEFAULT</span> 0,
+  canal           TEXT <span class="kw">DEFAULT</span> <span class="str">'mostrador'</span>,
+  notas           TEXT,
+  deleted_at      TIMESTAMPTZ
+);
+
+<span class="cm">-- LÍNEAS DE VENTA (los ítems del ticket)</span>
+<span class="kw">CREATE TABLE</span> ventas_items (
+  id              UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  venta_id        UUID <span class="kw">NOT NULL REFERENCES</span> ventas(id),
+  empresa_id      UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  producto_id     UUID <span class="kw">NOT NULL REFERENCES</span> productos(id),
+  cantidad        INTEGER <span class="kw">NOT NULL CHECK</span> (cantidad > 0),
+  precio_unitario NUMERIC(12,2) <span class="kw">NOT NULL</span>,
+  costo_unitario  NUMERIC(12,2) <span class="kw">NOT NULL</span>, <span class="cm">-- snapshot del costo</span>
+  subtotal        NUMERIC(12,2) <span class="kw">GENERATED ALWAYS AS</span>
+                  (precio_unitario * cantidad) <span class="kw">STORED</span>
+);
+<span class="kw">CREATE INDEX</span> idx_ventas_items_venta <span class="kw">ON</span> ventas_items(venta_id);
+<span class="kw">CREATE INDEX</span> idx_ventas_items_empresa <span class="kw">ON</span> ventas_items(empresa_id);</pre>
+
+      <div style="margin-top:12px;">
+        <p><strong>Total de la venta en Power BI:</strong></p>
+        <pre><span class="kw">Total Venta</span> =
+<span class="fn">CALCULATE</span>(<span class="fn">SUM</span>(ventas_items[subtotal])) - <span class="fn">MAX</span>(ventas[descuento])</pre>
+      </div>
+
+      <div style="background:#fef9ef;border-left:3px solid #B08D3E;border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;color:#4a3d30;margin-top:10px;">
+        <strong>Impacto en movimientos_inventario:</strong> cuando se confirma una venta, la app inserta automáticamente un movimiento tipo <span style="font-family:monospace">venta</span> con signo -1 por cada ítem. Si la venta tiene 3 ítems distintos → 3 movimientos en el Kardex. Si se anula la venta → se anulan los 3 movimientos.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Pantalla de venta multi-línea</h3>
+      <pre>┌─────────────────────────┐
+│ ← Nueva venta           │
+├─────────────────────────┤
+│ ÍTEM 1                  │
+│ Canasto Chico × 2       │
+│ $25.000 c/u → $50.000  │
+├─────────────────────────┤
+│ ÍTEM 2                  │
+│ Mochila × 1             │
+│ $30.000 c/u → $30.000  │
+├─────────────────────────┤
+│ ÍTEM 3                  │
+│ Bombilla × 3            │
+│ $5.000 c/u  → $15.000  │
+├─────────────────────────┤
+│ [+ Agregar producto]    │
+├─────────────────────────┤
+│ Subtotal:    $95.000    │
+│ Descuento: [ $5.000 ]  │
+│ TOTAL:       $90.000   │
+├─────────────────────────┤
+│ FORMA DE PAGO           │
+│ [💵 Efect] [📱 Trans]   │
+│ [💳 Débit] [💳 Créd]    │
+├─────────────────────────┤
+│ [  CONFIRMAR VENTA  ]   │
+└─────────────────────────┘</pre>
+      <p>El operador agrega ítems uno por uno. Cada ítem autocompleta el precio desde precios_historial. El descuento es en pesos, no porcentaje. El total se actualiza en tiempo real. Un solo toque en "Confirmar" guarda el encabezado, todas las líneas, y los movimientos de inventario correspondientes.</p>
+    </div>
+
+    <div class="card">
+      <h3>RLS — Políticas de seguridad <span class="badge b-crit">CRÍTICO</span></h3>
+      <pre><span class="cm">-- ═══════════════════════════════════════════
+-- FUNCIÓN ATÓMICA: registrar_venta()
+-- Previene race conditions con FOR UPDATE
+-- ═══════════════════════════════════════════</span>
+<span class="kw">CREATE OR REPLACE FUNCTION</span> <span class="fn">registrar_venta</span>(
+  p_venta_id    UUID,
+  p_empresa_id  UUID,
+  p_usuario_id  UUID,
+  p_forma_pago  TEXT,
+  p_descuento   NUMERIC,
+  p_canal       TEXT,
+  p_items       JSONB   <span class="cm">-- [{producto_id, variante_id, cantidad, precio, costo}]</span>
+) <span class="kw">RETURNS</span> UUID <span class="kw">AS</span> $$
+<span class="kw">DECLARE</span>
+  v_item       JSONB;
+  v_stock_act  INTEGER;
+  v_total      NUMERIC := 0;
+<span class="kw">BEGIN</span>
+  <span class="cm">-- Validar descuento no negativo</span>
+  <span class="kw">IF</span> p_descuento < 0 <span class="kw">THEN</span>
+    <span class="kw">RAISE EXCEPTION</span> <span class="str">'DESCUENTO_NEGATIVO'</span>;
+  <span class="kw">END IF</span>;
+
+  <span class="cm">-- Calcular total y validar</span>
+  <span class="kw">SELECT</span> <span class="fn">SUM</span>((item->><span class="str">'precio'</span>)::NUMERIC * (item->><span class="str">'cantidad'</span>)::INT)
+  <span class="kw">INTO</span> v_total
+  <span class="kw">FROM</span> jsonb_array_elements(p_items) item;
+
+  <span class="kw">IF</span> (v_total - p_descuento) <= 0 <span class="kw">THEN</span>
+    <span class="kw">RAISE EXCEPTION</span> <span class="str">'DESCUENTO_MAYOR_TOTAL'</span>;
+  <span class="kw">END IF</span>;
+
+  <span class="cm">-- Insertar encabezado de venta</span>
+  <span class="kw">INSERT INTO</span> ventas (id, empresa_id, usuario_id, forma_pago, descuento, canal)
+  <span class="kw">VALUES</span> (p_venta_id, p_empresa_id, p_usuario_id, p_forma_pago, p_descuento, p_canal);
+
+  <span class="cm">-- Procesar cada ítem con bloqueo de stock</span>
+  <span class="kw">FOR</span> v_item <span class="kw">IN SELECT</span> * <span class="kw">FROM</span> jsonb_array_elements(p_items)
+  <span class="kw">LOOP</span>
+    <span class="cm">-- Bloquear fila para evitar race condition</span>
+    <span class="kw">SELECT</span> <span class="fn">COALESCE</span>(<span class="fn">SUM</span>(cantidad * signo), 0) <span class="kw">INTO</span> v_stock_act
+    <span class="kw">FROM</span> movimientos_inventario
+    <span class="kw">WHERE</span> producto_id = (v_item->><span class="str">'producto_id'</span>)::UUID
+      <span class="kw">AND</span> empresa_id = p_empresa_id
+      <span class="kw">AND</span> deleted_at <span class="kw">IS NULL</span>
+    <span class="kw">FOR UPDATE</span>;
+
+    <span class="cm">-- Insertar ítem de venta</span>
+    <span class="kw">INSERT INTO</span> ventas_items (venta_id, empresa_id, producto_id, variante_id, cantidad, precio_unitario, costo_unitario)
+    <span class="kw">VALUES</span> (
+      p_venta_id, p_empresa_id,
+      (v_item->><span class="str">'producto_id'</span>)::UUID,
+      (v_item->><span class="str">'variante_id'</span>)::UUID,
+      (v_item->><span class="str">'cantidad'</span>)::INT,
+      (v_item->><span class="str">'precio'</span>)::NUMERIC,
+      (v_item->><span class="str">'costo'</span>)::NUMERIC
+    );
+
+    <span class="cm">-- Insertar movimiento de inventario</span>
+    <span class="kw">INSERT INTO</span> movimientos_inventario (
+      empresa_id, producto_id, variante_id, usuario_id,
+      tipo, signo, cantidad, precio_unitario, costo_unitario,
+      referencia_id
+    ) <span class="kw">VALUES</span> (
+      p_empresa_id, (v_item->><span class="str">'producto_id'</span>)::UUID,
+      (v_item->><span class="str">'variante_id'</span>)::UUID, p_usuario_id,
+      <span class="str">'venta'</span>, -1, (v_item->><span class="str">'cantidad'</span>)::INT,
+      (v_item->><span class="str">'precio'</span>)::NUMERIC, (v_item->><span class="str">'costo'</span>)::NUMERIC,
+      p_venta_id
+    );
+  <span class="kw">END LOOP</span>;
+
+  <span class="kw">RETURN</span> p_venta_id;
+<span class="kw">END</span>; $$ <span class="kw">LANGUAGE</span> plpgsql <span class="kw">SECURITY DEFINER</span>;
+
+<span class="cm">-- Habilitar RLS en todas las tablas</span>
+<span class="kw">ALTER TABLE</span> empresas         <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">ALTER TABLE</span> usuarios         <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">ALTER TABLE</span> productos        <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">ALTER TABLE</span> precios_historial <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">ALTER TABLE</span> proveedores      <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">ALTER TABLE</span> ventas           <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">ALTER TABLE</span> compras          <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">ALTER TABLE</span> modulos_empresa  <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+
+<span class="cm">-- Función helper: obtener empresa_id del usuario autenticado</span>
+<span class="kw">CREATE OR REPLACE FUNCTION</span> <span class="fn">get_empresa_id</span>()
+<span class="kw">RETURNS</span> UUID <span class="kw">AS</span> $$
+  <span class="kw">SELECT</span> empresa_id <span class="kw">FROM</span> usuarios
+  <span class="kw">WHERE</span> id = auth.uid()
+  <span class="kw">LIMIT</span> 1;
+$$ <span class="kw">LANGUAGE</span> sql <span class="kw">SECURITY DEFINER STABLE</span>;
+
+<span class="cm">-- Función helper: obtener rol del usuario autenticado</span>
+<span class="kw">CREATE OR REPLACE FUNCTION</span> <span class="fn">get_rol</span>()
+<span class="kw">RETURNS</span> TEXT <span class="kw">AS</span> $$
+  <span class="kw">SELECT</span> rol <span class="kw">FROM</span> usuarios
+  <span class="kw">WHERE</span> id = auth.uid()
+  <span class="kw">LIMIT</span> 1;
+$$ <span class="kw">LANGUAGE</span> sql <span class="kw">SECURITY DEFINER STABLE</span>;
+
+<span class="cm">-- POLÍTICA: ventas — ver solo las de tu empresa</span>
+<span class="kw">CREATE POLICY</span> ventas_select <span class="kw">ON</span> ventas
+  <span class="kw">FOR SELECT USING</span> (empresa_id = <span class="fn">get_empresa_id</span>());
+
+<span class="cm">-- POLÍTICA: ventas — insertar solo si sos dueno u operador</span>
+<span class="kw">CREATE POLICY</span> ventas_insert <span class="kw">ON</span> ventas
+  <span class="kw">FOR INSERT WITH CHECK</span> (
+    empresa_id = <span class="fn">get_empresa_id</span>()
+    <span class="kw">AND</span> <span class="fn">get_rol</span>() <span class="kw">IN</span> (<span class="str">'dueno'</span>, <span class="str">'operador'</span>)
+  );
+
+<span class="cm">-- POLÍTICA: ventas — borrado lógico solo para dueño</span>
+<span class="kw">CREATE POLICY</span> ventas_update <span class="kw">ON</span> ventas
+  <span class="kw">FOR UPDATE USING</span> (
+    empresa_id = <span class="fn">get_empresa_id</span>()
+    <span class="kw">AND</span> <span class="fn">get_rol</span>() = <span class="str">'dueno'</span>
+  );
+
+<span class="cm">-- (Repetir patrón para productos, compras, proveedores, etc.)</span></pre>
+    </div>
+  </div>
+
+  <!-- ROLES -->
+  <div id="roles" class="panel">
+    <div class="card">
+      <h3>Matriz de permisos por rol</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#3E2716;color:#F3ECDD;">
+            <th style="padding:8px 12px;text-align:left;">Acción</th>
+            <th style="padding:8px 12px;text-align:center;">Dueño</th>
+            <th style="padding:8px 12px;text-align:center;">Operador</th>
+            <th style="padding:8px 12px;text-align:center;">Visor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background:#FFFDF8;border-bottom:1px solid rgba(92,58,33,0.08)">
+            <td style="padding:8px 12px;">Ver ventas y compras</td>
+            <td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;">✅</td>
+          </tr>
+          <tr style="background:#fef9ef;border-bottom:1px solid rgba(92,58,33,0.08)">
+            <td style="padding:8px 12px;">Registrar venta</td>
+            <td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;">❌</td>
+          </tr>
+          <tr style="background:#FFFDF8;border-bottom:1px solid rgba(92,58,33,0.08)">
+            <td style="padding:8px 12px;">Registrar compra</td>
+            <td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;">❌</td>
+          </tr>
+          <tr style="background:#fef9ef;border-bottom:1px solid rgba(92,58,33,0.08)">
+            <td style="padding:8px 12px;">Agregar / editar productos</td>
+            <td style="text-align:center;">✅</td><td style="text-align:center;">❌</td><td style="text-align:center;">❌</td>
+          </tr>
+          <tr style="background:#FFFDF8;border-bottom:1px solid rgba(92,58,33,0.08)">
+            <td style="padding:8px 12px;">Actualizar precios</td>
+            <td style="text-align:center;">✅</td><td style="text-align:center;">❌</td><td style="text-align:center;">❌</td>
+          </tr>
+          <tr style="background:#fef9ef;border-bottom:1px solid rgba(92,58,33,0.08)">
+            <td style="padding:8px 12px;">Gestionar proveedores</td>
+            <td style="text-align:center;">✅</td><td style="text-align:center;">❌</td><td style="text-align:center;">❌</td>
+          </tr>
+          <tr style="background:#FFFDF8;border-bottom:1px solid rgba(92,58,33,0.08)">
+            <td style="padding:8px 12px;">Crear / desactivar usuarios</td>
+            <td style="text-align:center;">✅</td><td style="text-align:center;">❌</td><td style="text-align:center;">❌</td>
+          </tr>
+          <tr style="background:#fef9ef;border-bottom:1px solid rgba(92,58,33,0.08)">
+            <td style="padding:8px 12px;">Borrar registros (lógico)</td>
+            <td style="text-align:center;">✅</td><td style="text-align:center;">❌</td><td style="text-align:center;">❌</td>
+          </tr>
+          <tr style="background:#FFFDF8;">
+            <td style="padding:8px 12px;">Ver dashboard Power BI</td>
+            <td style="text-align:center;">✅</td><td style="text-align:center;">❌</td><td style="text-align:center;">✅</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Flujo de autenticación</h3>
+      <div class="flow-step"><div class="step-n">1</div>Usuario entra a la app → ve pantalla de login (email + contraseña)</div>
+      <div class="flow-step"><div class="step-n">2</div>Supabase Auth valida credenciales y devuelve JWT con el user ID</div>
+      <div class="flow-step"><div class="step-n">3</div>La app consulta la tabla <code>usuarios</code> con ese user ID para obtener <code>empresa_id</code> y <code>rol</code></div>
+      <div class="flow-step"><div class="step-n">4</div>Ese contexto (empresa_id + rol) se guarda en el estado global de la app (React Context)</div>
+      <div class="flow-step"><div class="step-n">5</div>Todas las consultas a Supabase incluyen automáticamente el filtro de empresa via RLS</div>
+      <div class="flow-step"><div class="step-n">6</div>La UI muestra u oculta opciones según el rol (dueño ve todo, operador solo carga, visor solo ve)</div>
+    </div>
+  </div>
+
+  <!-- MÓDULOS -->
+  <div id="modulos" class="panel">
+    <div class="note">Cada módulo se desarrolla, prueba y aprueba por separado antes de pasar al siguiente. Este es el orden recomendado.</div>
+
+    <div class="modulo">
+      <div class="modulo-header" onclick="toggleMod(this)">
+        <div class="mod-num" style="background:#3E2716">1</div>
+        <div class="modulo-title">Auth + Alta de empresa</div>
+        <span class="badge b-crit">PRIMERO</span>
+      </div>
+      <div class="modulo-body">
+        <p><strong>Qué hace:</strong> login, registro de empresa nueva, creación del primer usuario dueño.</p>
+        <p><strong>Pantallas:</strong> Login, Registro de empresa (nombre, rubro), confirmación.</p>
+        <p><strong>Validaciones:</strong> email válido, contraseña mínimo 8 caracteres, nombre de empresa obligatorio.</p>
+        <p><strong>Qué genera en la BD:</strong> fila en <code>empresas</code> + fila en <code>usuarios</code> con rol <code>dueno</code> + fila en <code>historial_planes</code>.</p>
+        <p><strong>Criterio de aprobación:</strong> usuario puede registrarse, iniciar sesión y cerrar sesión. Otro usuario no puede ver sus datos.</p>
+      </div>
+    </div>
+
+    <div class="modulo">
+      <div class="modulo-header" onclick="toggleMod(this)">
+        <div class="mod-num" style="background:#4B5D3A">2</div>
+        <div class="modulo-title">Productos + Historial de precios</div>
+        <span class="badge b-ok">FASE 1</span>
+      </div>
+      <div class="modulo-body">
+        <p><strong>Qué hace:</strong> ABM de productos y carga de precios con historial.</p>
+        <p><strong>Pantallas:</strong> Lista de productos (con buscador), formulario de producto nuevo, formulario de actualización de precio.</p>
+        <p><strong>Campos producto:</strong> nombre (obligatorio), categoría, variante (color/talle/modelo), activo.</p>
+        <p><strong>Campos precio:</strong> precio_venta (obligatorio, > 0), costo (obligatorio, ≥ 0), fecha_desde (default hoy).</p>
+        <p><strong>Regla crítica:</strong> actualizar precio = INSERT en precios_historial, NUNCA UPDATE del precio anterior.</p>
+        <p><strong>Criterio de aprobación:</strong> crear producto, actualizar precio 3 veces, verificar que el historial tiene 3 filas y la app muestra el precio más reciente.</p>
+      </div>
+    </div>
+
+    <div class="modulo">
+      <div class="modulo-header" onclick="toggleMod(this)">
+        <div class="mod-num" style="background:#B08D3E">3</div>
+        <div class="modulo-title">Ventas</div>
+        <span class="badge b-ok">FASE 1</span>
+      </div>
+      <div class="modulo-body">
+        <p><strong>Qué hace:</strong> registro de ventas desde el celular en máximo 3 toques.</p>
+        <p><strong>Pantallas:</strong> botón grande "Nueva venta" en home → selector de producto (dropdown con autocompletado) → cantidad → forma de pago (4 botones grandes) → confirmar.</p>
+        <p><strong>Campos:</strong> producto_id, cantidad (mínimo 1), fecha (default ahora, editable), forma_pago, descuento (opcional), notas (opcional).</p>
+        <p><strong>Comportamiento:</strong> al seleccionar producto, autocompletar precio_unitario y costo_unitario desde precios_historial (precio más reciente con fecha_desde ≤ hoy).</p>
+        <p><strong>Formas de pago:</strong> botones — Efectivo 💵, Transferencia 📱, Débito 💳, Crédito 💳, QR 📷.</p>
+        <p><strong>Criterio de aprobación:</strong> registrar venta en menos de 15 segundos desde el celular. Precio y costo se autocompletaron correctamente. La venta aparece en el historial.</p>
+      </div>
+    </div>
+
+    <div class="modulo">
+      <div class="modulo-header" onclick="toggleMod(this)">
+        <div class="mod-num" style="background:#B5541F">4</div>
+        <div class="modulo-title">Compras + Proveedores</div>
+        <span class="badge b-warn">FASE 2</span>
+      </div>
+      <div class="modulo-body">
+        <p><strong>Qué hace:</strong> registro de compras a proveedores y ABM de proveedores.</p>
+        <p><strong>Campos compra:</strong> producto_id, proveedor_id (opcional), cantidad, costo_total, fecha (editable para cargar compras atrasadas), notas.</p>
+        <p><strong>Costo unitario:</strong> calculado automáticamente = costo_total / cantidad. No lo ingresa el usuario.</p>
+        <p><strong>Campos proveedor:</strong> nombre (obligatorio), contacto, condiciones_pago, notas.</p>
+        <p><strong>Criterio de aprobación:</strong> registrar compra con fecha pasada. Verificar que el stock calculado (compras - ventas) refleja la compra retroactiva correctamente.</p>
+      </div>
+    </div>
+
+    <div class="modulo">
+      <div class="modulo-header" onclick="toggleMod(this)">
+        <div class="mod-num" style="background:#5C3A21">5</div>
+        <div class="modulo-title">Gestión de usuarios</div>
+        <span class="badge b-warn">FASE 2</span>
+      </div>
+      <div class="modulo-body">
+        <p><strong>Qué hace:</strong> el dueño puede crear, editar y desactivar usuarios de su empresa.</p>
+        <p><strong>Pantallas:</strong> lista de usuarios, formulario de invitación (email + rol), confirmación.</p>
+        <p><strong>Flujo de invitación:</strong> dueño ingresa email → Supabase Auth envía email de invitación → usuario crea contraseña → fila en <code>usuarios</code> con empresa_id y rol asignado.</p>
+        <p><strong>Criterio de aprobación:</strong> invitar usuario operador, verificar que puede cargar ventas pero no editar productos. Invitar usuario visor, verificar que solo puede ver.</p>
+      </div>
+    </div>
+
+    <div class="modulo">
+      <div class="modulo-header" onclick="toggleMod(this)">
+        <div class="mod-num" style="background:#4B5D3A">6</div>
+        <div class="modulo-title">Dashboard básico (Plan Starter)</div>
+        <span class="badge b-warn">FASE 2</span>
+      </div>
+      <div class="modulo-body">
+        <p><strong>Qué hace:</strong> resumen visual simple de ventas del día, la semana y el mes.</p>
+        <p><strong>KPIs:</strong> total vendido hoy, total vendido esta semana, top 3 productos del mes, distribución por forma de pago.</p>
+        <p><strong>Tecnología:</strong> Recharts (librería de gráficos para React, sin costo).</p>
+        <p><strong>Criterio de aprobación:</strong> los números del dashboard coinciden con la suma manual de las ventas cargadas.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ESCENARIOS -->
+  <div id="escenarios" class="panel">
+    <div class="note">Estos escenarios deben probarse antes de aprobar cada módulo. Cubren los casos edge más comunes en negocios reales argentinos.</div>
+
+    <div class="card">
+      <h3>Escenarios de prueba — Ventas</h3>
+      <div class="scenario">
+        <div class="scenario-title">E1 — Venta normal</div>
+        <div class="scenario-desc">Cargar venta de 1 canasto chico a $25.000 en efectivo. Verificar que el subtotal = $25.000 y el costo_unitario se autocompletó desde precios_historial.</div>
+      </div>
+      <div class="scenario">
+        <div class="scenario-title">E2 — Venta con descuento</div>
+        <div class="scenario-desc">Cargar venta de 2 mochilas a $30.000 c/u con descuento de $5.000. Verificar que subtotal = (30.000 × 2) - 5.000 = $55.000.</div>
+      </div>
+      <div class="scenario">
+        <div class="scenario-title">E3 — Venta con fecha pasada</div>
+        <div class="scenario-desc">Cargar venta de ayer. Verificar que el precio que se autocompleta es el que estaba vigente ayer, no el de hoy si hubo actualización.</div>
+      </div>
+      <div class="scenario">
+        <div class="scenario-title">E4 — Venta con cantidad 0</div>
+        <div class="scenario-desc">Intentar cargar venta con cantidad 0. La app debe rechazarla con mensaje claro: "La cantidad debe ser al menos 1".</div>
+      </div>
+      <div class="scenario">
+        <div class="scenario-title">E5 — Dos usuarios en simultáneo</div>
+        <div class="scenario-desc">Dos sesiones abiertas en simultáneo (operador 1 y operador 2) cargan ventas al mismo tiempo. Verificar que ambas aparecen en el historial sin conflicto.</div>
+      </div>
+      <div class="scenario">
+        <div class="scenario-title">E6 — Aislación entre empresas</div>
+        <div class="scenario-desc">Loguear como empresa A. Intentar acceder manualmente a datos de empresa B (modificando la URL o haciendo consulta directa). Supabase debe devolver array vacío, nunca datos de otra empresa.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Escenarios de prueba — Stock y compras</h3>
+      <div class="scenario">
+        <div class="scenario-title">E7 — Stock negativo por compras faltantes</div>
+        <div class="scenario-desc">Cargar 10 ventas de canasto chico sin ninguna compra. Stock = -10. Luego cargar compra de 20 unidades con fecha anterior a las ventas. Stock debe pasar a +10. El orden de carga no afecta el resultado.</div>
+      </div>
+      <div class="scenario">
+        <div class="scenario-title">E8 — Actualización de precio</div>
+        <div class="scenario-desc">Producto con precio $20.000 desde enero. Actualizar a $25.000 en julio. Cargar venta en julio. Verificar que la venta de julio tiene precio_unitario = $25.000. Las ventas de enero siguen con $20.000.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Escenarios de prueba — Roles</h3>
+      <div class="scenario">
+        <div class="scenario-title">E9 — Operador no puede editar productos</div>
+        <div class="scenario-desc">Loguear como operador. El menú de Productos no debe mostrar botón "Editar" ni "Actualizar precio". Si intenta via API, Supabase debe rechazar con error de permisos.</div>
+      </div>
+      <div class="scenario">
+        <div class="scenario-title">E10 — Visor no puede cargar ventas</div>
+        <div class="scenario-desc">Loguear como visor. El botón "Nueva venta" no debe aparecer. Si intenta via API, Supabase rechaza.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLUJO DE DESARROLLO -->
+  <div id="flujo" class="panel">
+    <div class="card">
+      <h3>Cómo usar este documento con Cursor Agent</h3>
+      <div class="flow-step"><div class="step-n">1</div><div>Abrís Cursor y creás el proyecto React: <code>npx create-react-app saas-gestion</code> o con Vite.</div></div>
+      <div class="flow-step"><div class="step-n">2</div><div>Pegás todo el SQL de la pestaña "Base de datos" en Supabase SQL Editor y lo ejecutás.</div></div>
+      <div class="flow-step"><div class="step-n">3</div><div>Abrís Cursor Agent (Ctrl+I) y le pasás este prompt inicial:</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Prompt base para Cursor Agent</h3>
+      <pre><span class="str">Estoy construyendo un SaaS multi-tenant de gestión para pequeños comercios.
+
+Stack: React + Tailwind CSS + Supabase (PostgreSQL) + Vercel.
+
+PRINCIPIOS QUE NUNCA SE VIOLAN:
+- Nunca borrar físicamente (usar deleted_at)
+- Nunca sobreescribir precios (insertar en precios_historial)
+- RLS activo en todas las tablas
+- empresa_id en todas las tablas transaccionales
+- Snapshot de precio y costo en cada venta
+
+ESTRUCTURA DE ROLES:
+- dueno: puede todo
+- operador: puede cargar ventas y compras, no editar catálogo
+- visor: solo lectura
+
+La base de datos ya está creada en Supabase con estas tablas:
+empresas, usuarios, productos, precios_historial,
+proveedores, ventas, compras, historial_planes, modulos_empresa.
+
+MÓDULO A CONSTRUIR AHORA: [NOMBRE DEL MÓDULO]
+Descripción: [PEGAR DESCRIPCIÓN DEL MÓDULO DE ESTA ESPECIFICACIÓN]
+Criterio de aprobación: [PEGAR CRITERIO DE APROBACIÓN]
+
+Construí el módulo completo con componentes React, conexión a
+Supabase, validaciones, y manejo de errores. Mobile-first con Tailwind.</span></pre>
+    </div>
+
+    <div class="card">
+      <h3>Ciclo de aprobación por módulo</h3>
+      <div class="flow-step"><div class="step-n">1</div>Cursor Agent genera el código del módulo</div>
+      <div class="flow-step"><div class="step-n">2</div>Vos lo probás en el navegador siguiendo los escenarios de prueba</div>
+      <div class="flow-step"><div class="step-n">3</div>Lo que no funciona lo describís en chat y Cursor lo corrige</div>
+      <div class="flow-step"><div class="step-n">4</div>Me traés a mí las dudas de arquitectura o seguridad</div>
+      <div class="flow-step"><div class="step-n">5</div>Una vez aprobado el módulo, commit a Git y pasás al siguiente</div>
+      <div class="flow-step"><div class="step-n">6</div>Nunca empezar el módulo siguiente sin aprobar el anterior</div>
+    </div>
+  </div>
+
+
+  <div id="inventario" class="panel">
+    <div class="note">Módulo de Inventario (Kardex) — reemplaza "Compras" y lo amplía. Todos los movimientos quedan registrados con motivo, usuario y fecha. El stock siempre es la suma de los movimientos.</div>
+
+    <div class="card">
+      <h3>Tabla movimientos_inventario — el Kardex digital</h3>
+      <pre><span class="kw">CREATE TABLE</span> movimientos_inventario (
+  id              UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  empresa_id      UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  producto_id     UUID <span class="kw">NOT NULL REFERENCES</span> productos(id),
+  usuario_id      UUID <span class="kw">NOT NULL REFERENCES</span> usuarios(id),
+  tipo            TEXT <span class="kw">NOT NULL CHECK</span> (tipo <span class="kw">IN</span> (
+                    <span class="str">'compra'</span>,
+                    <span class="str">'venta'</span>,
+                    <span class="str">'devolucion_cliente'</span>,
+                    <span class="str">'devolucion_proveedor'</span>,
+                    <span class="str">'merma_rotura'</span>,
+                    <span class="str">'perdida'</span>,
+                    <span class="str">'ajuste_positivo'</span>,
+                    <span class="str">'ajuste_negativo'</span>,
+                    <span class="str">'transferencia'</span>
+                  )),
+  cantidad        INTEGER <span class="kw">NOT NULL CHECK</span> (cantidad > 0),
+  signo           SMALLINT <span class="kw">NOT NULL CHECK</span> (signo <span class="kw">IN</span> (1, -1)),
+  costo_unitario  NUMERIC(12,2),
+  precio_unitario NUMERIC(12,2),
+  proveedor_id    UUID <span class="kw">REFERENCES</span> proveedores(id),
+  lote            TEXT,
+  fecha_vencimiento DATE,
+  ubicacion       TEXT,
+  motivo          TEXT,
+  referencia_id   UUID, <span class="cm">-- UUID de la venta/compra que originó el movimiento</span>
+  variante_id     UUID <span class="kw">REFERENCES</span> producto_variantes(id), <span class="cm">-- variante específica</span>
+  numero_serie    TEXT,  <span class="cm">-- IMEI, serie — para electrónica y joyería</span>
+  canal           TEXT <span class="kw">CHECK</span> (canal <span class="kw">IN</span> (
+                    <span class="str">'mostrador'</span>,<span class="str">'web'</span>,<span class="str">'instagram'</span>,
+                    <span class="str">'mercadolibre'</span>,<span class="str">'tiendanube'</span>,<span class="str">'otro'</span>)),
+  fecha           TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now(),
+  deleted_at      TIMESTAMPTZ
+);
+<span class="kw">CREATE INDEX</span> idx_mov_empresa_producto
+  <span class="kw">ON</span> movimientos_inventario(empresa_id, producto_id, fecha <span class="kw">DESC</span>);</pre>
+    </div>
+
+    <div class="card">
+      <h3>Tipos de movimiento — matriz completa</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#3E2716;color:#F3ECDD;">
+            <th style="padding:8px 12px;text-align:left;">Tipo</th>
+            <th style="padding:8px 12px;text-align:center;">Signo</th>
+            <th style="padding:8px 12px;text-align:left;">Cuándo se usa</th>
+            <th style="padding:8px 12px;text-align:left;">Lo carga quién</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background:#FFFDF8;border-bottom:1px solid rgba(92,58,33,0.08)"><td style="padding:8px 12px">compra</td><td style="text-align:center">+1</td><td style="padding:8px 12px">Recibe mercadería del proveedor</td><td>Dueño / Operador</td></tr>
+          <tr style="background:#fef9ef;border-bottom:1px solid rgba(92,58,33,0.08)"><td style="padding:8px 12px">venta</td><td style="text-align:center">−1</td><td style="padding:8px 12px">Vende a un cliente</td><td>Dueño / Operador</td></tr>
+          <tr style="background:#FFFDF8;border-bottom:1px solid rgba(92,58,33,0.08)"><td style="padding:8px 12px">devolucion_cliente</td><td style="text-align:center">+1</td><td style="padding:8px 12px">Cliente devuelve producto</td><td>Dueño / Operador</td></tr>
+          <tr style="background:#fef9ef;border-bottom:1px solid rgba(92,58,33,0.08)"><td style="padding:8px 12px">devolucion_proveedor</td><td style="text-align:center">−1</td><td style="padding:8px 12px">Devuelven mercadería al proveedor</td><td>Dueño</td></tr>
+          <tr style="background:#FFFDF8;border-bottom:1px solid rgba(92,58,33,0.08)"><td style="padding:8px 12px">merma_rotura</td><td style="text-align:center">−1</td><td style="padding:8px 12px">Producto dañado, vencido o inutilizable</td><td>Dueño</td></tr>
+          <tr style="background:#fef9ef;border-bottom:1px solid rgba(92,58,33,0.08)"><td style="padding:8px 12px">perdida</td><td style="text-align:center">−1</td><td style="padding:8px 12px">Conteo físico: faltan unidades sin explicación</td><td>Dueño</td></tr>
+          <tr style="background:#FFFDF8;border-bottom:1px solid rgba(92,58,33,0.08)"><td style="padding:8px 12px">ajuste_positivo</td><td style="text-align:center">+1</td><td style="padding:8px 12px">Conteo físico: sobran unidades</td><td>Dueño</td></tr>
+          <tr style="background:#fef9ef;border-bottom:1px solid rgba(92,58,33,0.08)"><td style="padding:8px 12px">ajuste_negativo</td><td style="text-align:center">−1</td><td style="padding:8px 12px">Corrección manual de stock</td><td>Dueño</td></tr>
+          <tr style="background:#FFFDF8;"><td style="padding:8px 12px">transferencia</td><td style="text-align:center">0</td><td style="padding:8px 12px">Mover entre depósitos / ubicaciones</td><td>Dueño / Operador</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+
+    <div class="card">
+      <h3>Insumos — cómo se manejan</h3>
+      <p>Los insumos no son un módulo separado. Son productos con <span style="font-family:monospace;background:#F3ECDD;padding:2px 6px;border-radius:4px">es_vendible = false</span> y <span style="font-family:monospace;background:#F3ECDD;padding:2px 6px;border-radius:4px">es_insumo = true</span>. Esto significa que:</p>
+      <div style="font-size:13px;color:#4a3d30;line-height:1.9;margin-top:8px;">
+        ✅ <strong>No aparecen en el dropdown de ventas</strong> — el operador no puede vender una bolsa por error.<br>
+        ✅ <strong>Sí aparecen en compras</strong> — cuando comprás 100 bolsas, las cargás como una compra normal.<br>
+        ✅ <strong>Sí aparecen en el inventario</strong> — ves cuántas bolsas/cajas/flejes quedan.<br>
+        ✅ <strong>Se consumen con movimiento tipo <em>consumo_interno</em></strong> — cuando usás 10 bolsas para despachar, cargás ese movimiento.<br>
+        ✅ <strong>En Power BI aparecen separados</strong> — podés ver el costo de insumos por mes y cuánto impacta en el margen real.
+      </div>
+      <pre style="margin-top:12px;"><span class="cm">-- Ejemplos de insumos típicos:</span>
+nombre          | es_vendible | es_insumo | categoria
+"Bolsa kraft"   | FALSE       | TRUE      | "Insumos"
+"Caja 30x20x15" | FALSE       | TRUE      | "Insumos"
+"Cinta de embalaje" | FALSE   | TRUE      | "Insumos"
+"Fleje plástico" | FALSE      | TRUE      | "Insumos"
+"Etiqueta marca" | FALSE      | TRUE      | "Insumos"
+"Moño decorativo" | FALSE     | TRUE      | "Insumos"
+
+<span class="cm">-- Movimiento cuando se usan 20 bolsas para despachar:</span>
+<span class="kw">INSERT INTO</span> movimientos_inventario (
+  tipo, signo, cantidad, producto_id, motivo
+) <span class="kw">VALUES</span> (
+  <span class="str">'consumo_interno'</span>, -1, 20, uuid_bolsa_kraft,
+  <span class="str">'Despacho pedidos semana 35'</span>
+);</pre>
+
+      <div style="background:#fef9ef;border-left:3px solid #B08D3E;border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;color:#4a3d30;margin-top:10px;">
+        <strong>En Power BI:</strong> podés crear una medida "Costo de insumos por venta" dividiendo el costo total de consumos internos del período por la cantidad de ventas. Eso te da el costo real de empaquetar cada pedido — un dato que casi ningún pequeño comercio conoce.
+      </div>
+    </div>
+    <div class="card">
+      <h3>Campos adicionales que conectan tablas — alto valor analítico</h3>
+      <div style="font-size:13px;color:#4a3d30;line-height:2;">
+        <strong style="color:#3E2716">movimientos_inventario.canal</strong> — mostrador / web / instagram / mercadolibre / tiendanube. Para análisis de canal de venta.<br>
+        <strong style="color:#3E2716">movimientos_inventario.referencia_id</strong> — UUID que vincula con la venta o compra original. Trazabilidad total.<br>
+        <strong style="color:#3E2716">productos.stock_minimo</strong> — umbral de alerta configurable por producto. Power BI semáforo rojo automático.<br>
+        <strong style="color:#3E2716">productos.margen_objetivo</strong> — % mínimo de margen que quiere el dueño. Alerta si el precio actual no lo cumple.<br>
+        <strong style="color:#3E2716">precios_historial.tipo_precio</strong> — minorista / mayorista / costo. Para negocios con precios por canal.<br>
+        <strong style="color:#3E2716">empresas.moneda_principal</strong> — ARS / USD / ambas. Para negocios que venden en dólares y compran en pesos.<br>
+        <strong style="color:#3E2716">movimientos_inventario.cliente_id</strong> — FK a tabla clientes (CRM). Para ver historial de compras por cliente.<br>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Importación masiva — tres estructuras CSV</h3>
+      <pre><span class="cm">-- 1. PRODUCTOS (carga inicial o actualización masiva):</span>
+nombre,sku,categoria,precio_venta,costo,alto_cm,ancho_cm,largo_cm,peso_kg
+"iPhone 15 Negro 128GB","IPH15-BLK-128","Celulares",1200000,900000,15,7,1,0.2
+"Funda iPhone 15 Roja","FUND-IPH15-RED","Fundas",15000,5000,16,8,1,0.05
+
+<span class="cm">-- Regla: si SKU existe → actualiza precio (nueva fila en precios_historial)
+--        si SKU no existe → crea producto nuevo</span>
+
+<span class="cm">-- 2. COMPRAS / INGRESOS MASIVOS:</span>
+sku,cantidad,costo_total,proveedor,fecha,lote,fecha_vencimiento
+"IPH15-BLK-128",10,9000000,"Importadora SA","2026-08-01","L2608",""
+"FUND-IPH15-RED",50,250000,"Importadora SA","2026-08-01","L2608",""
+
+<span class="cm">-- 3. VENTAS MASIVAS (consolidación web / marketplace):</span>
+sku,cantidad,precio_unitario,forma_pago,fecha,canal,notas
+"IPH15-BLK-128",2,1200000,"transferencia","2026-08-31","mercadolibre","#ML123"
+"FUND-IPH15-RED",5,15000,"qr","2026-08-31","tiendanube","#TN456"</pre>
+    </div>
+
+    <div class="card">
+      <h3>Stock en Power BI — medidas DAX con Kardex</h3>
+      <pre><span class="cm">-- Stock actual por producto</span>
+<span class="kw">Stock Actual</span> =
+<span class="fn">SUMX</span>(
+    movimientos_inventario,
+    movimientos_inventario[cantidad] * movimientos_inventario[signo]
+)
+
+<span class="cm">-- Alerta stock mínimo</span>
+<span class="kw">Alerta Stock</span> =
+<span class="fn">IF</span>(
+    [Stock Actual] <= <span class="fn">MAX</span>(productos[stock_minimo]),
+    <span class="str">"🔴 REPONER"</span>,
+    <span class="fn">IF</span>([Stock Actual] <= <span class="fn">MAX</span>(productos[stock_minimo]) * 1.5,
+    <span class="str">"🟡 ATENCIÓN"</span>, <span class="str">"🟢 OK"</span>)
+)
+
+<span class="cm">-- Mermas del período</span>
+<span class="kw">Mermas</span> =
+<span class="fn">CALCULATE</span>(
+    <span class="fn">SUM</span>(movimientos_inventario[cantidad]),
+    movimientos_inventario[tipo] <span class="kw">IN</span> {<span class="str">"merma_rotura"</span>, <span class="str">"perdida"</span>}
+)
+
+<span class="cm">-- Tasa de devolución</span>
+<span class="kw">Tasa Devolucion %</span> =
+<span class="fn">DIVIDE</span>(
+    <span class="fn">CALCULATE</span>(<span class="fn">SUM</span>(movimientos_inventario[cantidad]),
+        movimientos_inventario[tipo] = <span class="str">"devolucion_cliente"</span>),
+    <span class="fn">CALCULATE</span>(<span class="fn">SUM</span>(movimientos_inventario[cantidad]),
+        movimientos_inventario[tipo] = <span class="str">"venta"</span>),
+    0
+)</pre>
+    </div>
+  </div>
+  <div id="errores" class="panel">
+    <div class="note">Cada error tiene una solución diseñada desde la base de datos. Nunca se borra — siempre se corrige con trazabilidad completa.</div>
+
+    <div class="card">
+      <h3>Principio central de correcciones</h3>
+      <p><strong>Regla de oro: nunca se borra un registro. Siempre se corrige con un movimiento inverso o una anulación trazada.</strong></p>
+      <p>En la base de datos, una anulación es simplemente poner <span style="font-family:monospace;background:#F3ECDD;padding:2px 6px;border-radius:4px;">deleted_at = now()</span> en el registro original y generar el movimiento compensatorio. La historia queda intacta, el efecto queda revertido.</p>
+    </div>
+
+    <div class="card">
+      <h3>Error 1 — Venta con cantidad incorrecta</h3>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;width:140px;">Escenario</td><td style="padding:8px 12px;color:#4a3d30;">Vendí 10 mates marrones, era 1.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Solución</td><td style="padding:8px 12px;color:#4a3d30;">El usuario busca la venta en el historial → toca "Anular" → la app marca deleted_at en esa venta y genera movimiento +10 (devolucion_cliente) con motivo "Anulación por error de cantidad" → el usuario crea venta nueva de 1 unidad.</td></tr>
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">En la BD queda</td><td style="padding:8px 12px;color:#4a3d30;">Venta original (anulada) + movimiento inverso +10 + venta correcta de 1. Stock neto correcto. Trazabilidad completa.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Quién puede hacerlo</td><td style="padding:8px 12px;color:#4a3d30;">Solo rol <strong>dueño</strong>. Los operadores no pueden anular.</td></tr>
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Límite de tiempo</td><td style="padding:8px 12px;color:#4a3d30;">Configurable por empresa. Recomendado: solo se puede anular ventas del mismo día o de las últimas 24hs. Después requiere ajuste manual con motivo.</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Error 2 — Venta con producto incorrecto</h3>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;width:140px;">Escenario</td><td style="padding:8px 12px;color:#4a3d30;">Seleccioné "Canasto Grande" en lugar de "Canasto Chico".</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Solución</td><td style="padding:8px 12px;color:#4a3d30;">Igual que Error 1. Anulación + nueva venta con el producto correcto. No existe "editar una venta" — solo anular y recrear.</td></tr>
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Prevención</td><td style="padding:8px 12px;color:#4a3d30;">Pantalla de confirmación antes de guardar: "¿Confirmás la venta de 1 x Canasto Chico a $25.000 en efectivo?" con foto del producto si está disponible.</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Error 3 — Compra cargada con costo incorrecto</h3>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;width:140px;">Escenario</td><td style="padding:8px 12px;color:#4a3d30;">Cargué compra de 10 bolsos a $100.000 total. Era $1.000.000.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Solución</td><td style="padding:8px 12px;color:#4a3d30;">Anular la compra original (deleted_at) + movimiento inverso −10 + nueva compra con el costo correcto. El costo_unitario se recalcula solo.</td></tr>
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Impacto</td><td style="padding:8px 12px;color:#4a3d30;">El margen calculado en Power BI va a reflejar el costo correcto desde el momento de la corrección. Las ventas anteriores a la corrección mantienen el snapshot de costo que tenían al momento de venderse.</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Error 4 — Precio mal actualizado</h3>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;width:140px;">Escenario</td><td style="padding:8px 12px;color:#4a3d30;">Actualicé el precio a $2.500 cuando era $25.000. Error de tipeo.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Solución</td><td style="padding:8px 12px;color:#4a3d30;">Simplemente cargás el precio correcto ($25.000). Se inserta nueva fila en precios_historial con fecha de hoy. Las ventas que se hicieron con el precio erróneo de $2.500 ya tienen el snapshot guardado — no se pueden cambiar retroactivamente (correcto, es lo que pasó).</td></tr>
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Prevención</td><td style="padding:8px 12px;color:#4a3d30;">Al actualizar precio, mostrar: "El precio anterior era $25.000. Estás cambiando a $2.500. ¿Confirmar?" Si la variación es mayor al 50%, pedir confirmación doble.</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Error 5 — Producto duplicado en el catálogo</h3>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;width:140px;">Escenario</td><td style="padding:8px 12px;color:#4a3d30;">"Canasto Chico" y "canasto chico" y "Canasto chico" son tres productos distintos por error de tipeo.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Solución</td><td style="padding:8px 12px;color:#4a3d30;">Función de "Fusionar productos": se elige el producto correcto y los duplicados, todos los movimientos de los duplicados se reasignan al producto correcto, los duplicados se marcan como inactivos.</td></tr>
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Prevención</td><td style="padding:8px 12px;color:#4a3d30;">Al crear un producto nuevo, la app busca nombres similares (búsqueda fuzzy) y avisa: "Ya existe 'Canasto Chico'. ¿Es el mismo producto?"</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Error 6 — Stock negativo por ventas sin compras</h3>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;width:140px;">Escenario</td><td style="padding:8px 12px;color:#4a3d30;">Vendí 10 unidades pero nunca cargué la compra. Stock = −10.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Solución</td><td style="padding:8px 12px;color:#4a3d30;">Cargar la compra con la fecha real en que llegó la mercadería (campo fecha editable). El stock se corrige retroactivamente porque siempre se calcula sobre todos los movimientos.</td></tr>
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Alerta preventiva</td><td style="padding:8px 12px;color:#4a3d30;">Power BI muestra alerta cuando stock < 0: "Stock negativo en Canasto Chico — verificar si hay compras sin cargar."</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Error 7 — Importación masiva con datos incorrectos</h3>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;width:140px;">Escenario</td><td style="padding:8px 12px;color:#4a3d30;">El CSV de 500 productos tenía 30 filas con errores (precio en texto, SKU vacío, etc.).</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Solución</td><td style="padding:8px 12px;color:#4a3d30;">La importación nunca falla en bloque. Importa las 470 correctas, genera un CSV de errores con las 30 fallidas indicando el motivo de cada una. El usuario corrige el CSV y reimporta solo esas 30.</td></tr>
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Prevención</td><td style="padding:8px 12px;color:#4a3d30;">Antes de importar, la app hace una "vista previa" de las primeras 10 filas para que el usuario confirme que el formato es correcto.</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Error 8 — Usuario cargó venta en la empresa equivocada</h3>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr style="background:#F3ECDD;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;width:140px;">Escenario</td><td style="padding:8px 12px;color:#4a3d30;">Imposible por diseño. Cada usuario pertenece a una sola empresa. El RLS bloquea cualquier intento de cargar en otra empresa.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:8px 12px;font-weight:700;color:#3E2716;">Por qué</td><td style="padding:8px 12px;color:#4a3d30;">La función get_empresa_id() toma el empresa_id del usuario autenticado y lo inyecta automáticamente en cada INSERT. El usuario nunca elige en qué empresa carga — siempre es la suya.</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Estructura de anulación en la base de datos</h3>
+      <pre><span class="cm">-- Tabla para registrar anulaciones con trazabilidad completa</span>
+<span class="kw">CREATE TABLE</span> anulaciones (
+  id                UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  empresa_id        UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  tabla_origen      TEXT <span class="kw">NOT NULL</span>, <span class="cm">-- 'movimientos_inventario'</span>
+  registro_id       UUID <span class="kw">NOT NULL</span>, <span class="cm">-- ID del registro anulado</span>
+  motivo            TEXT <span class="kw">NOT NULL</span>, <span class="cm">-- obligatorio explicar por qué</span>
+  movimiento_comp_id UUID,          <span class="cm">-- ID del movimiento compensatorio</span>
+  usuario_id        UUID <span class="kw">NOT NULL REFERENCES</span> usuarios(id),
+  fecha             TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now()
+);
+<span class="cm">-- Nunca se borra de esta tabla. Es el registro de auditoría.</span></pre>
+    </div>
+
+    <div class="card">
+      <h3>Resumen de validaciones preventivas en la app</h3>
+      <div style="font-size:13px;color:#4a3d30;line-height:2;">
+        ✅ <strong>Cantidad mínima 1</strong> — no se puede guardar cantidad 0 o negativa.<br>
+        ✅ <strong>Precio mínimo $0</strong> — precio negativo rechazado.<br>
+        ✅ <strong>Confirmación antes de guardar</strong> — resumen de la transacción antes de confirmar.<br>
+        ✅ <strong>Alerta de variación de precio > 50%</strong> — pide confirmación doble.<br>
+        ✅ <strong>Detección de producto duplicado</strong> — avisa si el nombre es muy similar a uno existente.<br>
+        ✅ <strong>Vista previa de importación CSV</strong> — muestra primeras 10 filas antes de importar.<br>
+        ✅ <strong>Log de actividad</strong> — cada acción queda registrada con usuario, fecha y hora.<br>
+        ✅ <strong>Anulación solo para el dueño</strong> — operadores y visores no pueden anular.<br>
+        ✅ <strong>Límite de tiempo para anular</strong> — configurable por empresa (recomendado: 24hs).<br>
+        ✅ <strong>Stock negativo genera alerta</strong> — visible en dashboard inmediatamente.<br>
+      </div>
+    </div>
+  </div>
+  <div id="pantallas" class="panel">
+    <div class="note">Esto es exactamente lo que el usuario ve en el celular. Cada pantalla muestra qué datos toca y qué escribe a Supabase. Usá este diagrama como referencia al construir cada componente React en Cursor.</div>
+
+    <div class="card">
+      <h3>Flujo completo — 7 pantallas principales</h3>
+      <p>Login → Home → Nueva Venta → Historial → Inventario → Nuevo Ingreso → Productos. Cada pantalla es un componente React separado. La navegación usa React Router.</p>
+    </div>
+
+    <div class="card">
+      <h3>Pantalla 1 — Login</h3>
+      <pre>┌─────────────────────────┐
+│      🧉 TuApp           │
+│                         │
+│  ┌─────────────────┐    │
+│  │ email@empresa.com│    │
+│  └─────────────────┘    │
+│  ┌─────────────────┐    │
+│  │ ••••••••        │    │
+│  └─────────────────┘    │
+│                         │
+│  [   INGRESAR   ]       │
+│                         │
+└─────────────────────────┘</pre>
+      <p>→ Supabase Auth valida credenciales → obtiene empresa_id y rol del usuario → redirige al Home. Si las credenciales son incorrectas muestra error sin especificar si el error es email o contraseña (seguridad).</p>
+    </div>
+
+    <div class="card">
+      <h3>Pantalla 2 — Home (panel principal)</h3>
+      <pre>┌─────────────────────────┐
+│ 🧉 Acacia Mates   [≡]  │
+├─────────────────────────┤
+│  HOY                    │
+│  💰 $125.000            │
+│  📦 8 ventas            │
+├─────────────────────────┤
+│  ESTA SEMANA            │
+│  💰 $487.000            │
+│  📦 31 ventas           │
+├─────────────────────────┤
+│  ⚠️ Stock bajo: Mochila │
+├─────────────────────────┤
+│  [+ NUEVA VENTA  ]      │
+│                         │
+│  📊 Ventas              │
+│  📦 Inventario          │
+│  🛍️ Productos           │
+│  🏭 Proveedores         │
+│  👤 Mi cuenta           │
+└─────────────────────────┘</pre>
+      <p>Lee de Supabase: suma de movimientos_inventario del día y semana. Alertas de stock_minimo. El botón "Nueva Venta" es el elemento más grande y prominente de la pantalla — es la acción principal del operador.</p>
+    </div>
+
+    <div class="card">
+      <h3>Pantalla 3 — Nueva Venta (máximo 3 toques)</h3>
+      <pre>┌─────────────────────────┐
+│ ← Nueva venta           │
+├─────────────────────────┤
+│ PRODUCTO                │
+│ ┌─────────────────────┐ │
+│ │ 🔍 Buscar...  [📷] │ │
+│ └─────────────────────┘ │
+│ ▸ Canasto Chico $25.000 │
+│ ▸ Mochila       $30.000 │
+│ ▸ Mate Imperial $15.000 │
+├─────────────────────────┤
+│ CANTIDAD                │
+│ [ − ]  [ 1 ]  [ + ]    │
+├─────────────────────────┤
+│ FORMA DE PAGO           │
+│ [💵 Efectivo] [📱 Trans]│
+│ [💳 Débito]   [💳 Créd] │
+│ [📷 QR]                 │
+├─────────────────────────┤
+│ Descuento (opcional)    │
+│ ┌──────────────┐        │
+│ │ $0           │        │
+│ └──────────────┘        │
+├─────────────────────────┤
+│ Subtotal: $25.000 ←auto │
+├─────────────────────────┤
+│ [  CONFIRMAR VENTA  ]   │
+└─────────────────────────┘</pre>
+      <p>Al seleccionar producto: autocompleta precio_unitario y costo_unitario desde precios_historial (último precio con fecha_desde ≤ hoy). El costo_unitario es invisible para el usuario — se guarda en la BD como snapshot. Pantalla de confirmación antes de guardar. Escribe en: movimientos_inventario (tipo=venta, signo=-1).</p>
+    </div>
+
+    <div class="card">
+      <h3>Pantalla 4 — Historial de ventas</h3>
+      <pre>┌─────────────────────────┐
+│ ← Ventas      [Filtros] │
+├─────────────────────────┤
+│ [Hoy] [Semana] [Mes]    │
+│ [📅 Rango] [📥 Importar]│
+├─────────────────────────┤
+│ 31/08 10:15             │
+│ Canasto Chico × 2       │
+│ $50.000 — Efectivo  [⋮] │
+├─────────────────────────┤
+│ 31/08 09:42             │
+│ Mochila × 1             │
+│ $30.000 — QR        [⋮] │
+├─────────────────────────┤
+│ [⋮] → Ver detalle       │
+│      Anular (dueño)     │
+└─────────────────────────┘</pre>
+      <p>Lee: movimientos_inventario WHERE tipo=venta AND deleted_at IS NULL. La anulación crea movimiento inverso + registro en tabla anulaciones. Solo el rol dueño ve el botón Anular. El botón Importar permite carga masiva de ventas por CSV.</p>
+    </div>
+
+    <div class="card">
+      <h3>Pantalla 5 — Inventario</h3>
+      <pre>┌─────────────────────────┐
+│ ← Inventario            │
+├─────────────────────────┤
+│ [+ Ingreso] [+ Ajuste]  │
+│ [📥 Importar CSV]       │
+├─────────────────────────┤
+│ STOCK ACTUAL            │
+│ Canasto Chico    12 🟢  │
+│ Mochila           3 🟡  │
+│ Mate Imperial     0 🔴  │
+├─────────────────────────┤
+│ ÚLTIMOS MOVIMIENTOS     │
+│ 31/08 Compra  +20 MC   │
+│ 30/08 Ajuste  -1  Moch  │
+│ 29/08 Merma   -1  Mate  │
+└─────────────────────────┘</pre>
+      <p>Stock = SUM(cantidad × signo) agrupado por producto. Semáforo: 🔴 si stock ≤ stock_minimo, 🟡 si ≤ stock_minimo×1.5, 🟢 si está bien. El botón Ajuste abre el formulario de mermas, pérdidas y ajustes de conteo físico.</p>
+    </div>
+
+    <div class="card">
+      <h3>Pantalla 6 — Nuevo Ingreso (compra a proveedor)</h3>
+      <pre>┌─────────────────────────┐
+│ ← Nuevo ingreso         │
+├─────────────────────────┤
+│ PRODUCTO                │
+│ ┌─────────────────────┐ │
+│ │ 🔍 Buscar...  [📷] │ │
+│ └─────────────────────┘ │
+│ ▸ Canasto Chico         │
+│   Último costo: $9.500  │
+│   Último prov: Tío Rob. │
+├─────────────────────────┤
+│ CANTIDAD    COSTO TOTAL │
+│ ┌───────┐  ┌──────────┐│
+│ │  20   │  │ $190.000 ││
+│ └───────┘  └──────────┘│
+│ Costo unit: $9.500 auto │
+├─────────────────────────┤
+│ PROVEEDOR (precargado)  │
+│ ▾ Tío Roberto           │
+├─────────────────────────┤
+│ FECHA       LOTE (opt)  │
+│ [31/08/26]  [________]  │
+├─────────────────────────┤
+│ [  CONFIRMAR INGRESO ]  │
+└─────────────────────────┘</pre>
+      <p>Precarga: último proveedor y último costo del producto. Si el costo cambió respecto al último → INSERT en precios_historial automático. Escribe en: movimientos_inventario (tipo=compra, signo=+1). Fecha editable hacia atrás para cargar compras atrasadas.</p>
+    </div>
+
+    <div class="card">
+      <h3>Pantalla 7 — Gestión de productos (solo dueño)</h3>
+      <pre>┌─────────────────────────┐
+│ ← Productos   [+ Nuevo] │
+│               [📥 CSV]  │
+├─────────────────────────┤
+│ 🔍 Buscar producto...   │
+├─────────────────────────┤
+│ Canasto Chico      🟢   │
+│ $25.000 · Costo $9.500  │
+│ Stock: 12 · Margen 62% [›]│
+├─────────────────────────┤
+│ [›] → Historial precios │
+│      Editar datos       │
+│      Actualizar precio  │
+│      Desactivar         │
+└─────────────────────────┘</pre>
+      <p>Solo accesible para rol dueño. El operador no ve esta sección. Muestra precio actual (último de precios_historial), stock en tiempo real y margen %. La importación CSV permite cargar o actualizar catálogo masivamente.</p>
+    </div>
+  </div>
+  <div id="audit_campos" class="panel">
+    <div class="note">REQ = obligatorio (no se puede guardar sin este campo) · OPT = opcional (puede quedar vacío) · AUTO = calculado automáticamente por el sistema (el usuario no lo toca)</div>
+
+    <div class="card">
+      <h3>Módulo: Nueva Venta</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tr style="background:#3E2716;color:#F3ECDD;"><th style="padding:7px 10px;text-align:left">Campo</th><th style="padding:7px 10px">Tipo</th><th style="padding:7px 10px">¿Req?</th><th style="padding:7px 10px;text-align:left">Validaciones</th><th style="padding:7px 10px;text-align:left">UI en la app</th></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">producto_id</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">UUID</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">Debe existir en productos de la empresa. activo=true obligatorio.</td><td style="padding:7px 10px;color:#4B5D3A">Dropdown con búsqueda por texto + escaneo código de barras con cámara</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">cantidad</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">INTEGER</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">Entero positivo. Mín: 1. Máx: 9.999. Sin decimales. Sin negativos.</td><td style="padding:7px 10px;color:#4B5D3A">Botones −/+ con campo numérico. Teclado numérico en mobile.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">precio_unitario</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">NUMERIC(12,2)</td><td style="padding:7px 10px;text-align:center"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">AUTO</span></td><td style="padding:7px 10px;color:#4a3d30">Autocompleta desde precios_historial (último precio ≤ hoy). Editable por dueño.</td><td style="padding:7px 10px;color:#4B5D3A">Campo prellenado. Solo ARS. Positivo.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">costo_unitario</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">NUMERIC(12,2)</td><td style="padding:7px 10px;text-align:center"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">AUTO</span></td><td style="padding:7px 10px;color:#4a3d30">Snapshot del costo al momento de la venta. El usuario NO lo ve.</td><td style="padding:7px 10px;color:#4B5D3A">Campo oculto. Solo visible en Power BI.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">forma_pago</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT enum</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">Valores: efectivo, transferencia, debito, credito, qr. Solo uno.</td><td style="padding:7px 10px;color:#4B5D3A">5 botones grandes. Selección exclusiva.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">descuento</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">NUMERIC(12,2)</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">Decimal. Mín 0. No puede superar el subtotal bruto. Default: 0.</td><td style="padding:7px 10px;color:#4B5D3A">Campo numérico. Vacío = 0.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">subtotal</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">NUMERIC(12,2)</td><td style="padding:7px 10px;text-align:center"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">AUTO</span></td><td style="padding:7px 10px;color:#4a3d30">(precio × cantidad) − descuento. GENERATED ALWAYS en PostgreSQL.</td><td style="padding:7px 10px;color:#4B5D3A">Se actualiza en tiempo real mientras el usuario completa el form.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">fecha</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TIMESTAMPTZ</td><td style="padding:7px 10px;text-align:center"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">AUTO</span></td><td style="padding:7px 10px;color:#4a3d30">Default: now(). Editable dentro del mismo día. No fecha futura.</td><td style="padding:7px 10px;color:#4B5D3A">Muestra hora actual. Editable con selector.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">canal</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT enum</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">mostrador, web, instagram, mercadolibre, tiendanube, otro. Default: mostrador.</td><td style="padding:7px 10px;color:#4B5D3A">Dropdown. Default oculto si solo vende por mostrador.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">notas</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">Texto libre. Máx 500 caracteres. Alfanumérico.</td><td style="padding:7px 10px;color:#4B5D3A">Campo de texto. Teclado completo.</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Módulo: Nuevo Ingreso (Compra)</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tr style="background:#3E2716;color:#F3ECDD;"><th style="padding:7px 10px;text-align:left">Campo</th><th style="padding:7px 10px">Tipo</th><th style="padding:7px 10px">¿Req?</th><th style="padding:7px 10px;text-align:left">Validaciones</th><th style="padding:7px 10px;text-align:left">UI en la app</th></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">producto_id</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">UUID</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">Debe existir en productos de la empresa. Si no existe, ofrece crear.</td><td style="padding:7px 10px;color:#4B5D3A">Dropdown + escaneo. Precarga último proveedor y costo.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">cantidad</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">INTEGER</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">Entero positivo. Mín 1. Sin decimales.</td><td style="padding:7px 10px;color:#4B5D3A">Campo numérico. Teclado numérico.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">costo_total</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">NUMERIC(12,2)</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">Decimal positivo. Mayor a 0. Monto total (no unitario).</td><td style="padding:7px 10px;color:#4B5D3A">Campo numérico. Muestra costo unitario calculado en tiempo real.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">costo_unitario</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">NUMERIC(12,2)</td><td style="padding:7px 10px;text-align:center"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">AUTO</span></td><td style="padding:7px 10px;color:#4a3d30">costo_total / cantidad. GENERATED ALWAYS en PostgreSQL.</td><td style="padding:7px 10px;color:#4B5D3A">Se muestra como referencia. No editable.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">proveedor_id</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">UUID</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">Debe existir en proveedores de la empresa. Se precarga el último usado.</td><td style="padding:7px 10px;color:#4B5D3A">Dropdown. Opción de crear proveedor nuevo inline.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">fecha</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TIMESTAMPTZ</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">Default hoy. Editable a fechas pasadas (máx 365 días atrás). No futura.</td><td style="padding:7px 10px;color:#4B5D3A">Selector de fecha con opción de retroceder.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">lote</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">Alfanumérico. Máx 50 caracteres.</td><td style="padding:7px 10px;color:#4B5D3A">Campo de texto. Solo visible si módulo lotes activo.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">fecha_vencimiento</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">DATE</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">Debe ser fecha futura. Solo si lote está cargado.</td><td style="padding:7px 10px;color:#4B5D3A">Selector de fecha. Aparece solo si hay lote.</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Módulo: Productos (catálogo)</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tr style="background:#3E2716;color:#F3ECDD;"><th style="padding:7px 10px;text-align:left">Campo</th><th style="padding:7px 10px">Tipo</th><th style="padding:7px 10px">¿Req?</th><th style="padding:7px 10px;text-align:left">Validaciones</th><th style="padding:7px 10px;text-align:left">UI en la app</th></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">nombre</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">Mín 2 chars. Máx 100. Alfanumérico + espacios. Único por empresa (case-insensitive). Alerta si nombre similar existe.</td><td style="padding:7px 10px;color:#4B5D3A">Campo texto. Búsqueda fuzzy en tiempo real para detectar duplicados.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">sku</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">Alfanumérico + guiones. Máx 50 chars. Único por empresa.</td><td style="padding:7px 10px;color:#4B5D3A">Campo texto. Puede escanearse con cámara.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">precio_venta</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">NUMERIC(12,2)</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">Decimal. Mayor a 0. Genera INSERT en precios_historial al cambiar. Alerta si varía >50%.</td><td style="padding:7px 10px;color:#4B5D3A">Campo numérico. Muestra margen % en tiempo real.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">costo</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">NUMERIC(12,2)</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">Decimal ≥ 0. Alerta si costo > precio_venta (margen negativo).</td><td style="padding:7px 10px;color:#4B5D3A">Campo numérico. Muestra margen % calculado.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">stock_minimo</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">INTEGER</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">Entero ≥ 0. Default 0 (sin alerta). Dispara semáforo rojo en dashboard.</td><td style="padding:7px 10px;color:#4B5D3A">Campo numérico con descripción: "Avisarte cuando el stock baje de..."</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">alto/ancho/largo cm</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">NUMERIC(8,2)</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">Decimal positivo. Máx 9999,99. Solo si módulo envíos activo.</td><td style="padding:7px 10px;color:#4B5D3A">Tres campos en línea. Muestra peso volumétrico calculado.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">atributos</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">JSONB</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">JSON válido. Claves y valores alfanuméricos. Flexible por rubro.</td><td style="padding:7px 10px;color:#4B5D3A">Campos dinámicos según plantilla del rubro configurada por el dueño.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">activo</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">BOOLEAN</td><td style="padding:7px 10px;text-align:center"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">AUTO</span></td><td style="padding:7px 10px;color:#4a3d30">true = visible en ventas. false = oculto pero historial intacto.</td><td style="padding:7px 10px;color:#4B5D3A">Switch. Confirmación doble al desactivar.</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Módulo: Ajustes de inventario (mermas, devoluciones, ajustes)</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tr style="background:#3E2716;color:#F3ECDD;"><th style="padding:7px 10px;text-align:left">Campo</th><th style="padding:7px 10px">Tipo</th><th style="padding:7px 10px">¿Req?</th><th style="padding:7px 10px;text-align:left">Validaciones</th><th style="padding:7px 10px;text-align:left">UI</th></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">tipo</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT enum</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">merma_rotura, perdida, ajuste_positivo, ajuste_negativo, devolucion_cliente, devolucion_proveedor, transferencia.</td><td style="padding:7px 10px;color:#4B5D3A">Selector visual con íconos y descripción de cada tipo.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">cantidad</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">INTEGER</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">Entero positivo. El signo (+/-) lo define el tipo. Mín 1.</td><td style="padding:7px 10px;color:#4B5D3A">Campo numérico. Teclado numérico.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">motivo</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">Texto libre. Mín 5 chars. Máx 200. Obligatorio siempre.</td><td style="padding:7px 10px;color:#4B5D3A">No se puede guardar sin explicar el motivo.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">referencia_id</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">UUID</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">UUID de la venta original. Solo en devoluciones.</td><td style="padding:7px 10px;color:#4B5D3A">Buscador de venta original. Solo visible en devoluciones.</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Módulo: Proveedores</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tr style="background:#3E2716;color:#F3ECDD;"><th style="padding:7px 10px;text-align:left">Campo</th><th style="padding:7px 10px">Tipo</th><th style="padding:7px 10px">¿Req?</th><th style="padding:7px 10px;text-align:left">Validaciones</th><th style="padding:7px 10px;text-align:left">UI</th></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">nombre</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT</td><td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td><td style="padding:7px 10px;color:#4a3d30">Mín 2 chars. Máx 100. Único por empresa.</td><td style="padding:7px 10px;color:#4B5D3A">Campo texto.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">contacto</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">Texto libre. Puede ser tel, email o nombre. Máx 200 chars.</td><td style="padding:7px 10px;color:#4B5D3A">Campo texto. Botón WhatsApp si empieza con número.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">condiciones_pago</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">Texto libre. Máx 200 chars. Ej: "30 días", "contado".</td><td style="padding:7px 10px;color:#4B5D3A">Campo texto libre.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">notas</td><td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT</td><td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td><td style="padding:7px 10px;color:#4a3d30">Texto libre. Máx 500 chars.</td><td style="padding:7px 10px;color:#4B5D3A">Campo texto multilínea.</td></tr>
+      </table>
+    </div>
+  </div>
+  <div id="integraciones" class="panel">
+    <div class="note">Integraciones externas que agregan valor al producto. Algunas disponibles desde el arranque, otras para fases futuras.</div>
+
+    <div class="card">
+      <h3>ARCA (ex-AFIP) — integración de alto valor</h3>
+      <p>ARCA tiene una API pública con web services REST y SOAP que permiten validar contribuyentes, consultar condición frente al IVA y emitir comprobantes electrónicos. Contabilium usa exactamente esta API. Vos podés hacer lo mismo.</p>
+
+      <div style="margin-top:12px;">
+        <div style="background:#dcfce7;border-left:3px solid #16a34a;border-radius:0 6px 6px 0;padding:10px 14px;margin-bottom:8px;font-size:13px;">
+          <strong>Fase 1 — Validación de CUIT (implementable en semanas):</strong><br>
+          El usuario ingresa el CUIT del proveedor o cliente → la app consulta ARCA → autocompleta razón social y condición IVA (Responsable Inscripto, Monotributista, etc.). Costo de implementación: bajo. Valor percibido: muy alto.
+        </div>
+        <div style="background:#fef3c7;border-left:3px solid #d97706;border-radius:0 6px 6px 0;padding:10px 14px;margin-bottom:8px;font-size:13px;">
+          <strong>Fase 2 — Factura electrónica (implementable en 1-2 meses):</strong><br>
+          El cliente vende → toca "Generar factura" → la app emite la factura en ARCA automáticamente con tipo A, B o C según corresponda. Requisito: cada empresa necesita su certificado digital de ARCA (trámite único, vos los acompañás). Diferencial brutal vs competencia.
+        </div>
+        <div style="background:#dbeafe;border-left:3px solid #1d4ed8;border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;">
+          <strong>Fase 3 — Libro IVA digital (futuro):</strong><br>
+          Generación automática del libro IVA ventas y compras en formato ARCA. Esto reemplaza trabajo del contador y es un servicio premium que podés cobrar separado.
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <div class="note">Web services relevantes de ARCA: wsfe (Factura Electrónica), ws-sr-padron-a4 (Padrón de contribuyentes), wsbfe (Bienes de Uso). Todos tienen documentación pública en arca.gob.ar.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Mercado Pago — cobro integrado</h3>
+      <p>Mercado Pago tiene SDK para React que permite generar links de pago o cobrar con QR desde la misma app. Al completar una venta, el cliente puede tocar "Cobrar con MP" y el sistema registra el pago automáticamente sin necesidad de que el operador lo cargue a mano.</p>
+      <div style="font-size:13px;color:#4a3d30;margin-top:8px;">
+        <strong>Implementación:</strong> SDK de Mercado Pago Checkout Pro. El webhook de MP notifica a tu app cuando el pago se confirma → la app actualiza el movimiento en Supabase automáticamente.<br>
+        <strong>Costo:</strong> MP cobra comisión por transacción (varía por plan del cliente). Vos no pagás nada extra de infraestructura.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Andreani / OCA — cotización de envíos</h3>
+      <p>Con las dimensiones y peso cargados en el catálogo de productos, podés integrar la API de Andreani o OCA para cotizar el envío en tiempo real al momento de la venta. El cliente ve cuánto va a costar el envío antes de confirmar.</p>
+      <div style="font-size:13px;color:#4a3d30;margin-top:8px;">
+        <strong>Fórmula base:</strong> peso a cotizar = MAX(peso_real, alto×ancho×largo/4000). Esto ya está en la base de datos cuando el cliente carga las dimensiones del producto.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Tiendanube / MercadoLibre — sincronización de ventas</h3>
+      <p>Ambas plataformas tienen APIs para leer las ventas realizadas. Podés automatizar la importación masiva que hoy se hace por CSV: las ventas de Tiendanube o ML del día se importan solas a Supabase sin que el cliente haga nada.</p>
+      <div style="font-size:13px;color:#4a3d30;margin-top:8px;">
+        <strong>Implementación:</strong> webhook o pull periódico (cada hora) que lee las órdenes nuevas y las inserta en movimientos_inventario con canal="tiendanube" o canal="mercadolibre".<br>
+        <strong>Valor:</strong> elimina la carga manual de ventas web. El cliente solo carga las ventas físicas del mostrador.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>WhatsApp Business API — alertas automáticas</h3>
+      <p>Cuando el stock de un producto cae por debajo del stock_minimo, la app puede enviar un WhatsApp automático al dueño: "⚠️ Stock bajo: Canasto Chico — quedan 2 unidades. ¿Querés hacer un pedido a Tío Roberto?" con el contacto del proveedor prellenado.</p>
+      <div style="font-size:13px;color:#4a3d30;margin-top:8px;">
+        <strong>Implementación:</strong> Supabase Edge Function que corre cada hora, detecta stocks bajos y envía mensajes via Twilio o Meta WhatsApp Business API.<br>
+        <strong>Costo:</strong> Twilio cobra ~$0.005 USD por mensaje. Para un cliente con 10 alertas al mes = $0.05 USD.
+      </div>
+    </div>
+  </div>
+  <div id="crm" class="panel">
+    <div class="note">El CRM no es un formulario que el cliente llena. Es un registro que el operador completa DESPUÉS de que el cliente se va. El cliente nunca sabe que existe. El objetivo es crear vínculos reales, no bases de datos frías.</div>
+
+    <div class="card">
+      <h3>Filosofía del módulo — CRM relacional, no transaccional</h3>
+      <p>La mayoría de los CRMs capturan datos fríos: nombre, email, teléfono. Eso es útil pero no crea fidelidad. Este módulo captura datos cálidos: preferencias, gustos, contexto de vida, lo que el cliente contó sin saber que lo ibas a anotar. Es lo que hacen los mejores vendedores del mundo de forma intuitiva.</p>
+      <p><strong>Principio central:</strong> el único dato "obligatorio" al crear un cliente es el apodo o nombre con el que lo vas a reconocer. Todo lo demás es opcional y se va completando con el tiempo de forma natural.</p>
+    </div>
+
+    <div class="card">
+      <h3>Tabla: clientes</h3>
+      <pre><span class="kw">CREATE TABLE</span> clientes (
+  id              UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  empresa_id      UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+
+  <span class="cm">-- Identificación mínima (solo nombre es obligatorio)</span>
+  nombre          TEXT <span class="kw">NOT NULL</span>,        <span class="cm">-- "Doña Creta", "El Ruso", "María"</span>
+  apodo           TEXT,                  <span class="cm">-- como lo conocen en el negocio</span>
+  telefono        TEXT,                  <span class="cm">-- con o sin WhatsApp</span>
+  tiene_whatsapp  BOOLEAN <span class="kw">DEFAULT</span> <span class="kw">NULL</span>, <span class="cm">-- NULL = no se sabe</span>
+  email           TEXT,                  <span class="cm">-- muy opcional</span>
+  fecha_nacimiento DATE,                 <span class="cm">-- para cumpleaños (día/mes, año opcional)</span>
+
+  <span class="cm">-- Datos de contexto (todo libre, todo opcional)</span>
+  como_nos_conocio TEXT,                 <span class="cm">-- "pasó por la feria", "Instagram", "referido"</span>
+  notas_libres    TEXT,                  <span class="cm">-- campo abierto: lo que el operador quiera anotar</span>
+  etiquetas       TEXT[],                <span class="cm">-- array: ["mayorista","fiel","cumple en marzo"]</span>
+
+  <span class="cm">-- Control</span>
+  created_at      TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now(),
+  ultima_visita   TIMESTAMPTZ,           <span class="cm">-- se actualiza automáticamente con cada venta</span>
+  deleted_at      TIMESTAMPTZ
+);
+<span class="kw">CREATE INDEX</span> idx_clientes_empresa <span class="kw">ON</span> clientes(empresa_id);
+
+<span class="cm">-- Tabla de interacciones (el diario del cliente)</span>
+<span class="kw">CREATE TABLE</span> clientes_interacciones (
+  id              UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  empresa_id      UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  cliente_id      UUID <span class="kw">NOT NULL REFERENCES</span> clientes(id),
+  usuario_id      UUID <span class="kw">NOT NULL REFERENCES</span> usuarios(id),
+  tipo            TEXT <span class="kw">CHECK</span> (tipo <span class="kw">IN</span> (
+                    <span class="str">'nota'</span>,          <span class="cm">-- observación libre</span>
+                    <span class="str">'preferencia'</span>,   <span class="cm">-- le gusta X, prefiere Y</span>
+                    <span class="str">'dato_personal'</span>, <span class="cm">-- tiene perro, vive en tal barrio</span>
+                    <span class="str">'queja'</span>,         <span class="cm">-- tuvo un problema</span>
+                    <span class="str">'cumplido'</span>,      <span class="cm">-- agradeció, recomendó</span>
+                    <span class="str">'seguimiento'</span>    <span class="cm">-- hay que llamarle o contactarle</span>
+                  )),
+  contenido       TEXT <span class="kw">NOT NULL</span>,        <span class="cm">-- texto libre de la interacción</span>
+  privado         BOOLEAN <span class="kw">DEFAULT FALSE</span>,<span class="cm">-- solo el dueño lo ve</span>
+  fecha           TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now()
+);
+<span class="kw">CREATE INDEX</span> idx_interacciones_cliente <span class="kw">ON</span> clientes_interacciones(cliente_id);</pre>
+    </div>
+
+    <div class="card">
+      <h3>Pantalla CRM — lo que ve el operador</h3>
+      <pre>┌─────────────────────────┐
+│ ← Doña Creta        [⋮]│
+├─────────────────────────┤
+│ 📞 (sin teléfono)       │
+│ 🎂 15 de marzo          │
+│ 🏷️ fiel · mayorista     │
+├─────────────────────────┤
+│ HISTORIAL DE COMPRAS    │
+│ 31/08 Mochila ×2 $60k  │
+│ 15/08 Canasto ×1 $25k  │
+│ Total: $271.000 (8 vis.)│
+├─────────────────────────┤
+│ NOTAS                   │
+│ 📝 "Le gusta el color   │
+│    marrón. Tiene nieta  │
+│    que juega al rugby." │
+│ 📝 "Prefiere efectivo.  │
+│    Viene los sábados."  │
+├─────────────────────────┤
+│ [+ Agregar nota]        │
+│ [📦 Ver todas las compras]│
+└─────────────────────────┘</pre>
+      <p>La pantalla del cliente muestra todo en un solo lugar: sus datos de contacto, su historial de compras con el total acumulado, y todas las notas que el operador fue anotando. Las notas se agregan en segundos después de que el cliente se va.</p>
+    </div>
+
+    <div class="card">
+      <h3>Flujo de uso real — cómo funciona en la práctica</h3>
+      <div style="font-size:13px;color:#4a3d30;line-height:1.9;">
+        <strong style="color:#3E2716">1. Primera visita de Doña Creta:</strong><br>
+        El operador registra la venta normalmente. Al final, antes de cerrar la venta, aparece: "¿Querés guardar este cliente?" → toca Sí → escribe solo el nombre: "Doña Creta". Listo. La venta queda vinculada al cliente.<br><br>
+        <strong style="color:#3E2716">2. Después de que se va:</strong><br>
+        El operador abre el perfil de Doña Creta → toca "Agregar nota" → escribe: "Le gusta el marrón. Tiene nieta que juega al rugby. Viene los sábados." → guarda. 20 segundos de trabajo.<br><br>
+        <strong style="color:#3E2716">3. Segunda visita, tres semanas después:</strong><br>
+        Doña Creta llega al stand. El operador busca su nombre → ve todas las notas → puede saludarla por nombre, preguntarle por la nieta, mostrarle primero los productos en marrón. Doña Creta siente que la conocen.<br><br>
+        <strong style="color:#3E2716">4. En Power BI (para el dueño):</strong><br>
+        Clientes con más de X visitas, clientes que no vienen hace 30 días (alerta de inactividad), ticket promedio por cliente, distribución por etiqueta, clientes con cumpleaños este mes.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Alertas automáticas que genera el CRM</h3>
+      <div style="font-size:13px;color:#4a3d30;line-height:1.9;">
+        🎂 <strong>Cumpleaños del mes:</strong> cada 1ro del mes, el dashboard muestra los clientes que cumplen años ese mes. El operador puede mandarles un mensaje personalizado.<br>
+        ⚠️ <strong>Cliente inactivo:</strong> si un cliente que venía frecuentemente no compró en 30/60/90 días, aparece en la lista de "clientes a contactar".<br>
+        ⭐ <strong>Cliente VIP:</strong> automáticamente se etiqueta como VIP cuando supera X compras o Y monto acumulado (umbral configurable por el dueño).<br>
+        📊 <strong>Análisis de frecuencia:</strong> Power BI muestra cuántos clientes volvieron 1 vez, 2-5 veces, o más de 5 veces. La retención real del negocio.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Auditoría de campos del módulo CRM</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tr style="background:#3E2716;color:#F3ECDD;">
+          <th style="padding:7px 10px;text-align:left">Campo</th>
+          <th style="padding:7px 10px">Tipo</th>
+          <th style="padding:7px 10px">¿Req?</th>
+          <th style="padding:7px 10px;text-align:left">Validaciones</th>
+          <th style="padding:7px 10px;text-align:left">UI</th>
+        </tr>
+        <tr style="background:#FFFDF8;">
+          <td style="padding:7px 10px;font-family:monospace;font-weight:700">nombre</td>
+          <td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT</td>
+          <td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td>
+          <td style="padding:7px 10px;color:#4a3d30">Mín 2 chars. Máx 100. El único campo obligatorio. Puede ser apodo, nombre, o como lo conocen.</td>
+          <td style="padding:7px 10px;color:#4B5D3A">Campo texto. Primer campo del formulario.</td>
+        </tr>
+        <tr style="background:#fef9ef;">
+          <td style="padding:7px 10px;font-family:monospace;font-weight:700">telefono</td>
+          <td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT</td>
+          <td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td>
+          <td style="padding:7px 10px;color:#4a3d30">Texto libre. Acepta cualquier formato. Sin validación estricta — puede ser "261-xxx" o "+54 9 261..."</td>
+          <td style="padding:7px 10px;color:#4B5D3A">Campo texto con teclado numérico. Botón WhatsApp si se completa.</td>
+        </tr>
+        <tr style="background:#FFFDF8;">
+          <td style="padding:7px 10px;font-family:monospace;font-weight:700">fecha_nacimiento</td>
+          <td style="padding:7px 10px;text-align:center;color:#1a5fa6">DATE</td>
+          <td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td>
+          <td style="padding:7px 10px;color:#4a3d30">Fecha válida. El año es opcional — se puede guardar solo día y mes para el cumpleaños.</td>
+          <td style="padding:7px 10px;color:#4B5D3A">Selector de fecha con opción de omitir el año.</td>
+        </tr>
+        <tr style="background:#fef9ef;">
+          <td style="padding:7px 10px;font-family:monospace;font-weight:700">etiquetas</td>
+          <td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT[]</td>
+          <td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td>
+          <td style="padding:7px 10px;color:#4a3d30">Array de texto. Cada etiqueta máx 30 chars. El dueño define sus etiquetas. Ejemplos: "mayorista", "fiel", "referido", "VIP".</td>
+          <td style="padding:7px 10px;color:#4B5D3A">Chips seleccionables + opción de crear nueva etiqueta inline.</td>
+        </tr>
+        <tr style="background:#FFFDF8;">
+          <td style="padding:7px 10px;font-family:monospace;font-weight:700">notas_libres</td>
+          <td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT</td>
+          <td style="padding:7px 10px;text-align:center"><span style="background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">OPT</span></td>
+          <td style="padding:7px 10px;color:#4a3d30">Texto libre sin límite práctico. Todo vale: gustos, datos personales, observaciones.</td>
+          <td style="padding:7px 10px;color:#4B5D3A">Campo de texto multilínea grande. El más importante del formulario.</td>
+        </tr>
+        <tr style="background:#fef9ef;">
+          <td style="padding:7px 10px;font-family:monospace;font-weight:700">interacciones.contenido</td>
+          <td style="padding:7px 10px;text-align:center;color:#1a5fa6">TEXT</td>
+          <td style="padding:7px 10px;text-align:center"><span style="background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">REQ</span></td>
+          <td style="padding:7px 10px;color:#4a3d30">Texto libre. Mín 3 chars. Sin máximo. Es el diario del cliente — cada nota es una entrada.</td>
+          <td style="padding:7px 10px;color:#4B5D3A">Campo texto rápido. Se agrega desde el perfil del cliente con un toque.</td>
+        </tr>
+        <tr style="background:#FFFDF8;">
+          <td style="padding:7px 10px;font-family:monospace;font-weight:700">interacciones.privado</td>
+          <td style="padding:7px 10px;text-align:center;color:#1a5fa6">BOOLEAN</td>
+          <td style="padding:7px 10px;text-align:center"><span style="background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">AUTO</span></td>
+          <td style="padding:7px 10px;color:#4a3d30">Default: false. Si se marca como privado, solo el rol dueño puede verla. Para anotaciones sensibles.</td>
+          <td style="padding:7px 10px;color:#4B5D3A">Switch "Privado" al agregar la nota. Ícono de candado en la lista.</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Medidas DAX en Power BI para el CRM</h3>
+      <pre><span class="cm">-- Clientes únicos del período</span>
+<span class="kw">Clientes Únicos</span> =
+<span class="fn">DISTINCTCOUNT</span>(movimientos_inventario[cliente_id])
+
+<span class="cm">-- Ticket promedio por cliente</span>
+<span class="kw">Ticket Promedio Cliente</span> =
+<span class="fn">DIVIDE</span>([Ingresos Netos], [Clientes Únicos], 0)
+
+<span class="cm">-- Clientes que volvieron (recurrentes)</span>
+<span class="kw">Clientes Recurrentes</span> =
+<span class="fn">CALCULATE</span>(
+    <span class="fn">DISTINCTCOUNT</span>(movimientos_inventario[cliente_id]),
+    <span class="fn">FILTER</span>(
+        <span class="fn">VALUES</span>(movimientos_inventario[cliente_id]),
+        <span class="fn">CALCULATE</span>(<span class="fn">COUNT</span>(movimientos_inventario[id])) > 1
+    )
+)
+
+<span class="cm">-- Tasa de retención</span>
+<span class="kw">Tasa Retención %</span> =
+<span class="fn">DIVIDE</span>([Clientes Recurrentes], [Clientes Únicos], 0)
+
+<span class="cm">-- Clientes inactivos (no compraron en 30 días)</span>
+<span class="kw">Clientes Inactivos</span> =
+<span class="fn">CALCULATE</span>(
+    <span class="fn">DISTINCTCOUNT</span>(clientes[id]),
+    clientes[ultima_visita] < <span class="fn">TODAY</span>() - 30
+)</pre>
+    </div>
+
+    <div class="card">
+      <h3>¿Por qué esto genera fidelidad real?</h3>
+      <p style="font-size:13px;color:#4a3d30;line-height:1.75;">Hay un concepto en psicología del consumidor que se llama <strong>efecto de ser recordado</strong>. Cuando una empresa recuerda un detalle personal que vos mencionaste casualmente, el cerebro lo procesa como una señal de que esa persona te importa. No como marketing — como vínculo humano genuino.</p>
+      <p style="font-size:13px;color:#4a3d30;line-height:1.75;">Doña Creta no sabe que hay una base de datos. Ella solo sabe que la persona del stand se acordó que su nieta juega al rugby y que le gusta el marrón. Eso vale más que cualquier descuento. Es la diferencia entre un cliente que vuelve y uno que busca alternativas.</p>
+      <p style="font-size:13px;color:#4a3d30;line-height:1.75;"><strong>El dato más valioso que podés capturar es el nombre.</strong> Con eso solo, la próxima vez que venga podés saludarla por nombre. Eso ya es excepcional en una feria.</p>
+    </div>
+  </div>
+  <div id="simulacion" class="panel">
+    <div class="note">Resultado de simular 543 transacciones en 15 rubros distintos. Estos hallazgos ya están incorporados al SQL y a los módulos del sistema.</div>
+
+    <div class="card">
+      <h3>Resumen ejecutivo de la simulación</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tr style="background:#3E2716;color:#F3ECDD;"><th style="padding:8px 12px;text-align:left">Métrica</th><th style="padding:8px 12px;text-align:center">Resultado</th></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:8px 12px">Rubros simulados</td><td style="padding:8px 12px;text-align:center">15</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:8px 12px">Transacciones procesadas</td><td style="padding:8px 12px;text-align:center">543</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:8px 12px">Ingresos simulados totales</td><td style="padding:8px 12px;text-align:center">$64.670.797 ARS</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:8px 12px">Errores críticos encontrados</td><td style="padding:8px 12px;text-align:center;color:#dc2626;font-weight:700">4 tipos</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:8px 12px">Errores medios</td><td style="padding:8px 12px;text-align:center;color:#d97706;font-weight:700">4 tipos</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:8px 12px">Tasa de error de stock (9.7%)</td><td style="padding:8px 12px;text-align:center">53 / 543 ventas</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:8px 12px">Rubros que necesitan variantes</td><td style="padding:8px 12px;text-align:center">Ropa, calzado, electrónica</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:8px 12px">Rubros que necesitan vencimiento</td><td style="padding:8px 12px;text-align:center">Alimentación, farmacia, veterinaria</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Los 4 errores críticos — resueltos en el diseño</h3>
+      <div style="font-size:13px;color:#4a3d30;line-height:2;">
+        <strong style="color:#dc2626">1. Stock cero sin bloqueo:</strong> No bloquear la venta — mostrar advertencia y dejar decidir al dueño. La app no puede saber si el comerciante vendió físicamente antes de cargar el movimiento.<br>
+        <strong style="color:#dc2626">2. Descuento mayor al total:</strong> Deshabilitar botón "Confirmar" si total_neto ≤ 0. Validación en frontend Y en la función PostgreSQL registrar_venta().<br>
+        <strong style="color:#dc2626">3. Race condition en stock:</strong> Resuelto con función atómica registrar_venta() que usa FOR UPDATE para bloquear filas mientras procesa la transacción.<br>
+        <strong style="color:#dc2626">4. Variantes multiplican el catálogo:</strong> Resuelto con tabla producto_variantes. Un producto tiene múltiples variantes, cada una con su SKU y stock propio.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Módulos activables por rubro — tabla completa</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tr style="background:#3E2716;color:#F3ECDD;">
+          <th style="padding:7px 10px;text-align:left">Módulo</th>
+          <th style="padding:7px 10px;text-align:left">Rubros que lo necesitan</th>
+          <th style="padding:7px 10px;text-align:left">Qué agrega</th>
+        </tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">variantes</td><td style="padding:7px 10px">Ropa, calzado, electrónica</td><td style="padding:7px 10px">Tabla producto_variantes. Selector talle/color en venta.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">vencimiento</td><td style="padding:7px 10px">Alimentos, farmacia, veterinaria</td><td style="padding:7px 10px">fecha_vencimiento requerida. Alerta 3 días antes.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">numero_serie</td><td style="padding:7px 10px">Electrónica, joyería</td><td style="padding:7px 10px">Campo número_serie en ventas_items. Trazabilidad garantía.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">moneda_dual</td><td style="padding:7px 10px">Importadores, electrónica, autopartes</td><td style="padding:7px 10px">moneda_costo + tipo_cambio en precios_historial.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">confirmacion_alta</td><td style="padding:7px 10px">Joyería, electrónica, concesionaria</td><td style="padding:7px 10px">Doble confirmación si venta supera umbral configurable.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">envios</td><td style="padding:7px 10px">Cualquiera que despache</td><td style="padding:7px 10px">Dimensiones + peso. Cubicaje automático. API Andreani/OCA.</td></tr>
+        <tr style="background:#FFFDF8;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">lotes</td><td style="padding:7px 10px">Alimentos, cosméticos, farmacia</td><td style="padding:7px 10px">Lote + fecha_vencimiento por compra. FIFO en Power BI.</td></tr>
+        <tr style="background:#fef9ef;"><td style="padding:7px 10px;font-family:monospace;font-weight:700">compatibilidad</td><td style="padding:7px 10px">Autopartes</td><td style="padding:7px 10px">Atributo compatible_con en productos para reducir devoluciones.</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Cambios incorporados al SQL del documento</h3>
+      <div style="font-size:13px;color:#4a3d30;line-height:2;">
+        ✅ Tabla <code style="background:#F3ECDD;padding:1px 5px;border-radius:3px">producto_variantes</code> agregada<br>
+        ✅ <code style="background:#F3ECDD;padding:1px 5px;border-radius:3px">moneda_costo</code> y <code style="background:#F3ECDD;padding:1px 5px;border-radius:3px">tipo_cambio</code> en precios_historial<br>
+        ✅ <code style="background:#F3ECDD;padding:1px 5px;border-radius:3px">unidad_medida</code> en productos (unidad/kg/litro/hora/servicio/m2)<br>
+        ✅ <code style="background:#F3ECDD;padding:1px 5px;border-radius:3px">variante_id</code> y <code style="background:#F3ECDD;padding:1px 5px;border-radius:3px">numero_serie</code> en movimientos_inventario<br>
+        ✅ <code style="background:#F3ECDD;padding:1px 5px;border-radius:3px">umbral_confirmacion</code> en empresas<br>
+        ✅ Función atómica <code style="background:#F3ECDD;padding:1px 5px;border-radius:3px">registrar_venta()</code> con FOR UPDATE<br>
+        ✅ 8 módulos activables documentados en modulos_empresa
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+function toggleMod(header) {
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+</script>
+</body>
+</html>
+<script>
+// Inject new tab and panel for Productos Avanzados
+document.addEventListener('DOMContentLoaded', function() {
+  // Add tab
+  const tabRow = document.querySelector('.tab-row');
+  const newTab = document.createElement('button');
+  newTab.className = 'tab';
+  newTab.textContent = 'Productos avanzados';
+  newTab.onclick = function() { show('productos_avz', this); };
+  tabRow.appendChild(newTab);
+
+  // Add panel
+  const wrap = document.querySelector('.wrap');
+  const panel = document.createElement('div');
+  panel.id = 'productos_avz';
+  panel.className = 'panel';
+  panel.innerHTML = `
+    <div class="note">Todo lo de esta sección va al documento maestro. Son decisiones de diseño que hay que tomar ANTES de escribir código.</div>
+
+    <div class="card">
+      <h3>Cómo se lee una fila en SQL — para que lo entiendas</h3>
+      <p>Pensá en SQL como un Excel gigante en la nube. Cada tabla es una hoja, cada columna es un encabezado, cada fila es un registro. Una fila de ventas se ve así:</p>
+      <pre><span class="cm">COLUMNA        → VALOR</span>
+id             → 7f3a-... (identificador único automático)
+empresa_id     → uuid-acacia
+producto_id    → uuid-canasto-chico
+fecha          → 2026-08-31 10:15:00
+cantidad       → 2
+precio_unitario→ 25000.00
+costo_unitario → 9500.00
+descuento      → 0.00
+forma_pago     → efectivo
+subtotal       → 50000.00  ← calculado automático
+notas          → NULL</pre>
+      <p>Cada venta es una fila. 10.000 ventas = 10.000 filas. Un millón de ventas = un millón de filas. PostgreSQL lo maneja sin problema.</p>
+    </div>
+
+    <div class="card">
+      <h3>Tabla productos — versión ampliada con dimensiones</h3>
+      <pre><span class="kw">CREATE TABLE</span> productos (
+  id            UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  empresa_id    UUID <span class="kw">NOT NULL REFERENCES</span> empresas(id),
+  nombre        TEXT <span class="kw">NOT NULL</span>,
+  sku           TEXT,               <span class="cm">-- código interno o EAN/UPC</span>
+  codigo_barra  TEXT,               <span class="cm">-- para escaneo con cámara</span>
+  categoria     TEXT,
+  <span class="cm">-- Dimensiones para cálculo de envío</span>
+  alto_cm       NUMERIC(8,2),
+  ancho_cm      NUMERIC(8,2),
+  largo_cm      NUMERIC(8,2),
+  peso_kg       NUMERIC(8,3),
+  <span class="cm">-- Atributos flexibles por rubro (JSON)</span>
+  atributos     JSONB,
+  <span class="cm">-- Control</span>
+  activo        BOOLEAN <span class="kw">NOT NULL DEFAULT TRUE</span>,
+  created_at    TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now(),
+  deleted_at    TIMESTAMPTZ
+);</pre>
+      <p>Ejemplos de atributos por rubro:</p>
+      <pre><span class="cm">-- Acacia Mates</span>
+atributos = <span class="str">{"color": "marrón", "textura": "liso", "material": "cuero"}</span>
+
+<span class="cm">-- Zapatería</span>
+atributos = <span class="str">{"talle": 42, "género": "hombre", "marca": "Nike", "horma": "ancha"}</span>
+
+<span class="cm">-- Concesionaria</span>
+atributos = <span class="str">{"año": 2024, "km": 0, "color": "blanco", "versión": "GLS"}</span>
+
+<span class="cm">-- Ferretería</span>
+atributos = <span class="str">{"medida": "3/4 pulgada", "material": "acero", "norma": "DIN 934"}</span></pre>
+    </div>
+
+    <div class="card">
+      <h3>Tabla compras — con lote y vencimiento</h3>
+      <pre><span class="kw">ALTER TABLE</span> compras <span class="kw">ADD COLUMN</span> lote TEXT;
+<span class="kw">ALTER TABLE</span> compras <span class="kw">ADD COLUMN</span> fecha_vencimiento DATE;
+<span class="kw">ALTER TABLE</span> compras <span class="kw">ADD COLUMN</span> ubicacion TEXT; <span class="cm">-- depósito / estante</span></pre>
+      <p>El lote va en compras porque cada partida que comprás puede tener lote distinto aunque sea el mismo producto. Cuando vendés, Power BI puede hacer FIFO (primero en entrar, primero en salir) con la fecha de compra.</p>
+    </div>
+
+    <div class="card">
+      <h3>Precarga inteligente — cómo funciona</h3>
+      <pre><span class="cm">Flujo cuando el usuario registra una compra nueva:</span>
+
+1. Usuario tipea nombre del producto o escanea código de barras
+2. App busca en tabla productos de su empresa
+3. Si existe → precarga: nombre, dimensiones, atributos, último proveedor,
+   último costo pagado (desde precios_historial)
+4. Usuario confirma o modifica solo lo que cambió
+5. App guarda la compra con los datos confirmados
+
+<span class="cm">Query para traer precarga:</span>
+<span class="kw">SELECT</span>
+  p.id, p.nombre, p.alto_cm, p.ancho_cm, p.largo_cm, p.peso_kg,
+  p.atributos, p.codigo_barra,
+  ph.costo <span class="kw">AS</span> ultimo_costo,
+  c.proveedor_id <span class="kw">AS</span> ultimo_proveedor
+<span class="kw">FROM</span> productos p
+<span class="kw">LEFT JOIN LATERAL</span> (
+  <span class="kw">SELECT</span> costo <span class="kw">FROM</span> precios_historial
+  <span class="kw">WHERE</span> producto_id = p.id
+  <span class="kw">ORDER BY</span> fecha_desde <span class="kw">DESC LIMIT</span> 1
+) ph <span class="kw">ON TRUE</span>
+<span class="kw">LEFT JOIN LATERAL</span> (
+  <span class="kw">SELECT</span> proveedor_id <span class="kw">FROM</span> compras
+  <span class="kw">WHERE</span> producto_id = p.id
+  <span class="kw">ORDER BY</span> fecha <span class="kw">DESC LIMIT</span> 1
+) c <span class="kw">ON TRUE</span>
+<span class="kw">WHERE</span> p.empresa_id = <span class="fn">get_empresa_id</span>()
+  <span class="kw">AND</span> p.activo = <span class="kw">TRUE</span>
+  <span class="kw">AND</span> p.nombre <span class="kw">ILIKE</span> <span class="str">'%búsqueda%'</span>;</pre>
+    </div>
+
+    <div class="card">
+      <h3>Importación masiva por Excel/CSV</h3>
+      <p>Para clientes con catálogos grandes (100+ productos). El usuario arrastra un archivo CSV o Excel y la app importa todo de una vez.</p>
+      <pre><span class="cm">Formato del CSV de importación de productos:</span>
+nombre,sku,categoria,precio_venta,costo,alto_cm,ancho_cm,largo_cm,peso_kg
+"Canasto Chico","CS001","Canastos",25000,9500,20,15,12,0.8
+"Canasto Grande","CG001","Canastos",35000,13000,30,22,18,1.2
+"Mochila Matero","MM001","Mochilas",30000,11000,45,35,15,0.9
+
+<span class="cm">Reglas de importación:</span>
+- Si el SKU ya existe → actualiza precio, no duplica producto
+- Si el SKU no existe → crea producto nuevo
+- Filas con errores → se listan al final para corrección manual
+- Nunca falla silenciosamente — siempre muestra resumen de resultado</pre>
+    </div>
+
+    <div class="card">
+      <h3>Escaneo de código de barras</h3>
+      <p>Librería recomendada: <code>@zxing/browser</code> (gratis, open source). Activa la cámara del celular y lee EAN-13, QR, Code128 y otros formatos.</p>
+      <pre><span class="cm">Flujo de escaneo al registrar una venta:</span>
+
+1. Usuario toca ícono de cámara en el campo "Producto"
+2. Se activa la cámara trasera del celular
+3. Usuario apunta al código de barras del producto
+4. La app lee el código y busca en tabla productos por codigo_barra
+5. Si encuentra → precarga el producto automáticamente
+6. Si no encuentra → pregunta si quiere registrar ese código
+   al producto existente o crear uno nuevo
+
+<span class="cm">Contingencia importante:</span>
+No todos los productos tienen código de barras (artesanías, productos
+a medida, etc.). El escaneo es OPCIONAL — siempre está disponible
+el dropdown de búsqueda por texto como alternativa.</pre>
+    </div>
+
+    <div class="card">
+      <h3>Cubicaje para envíos — cálculo automático</h3>
+      <pre><span class="cm">Fórmula de peso volumétrico (estándar Andreani / OCA):</span>
+peso_volumétrico = (alto_cm × ancho_cm × largo_cm) / 4000
+
+<span class="cm">Peso a cotizar = MAX(peso_real_kg, peso_volumétrico)</span>
+
+<span class="cm">Medida DAX en Power BI:</span>
+<span class="kw">Peso Envío</span> =
+<span class="fn">MAX</span>(
+    <span class="fn">RELATED</span>(productos[peso_kg]),
+    (
+        <span class="fn">RELATED</span>(productos[alto_cm]) *
+        <span class="fn">RELATED</span>(productos[ancho_cm]) *
+        <span class="fn">RELATED</span>(productos[largo_cm])
+    ) / 4000
+)</pre>
+      <p>Con esto el cliente puede calcular automáticamente cuánto le va a costar enviar cualquier producto antes de venderlo.</p>
+    </div>
+
+    <div class="card">
+      <h3>Contingencias a prever desde el diseño</h3>
+      <div style="margin-top:8px;">
+        <div style="background:#fee2e2;border-left:3px solid #dc2626;border-radius:0 6px 6px 0;padding:10px 14px;margin-bottom:8px;font-size:13px;color:#7f1d1d;">
+          <strong>Importación de Excel con errores parciales:</strong> si 200 de 10.000 filas fallan, no se puede rechazar todo. La app importa las correctas, lista las fallidas con el motivo, y permite descargar un CSV de errores para corregir y reimportar.
+        </div>
+        <div style="background:#fef3c7;border-left:3px solid #d97706;border-radius:0 6px 6px 0;padding:10px 14px;margin-bottom:8px;font-size:13px;color:#78350f;">
+          <strong>Atributos que cambian con el tiempo:</strong> un cliente puede querer agregar un atributo nuevo a productos que ya existen. El JSON permite esto sin migración de base de datos — simplemente agregás la clave nueva al JSON de cada producto.
+        </div>
+        <div style="background:#fef3c7;border-left:3px solid #d97706;border-radius:0 6px 6px 0;padding:10px 14px;margin-bottom:8px;font-size:13px;color:#78350f;">
+          <strong>Código de barras duplicado entre empresas:</strong> el mismo EAN puede existir en dos empresas distintas (ambas venden el mismo producto de marca). El código de barras se busca SIEMPRE filtrado por empresa_id.
+        </div>
+        <div style="background:#dcfce7;border-left:3px solid #16a34a;border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;color:#14532d;">
+          <strong>Catálogo de 10.000 SKUs — rendimiento:</strong> agregar índice en codigo_barra y en nombre (búsqueda de texto). Supabase tiene búsqueda full-text nativa con PostgreSQL que maneja millones de registros sin problema.
+        </div>
+      </div>
+    </div>
+  `;
+  wrap.appendChild(panel);
+});
+
+// ── PANEL: PAGOS Y SUSCRIPCIONES ──────────────────────────────
+(function(){
+  var panel = document.createElement('div');
+  panel.id = 'pagos'; panel.className = 'panel';
+  panel.innerHTML = `
+    <div class="card">
+      <h3>💳 Integración Mercado Pago — Filosofía de implementación</h3>
+      <div class="note">
+        <strong>Principio clave:</strong> la integración se construye en DOS etapas. 
+        En Fase 1 se crea toda la estructura de datos (tablas, campos, estados) pero el cobro 
+        se hace manual. En Fase 3 se conecta la API de MP a esa estructura ya existente. 
+        Así nunca se toca código en producción con clientes activos.
+      </div>
+      <p><strong>¿Cuánto cobra Mercado Pago?</strong> No hay costo de activación ni mensualidad. 
+      Solo comisión por transacción procesada:</p>
+      <ul>
+        <li>Cobro disponible al instante: ~6.79% por transacción</li>
+        <li>Cobro disponible a 7 días: ~4.99% por transacción</li>
+        <li>Cobro disponible a 14 días: ~3.49% por transacción</li>
+      </ul>
+      <p>Ejemplo: si cobrás $15.000 ARS de suscripción mensual con cobro a 7 días, 
+      MP retiene ~$748 y vos recibís ~$14.252. Sin otros costos.</p>
+    </div>
+
+    <div class="card">
+      <h3>🗄️ SQL — Tablas a crear en Supabase (Fase 1)</h3>
+      <p>Estas tablas se agregan ahora. No modifican nada existente — son tablas nuevas.</p>
+      <pre>
+<span class="cm">-- Tabla de planes disponibles del SaaS</span>
+<span class="kw">CREATE TABLE</span> planes (
+  id            <span class="fn">UUID</span> PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre        TEXT NOT NULL, <span class="cm">-- 'starter', 'pro', 'premium'</span>
+  precio_ars    NUMERIC(12,2) NOT NULL,
+  descripcion   TEXT,
+  max_usuarios  INT DEFAULT 3,
+  max_productos INT DEFAULT 100,
+  activo        BOOLEAN DEFAULT TRUE,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+<span class="cm">-- Tabla de suscripciones por empresa</span>
+<span class="kw">CREATE TABLE</span> suscripciones (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id        UUID NOT NULL REFERENCES empresas(id),
+  plan_id           UUID NOT NULL REFERENCES planes(id),
+  estado            TEXT NOT NULL DEFAULT 'activa'
+                    CHECK (estado IN ('activa','vencida','cancelada',
+                                      'pendiente_pago','periodo_prueba')),
+  fecha_inicio      DATE NOT NULL DEFAULT CURRENT_DATE,
+  fecha_vencimiento DATE NOT NULL,
+  periodo_prueba    BOOLEAN DEFAULT FALSE,
+  dias_prueba       INT DEFAULT 14,
+  created_at        TIMESTAMPTZ DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ DEFAULT NOW()
+);
+
+<span class="cm">-- Tabla de pagos registrados</span>
+<span class="kw">CREATE TABLE</span> pagos (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id          UUID NOT NULL REFERENCES empresas(id),
+  suscripcion_id      UUID REFERENCES suscripciones(id),
+  monto_ars           NUMERIC(12,2) NOT NULL,
+  metodo              TEXT DEFAULT 'transferencia'
+                      CHECK (metodo IN ('transferencia','mercadopago',
+                                        'efectivo','otro')),
+  estado              TEXT DEFAULT 'pendiente'
+                      CHECK (estado IN ('pendiente','confirmado',
+                                        'rechazado','reembolsado')),
+  mp_payment_id       TEXT, <span class="cm">-- ID que devuelve MP al confirmar</span>
+  mp_preference_id    TEXT, <span class="cm">-- ID de preferencia MP (checkout)</span>
+  mp_subscription_id  TEXT, <span class="cm">-- ID de suscripción recurrente en MP</span>
+  fecha_pago          DATE,
+  periodo_desde       DATE, <span class="cm">-- mes que cubre este pago</span>
+  periodo_hasta       DATE,
+  notas               TEXT,
+  created_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+<span class="cm">-- Tabla de aceptación de términos (auditoría legal)</span>
+<span class="kw">CREATE TABLE</span> aceptaciones_terminos (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  empresa_id  UUID NOT NULL REFERENCES empresas(id),
+  usuario_id  UUID NOT NULL REFERENCES usuarios(id),
+  version     TEXT NOT NULL DEFAULT '1.0',
+  ip_address  TEXT,
+  user_agent  TEXT,
+  aceptado_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+<span class="cm">-- Datos iniciales: planes del SaaS</span>
+<span class="kw">INSERT INTO</span> planes (nombre, precio_ars, descripcion, max_usuarios, max_productos) VALUES
+  ('starter', 0,      'Plan gratuito — período de prueba 14 días', 1, 50),
+  ('basico',  15000,  'Plan básico — hasta 3 usuarios y 200 productos', 3, 200),
+  ('pro',     35000,  'Plan profesional — hasta 10 usuarios y productos ilimitados', 10, 9999),
+  ('premium', 70000,  'Plan completo — usuarios ilimitados, reportes avanzados', 999, 9999);
+
+<span class="cm">-- RLS: solo el dueño de la empresa ve sus suscripciones y pagos</span>
+<span class="kw">ALTER TABLE</span> suscripciones <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">CREATE POLICY</span> "empresa_propia" <span class="kw">ON</span> suscripciones
+  <span class="kw">FOR ALL USING</span> (empresa_id = (
+    <span class="kw">SELECT</span> empresa_id <span class="kw">FROM</span> usuarios 
+    <span class="kw">WHERE</span> auth_id = auth.uid()
+  ));
+
+<span class="kw">ALTER TABLE</span> pagos <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">CREATE POLICY</span> "empresa_propia" <span class="kw">ON</span> pagos
+  <span class="kw">FOR ALL USING</span> (empresa_id = (
+    <span class="kw">SELECT</span> empresa_id <span class="kw">FROM</span> usuarios 
+    <span class="kw">WHERE</span> auth_id = auth.uid()
+  ));
+</pre>
+    </div>
+
+    <div class="card">
+      <h3>🔌 Fase 1 — Cobro manual (implementar ahora)</h3>
+      <ul>
+        <li>Al registrarse una empresa nueva → crear automáticamente una suscripción en estado <code>periodo_prueba</code> por 14 días con plan <code>starter</code></li>
+        <li>Al vencer el período de prueba → cambiar estado a <code>pendiente_pago</code> y mostrar banner en el home</li>
+        <li>Alan confirma el pago manualmente desde un panel de admin y cambia el estado a <code>activa</code></li>
+        <li>No hay integración con MP todavía — el cobro se hace por transferencia bancaria</li>
+      </ul>
+      <div class="note">
+        <strong>Panel de admin para Alan:</strong> crear una ruta protegida <code>/admin</code> 
+        accesible solo con el email de Alan (hardcodeado en variable de entorno). 
+        Desde ahí puede ver todas las empresas, sus estados de suscripción, 
+        y confirmar pagos manualmente.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🚀 Fase 3 — Integración API Mercado Pago (implementar cuando haya 10+ clientes)</h3>
+      <p>Los "enchufes" ya están en la base de datos (campos <code>mp_payment_id</code>, 
+      <code>mp_preference_id</code>, <code>mp_subscription_id</code>). Solo hay que conectarlos.</p>
+      <ol>
+        <li><strong>Crear cuenta de MP Business</strong> verificada con CUIT de Alan/empresa</li>
+        <li><strong>Obtener credenciales API:</strong> Access Token y Public Key del panel de desarrolladores de MP</li>
+        <li><strong>Crear preferencia de pago:</strong> cuando el cliente quiere pagar, el backend crea una preferencia en MP y redirige al checkout</li>
+        <li><strong>Webhook de confirmación:</strong> MP llama a una URL del backend cuando el pago se confirma → el backend actualiza el estado de la suscripción automáticamente</li>
+        <li><strong>Suscripción recurrente:</strong> MP cobra automáticamente cada mes y notifica via webhook</li>
+      </ol>
+      <pre>
+<span class="cm">// Ejemplo: crear preferencia de pago con MP SDK</span>
+<span class="kw">import</span> { MercadoPagoConfig, Preference } from <span class="str">'mercadopago'</span>;
+
+<span class="kw">const</span> client = <span class="kw">new</span> <span class="fn">MercadoPagoConfig</span>({ 
+  accessToken: process.env.<span class="fn">MP_ACCESS_TOKEN</span> 
+});
+
+<span class="kw">const</span> preference = <span class="kw">await new</span> <span class="fn">Preference</span>(client).<span class="fn">create</span>({
+  body: {
+    items: [{
+      title: <span class="str">`Analítica 360 — Plan Pro`</span>,
+      quantity: 1,
+      unit_price: 35000,
+      currency_id: <span class="str">'ARS'</span>
+    }],
+    back_urls: {
+      success: <span class="str">`${process.env.APP_URL}/pago/exitoso`</span>,
+      failure: <span class="str">`${process.env.APP_URL}/pago/fallido`</span>
+    },
+    auto_return: <span class="str">'approved'</span>,
+    notification_url: <span class="str">`${process.env.APP_URL}/webhook/mp`</span>
+  }
+});
+<span class="cm">// Redirigir al cliente a: preference.init_point</span>
+</pre>
+    </div>
+  `;
+  document.querySelector('.wrap').appendChild(panel);
+})();
+
+// ── PANEL: TÉRMINOS Y CONDICIONES ─────────────────────────────
+(function(){
+  var panel = document.createElement('div');
+  panel.id = 'terminos'; panel.className = 'panel';
+  panel.innerHTML = `
+    <div class="card">
+      <h3>📋 Términos y Condiciones — Implementación técnica</h3>
+      <div class="note">
+        <strong>¿Por qué es importante en Fase 1?</strong> Una vez que una persona real 
+        usa la app, existe relación legal. Los T&C protegen a Analítica 360 en caso de 
+        disputas, mal uso, o reclamos sobre los datos. Sin esto, cualquier conflicto 
+        es terreno pantanoso.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🖥️ Cambios en el frontend — Pantalla de registro</h3>
+      <p>Agregar en el formulario de registro, justo antes del botón CREAR EMPRESA:</p>
+      <pre>
+<span class="cm">// Componente React — Checkbox de T&C</span>
+<span class="kw">const</span> [aceptaTerminos, setAceptaTerminos] = <span class="fn">useState</span>(false);
+
+&lt;<span class="fn">div</span> className="flex items-start gap-3 mt-4"&gt;
+  &lt;<span class="fn">input</span>
+    type="checkbox"
+    id="terminos"
+    checked={aceptaTerminos}
+    onChange={(e) => <span class="fn">setAceptaTerminos</span>(e.target.checked)}
+    className="mt-1 accent-indigo-600"
+  /&gt;
+  &lt;<span class="fn">label</span> htmlFor="terminos" className="text-sm text-gray-400"&gt;
+    Acepto los{' '}
+    &lt;<span class="fn">a</span> 
+      href="/terminos" 
+      target="_blank" 
+      className="text-indigo-400 underline hover:text-indigo-300"
+    &gt;
+      Términos y Condiciones
+    &lt;/<span class="fn">a</span>&gt;
+    {' '}y la{' '}
+    &lt;<span class="fn">a</span> 
+      href="/privacidad" 
+      target="_blank"
+      className="text-indigo-400 underline hover:text-indigo-300"
+    &gt;
+      Política de Privacidad
+    &lt;/<span class="fn">a</span>&gt;
+  &lt;/<span class="fn">label</span>&gt;
+&lt;/<span class="fn">div</span>&gt;
+
+<span class="cm">// El botón CREAR EMPRESA queda deshabilitado si no está marcado</span>
+&lt;<span class="fn">button</span> disabled={!aceptaTerminos || !formularioValido}&gt;
+  CREAR EMPRESA
+&lt;/<span class="fn">button</span>&gt;
+</pre>
+    </div>
+
+    <div class="card">
+      <h3>🗄️ Registro de aceptación en Supabase</h3>
+      <p>Al crear la empresa, inmediatamente después del registro exitoso, 
+      guardar la aceptación con auditoría completa:</p>
+      <pre>
+<span class="cm">// Guardar aceptación de T&C al registrar empresa</span>
+<span class="kw">await</span> supabase
+  .<span class="fn">from</span>(<span class="str">'aceptaciones_terminos'</span>)
+  .<span class="fn">insert</span>({
+    empresa_id: nuevaEmpresa.id,
+    usuario_id: nuevoUsuario.id,
+    version: <span class="str">'1.0'</span>,
+    ip_address: <span class="kw">await</span> <span class="fn">obtenerIP</span>(), <span class="cm">// fetch a api externa o header</span>
+    user_agent: navigator.userAgent
+  });
+</pre>
+      <div class="note">
+        <strong>¿Por qué guardar la IP y el user_agent?</strong> Es evidencia legal 
+        de que esa persona, desde ese dispositivo y conexión, aceptó los términos 
+        en esa fecha y hora exacta. Estándar en la industria.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📄 Contenido de los Términos y Condiciones — v1.0</h3>
+      <p>Crear una ruta <code>/terminos</code> en la app con este contenido 
+      (página estática, sin login requerido):</p>
+      <div style="background:#F3ECDD;border-radius:8px;padding:16px;font-size:12px;line-height:1.8;color:#3E2716;">
+        <strong>TÉRMINOS Y CONDICIONES DE USO — ANALÍTICA 360</strong><br>
+        Versión 1.0 — Vigente desde [fecha de lanzamiento]<br><br>
+        <strong>1. SERVICIO</strong><br>
+        Analítica 360 es una plataforma SaaS de gestión comercial para pequeñas y medianas empresas 
+        con sede en Mendoza, Argentina. El servicio incluye registro de ventas, compras, 
+        inventario, clientes y reportes analíticos.<br><br>
+        <strong>2. CUENTA Y RESPONSABILIDAD</strong><br>
+        El usuario es responsable de mantener la confidencialidad de sus credenciales. 
+        Cada empresa registrada es una cuenta independiente con datos aislados de otras empresas.<br><br>
+        <strong>3. DATOS Y PRIVACIDAD</strong><br>
+        Los datos ingresados por el usuario son de su exclusiva propiedad. 
+        Analítica 360 no comercializa, cede ni vende datos de sus clientes a terceros. 
+        Los datos se almacenan en servidores de Supabase (AWS São Paulo, Brasil) 
+        bajo estándares de seguridad SOC 2.<br><br>
+        <strong>4. PLANES Y PAGOS</strong><br>
+        El servicio incluye un período de prueba gratuito de 14 días. 
+        Transcurrido ese período, el acceso requiere la contratación de un plan pago. 
+        Los precios están expresados en pesos argentinos (ARS) y pueden actualizarse 
+        con previo aviso de 30 días.<br><br>
+        <strong>5. CANCELACIÓN</strong><br>
+        El usuario puede cancelar su suscripción en cualquier momento. 
+        No se realizan reembolsos por períodos ya facturados. 
+        Los datos se conservan por 30 días tras la cancelación para posible reactivación.<br><br>
+        <strong>6. LIMITACIÓN DE RESPONSABILIDAD</strong><br>
+        Analítica 360 no es responsable por pérdidas de datos ocasionadas por 
+        mal uso de la plataforma, problemas de conectividad del usuario, 
+        o eventos de fuerza mayor. Se recomienda exportar respaldos periódicamente.<br><br>
+        <strong>7. JURISDICCIÓN</strong><br>
+        Cualquier disputa se resolverá bajo la legislación argentina vigente, 
+        con jurisdicción en los tribunales ordinarios de la Ciudad de Mendoza.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📄 Política de Privacidad — v1.0</h3>
+      <p>Crear una ruta <code>/privacidad</code> con este contenido:</p>
+      <div style="background:#F3ECDD;border-radius:8px;padding:16px;font-size:12px;line-height:1.8;color:#3E2716;">
+        <strong>POLÍTICA DE PRIVACIDAD — ANALÍTICA 360</strong><br>
+        Versión 1.0<br><br>
+        <strong>¿Qué datos recopilamos?</strong><br>
+        Email del titular de la cuenta, nombre de la empresa, rubro, y todos los datos 
+        comerciales que el usuario ingresa voluntariamente (ventas, productos, clientes, etc.).<br><br>
+        <strong>¿Para qué los usamos?</strong><br>
+        Exclusivamente para proveer el servicio contratado. 
+        No utilizamos los datos para publicidad, perfilado ni ningún fin ajeno al servicio.<br><br>
+        <strong>¿Dónde se almacenan?</strong><br>
+        En servidores de Supabase ubicados en São Paulo, Brasil, 
+        bajo certificación SOC 2 Type II y encriptación en reposo y en tránsito.<br><br>
+        <strong>¿Con quién los compartimos?</strong><br>
+        Con ningún tercero, salvo requerimiento judicial o legal expreso.<br><br>
+        <strong>¿Por cuánto tiempo?</strong><br>
+        Mientras la cuenta esté activa, más 30 días tras la cancelación. 
+        El usuario puede solicitar la eliminación total de sus datos en cualquier momento 
+        escribiendo a [email de contacto].<br><br>
+        <strong>Contacto:</strong> [email de Alan/empresa]
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>✅ Prompt para Cursor — implementar todo esto</h3>
+      <pre>
+Implementar términos y condiciones y estructura base de pagos. 
+Tareas específicas:
+
+1. CHECKBOX EN REGISTRO
+Agregar checkbox "Acepto los Términos y Condiciones y 
+la Política de Privacidad" antes del botón CREAR EMPRESA.
+El botón debe estar deshabilitado hasta que esté marcado.
+Los textos deben ser links que abran en pestaña nueva.
+
+2. RUTAS ESTÁTICAS
+Crear /terminos y /privacidad como páginas estáticas 
+accesibles sin login. Incluir el texto provisto en 
+el documento de especificación.
+
+3. SQL EN SUPABASE
+Correr el script de creación de tablas:
+planes, suscripciones, pagos, aceptaciones_terminos
+(script completo en la pestaña "Pagos y Suscripciones").
+
+4. LÓGICA AL REGISTRAR EMPRESA
+Al completar el registro exitosamente:
+a) Crear registro en suscripciones con estado='periodo_prueba', 
+   plan starter, fecha_vencimiento = hoy + 14 días
+b) Crear registro en aceptaciones_terminos con 
+   empresa_id, usuario_id, version='1.0', user_agent
+
+5. BANNER DE PERÍODO DE PRUEBA
+En el home/dashboard mostrar un banner informativo 
+cuando el estado de la suscripción es 'periodo_prueba':
+"Estás en tu período de prueba gratuito — X días restantes"
+Cuando el estado es 'pendiente_pago':
+"Tu período de prueba venció — contactanos para continuar"
+Color: amarillo para prueba, rojo para vencido.
+
+6. PANEL ADMIN (ruta protegida)
+Crear ruta /admin accesible solo si el email del usuario 
+coincide con VITE_ADMIN_EMAIL (variable de entorno).
+Mostrar tabla con: empresa, plan, estado suscripción, 
+fecha vencimiento, último pago.
+Botón para cambiar estado de suscripción manualmente.
+
+No integrar MP todavía — el cobro se maneja manual por ahora.
+No romper ninguna funcionalidad existente.
+</pre>
+    </div>
+  `;
+  document.querySelector('.wrap').appendChild(panel);
+})();
+</script>

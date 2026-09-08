@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 
 export const authInputClass =
-  'h-11 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm text-[#1A2F4A] outline-none transition focus:border-[#6366F1] focus:shadow-[0_0_0_3px_rgba(99,102,241,0.18)]'
+  'h-11 w-full rounded-md border border-[#CBD5E1] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#6366F1] focus:bg-white focus:shadow-[0_0_0_3px_rgba(99,102,241,0.18)]'
 
 export const authInputWithIconClass = `${authInputClass} pl-10`
 
@@ -19,7 +19,7 @@ export function AuthLayout({
       <ParticleNetwork />
       <div className="relative z-10 flex min-h-dvh items-center justify-center px-4 py-10">
         <div
-          className="flex w-full min-h-[760px] max-w-[440px] flex-col rounded-lg bg-white/95 p-10 shadow-[0_20px_60px_rgba(0,0,0,0.3)] backdrop-blur-md"
+          className="flex w-full min-h-[820px] max-w-[440px] flex-col rounded-lg bg-white/95 p-10 shadow-[0_20px_60px_rgba(0,0,0,0.3)] backdrop-blur-md"
           style={{ fontFamily: 'Inter, system-ui, sans-serif', width: 'min(440px, 100%)' }}
         >
           {tabs ? (

@@ -30,14 +30,18 @@ export function RegistroPage() {
   const [nombreUsuario, setNombreUsuario] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmacion, setConfirmacion] = useState('')
   const [mostrarClave, setMostrarClave] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [aceptaTerminos, setAceptaTerminos] = useState(false)
   const [enviando, setEnviando] = useState(false)
 
   const check = evaluarPassword(password)
   const listaOk = passwordValida(check)
   const nivel = nivelSeguridad(requisitosCumplidos(check))
+  const coinciden = confirmacion.length > 0 && password === confirmacion
+  const puedeCrear = listaOk && coinciden
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -53,6 +57,14 @@ export function RegistroPage() {
     }
     if (!listaOk) {
       setError('La contraseña no cumple todos los requisitos de seguridad')
+      return
+    }
+    if (password !== confirmacion) {
+      setError('Las contraseñas no coinciden')
+      return
+    }
+    if (!aceptaTerminos) {
+      setError('Tenés que aceptar los Términos y Condiciones')
       return
     }
     setEnviando(true)
@@ -190,6 +202,27 @@ export function RegistroPage() {
           </span>
         </label>
 
+        <label className="mt-4 text-left text-sm font-medium text-[#4A5568]">
+          Repetir contraseña
+          <span className="relative mt-1.5 block">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+              <LockIcon />
+            </span>
+            <input
+              className={authInputWithIconClass}
+              type={mostrarClave ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={confirmacion}
+              onChange={(ev) => setConfirmacion(ev.target.value)}
+            />
+          </span>
+        </label>
+        {confirmacion.length > 0 ? (
+          <p className={`mt-1.5 text-xs ${coinciden ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
+            {coinciden ? '✓ Las contraseñas coinciden' : '✗ Las contraseñas no coinciden'}
+          </p>
+        ) : null}
+
         <div className="mt-3">
           <div className="mb-1.5 flex items-center justify-between">
             <span className="text-xs font-medium" style={{ color: nivel.color }}>
@@ -230,10 +263,42 @@ export function RegistroPage() {
           <p className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">{aviso}</p>
         ) : null}
 
+        <div className="mt-5 flex items-start gap-3">
+          <input
+            id="terminos"
+            type="checkbox"
+            className="mt-1 h-4 w-4 accent-[#6366F1]"
+            checked={aceptaTerminos}
+            onChange={(ev) => setAceptaTerminos(ev.target.checked)}
+          />
+          <label htmlFor="terminos" className="text-sm leading-snug text-[#4A5568]">
+            Acepto los{' '}
+            <a
+              href="/terminos"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-[#6366F1] underline hover:text-[#4F46E5]"
+              onClick={(ev) => ev.stopPropagation()}
+            >
+              Términos y Condiciones
+            </a>{' '}
+            y la{' '}
+            <a
+              href="/privacidad"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-[#6366F1] underline hover:text-[#4F46E5]"
+              onClick={(ev) => ev.stopPropagation()}
+            >
+              Política de Privacidad
+            </a>
+          </label>
+        </div>
+
         <button
           className="mt-6 h-11 w-full rounded-md bg-[#6366F1] text-sm font-semibold tracking-wide text-white transition hover:bg-[#4F46E5] disabled:cursor-not-allowed disabled:opacity-40"
           type="submit"
-          disabled={enviando || !listaOk}
+          disabled={enviando || !puedeCrear || !aceptaTerminos}
         >
           {enviando ? 'CREANDO…' : 'CREAR EMPRESA'}
         </button>

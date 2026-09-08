@@ -46,11 +46,13 @@ export function ParticleNetwork() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    const surface = canvasRef.current
+    if (!surface) return
 
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const gfx = surface.getContext('2d')
+    if (!gfx) return
+    const board: HTMLCanvasElement = surface
+    const brush: CanvasRenderingContext2D = gfx
 
     let particles: Particle[] = []
     let raf = 0
@@ -61,22 +63,22 @@ export function ParticleNetwork() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       const width = window.innerWidth
       const height = window.innerHeight
-      canvas.width = Math.floor(width * dpr)
-      canvas.height = Math.floor(height * dpr)
-      canvas.style.width = `${width}px`
-      canvas.style.height = `${height}px`
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      board.width = Math.floor(width * dpr)
+      board.height = Math.floor(height * dpr)
+      board.style.width = `${width}px`
+      board.style.height = `${height}px`
+      brush.setTransform(dpr, 0, 0, dpr, 0, 0)
       particles = createParticles(width, height)
     }
 
     function draw() {
       const width = window.innerWidth
       const height = window.innerHeight
-      const g = ctx.createLinearGradient(0, 0, 0, height)
+      const g = brush.createLinearGradient(0, 0, 0, height)
       g.addColorStop(0, theme.canvasFrom)
       g.addColorStop(1, theme.canvasTo)
-      ctx.fillStyle = g
-      ctx.fillRect(0, 0, width, height)
+      brush.fillStyle = g
+      brush.fillRect(0, 0, width, height)
 
       for (const p of particles) {
         if (mouse.active) {
@@ -105,8 +107,8 @@ export function ParticleNetwork() {
         p.y = Math.min(height, Math.max(0, p.y))
       }
 
-      ctx.strokeStyle = LINE
-      ctx.lineWidth = 1
+      brush.strokeStyle = LINE
+      brush.lineWidth = 1
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const a = particles[i]
@@ -115,21 +117,21 @@ export function ParticleNetwork() {
           const dy = a.y - b.y
           const dist = Math.hypot(dx, dy)
           if (dist < LINK_DIST) {
-            ctx.globalAlpha = 1 - dist / LINK_DIST
-            ctx.beginPath()
-            ctx.moveTo(a.x, a.y)
-            ctx.lineTo(b.x, b.y)
-            ctx.stroke()
+            brush.globalAlpha = 1 - dist / LINK_DIST
+            brush.beginPath()
+            brush.moveTo(a.x, a.y)
+            brush.lineTo(b.x, b.y)
+            brush.stroke()
           }
         }
       }
-      ctx.globalAlpha = 1
+      brush.globalAlpha = 1
 
-      ctx.fillStyle = DOT
+      brush.fillStyle = DOT
       for (const p of particles) {
-        ctx.beginPath()
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fill()
+        brush.beginPath()
+        brush.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+        brush.fill()
       }
 
       raf = requestAnimationFrame(draw)

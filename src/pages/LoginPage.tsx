@@ -63,16 +63,14 @@ export function LoginPage() {
     setEnviandoRecupero(false)
     if (result) setError(result)
     else {
-      setAviso(
-        'Te enviamos un email. Abrilo en esta misma computadora, con Analítica 360 abierta. Si la notebook está apagada o lo abrís en el celular, va a fallar.',
-      )
+      setAviso('Te enviamos un email para restablecer tu contraseña. Revisá tu casilla.')
       setPedirEmail(false)
     }
   }
 
   async function onOlvido() {
     const mail = email.trim()
-    if (mail.includes('@')) {
+    if (mail.length > 0) {
       await enviarRecupero(mail)
       return
     }
