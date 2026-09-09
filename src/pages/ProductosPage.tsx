@@ -27,6 +27,7 @@ import {
   theadStyle,
 } from '../components/listado'
 import { AjustarStockModal } from '../components/AjustarStockModal'
+import { HistorialMovimientosPanel } from '../components/HistorialMovimientosPanel'
 import { ImportarExcelModal } from '../components/ImportarExcelModal'
 import { MSG_ERROR_RED, mensajeCargaTabla } from '../lib/consulta'
 import {
@@ -72,6 +73,7 @@ export function ProductosPage() {
   const [activos, setActivos] = useState(0)
   const [categorias, setCategorias] = useState<string[]>([])
   const [ajuste, setAjuste] = useState<{ id: string; nombre: string; stock: number } | null>(null)
+  const [historial, setHistorial] = useState<{ id: string; nombre: string; stock: number } | null>(null)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -403,15 +405,12 @@ export function ProductosPage() {
                   <td className="px-3 py-3">
                     <StockCelda
                       stock={fila.stock_actual}
-                      onClick={
-                        puedeAjustar
-                          ? () =>
-                              setAjuste({
-                                id: fila.id,
-                                nombre: fila.nombre,
-                                stock: fila.stock_actual,
-                              })
-                          : undefined
+                      onClick={() =>
+                        setHistorial({
+                          id: fila.id,
+                          nombre: fila.nombre,
+                          stock: fila.stock_actual,
+                        })
                       }
                     />
                   </td>
@@ -456,15 +455,12 @@ export function ProductosPage() {
                     Stock:{' '}
                     <StockCelda
                       stock={fila.stock_actual}
-                      onClick={
-                        puedeAjustar
-                          ? () =>
-                              setAjuste({
-                                id: fila.id,
-                                nombre: fila.nombre,
-                                stock: fila.stock_actual,
-                              })
-                          : undefined
+                      onClick={() =>
+                        setHistorial({
+                          id: fila.id,
+                          nombre: fila.nombre,
+                          stock: fila.stock_actual,
+                        })
                       }
                     />
                   </p>
@@ -503,6 +499,17 @@ export function ProductosPage() {
             existentes={existentesImport}
             onCerrar={() => setImportar(false)}
             onListo={cargar}
+          />
+        ) : null}
+        {historial ? (
+          <HistorialMovimientosPanel
+            producto={historial}
+            puedeAjustar={puedeAjustar}
+            onCerrar={() => setHistorial(null)}
+            onAjustar={() => {
+              setAjuste(historial)
+              setHistorial(null)
+            }}
           />
         ) : null}
         {ajuste ? (

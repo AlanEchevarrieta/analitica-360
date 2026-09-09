@@ -173,7 +173,7 @@ export function StockCelda({
       <button
         className={`${clase} rounded-md px-1 hover:underline`}
         type="button"
-        title="Ajustar stock"
+        title="Ver movimientos"
         onClick={onClick}
       >
         {contenido}

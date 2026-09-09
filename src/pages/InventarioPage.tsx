@@ -1,0 +1,437 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAuth } from '../auth'
+import { AppNav } from '../components/AppNav'
+import { HistorialMovimientosPanel } from '../components/HistorialMovimientosPanel'
+import { ParticleNetwork } from '../components/ParticleNetwork'
+import {
+  FilterCollapse,
+  ListCard,
+  MobileCards,
+  PageTitle,
+  TableCard,
+  TableErrorRed,
+  TableSkeleton,
+  Th,
+  Tr,
+  theadClass,
+  theadStyle,
+} from '../components/listado'
+import { MSG_ERROR_RED, mensajeCargaTabla } from '../lib/consulta'
+import {
+  estadoStock,
+  etiquetaEstadoStock,
+  formatoFechaMov,
+  listarResumenInventario,
+  listarUbicaciones,
+  leerUmbralStock,
+  registrarTraslado,
+  type ResumenInventario,
+  type EstadoStock,
+  type UbicacionFila,
+} from '../lib/inventario'
+import { listarProductosNombres } from '../lib/productos'
+import { tienePermiso } from '../lib/permisos'
+import { requireSupabase } from '../lib/supabase'
+import { theme } from '../theme'
+
+function fechaCorta(iso: string | null) {
+  if (!iso) return '—'
+  return formatoFechaMov(iso).split(',')[0] ?? formatoFechaMov(iso)
+}
+
+export function InventarioPage() {
+  const { perfil } = useAuth()
+  const [filas, setFilas] = useState<ResumenInventario[]>([])
+  const [ubicaciones, setUbicaciones] = useState<UbicacionFila[]>([])
+  const [umbral, setUmbral] = useState(5)
+  const [error, setError] = useState<string | null>(null)
+  const [cargando, setCargando] = useState(true)
+  const [estadoFiltro, setEstadoFiltro] = useState<'todos' | EstadoStock>('todos')
+  const [categoria, setCategoria] = useState('')
+  const [historial, setHistorial] = useState<ResumenInventario | null>(null)
+  const [traslado, setTraslado] = useState(false)
+  const [productos, setProductos] = useState<{ id: string; nombre: string }[]>([])
+
+  const cargar = useCallback(async () => {
+    if (!perfil) return
+    setCargando(true)
+    const client = requireSupabase()
+    const [res, ub, umb] = await Promise.all([
+      listarResumenInventario(client),
+      listarUbicaciones(client),
+      leerUmbralStock(client, perfil.empresa.id),
+    ])
+    setCargando(false)
+    setUmbral(umb)
+    setUbicaciones(ub.filas)
+    if (res.error) {
+      const msg = mensajeCargaTabla(res.error)
+      setError(msg === MSG_ERROR_RED ? MSG_ERROR_RED : res.error)
+      return
+    }
+    setError(null)
+    setFilas(res.filas)
+  }, [perfil])
+
+  useEffect(() => {
+    void cargar()
+  }, [cargar])
+
+  const categorias = useMemo(
+    () =>
+      [...new Set(filas.map((f) => (f.categoria ?? '').trim()).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, 'es'),
+      ),
+    [filas],
+  )
+
+  const visibles = useMemo(() => {
+    return filas.filter((f) => {
+      if (categoria && (f.categoria ?? '') !== categoria) return false
+      if (estadoFiltro !== 'todos' && estadoStock(f.stock_actual, umbral) !== estadoFiltro) return false
+      return true
+    })
+  }, [filas, categoria, estadoFiltro, umbral])
+
+  if (!perfil) return null
+
+  const puedeMover = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'ajustar_stock')
+  const mostrarUbicaciones = ubicaciones.length >= 2
+
+  return (
+    <div
+      className="relative min-h-dvh"
+      style={{
+        fontFamily: theme.font,
+        background: `linear-gradient(180deg, ${theme.canvasFrom}, ${theme.canvasTo})`,
+      }}
+    >
+      <ParticleNetwork />
+      <div className="relative z-10 mx-auto max-w-6xl px-4 py-8">
+        <AppNav />
+        <PageTitle titulo="Inventario" subtitulo={`${visibles.length} productos`} />
+
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <FilterCollapse activo={estadoFiltro !== 'todos' || Boolean(categoria)}>
+            <div className="filter-field">
+              <label htmlFor="inv-estado">Estado</label>
+              <select
+                id="inv-estado"
+                value={estadoFiltro}
+                onChange={(ev) => setEstadoFiltro(ev.target.value as 'todos' | EstadoStock)}
+              >
+                <option value="todos">Todos</option>
+                <option value="sin">Sin stock</option>
+                <option value="bajo">Stock bajo</option>
+                <option value="normal">Normal</option>
+              </select>
+            </div>
+            <div className="filter-field">
+              <label htmlFor="inv-cat">Categoría</label>
+              <select id="inv-cat" value={categoria} onChange={(ev) => setCategoria(ev.target.value)}>
+                <option value="">Todas</option>
+                {categorias.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </FilterCollapse>
+          {puedeMover && mostrarUbicaciones ? (
+            <button
+              type="button"
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-[#6366F1] px-4 text-sm font-semibold text-white hover:bg-[#4F46E5]"
+              onClick={() => {
+                void listarProductosNombres(requireSupabase()).then((r) => {
+                  if (!r.error) setProductos(r.filas)
+                  setTraslado(true)
+                })
+              }}
+            >
+              Registrar traslado
+            </button>
+          ) : null}
+        </div>
+
+        {mostrarUbicaciones ? (
+          <section
+            className="mb-6 rounded-xl p-4"
+            style={{ border: '1px solid var(--border)', background: 'var(--card-bg)' }}
+          >
+            <h2 className="text-sm font-semibold">Traslados</h2>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+              Mové stock entre Casa y Stand. El total del producto no cambia.
+            </p>
+          </section>
+        ) : null}
+
+        <TableCard>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[920px] text-left">
+              <thead className={theadClass} style={theadStyle}>
+                <tr>
+                  <Th>Producto</Th>
+                  <Th>Categoría</Th>
+                  <Th>Stock</Th>
+                  {mostrarUbicaciones ? <Th>Casa</Th> : null}
+                  {mostrarUbicaciones ? <Th>Stand</Th> : null}
+                  <Th>Última entrada</Th>
+                  <Th>Última salida</Th>
+                  <Th>Rotación 30d</Th>
+                  <Th>Estado</Th>
+                </tr>
+              </thead>
+              {!cargando && error !== MSG_ERROR_RED ? (
+                <tbody>
+                  {visibles.map((fila, index) => {
+                    const est = etiquetaEstadoStock(estadoStock(fila.stock_actual, umbral))
+                    return (
+                      <Tr key={fila.id} index={index}>
+                        <td className="px-3 py-3 font-medium">{fila.nombre}</td>
+                        <td className="px-3 py-3" style={{ color: 'var(--text-muted)' }}>
+                          {fila.categoria ?? '—'}
+                        </td>
+                        <td className="px-3 py-3">
+                          <button
+                            type="button"
+                            className="font-semibold text-[#A5B4FC] hover:underline"
+                            onClick={() => setHistorial(fila)}
+                          >
+                            {fila.stock_actual}
+                          </button>
+                        </td>
+                        {mostrarUbicaciones ? <td className="px-3 py-3">{fila.stock_casa}</td> : null}
+                        {mostrarUbicaciones ? <td className="px-3 py-3">{fila.stock_stand}</td> : null}
+                        <td className="px-3 py-3">{fechaCorta(fila.ultima_entrada)}</td>
+                        <td className="px-3 py-3">{fechaCorta(fila.ultima_salida)}</td>
+                        <td className="px-3 py-3">{fila.rotacion_30}</td>
+                        <td className="px-3 py-3">
+                          {est.icono} {est.texto}
+                        </td>
+                      </Tr>
+                    )
+                  })}
+                </tbody>
+              ) : null}
+            </table>
+          </div>
+          {!cargando && error !== MSG_ERROR_RED ? (
+            <MobileCards>
+              {visibles.map((fila) => {
+                const est = etiquetaEstadoStock(estadoStock(fila.stock_actual, umbral))
+                return (
+                  <ListCard key={fila.id}>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-semibold">{fila.nombre}</p>
+                      <span className="text-xs">
+                        {est.icono} {est.texto}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="mt-2 text-sm font-semibold text-[#6366F1]"
+                      onClick={() => setHistorial(fila)}
+                    >
+                      Stock {fila.stock_actual}
+                    </button>
+                    {mostrarUbicaciones ? (
+                      <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        Casa {fila.stock_casa} · Stand {fila.stock_stand}
+                      </p>
+                    ) : null}
+                    <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                      Rotación 30d: {fila.rotacion_30}
+                    </p>
+                  </ListCard>
+                )
+              })}
+            </MobileCards>
+          ) : null}
+          {cargando ? <TableSkeleton /> : null}
+          {!cargando && error === MSG_ERROR_RED ? (
+            <TableErrorRed onReintentar={() => void cargar()} />
+          ) : null}
+          {!cargando && visibles.length === 0 && !error ? (
+            <p className="px-3 py-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+              No hay productos con esos filtros.
+            </p>
+          ) : null}
+        </TableCard>
+      </div>
+
+      {historial ? (
+        <HistorialMovimientosPanel
+          producto={{ id: historial.id, nombre: historial.nombre, stock: historial.stock_actual }}
+          puedeAjustar={false}
+          onCerrar={() => setHistorial(null)}
+        />
+      ) : null}
+
+      {traslado ? (
+        <TrasladoModal
+          productos={productos}
+          ubicaciones={ubicaciones}
+          onCerrar={() => setTraslado(false)}
+          onOk={() => {
+            setTraslado(false)
+            void cargar()
+          }}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+function TrasladoModal({
+  productos,
+  ubicaciones,
+  onCerrar,
+  onOk,
+}: {
+  productos: { id: string; nombre: string }[]
+  ubicaciones: UbicacionFila[]
+  onCerrar: () => void
+  onOk: () => void
+}) {
+  const [productoId, setProductoId] = useState(productos[0]?.id ?? '')
+  const [cantidad, setCantidad] = useState('1')
+  const [origen, setOrigen] = useState(
+    ubicaciones.find((u) => u.nombre === 'Casa')?.nombre ?? ubicaciones[0]?.nombre ?? '',
+  )
+  const [destino, setDestino] = useState(
+    ubicaciones.find((u) => u.nombre === 'Stand')?.nombre ?? ubicaciones[1]?.nombre ?? '',
+  )
+  const [fecha, setFecha] = useState(() => {
+    const d = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  })
+  const [notas, setNotas] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [enviando, setEnviando] = useState(false)
+
+  async function confirmar() {
+    setError(null)
+    const n = Number.parseInt(cantidad, 10)
+    if (!productoId) {
+      setError('Elegí un producto')
+      return
+    }
+    if (!Number.isFinite(n) || n <= 0) {
+      setError('La cantidad tiene que ser un número positivo')
+      return
+    }
+    setEnviando(true)
+    const fallo = await registrarTraslado(requireSupabase(), {
+      productoId,
+      cantidad: n,
+      origen,
+      destino,
+      fecha,
+      notas: notas.trim(),
+    })
+    setEnviando(false)
+    if (fallo) {
+      setError(fallo)
+      return
+    }
+    onOk()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-[440px] rounded-lg bg-white/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+        <h2 className="text-xl font-bold text-[#1A2F4A]">Registrar traslado</h2>
+        <label className="mt-4 block text-sm font-medium text-[#4A5568]">
+          Producto
+          <select
+            className="mt-1.5 h-11 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A]"
+            value={productoId}
+            onChange={(ev) => setProductoId(ev.target.value)}
+          >
+            {productos.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="mt-4 block text-sm font-medium text-[#4A5568]">
+          Cantidad
+          <input
+            className="mt-1.5 h-11 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A]"
+            inputMode="numeric"
+            value={cantidad}
+            onChange={(ev) => setCantidad(ev.target.value)}
+          />
+        </label>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <label className="text-sm font-medium text-[#4A5568]">
+            De
+            <select
+              className="mt-1.5 h-11 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A]"
+              value={origen}
+              onChange={(ev) => setOrigen(ev.target.value)}
+            >
+              {ubicaciones.map((u) => (
+                <option key={u.id} value={u.nombre}>
+                  {u.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm font-medium text-[#4A5568]">
+            A
+            <select
+              className="mt-1.5 h-11 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A]"
+              value={destino}
+              onChange={(ev) => setDestino(ev.target.value)}
+            >
+              {ubicaciones.map((u) => (
+                <option key={u.id} value={u.nombre}>
+                  {u.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label className="mt-4 block text-sm font-medium text-[#4A5568]">
+          Fecha
+          <input
+            className="mt-1.5 h-11 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A]"
+            type="datetime-local"
+            value={fecha}
+            onChange={(ev) => setFecha(ev.target.value)}
+          />
+        </label>
+        <label className="mt-4 block text-sm font-medium text-[#4A5568]">
+          Notas
+          <input
+            className="mt-1.5 h-11 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A]"
+            value={notas}
+            onChange={(ev) => setNotas(ev.target.value)}
+          />
+        </label>
+        {error ? <p className="mt-3 text-sm text-[#DC2626]">{error}</p> : null}
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            className="h-11 flex-1 rounded-md border border-[#E2E8F0] text-sm font-semibold text-[#4A5568]"
+            onClick={onCerrar}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className="h-11 flex-1 rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
+            disabled={enviando}
+            onClick={() => void confirmar()}
+          >
+            {enviando ? 'Guardando…' : 'Confirmar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -36,7 +36,7 @@ export function AppNav() {
   const location = useLocation()
   const [mas, setMas] = useState(false)
   const sinAnalytics = Boolean(perfil && !planTieneAnalytics(perfil.empresa.plan_actual))
-  const masActivo = ['/compras', '/proveedores', '/analytics', '/configuracion'].some((p) =>
+  const masActivo = ['/compras', '/proveedores', '/analytics', '/configuracion', '/inventario'].some((p) =>
     location.pathname.startsWith(p),
   )
 
@@ -87,6 +87,9 @@ export function AppNav() {
         <NavLink className={linkClass} to="/proveedores">
           Proveedores
         </NavLink>
+        <NavLink className={linkClass} to="/inventario">
+          Inventario
+        </NavLink>
         <NavLink className={linkClass} to="/analytics">
           {analyticsLabel}
         </NavLink>
@@ -124,6 +127,9 @@ export function AppNav() {
           </NavLink>
           <NavLink className={sideClass} to="/proveedores">
             🏭 Proveedores
+          </NavLink>
+          <NavLink className={sideClass} to="/inventario">
+            📋 Inventario
           </NavLink>
           <NavLink className={sideClass} to="/analytics">
             📊 {analyticsLabel}
@@ -180,6 +186,9 @@ export function AppNav() {
             </NavLink>
             <NavLink className={sheetClass} to="/proveedores" onClick={() => setMas(false)}>
               🏭 Proveedores
+            </NavLink>
+            <NavLink className={sheetClass} to="/inventario" onClick={() => setMas(false)}>
+              📋 Inventario
             </NavLink>
             <NavLink className={sheetClass} to="/analytics" onClick={() => setMas(false)}>
               📊 {analyticsLabel}

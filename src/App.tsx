@@ -11,6 +11,9 @@ const CompletarAltaPage = lazy(() =>
   import('./pages/CompletarAltaPage').then((m) => ({ default: m.CompletarAltaPage })),
 )
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })))
+const InventarioPage = lazy(() =>
+  import('./pages/InventarioPage').then((m) => ({ default: m.InventarioPage })),
+)
 const LandingPage = lazy(() =>
   import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })),
 )
@@ -196,6 +199,7 @@ function AppRoutes() {
         <Route path="/productos" element={<ProductosPage />} />
         <Route path="/productos/nuevo" element={<ProductoFormPage />} />
         <Route path="/productos/:id" element={<ProductoFormPage />} />
+        <Route path="/inventario" element={<InventarioPage />} />
         <Route path="/ventas" element={<VentasPage />} />
         <Route path="/ventas/nueva" element={<VentaNuevaPage />} />
         <Route path="/compras" element={<ComprasPage />} />
