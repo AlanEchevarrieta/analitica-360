@@ -17,8 +17,8 @@ function speed() {
   return 0.6 + Math.random() * 0.6
 }
 
-function createParticles(width: number, height: number): Particle[] {
-  return Array.from({ length: COUNT }, () => {
+function createParticles(width: number, height: number, count: number): Particle[] {
+  return Array.from({ length: count }, () => {
     const s = speed()
     const angle = Math.random() * Math.PI * 2
     return {
@@ -31,9 +31,9 @@ function createParticles(width: number, height: number): Particle[] {
   })
 }
 
-function shouldAnimate() {
+function shouldAnimate(enableMobile: boolean) {
   if (typeof window === 'undefined') return false
-  if (window.innerWidth < MIN_WIDTH) return false
+  if (!enableMobile && window.innerWidth < MIN_WIDTH) return false
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false
   return true
 }
@@ -51,7 +51,17 @@ function leerColores() {
   }
 }
 
-export function ParticleNetwork({ contained = false }: { contained?: boolean }) {
+export function ParticleNetwork({
+  contained = false,
+  enableMobile = false,
+  mobileCount = 80,
+  desktopCount = COUNT,
+}: {
+  contained?: boolean
+  enableMobile?: boolean
+  mobileCount?: number
+  desktopCount?: number
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -85,7 +95,8 @@ export function ParticleNetwork({ contained = false }: { contained?: boolean }) 
       board.style.width = `${width}px`
       board.style.height = `${height}px`
       brush.setTransform(dpr, 0, 0, dpr, 0, 0)
-      particles = createParticles(width, height)
+      const count = width < MIN_WIDTH ? mobileCount : desktopCount
+      particles = createParticles(width, height, count)
     }
 
     function draw() {
@@ -159,7 +170,7 @@ export function ParticleNetwork({ contained = false }: { contained?: boolean }) 
     }
 
     function start() {
-      if (running || !shouldAnimate()) return
+      if (running || !shouldAnimate(enableMobile)) return
       running = true
       resize()
       raf = requestAnimationFrame(draw)
@@ -188,12 +199,12 @@ export function ParticleNetwork({ contained = false }: { contained?: boolean }) 
 
     function onResize() {
       stop()
-      if (shouldAnimate()) start()
+      if (shouldAnimate(enableMobile)) start()
     }
 
     function onVisibility() {
       if (document.hidden) stop()
-      else if (shouldAnimate()) start()
+      else if (shouldAnimate(enableMobile)) start()
     }
 
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -203,7 +214,7 @@ export function ParticleNetwork({ contained = false }: { contained?: boolean }) 
     window.addEventListener('mouseleave', onLeave)
     document.addEventListener('visibilitychange', onVisibility)
 
-    if (shouldAnimate()) start()
+    if (shouldAnimate(enableMobile)) start()
 
     return () => {
       stop()
@@ -213,16 +224,17 @@ export function ParticleNetwork({ contained = false }: { contained?: boolean }) 
       window.removeEventListener('mouseleave', onLeave)
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [contained])
+  }, [contained, enableMobile, mobileCount, desktopCount])
 
+  const vis = enableMobile ? 'block' : 'hidden md:block'
   return (
     <canvas
       ref={canvasRef}
       aria-hidden="true"
       className={
         contained
-          ? 'pointer-events-none absolute inset-0 z-0 hidden h-full w-full md:block'
-          : 'pointer-events-none fixed inset-0 z-0 hidden h-full w-full md:block'
+          ? `pointer-events-none absolute inset-0 z-0 h-full w-full ${vis}`
+          : `pointer-events-none fixed top-0 left-0 z-0 h-[100vh] w-[100vw] ${vis}`
       }
     />
   )
