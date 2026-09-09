@@ -139,6 +139,8 @@ function etiquetaEstadoPago(estado: string) {
   if (estado === 'rechazado') return 'Rechazado'
   return estado || '—'
 }
+
+function fechaMasDias(dias: number) {
   const d = new Date()
   d.setDate(d.getDate() + dias)
   const y = d.getFullYear()

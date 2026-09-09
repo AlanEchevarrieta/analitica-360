@@ -284,6 +284,7 @@ export function VentasPage() {
               Nueva venta
             </Link>
           </div>
+          </div>
         </div>
 
         {error && error !== MSG_ERROR_RED ? (
@@ -446,6 +447,16 @@ export function VentasPage() {
             productos={productos}
             onCerrar={() => setImportar(false)}
             onListo={cargar}
+          />
+        ) : null}
+        {anular ? (
+          <AnularVentaModal
+            venta={anular}
+            onCerrar={() => setAnular(null)}
+            onOk={() => {
+              setAnular(null)
+              void cargar()
+            }}
           />
         ) : null}
         {tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'registrar_ventas') ? (
