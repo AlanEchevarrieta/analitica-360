@@ -69,7 +69,7 @@ export function AppNav() {
     <>
       {/* Desktop > 1024: navbar horizontal actual */}
       <nav className="app-nav mb-6 hidden items-center gap-1 lg:flex" style={{ fontFamily: theme.font }}>
-        <NavLink className={linkClass} to="/" end>
+        <NavLink className={linkClass} to="/inicio" end>
           Inicio
         </NavLink>
         <NavLink className={linkClass} to="/productos">
@@ -107,7 +107,7 @@ export function AppNav() {
       <aside className="app-sidebar hidden md:flex lg:hidden" aria-label="Navegación">
         <p className="app-sidebar-brand">Analítica 360</p>
         <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
-          <NavLink className={sideClass} to="/" end>
+          <NavLink className={sideClass} to="/inicio" end>
             🏠 Inicio
           </NavLink>
           <NavLink className={sideClass} to="/ventas">
@@ -144,7 +144,7 @@ export function AppNav() {
 
       {/* Mobile: bottom bar */}
       <nav className="app-nav-bottom md:hidden" aria-label="Navegación principal">
-        <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/" end>
+        <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/inicio" end>
           <span aria-hidden>🏠</span>
           Inicio
         </NavLink>

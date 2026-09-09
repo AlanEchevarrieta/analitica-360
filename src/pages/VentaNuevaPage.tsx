@@ -281,7 +281,7 @@ export function VentaNuevaPage() {
       return
     }
     setExito(true)
-    window.setTimeout(() => navigate('/', { replace: true }), 1200)
+    window.setTimeout(() => navigate('/inicio', { replace: true }), 1200)
   }
 
   if (!perfil) return null

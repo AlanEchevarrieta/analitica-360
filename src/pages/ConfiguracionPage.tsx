@@ -131,7 +131,7 @@ export function ConfiguracionPage() {
   }, [perfil])
 
   if (!perfil) return null
-  if (perfil.usuario.rol !== 'dueno') return <Navigate to="/" replace />
+  if (perfil.usuario.rol !== 'dueno') return <Navigate to="/inicio" replace />
 
   const creditoActivo = medios.includes('credito')
 
@@ -658,7 +658,7 @@ export function ConfiguracionPage() {
             </>
           )}
 
-          <Link className="mt-6 block text-center text-sm font-medium text-[#A5B4FC]" to="/">
+          <Link className="mt-6 block text-center text-sm font-medium text-[#A5B4FC]" to="/inicio">
             Volver al inicio
           </Link>
         </div>

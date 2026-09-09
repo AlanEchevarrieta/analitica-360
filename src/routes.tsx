@@ -17,7 +17,7 @@ export function RequireGuest() {
     return <p className="p-8 text-center text-sm text-[#8a7a63]">Cargando…</p>
   }
   if (session && !perfil) return <Navigate to="/completar-alta" replace />
-  if (session && perfil) return <Navigate to="/" replace />
+  if (session && perfil) return <Navigate to="/inicio" replace />
   return <Outlet />
 }
 
@@ -28,7 +28,7 @@ export function RequireDueno() {
   }
   if (!session) return <Navigate to="/login" replace />
   if (!perfil) return <Navigate to="/completar-alta" replace />
-  if (perfil.usuario.rol !== 'dueno') return <Navigate to="/" replace />
+  if (perfil.usuario.rol !== 'dueno') return <Navigate to="/inicio" replace />
   return <Outlet />
 }
 
@@ -38,6 +38,6 @@ export function RequireCompletarAlta() {
     return <p className="p-8 text-center text-sm text-[#8a7a63]">Cargando…</p>
   }
   if (!session) return <Navigate to="/login" replace />
-  if (perfil) return <Navigate to="/" replace />
+  if (perfil) return <Navigate to="/inicio" replace />
   return <Outlet />
 }

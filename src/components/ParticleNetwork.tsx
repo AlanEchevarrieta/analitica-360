@@ -51,7 +51,7 @@ function leerColores() {
   }
 }
 
-export function ParticleNetwork() {
+export function ParticleNetwork({ contained = false }: { contained?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -69,10 +69,17 @@ export function ParticleNetwork() {
     let colors = leerColores()
     const mouse = { x: 0, y: 0, active: false }
 
+    function medidas() {
+      const parent = board.parentElement
+      if (contained && parent) {
+        return { width: parent.clientWidth, height: parent.clientHeight }
+      }
+      return { width: window.innerWidth, height: window.innerHeight }
+    }
+
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
-      const width = window.innerWidth
-      const height = window.innerHeight
+      const { width, height } = medidas()
       board.width = Math.floor(width * dpr)
       board.height = Math.floor(height * dpr)
       board.style.width = `${width}px`
@@ -83,8 +90,7 @@ export function ParticleNetwork() {
 
     function draw() {
       colors = leerColores()
-      const width = window.innerWidth
-      const height = window.innerHeight
+      const { width, height } = medidas()
       if (colors.fill) {
         const g = brush.createLinearGradient(0, 0, 0, height)
         g.addColorStop(0, colors.from)
@@ -165,8 +171,14 @@ export function ParticleNetwork() {
     }
 
     function onMove(e: MouseEvent) {
-      mouse.x = e.clientX
-      mouse.y = e.clientY
+      if (contained) {
+        const rect = board.getBoundingClientRect()
+        mouse.x = e.clientX - rect.left
+        mouse.y = e.clientY - rect.top
+      } else {
+        mouse.x = e.clientX
+        mouse.y = e.clientY
+      }
       mouse.active = true
     }
 
@@ -201,13 +213,17 @@ export function ParticleNetwork() {
       window.removeEventListener('mouseleave', onLeave)
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [contained])
 
   return (
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-0 hidden h-full w-full md:block"
+      className={
+        contained
+          ? 'pointer-events-none absolute inset-0 z-0 hidden h-full w-full md:block'
+          : 'pointer-events-none fixed inset-0 z-0 hidden h-full w-full md:block'
+      }
     />
   )
 }

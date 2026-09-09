@@ -11,6 +11,9 @@ const CompletarAltaPage = lazy(() =>
   import('./pages/CompletarAltaPage').then((m) => ({ default: m.CompletarAltaPage })),
 )
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })))
+const LandingPage = lazy(() =>
+  import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })),
+)
 const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })))
 const ResetPasswordPage = lazy(() =>
   import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
@@ -144,6 +147,25 @@ function InactivityWatch() {
   return null
 }
 
+function TitleGate() {
+  const location = useLocation()
+  useEffect(() => {
+    document.title =
+      location.pathname === '/'
+        ? 'Analítica 360 — Sistema de gestión para comercios'
+        : 'Analítica 360'
+  }, [location.pathname])
+  return null
+}
+
+function PublicHome() {
+  const { listo, session, perfil } = useAuth()
+  if (!listo) return <PageFallback />
+  if (session && !perfil) return <Navigate to="/completar-alta" replace />
+  if (session && perfil) return <Navigate to="/inicio" replace />
+  return <LandingPage />
+}
+
 function AppRoutes() {
   const { configurado } = useAuth()
   if (!configurado) {
@@ -158,6 +180,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/" element={<PublicHome />} />
       <Route path="/terminos" element={<TerminosPage />} />
       <Route path="/privacidad" element={<PrivacidadPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -169,7 +192,7 @@ function AppRoutes() {
         <Route path="/completar-alta" element={<CompletarAltaPage />} />
       </Route>
       <Route element={<RequireAuth />}>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/inicio" element={<HomePage />} />
         <Route path="/productos" element={<ProductosPage />} />
         <Route path="/productos/nuevo" element={<ProductoFormPage />} />
         <Route path="/productos/:id" element={<ProductoFormPage />} />
@@ -196,15 +219,12 @@ function AppRoutes() {
 }
 
 export default function App() {
-  useEffect(() => {
-    document.title = 'Analítica 360'
-  }, [])
-
   return (
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
           <RecoveryGate />
+          <TitleGate />
           <InactivityWatch />
           <ToastHost />
           <Suspense fallback={<PageFallback />}>

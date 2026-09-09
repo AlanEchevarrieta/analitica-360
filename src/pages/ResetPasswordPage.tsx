@@ -47,7 +47,7 @@ export function ResetPasswordPage() {
     const result = await actualizarPassword(password)
     setEnviando(false)
     if (result) setError(result)
-    else navigate('/', { replace: true })
+    else navigate('/inicio', { replace: true })
   }
 
   if (!listo) {

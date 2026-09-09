@@ -323,7 +323,7 @@ export function AdminPage() {
   }
 
   if (!esAdminEmail(email)) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/inicio" replace />
   }
 
   return (
@@ -333,7 +333,7 @@ export function AdminPage() {
           <h1 className="text-xl font-bold">Admin · Analítica 360</h1>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Link className="text-sm" style={{ color: 'var(--nav-idle)' }} to="/">
+            <Link className="text-sm" style={{ color: 'var(--nav-idle)' }} to="/inicio">
               Volver
             </Link>
           </div>
