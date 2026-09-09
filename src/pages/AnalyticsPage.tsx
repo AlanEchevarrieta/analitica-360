@@ -246,11 +246,31 @@ export function AnalyticsPage() {
   }, [perfil, desde, hasta])
 
   const diasPeriodo = diasIncluidosPeriodo(desde, hasta)
-  const tieneCostos = data.costo > 0 || data.productos.some((p) => p.costo > 0)
-  const ticket = ticketPromedio(data.total, data.cantidad)
-  const ticketAnt = ticketPromedio(data.totalAnt, data.cantidadAnt)
-  const margen = margenPct(data.total, data.costo)
-  const margenAnt = margenPct(data.totalAnt, data.costoAnt)
+  const dataPeriodoAnterior = useMemo(
+    () => ({
+      total: data.totalAnt,
+      cantidad: data.cantidadAnt,
+      costo: data.costoAnt,
+      ticket: ticketPromedio(data.totalAnt, data.cantidadAnt),
+      margen: margenPct(data.totalAnt, data.costoAnt),
+    }),
+    [data.totalAnt, data.cantidadAnt, data.costoAnt],
+  )
+  const comparacionPeriodo = useMemo(() => {
+    const ticket = ticketPromedio(data.total, data.cantidad)
+    const margen = margenPct(data.total, data.costo)
+    const tieneCostos = data.costo > 0 || data.productos.some((p) => p.costo > 0)
+    return {
+      ticket,
+      margen,
+      tieneCostos,
+      pctVentas: variacionPct(data.total, dataPeriodoAnterior.total),
+      pctCantidad: variacionPct(data.cantidad, dataPeriodoAnterior.cantidad),
+      pctTicket: variacionPct(ticket, dataPeriodoAnterior.ticket),
+      pctMargen: variacionPct(margen, dataPeriodoAnterior.margen),
+    }
+  }, [data, dataPeriodoAnterior])
+  const { ticket, margen, tieneCostos } = comparacionPeriodo
 
   const coloresDonut = useMemo(
     () => data.formasPago.map((f) => colorFormaPago(f.name)),
@@ -482,18 +502,18 @@ export function AnalyticsPage() {
             ) : (
               <>
                 <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                  <Kpi label="Total ventas" valor={formatoARS(data.total)} pct={variacionPct(data.total, data.totalAnt)} />
+                  <Kpi label="Total ventas" valor={formatoARS(data.total)} pct={comparacionPeriodo.pctVentas} />
                   <Kpi
                     label="Transacciones"
                     valor={String(data.cantidad)}
-                    pct={variacionPct(data.cantidad, data.cantidadAnt)}
+                    pct={comparacionPeriodo.pctCantidad}
                   />
-                  <Kpi label="Ticket promedio" valor={formatoARS(ticket)} pct={variacionPct(ticket, ticketAnt)} />
+                  <Kpi label="Ticket promedio" valor={formatoARS(ticket)} pct={comparacionPeriodo.pctTicket} />
                   {tieneCostos ? (
                     <Kpi
                       label="Margen bruto estimado"
                       valor={`${margen.toFixed(1)}%`}
-                      pct={variacionPct(margen, margenAnt)}
+                      pct={comparacionPeriodo.pctMargen}
                     />
                   ) : (
                     <KpiShell

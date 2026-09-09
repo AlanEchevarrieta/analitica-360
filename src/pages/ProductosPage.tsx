@@ -503,6 +503,7 @@ export function ProductosPage() {
         ) : null}
         {historial ? (
           <HistorialMovimientosPanel
+            key={historial.id}
             producto={historial}
             puedeAjustar={puedeAjustar}
             onCerrar={() => setHistorial(null)}

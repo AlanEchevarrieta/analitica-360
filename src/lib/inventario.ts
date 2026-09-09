@@ -223,36 +223,58 @@ export async function listarResumenInventario(
   return { filas, error: null }
 }
 
+function deltaStockKardex(tipo: string, cantidad: number, signo: number) {
+  if (tipo === 'transferencia') return 0
+  return cantidad * signo
+}
+
 export async function listarKardexProducto(
   client: SupabaseClient,
   productoId: string,
-): Promise<{ filas: MovimientoKardex[]; error: string | null }> {
-  const conUbic = await client
-    .from('movimientos_inventario')
-    .select('id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino')
-    .eq('producto_id', productoId)
-    .is('deleted_at', null)
-    .order('fecha', { ascending: true })
-    .order('id', { ascending: true })
-    .limit(800)
+  input: { pagina: number; pageSize: number; stockActual: number },
+): Promise<{ filas: MovimientoKardex[]; total: number; error: string | null }> {
+  const from = (input.pagina - 1) * input.pageSize
+  const to = from + input.pageSize - 1
+  const colsConUbic =
+    'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino'
+  const colsSinUbic = 'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id'
 
-  let raw: Record<string, unknown>[] = []
-  if (!conUbic.error) {
-    raw = (conUbic.data ?? []) as Record<string, unknown>[]
-  } else if (/ubicacion/i.test(conUbic.error.message)) {
-    const sinUbic = await client
+  const pedirPagina = (cols: string) =>
+    client
       .from('movimientos_inventario')
-      .select('id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id')
+      .select(cols, { count: 'exact' })
       .eq('producto_id', productoId)
       .is('deleted_at', null)
-      .order('fecha', { ascending: true })
-      .order('id', { ascending: true })
-      .limit(800)
-    if (sinUbic.error) return { filas: [], error: sinUbic.error.message }
-    raw = (sinUbic.data ?? []) as Record<string, unknown>[]
-  } else {
-    return { filas: [], error: conUbic.error.message }
+      .order('fecha', { ascending: false })
+      .order('id', { ascending: false })
+      .range(from, to)
+
+  let pagina = await pedirPagina(colsConUbic)
+  if (pagina.error && /ubicacion/i.test(pagina.error.message)) {
+    pagina = await pedirPagina(colsSinUbic)
   }
+  if (pagina.error) return { filas: [], total: 0, error: pagina.error.message }
+
+  const raw = (pagina.data ?? []) as unknown as Record<string, unknown>[]
+  const total = pagina.count ?? 0
+
+  let netNewer = 0
+  if (from > 0) {
+    const saltados = await client
+      .from('movimientos_inventario')
+      .select('tipo, cantidad, signo')
+      .eq('producto_id', productoId)
+      .is('deleted_at', null)
+      .order('fecha', { ascending: false })
+      .order('id', { ascending: false })
+      .range(0, from - 1)
+    if (!saltados.error) {
+      for (const row of (saltados.data ?? []) as Record<string, unknown>[]) {
+        netNewer += deltaStockKardex(String(row.tipo ?? ''), Number(row.cantidad ?? 0), Number(row.signo ?? 0))
+      }
+    }
+  }
+
   const userIds = [...new Set(raw.map((r) => String(r.usuario_id ?? '')).filter(Boolean))]
   const ventaIds = [
     ...new Set(
@@ -275,14 +297,13 @@ export async function listarKardexProducto(
     }
   }
 
-  let saldo = 0
-  const conSaldo: MovimientoKardex[] = raw.map((row) => {
+  let saldo = Number(input.stockActual) - netNewer
+  const filas: MovimientoKardex[] = raw.map((row) => {
     const tipo = String(row.tipo ?? '')
     const cant = Number(row.cantidad ?? 0)
     const signo = Number(row.signo ?? 0)
-    if (tipo !== 'transferencia') saldo += cant * signo
     const ref = row.referencia_id == null ? null : String(row.referencia_id)
-    return {
+    const item: MovimientoKardex = {
       id: String(row.id),
       tipo,
       cantidad: cant,
@@ -296,8 +317,10 @@ export async function listarKardexProducto(
       ubicacionDestino: row.ubicacion_destino == null ? null : String(row.ubicacion_destino),
       ventaFecha: ref ? ventas.get(ref) ?? null : null,
     }
+    saldo -= deltaStockKardex(tipo, cant, signo)
+    return item
   })
-  return { filas: conSaldo.reverse(), error: null }
+  return { filas, total, error: null }
 }
 
 export async function registrarTraslado(

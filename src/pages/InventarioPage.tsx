@@ -262,6 +262,7 @@ export function InventarioPage() {
 
       {historial ? (
         <HistorialMovimientosPanel
+          key={historial.id}
           producto={{ id: historial.id, nombre: historial.nombre, stock: historial.stock_actual }}
           puedeAjustar={false}
           onCerrar={() => setHistorial(null)}

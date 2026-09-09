@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { PAGE_MOVIMIENTOS, PaginacionBar } from './listado'
 import {
   estiloTipoMovimiento,
   formatoFechaMov,
@@ -33,22 +34,29 @@ export function HistorialMovimientosPanel({
   onAjustar?: () => void
 }) {
   const [filas, setFilas] = useState<MovimientoKardex[]>([])
+  const [total, setTotal] = useState(0)
+  const [pagina, setPagina] = useState(1)
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => {
     let vivo = true
     setCargando(true)
-    void listarKardexProducto(requireSupabase(), producto.id).then((res) => {
+    void listarKardexProducto(requireSupabase(), producto.id, {
+      pagina,
+      pageSize: PAGE_MOVIMIENTOS,
+      stockActual: producto.stock,
+    }).then((res) => {
       if (!vivo) return
       setCargando(false)
       setError(res.error)
       setFilas(res.filas)
+      setTotal(res.total)
     })
     return () => {
       vivo = false
     }
-  }, [producto.id])
+  }, [producto.id, producto.stock, pagina])
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -131,6 +139,17 @@ export function HistorialMovimientosPanel({
                 })}
               </tbody>
             </table>
+          ) : null}
+          {!cargando && !error && total > 0 ? (
+            <div className="mt-3">
+              <PaginacionBar
+                pagina={pagina}
+                total={total}
+                pageSize={PAGE_MOVIMIENTOS}
+                onPagina={setPagina}
+                entidad="movimientos"
+              />
+            </div>
           ) : null}
         </div>
       </aside>
