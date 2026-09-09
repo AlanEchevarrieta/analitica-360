@@ -137,7 +137,7 @@ function Grafico7Dias({ data }: { data: DashboardInicio['ultimos7'] }) {
 function KpiCardSkeleton() {
   return (
     <div
-      className="rounded-lg p-4"
+      className="flex min-h-[108px] flex-col justify-center rounded-lg p-4"
       style={{
         background: 'var(--surface)',
         border: '1px solid var(--border)',
@@ -158,17 +158,25 @@ function DashboardSkeleton() {
         <KpiCardSkeleton />
         <KpiCardSkeleton />
         <KpiCardSkeleton />
-        <KpiCardSkeleton />
+        <div className="col-span-2 w-full max-w-[calc(50%-0.375rem)] justify-self-center xl:col-span-1 xl:max-w-none xl:justify-self-auto">
+          <KpiCardSkeleton />
+        </div>
       </div>
       <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div
-          className="kpi-skeleton-bar h-72"
-          style={{ borderRadius: 8 }}
-        />
+          className="rounded-lg p-4"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+        >
+          <div className="kpi-skeleton-bar" style={{ width: '45%', height: 14 }} />
+          <div className="kpi-skeleton-bar mt-3 h-56" style={{ borderRadius: 8 }} />
+        </div>
         <div
-          className="kpi-skeleton-bar h-72"
-          style={{ borderRadius: 8 }}
-        />
+          className="rounded-lg p-4"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+        >
+          <div className="kpi-skeleton-bar" style={{ width: '55%', height: 14 }} />
+          <div className="kpi-skeleton-bar mt-3" style={{ height: 320, borderRadius: 8 }} />
+        </div>
       </div>
     </section>
   )
@@ -229,7 +237,7 @@ function KpiCard({
 }) {
   return (
     <div
-      className="rounded-lg p-4"
+      className="min-h-[108px] rounded-lg p-4"
       style={{
         background: 'var(--surface)',
         border: '1px solid var(--border)',

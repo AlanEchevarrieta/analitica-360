@@ -909,7 +909,8 @@ select option:checked:hover {
 }
 
 .landing {
-  font-family: Karla, Inter, sans-serif;
+  font-family: Karla, Inter, ui-sans-serif, system-ui, sans-serif;
+  font-display: swap;
   color: var(--text);
   background: #080c14;
   position: relative;
@@ -923,6 +924,7 @@ select option:checked:hover {
 
 .landing-display {
   font-family: Fraunces, ui-serif, Georgia, serif;
+  font-display: swap;
 }
 
 .landing-nav {
@@ -1085,18 +1087,17 @@ select option:checked:hover {
   background: rgba(255, 255, 255, 0.04);
   padding: 0.4rem 0.9rem;
   font-size: 0.875rem;
-  opacity: 0;
-  transform: translateY(10px);
+  line-height: 1.25rem;
+  min-height: 2.05rem;
+  opacity: 0.35;
   transition:
     opacity 0.45s ease,
-    transform 0.45s ease,
     background 0.2s ease,
     border-color 0.2s ease;
 }
 
 .landing-chip.in {
   opacity: 1;
-  transform: none;
 }
 
 .landing-chip:hover {

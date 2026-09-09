@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './auth'
 import { ThemeProvider } from './lib/tema'
 import { supabase } from './lib/supabase'
 import { RequireAuth, RequireCompletarAlta, RequireDueno, RequireGuest } from './routes'
+import { LandingPage } from './pages/LandingPage'
 
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
 const CompletarAltaPage = lazy(() =>
@@ -13,9 +14,6 @@ const CompletarAltaPage = lazy(() =>
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })))
 const InventarioPage = lazy(() =>
   import('./pages/InventarioPage').then((m) => ({ default: m.InventarioPage })),
-)
-const LandingPage = lazy(() =>
-  import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })),
 )
 const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })))
 const ResetPasswordPage = lazy(() =>
@@ -163,9 +161,8 @@ function TitleGate() {
 
 function PublicHome() {
   const { listo, session, perfil } = useAuth()
-  if (!listo) return <PageFallback />
-  if (session && !perfil) return <Navigate to="/completar-alta" replace />
-  if (session && perfil) return <Navigate to="/inicio" replace />
+  if (listo && session && !perfil) return <Navigate to="/completar-alta" replace />
+  if (listo && session && perfil) return <Navigate to="/inicio" replace />
   return <LandingPage />
 }
 

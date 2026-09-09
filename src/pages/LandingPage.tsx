@@ -126,7 +126,7 @@ export function LandingPage() {
 
   return (
     <div className="landing">
-      <ParticleNetwork enableMobile desktopCount={150} mobileCount={80} />
+      <ParticleNetwork enableMobile startWhenIdle desktopCount={100} mobileCount={60} />
       <div className="relative z-10">
         <header className="landing-nav sticky top-0 z-30 flex items-center justify-between gap-3 px-4 py-3 md:px-8">
           <Link to="/" className="shrink-0 text-base font-semibold tracking-tight md:text-lg">
@@ -182,7 +182,7 @@ export function LandingPage() {
           <div className="mx-auto mt-8 grid max-w-6xl grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
               <article key={f.titulo} className="landing-card rounded-[12px] p-5">
-                <p className="text-[32px] leading-none" aria-hidden>
+                <p className="flex h-8 w-8 items-center justify-center text-[32px] leading-none" aria-hidden>
                   {f.icon}
                 </p>
                 <h3 className="landing-display mt-2 text-lg font-semibold">{f.titulo}</h3>

@@ -56,11 +56,13 @@ export function ParticleNetwork({
   enableMobile = false,
   mobileCount = 80,
   desktopCount = COUNT,
+  startWhenIdle = false,
 }: {
   contained?: boolean
   enableMobile?: boolean
   mobileCount?: number
   desktopCount?: number
+  startWhenIdle?: boolean
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -214,6 +216,29 @@ export function ParticleNetwork({
     window.addEventListener('mouseleave', onLeave)
     document.addEventListener('visibilitychange', onVisibility)
 
+    if (startWhenIdle) {
+      const arrancar = () => {
+        if (shouldAnimate(enableMobile)) start()
+      }
+      let cancelIdle: () => void
+      if (typeof window.requestIdleCallback === 'function') {
+        const idleId = window.requestIdleCallback(arrancar, { timeout: 500 })
+        cancelIdle = () => window.cancelIdleCallback(idleId)
+      } else {
+        const t = window.setTimeout(arrancar, 500)
+        cancelIdle = () => window.clearTimeout(t)
+      }
+      return () => {
+        cancelIdle()
+        stop()
+        motion.removeEventListener('change', onResize)
+        window.removeEventListener('resize', onResize)
+        window.removeEventListener('mousemove', onMove)
+        window.removeEventListener('mouseleave', onLeave)
+        document.removeEventListener('visibilitychange', onVisibility)
+      }
+    }
+
     if (shouldAnimate(enableMobile)) start()
 
     return () => {
@@ -224,12 +249,14 @@ export function ParticleNetwork({
       window.removeEventListener('mouseleave', onLeave)
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [contained, enableMobile, mobileCount, desktopCount])
+  }, [contained, enableMobile, mobileCount, desktopCount, startWhenIdle])
 
   const vis = enableMobile ? 'block' : 'hidden md:block'
   return (
     <canvas
       ref={canvasRef}
+      width={390}
+      height={844}
       aria-hidden="true"
       className={
         contained
