@@ -29,6 +29,47 @@ import {
 import { theme } from '../theme'
 import { coloresGrafico, useTema } from '../lib/tema'
 
+function resumenAlerta(nombres: string[], extraLabel?: string) {
+  const vis = nombres.slice(0, 3)
+  const extra = nombres.length - vis.length
+  const lista = vis.join(', ')
+  if (extra <= 0) return lista
+  return extraLabel ? `${lista} +${extra} más ${extraLabel}` : `${lista} +${extra} más`
+}
+
+function BannerStock({
+  texto,
+  to,
+  fondo,
+  borde,
+  color,
+}: {
+  texto: string
+  to: string
+  fondo: string
+  borde: string
+  color: string
+}) {
+  return (
+    <div
+      className="flex items-center gap-3 px-3 py-2 text-sm"
+      style={{
+        background: fondo,
+        border: `1px solid ${borde}`,
+        borderRadius: 8,
+        color,
+      }}
+    >
+      <p className="min-w-0 flex-1 truncate" title={texto}>
+        {texto}
+      </p>
+      <Link className="shrink-0 font-semibold whitespace-nowrap" style={{ color }} to={to}>
+        Ver todos →
+      </Link>
+    </div>
+  )
+}
+
 const DASH_VACIO: DashboardInicio = {
   hoy: { cantidad: 0, total: 0 },
   semana: 0,
@@ -338,19 +379,34 @@ export function HomePage() {
             {(() => {
               const sin = dash.alertasStock.filter((p) => p.stock <= 0)
               const bajo = dash.alertasStock.filter((p) => p.stock > 0)
+              if (sin.length === 0 && bajo.length === 0) return null
+              const claro = tema === 'light'
               return (
-                <>
+                <div className="mt-4 space-y-2">
                   {sin.length > 0 ? (
-                    <p className="mt-4 rounded-lg bg-red-100 px-3 py-3 text-sm text-red-900">
-                      ⚠️ Sin stock: {sin.map((p) => p.nombre).join(', ')}
-                    </p>
+                    <BannerStock
+                      to="/productos?stock=sin"
+                      texto={`⚠️ Sin stock (${sin.length} ${sin.length === 1 ? 'producto' : 'productos'}): ${resumenAlerta(
+                        sin.map((p) => p.nombre),
+                        'sin stock',
+                      )}`}
+                      fondo={claro ? '#FEE2E2' : 'rgba(248,113,113,0.1)'}
+                      borde={claro ? '#EF4444' : '#F87171'}
+                      color={claro ? '#991B1B' : '#F87171'}
+                    />
                   ) : null}
                   {bajo.length > 0 ? (
-                    <p className="mt-3 rounded-lg bg-amber-100 px-3 py-3 text-sm text-amber-950">
-                      📦 Stock bajo: {bajo.map((p) => `${p.nombre} (${p.stock}u)`).join(', ')}
-                    </p>
+                    <BannerStock
+                      to="/productos?stock=bajo"
+                      texto={`📦 Stock bajo (${bajo.length} ${bajo.length === 1 ? 'producto' : 'productos'}): ${resumenAlerta(
+                        bajo.map((p) => `${p.nombre} (${p.stock}u)`),
+                      )}`}
+                      fondo={claro ? '#FEF9C3' : 'rgba(252,211,77,0.1)'}
+                      borde={claro ? '#EAB308' : '#FCD34D'}
+                      color={claro ? '#713F12' : '#FCD34D'}
+                    />
                   ) : null}
-                </>
+                </div>
               )
             })()}
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { AppNav } from '../components/AppNav'
@@ -41,13 +41,21 @@ function margenPct(precio: number, costo: number) {
   return ((precio - costo) / precio) * 100
 }
 
+function stockDesdeQuery(valor: string | null): 'todos' | 'con' | 'sin' | 'bajo' {
+  if (valor === 'con' || valor === 'sin' || valor === 'bajo') return valor
+  return 'todos'
+}
+
 export function ProductosPage() {
   const { perfil } = useAuth()
+  const [searchParams] = useSearchParams()
   const [filas, setFilas] = useState<ProductoFila[]>([])
   const [busqueda, setBusqueda] = useState('')
   const [categoria, setCategoria] = useState('')
   const [estado, setEstado] = useState<'todos' | 'activos' | 'inactivos'>('todos')
-  const [stockFiltro, setStockFiltro] = useState<'todos' | 'con' | 'sin' | 'bajo'>('todos')
+  const [stockFiltro, setStockFiltro] = useState<'todos' | 'con' | 'sin' | 'bajo'>(() =>
+    stockDesdeQuery(searchParams.get('stock')),
+  )
   const [margenFiltro, setMargenFiltro] = useState<'todos' | 'alto' | 'medio' | 'bajo'>('todos')
   const [menu, setMenu] = useState<'cat' | 'estado' | 'stock' | 'margen' | null>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
@@ -95,6 +103,14 @@ export function ProductosPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useEffect(() => {
+    const raw = searchParams.get('stock')
+    if (raw == null) return
+    const fromUrl = stockDesdeQuery(raw)
+    setStockFiltro(fromUrl)
+    setPagina(1)
+  }, [searchParams])
 
   if (!perfil) return null
 
