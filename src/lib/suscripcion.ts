@@ -138,6 +138,15 @@ export function esAdminEmail(email: string | undefined | null): boolean {
 
 export type PlanAdmin = { id: string; nombre: string }
 
+function esDemoTrue(valor: unknown): boolean {
+  if (valor === true || valor === 1) return true
+  if (typeof valor === 'string') {
+    const t = valor.trim().toLowerCase()
+    return t === 'true' || t === 't' || t === '1'
+  }
+  return false
+}
+
 export type FilaAdminSuscripcion = {
   suscripcion_id: string | null
   empresa_id: string
@@ -177,7 +186,7 @@ export async function listarSuscripcionesAdmin(
     fecha_vencimiento: row.fecha_vencimiento == null ? null : String(row.fecha_vencimiento),
     plan_nombre: row.plan_nombre == null ? null : String(row.plan_nombre),
     plan_actual: row.plan_actual == null ? null : String(row.plan_actual),
-    es_demo: Boolean(row.es_demo),
+    es_demo: esDemoTrue(row.es_demo),
   })), error: null }
 }
 

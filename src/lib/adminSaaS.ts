@@ -104,7 +104,10 @@ export async function listarPagosAdmin(
     p_estado: input.estado || null,
     p_periodo: periodo,
   })
-  if (error) return { filas: [], error: error.message }
+  if (error) {
+    console.error('[admin_listar_pagos]', error)
+    return { filas: [], error: error.message }
+  }
   return {
     filas: ((data ?? []) as Record<string, unknown>[]).map((row) => ({
       id: String(row.id),
@@ -139,6 +142,7 @@ export async function registrarPagoAdmin(
     p_notas: input.notas,
   })
   if (!error) return null
+  console.error('[admin_registrar_pago]', error)
   if (error.message.includes('MONTO_INVALIDO')) return 'El monto tiene que ser mayor a 0'
   return error.message
 }

@@ -123,7 +123,22 @@ function KpiAdmin({
   )
 }
 
-function fechaMasDias(dias: number) {
+function etiquetaPeriodoPago(periodo: string | null) {
+  if (!periodo) return '—'
+  const [anio, mes] = periodo.split('-')
+  const n = Number(mes)
+  if (!anio || !Number.isFinite(n) || n < 1) return periodo
+  const fecha = new Date(Number(anio), n - 1, 1)
+  const texto = fecha.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+  return texto.charAt(0).toUpperCase() + texto.slice(1)
+}
+
+function etiquetaEstadoPago(estado: string) {
+  if (estado === 'confirmado') return 'Confirmado'
+  if (estado === 'pendiente') return 'Pendiente'
+  if (estado === 'rechazado') return 'Rechazado'
+  return estado || '—'
+}
   const d = new Date()
   d.setDate(d.getDate() + dias)
   const y = d.getFullYear()
@@ -145,6 +160,7 @@ export function AdminPage() {
   const [tab, setTab] = useState<'empresas' | 'pagos'>('empresas')
   const [metrics, setMetrics] = useState<AdminMetricsRpc>(METRICS_CERO)
   const [pagos, setPagos] = useState<AdminPagoFila[]>([])
+  const [errorPagos, setErrorPagos] = useState<string | null>(null)
   const [filtroPagoEstado, setFiltroPagoEstado] = useState('')
   const [filtroPagoMes, setFiltroPagoMes] = useState('')
   const [modalPago, setModalPago] = useState(false)
@@ -164,6 +180,11 @@ export function AdminPage() {
     const filtrados = planes.filter((p) => ids.has(clavePlan(p.nombre)))
     return filtrados.length ? filtrados : planes
   }, [planes])
+
+  const empresasActivasPago = useMemo(
+    () => filas.filter((f) => f.estado === 'activa'),
+    [filas],
+  )
 
   function planDeFila(fila: FilaAdminSuscripcion) {
     return fila.plan_actual || fila.plan_nombre
@@ -191,8 +212,14 @@ export function AdminPage() {
       estado: filtroPagoEstado,
       periodo: filtroPagoMes,
     })
-    if (fallo) setError(fallo)
-    else setPagos(data)
+    if (fallo) {
+      console.error('[admin] pagos', fallo)
+      setErrorPagos(fallo)
+      setPagos([])
+    } else {
+      setErrorPagos(null)
+      setPagos(data)
+    }
   }, [filtroPagoEstado, filtroPagoMes])
 
   useEffect(() => {
@@ -435,16 +462,20 @@ export function AdminPage() {
                 Registrar pago manual
               </button>
             </div>
+            {errorPagos ? (
+              <p className="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">{errorPagos}</p>
+            ) : null}
             <div className="overflow-x-auto rounded-lg bg-white/95 text-[#1A2F4A]">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead className="bg-[#EEF2F6] text-xs uppercase tracking-wide text-[#4A5568]">
                   <tr>
                     <th className="px-3 py-3">Empresa</th>
-                    <th className="px-3 py-3">Monto</th>
+                    <th className="px-3 py-3">Monto ARS</th>
                     <th className="px-3 py-3">Método</th>
                     <th className="px-3 py-3">Estado</th>
                     <th className="px-3 py-3">Período</th>
                     <th className="px-3 py-3">Fecha</th>
+                    <th className="px-3 py-3">Notas</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -453,13 +484,14 @@ export function AdminPage() {
                       <td className="px-3 py-3 font-medium">{p.empresa_nombre}</td>
                       <td className="px-3 py-3">{formatoARS(p.monto_ars)}</td>
                       <td className="px-3 py-3">{p.metodo}</td>
-                      <td className="px-3 py-3">{p.estado}</td>
-                      <td className="px-3 py-3">{p.periodo ?? '—'}</td>
+                      <td className="px-3 py-3">{etiquetaEstadoPago(p.estado)}</td>
+                      <td className="px-3 py-3">{etiquetaPeriodoPago(p.periodo)}</td>
                       <td className="px-3 py-3">
                         {p.created_at
                           ? new Date(p.created_at).toLocaleDateString('es-AR')
                           : '—'}
                       </td>
+                      <td className="max-w-[220px] px-3 py-3 text-[#4A5568]">{p.notas || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -500,7 +532,7 @@ export function AdminPage() {
                       <input
                         type="checkbox"
                         className="h-4 w-4 accent-[#6366F1]"
-                        checked={Boolean(fila.es_demo)}
+                        checked={fila.es_demo === true}
                         disabled={guardando === fila.empresa_id}
                         onChange={() => void marcarDemo(fila)}
                       />
@@ -605,7 +637,7 @@ export function AdminPage() {
                   onChange={(ev) => setPagoEmpresa(ev.target.value)}
                 >
                   <option value="">Elegí una empresa</option>
-                  {filas.map((f) => (
+                  {empresasActivasPago.map((f) => (
                     <option key={f.empresa_id} value={f.empresa_id}>
                       {f.empresa_nombre}
                     </option>
