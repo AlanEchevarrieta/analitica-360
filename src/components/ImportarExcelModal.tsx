@@ -33,6 +33,7 @@ export function ImportarExcelModal({
   const [oculto, setOculto] = useState(false)
 
   useEffect(() => {
+    void import('xlsx')
     return () => {
       if (toastTimer.current != null) window.clearTimeout(toastTimer.current)
     }
@@ -130,7 +131,7 @@ export function ImportarExcelModal({
               borderRadius: 8,
               padding: '12px 20px',
             }}
-            onClick={() => descargarPlantillaProductos()}
+            onClick={() => void descargarPlantillaProductos()}
           >
             <span aria-hidden>⬇️</span> Descargar plantilla Excel
           </button>

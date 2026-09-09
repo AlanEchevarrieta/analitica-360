@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
 import { crearProducto, type ProductoFila } from './productos'
 
 export const COLUMNAS_PLANTILLA = [
@@ -88,7 +87,8 @@ function filasDesdeMatriz(rows: unknown[][]): FilaImportacion[] {
   return out
 }
 
-export function descargarPlantillaProductos() {
+export async function descargarPlantillaProductos() {
+  const XLSX = await import('xlsx')
   const wb = XLSX.utils.book_new()
   const ws = XLSX.utils.aoa_to_sheet([
     [...COLUMNAS_PLANTILLA],
@@ -107,6 +107,7 @@ export async function leerArchivoProductos(file: File): Promise<FilaImportacion[
     return filasDesdeMatriz(rows)
   }
   const buf = await file.arrayBuffer()
+  const XLSX = await import('xlsx')
   const wb = XLSX.read(buf, { type: 'array' })
   const hoja = wb.Sheets[wb.SheetNames[0] ?? '']
   if (!hoja) return []
