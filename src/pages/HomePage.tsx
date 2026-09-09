@@ -39,6 +39,7 @@ const DASH_VACIO: DashboardInicio = {
   top5: [],
   stock: [],
   cumples: [],
+  alertasStock: [],
 }
 
 function KpiCardSkeleton() {
@@ -333,6 +334,25 @@ export function HomePage() {
                 icono={<IconoProducto />}
               />
             </div>
+
+            {(() => {
+              const sin = dash.alertasStock.filter((p) => p.stock <= 0)
+              const bajo = dash.alertasStock.filter((p) => p.stock > 0)
+              return (
+                <>
+                  {sin.length > 0 ? (
+                    <p className="mt-4 rounded-lg bg-red-100 px-3 py-3 text-sm text-red-900">
+                      ⚠️ Sin stock: {sin.map((p) => p.nombre).join(', ')}
+                    </p>
+                  ) : null}
+                  {bajo.length > 0 ? (
+                    <p className="mt-3 rounded-lg bg-amber-100 px-3 py-3 text-sm text-amber-950">
+                      📦 Stock bajo: {bajo.map((p) => `${p.nombre} (${p.stock}u)`).join(', ')}
+                    </p>
+                  ) : null}
+                </>
+              )
+            })()}
 
             {dash.cumples.length > 0 ? (
               <p

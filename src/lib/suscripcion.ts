@@ -146,6 +146,7 @@ export type FilaAdminSuscripcion = {
   fecha_vencimiento: string | null
   plan_nombre: string | null
   plan_actual?: string | null
+  es_demo?: boolean
 }
 
 function soloFecha(valor: string) {
@@ -168,7 +169,33 @@ export async function listarSuscripcionesAdmin(
   if (error) {
     return { filas: [], error: error.message }
   }
-  return { filas: (data ?? []) as FilaAdminSuscripcion[], error: null }
+  return { filas: ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    suscripcion_id: row.suscripcion_id == null ? null : String(row.suscripcion_id),
+    empresa_id: String(row.empresa_id),
+    empresa_nombre: String(row.empresa_nombre ?? ''),
+    estado: row.estado == null ? null : String(row.estado),
+    fecha_vencimiento: row.fecha_vencimiento == null ? null : String(row.fecha_vencimiento),
+    plan_nombre: row.plan_nombre == null ? null : String(row.plan_nombre),
+    plan_actual: row.plan_actual == null ? null : String(row.plan_actual),
+    es_demo: Boolean(row.es_demo),
+  })), error: null }
+}
+
+export async function marcarEmpresaDemoAdmin(
+  client: SupabaseClient,
+  empresaId: string,
+  esDemo: boolean,
+): Promise<string | null> {
+  const { error } = await client.rpc('admin_marcar_demo', {
+    p_empresa_id: empresaId,
+    p_es_demo: esDemo,
+  })
+  if (!error) return null
+  const t = error.message.toLowerCase()
+  if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
+    return 'Falta marcar empresas demo. Pegá supabase/027_empresas_demo.sql (rol postgres) y recargá.'
+  }
+  return error.message
 }
 
 export async function asignarSuscripcionAdmin(

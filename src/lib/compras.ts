@@ -75,6 +75,7 @@ export async function confirmarCompra(
       costo_unitario: number
     }[]
     proveedor: string
+    proveedorId?: string | null
     fecha: string
     notas: string
   },
@@ -84,13 +85,15 @@ export async function confirmarCompra(
     p_proveedor: input.proveedor,
     p_fecha: input.fecha,
     p_notas: input.notas,
+    p_proveedor_id: input.proveedorId ?? null,
   })
   if (!error) return null
   const msg = error.message
   if (msg.includes('SIN_PRODUCTOS')) return 'Agregá al menos un producto'
   if (msg.includes('NO_AUTORIZADO')) return 'No tenés permiso para registrar compras'
   if (msg.includes('PRODUCTO_INVALIDO')) return 'Hay un producto que ya no está disponible'
-  return 'No se pudo confirmar la compra. Corré supabase/016_compras.sql en el SQL Editor.'
+  if (msg.includes('PROVEEDOR_INVALIDO')) return 'Ese proveedor ya no está disponible'
+  return 'No se pudo confirmar la compra. Corré supabase/016_compras.sql y supabase/022_proveedores.sql en el SQL Editor.'
 }
 
 export async function crearProductoParaCompra(

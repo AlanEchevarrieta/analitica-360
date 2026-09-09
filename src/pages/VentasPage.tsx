@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { AnularVentaModal } from '../components/AnularVentaModal'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import {
@@ -19,25 +20,23 @@ import {
   theadClass,
   theadStyle,
 } from '../components/listado'
+import { ImportarVentasModal } from '../components/ImportarVentasModal'
 import { rangoPreset } from '../lib/analytics'
 import { MSG_ERROR_RED, mensajeCargaTabla } from '../lib/consulta'
+import { exportarVentasExcel, exportarVentasPdf } from '../lib/exportarReportes'
 import { formatoARS, listarProductosNombres } from '../lib/productos'
 import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
 import {
   FORMAS_PAGO,
-  anularVenta,
+  etiquetaCuotas,
   formatoFechaVenta,
+  listarVentasExport,
   listarVentasPaginado,
   resumenVentasHoy,
   type VentaFila,
 } from '../lib/ventas'
 import { theme } from '../theme'
-
-function etiquetaCuotas(n: number) {
-  if (n <= 1) return 'Contado'
-  return `${n} cuotas`
-}
 
 function rangoMes() {
   return rangoPreset('mes')
@@ -51,7 +50,6 @@ export function VentasPage() {
   const [productos, setProductos] = useState<{ id: string; nombre: string }[]>([])
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
-  const [anulando, setAnulando] = useState<string | null>(null)
   const [hoy, setHoy] = useState({ cantidad: 0, total: 0 })
   const inicial = rangoMes()
   const [desde, setDesde] = useState(inicial.desde)
@@ -60,6 +58,12 @@ export function VentasPage() {
   const [forma, setForma] = useState('')
   const [cliente, setCliente] = useState('')
   const [menu, setMenu] = useState<'pago' | 'cliente' | null>(null)
+  const [importar, setImportar] = useState(false)
+  const [mostrarAnuladas, setMostrarAnuladas] = useState(false)
+  const [anular, setAnular] = useState<VentaFila | null>(null)
+  const [menuExportar, setMenuExportar] = useState(false)
+  const [exportando, setExportando] = useState(false)
+  const exportRef = useRef<HTMLDivElement>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
 
   const cargar = useCallback(async () => {
@@ -74,6 +78,7 @@ export function VentasPage() {
         forma,
         cliente,
         productoId,
+        mostrarAnuladas,
       }),
       resumenVentasHoy(client),
     ])
@@ -93,7 +98,7 @@ export function VentasPage() {
     setError(null)
     setFilas(data)
     setTotal(n)
-  }, [pagina, desde, hasta, forma, cliente, productoId])
+  }, [pagina, desde, hasta, forma, cliente, productoId, mostrarAnuladas])
 
   useEffect(() => {
     void cargar()
@@ -110,20 +115,53 @@ export function VentasPage() {
     [hoy],
   )
 
+  useEffect(() => {
+    function onDoc(ev: MouseEvent) {
+      if (!exportRef.current?.contains(ev.target as Node)) setMenuExportar(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
+
   if (!perfil) return null
 
-  const puedeAnular = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'anular_ventas')
+  const puedeAnular = perfil.usuario.rol === 'dueno'
+  const nombreEmpresa = perfil.empresa.nombre
 
-  async function onAnular(id: string) {
+  const filtrosExport = {
+    desde,
+    hasta,
+    forma,
+    cliente,
+    productoId,
+    mostrarAnuladas,
+  }
+
+  async function onExportar(tipo: 'xlsx' | 'pdf') {
     setError(null)
-    setAnulando(id)
-    const fallo = await anularVenta(requireSupabase(), id)
-    setAnulando(null)
+    setExportando(true)
+    setMenuExportar(false)
+    const { filas: data, error: fallo } = await listarVentasExport(requireSupabase(), filtrosExport)
     if (fallo) {
+      setExportando(false)
       setError(fallo)
       return
     }
-    await cargar()
+    try {
+      if (tipo === 'xlsx') {
+        await exportarVentasExcel({ empresa: nombreEmpresa, ventas: data })
+      } else {
+        await exportarVentasPdf({
+          empresa: nombreEmpresa,
+          desde,
+          hasta,
+          ventas: data,
+        })
+      }
+    } catch {
+      setError('No se pudo generar el archivo')
+    }
+    setExportando(false)
   }
 
   return (
@@ -186,10 +224,61 @@ export function VentasPage() {
                 ))}
               </select>
             </div>
+            <label className="filter-field flex cursor-pointer items-end gap-2 pb-2 text-sm text-[#A5B4FC]">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[#6366F1]"
+                checked={mostrarAnuladas}
+                onChange={(ev) => {
+                  setPagina(1)
+                  setMostrarAnuladas(ev.target.checked)
+                }}
+              />
+              Mostrar anuladas
+            </label>
           </div>
-          <Link className={btnPrimary} to="/ventas/nueva">
-            Nueva venta
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <div className="relative" ref={exportRef}>
+              <button
+                className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 disabled:opacity-50"
+                type="button"
+                disabled={exportando}
+                onClick={() => setMenuExportar((v) => !v)}
+              >
+                {exportando ? 'Exportando…' : 'Exportar'}
+              </button>
+              {menuExportar ? (
+                <div className="absolute right-0 z-20 mt-1 min-w-[220px] overflow-hidden rounded-lg border border-[rgba(99,102,241,0.35)] bg-[#0F1729] shadow-lg">
+                  <button
+                    className="block w-full px-4 py-2.5 text-left text-sm text-[#F1F5F9] hover:bg-white/10"
+                    type="button"
+                    onClick={() => void onExportar('xlsx')}
+                  >
+                    Exportar a Excel (.xlsx)
+                  </button>
+                  <button
+                    className="block w-full px-4 py-2.5 text-left text-sm text-[#F1F5F9] hover:bg-white/10"
+                    type="button"
+                    onClick={() => void onExportar('pdf')}
+                  >
+                    Exportar a PDF
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            {tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'registrar_ventas') ? (
+              <button
+                className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
+                type="button"
+                onClick={() => setImportar(true)}
+              >
+                Importar Excel
+              </button>
+            ) : null}
+            <Link className={btnPrimary} to="/ventas/nueva">
+              Nueva venta
+            </Link>
+          </div>
         </div>
 
         {error && error !== MSG_ERROR_RED ? (
@@ -263,7 +352,16 @@ export function VentasPage() {
             <tbody>
               {filas.map((fila, index) => (
                 <Tr key={fila.id} index={index}>
-                  <td className="px-3 py-3 whitespace-nowrap">{formatoFechaVenta(fila.fecha)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    <span className="inline-flex flex-wrap items-center gap-2">
+                      {formatoFechaVenta(fila.fecha)}
+                      {fila.anulada ? (
+                        <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[11px] font-semibold text-[#F87171]">
+                          Anulada
+                        </span>
+                      ) : null}
+                    </span>
+                  </td>
                   <td className="px-3 py-3">{fila.productos || '—'}</td>
                   <td className="px-3 py-3 font-bold text-[#4ADE80]">{formatoARS(fila.total)}</td>
                   <td className="px-3 py-3">
@@ -279,13 +377,11 @@ export function VentasPage() {
                   </td>
                   {puedeAnular ? (
                     <td className="px-3 py-3">
-                      <IconBtn
-                        label="Anular venta"
-                        hoverOnly
-                        onClick={() => void onAnular(fila.id)}
-                      >
-                        {anulando === fila.id ? '…' : '🗑️'}
-                      </IconBtn>
+                      {!fila.anulada ? (
+                        <IconBtn label="Anular venta" hoverOnly onClick={() => setAnular(fila)}>
+                          🗑️
+                        </IconBtn>
+                      ) : null}
                     </td>
                   ) : null}
                 </Tr>
@@ -311,6 +407,23 @@ export function VentasPage() {
           onPagina={setPagina}
           entidad="ventas"
         />
+        ) : null}
+        {importar ? (
+          <ImportarVentasModal
+            productos={productos}
+            onCerrar={() => setImportar(false)}
+            onListo={cargar}
+          />
+        ) : null}
+        {anular ? (
+          <AnularVentaModal
+            venta={anular}
+            onCerrar={() => setAnular(null)}
+            onOk={() => {
+              setAnular(null)
+              void cargar()
+            }}
+          />
         ) : null}
       </div>
     </div>

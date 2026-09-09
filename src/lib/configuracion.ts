@@ -22,6 +22,7 @@ export type ConfiguracionEmpresa = {
   mediosPago: MedioPagoId[]
   tasasCuotas: TasaCuota[]
   flujoVentas: FlujoVentas
+  umbralStockBajo: number
 }
 
 export const MEDIOS_PAGO = [
@@ -115,6 +116,7 @@ export const CONFIG_DEFAULT: Omit<ConfiguracionEmpresa, 'empresaId'> = {
   mediosPago: [...MEDIOS_PAGO_DEFAULT],
   tasasCuotas: TASAS_CUOTAS_DEFAULT.map((t) => ({ ...t })),
   flujoVentas: { ...FLUJO_VENTAS_DEFAULT },
+  umbralStockBajo: 5,
 }
 
 function normalizarFlujo(raw: unknown): FlujoVentas {
@@ -150,7 +152,7 @@ export async function obtenerConfiguracion(
 ): Promise<{ config: ConfiguracionEmpresa; error: string | null }> {
   const conFlujo = await client
     .from('configuracion_empresa')
-    .select('empresa_id, medios_pago, tasas_cuotas, flujo_ventas')
+    .select('empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario')
     .eq('empresa_id', empresaId)
     .maybeSingle()
 
@@ -168,12 +170,16 @@ export async function obtenerConfiguracion(
   if (!data) {
     return { config: { empresaId, ...CONFIG_DEFAULT }, error: null }
   }
+  const inv = (data as { inventario?: unknown }).inventario as Record<string, unknown> | null
+  const umbralRaw = inv?.umbral_stock_bajo
+  const umbral = Number(umbralRaw)
   return {
     config: {
       empresaId: String(data.empresa_id ?? empresaId),
       mediosPago: normalizarMedios(data.medios_pago),
       tasasCuotas: normalizarTasas(data.tasas_cuotas),
       flujoVentas: normalizarFlujo((data as { flujo_ventas?: unknown }).flujo_ventas),
+      umbralStockBajo: Number.isFinite(umbral) && umbral >= 0 ? umbral : 5,
     },
     error: null,
   }
@@ -210,11 +216,29 @@ export async function guardarConfiguracion(
         flujo.mostrarCliente === FLUJO_VENTAS_DEFAULT.mostrarCliente &&
         flujo.crearDesdeVenta === FLUJO_VENTAS_DEFAULT.crearDesdeVenta
       ) {
-        return null
+        return await guardarInventario(client, input)
       }
       return 'Falta la columna de flujo de ventas. Pegá supabase/018_flujo_ventas.sql (rol postgres) y recargá.'
     }
     return flujoError.message
   }
-  return null
+  return guardarInventario(client, input)
+}
+
+async function guardarInventario(client: SupabaseClient, input: ConfiguracionEmpresa) {
+  const umbral = Number.isFinite(input.umbralStockBajo) ? Math.max(0, Math.round(input.umbralStockBajo)) : 5
+  const { error } = await client
+    .from('configuracion_empresa')
+    .update({
+      inventario: { umbral_stock_bajo: umbral },
+      updated_at: new Date().toISOString(),
+    })
+    .eq('empresa_id', input.empresaId)
+  if (!error) return null
+  const t = error.message.toLowerCase()
+  if (t.includes('inventario') || t.includes('schema cache') || t.includes('does not exist')) {
+    if (umbral === 5) return null
+    return 'Falta la columna de inventario. Pegá supabase/026_inventario_alertas.sql (rol postgres) y recargá.'
+  }
+  return error.message
 }

@@ -1,0 +1,270 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { crearCliente } from './clientes'
+import {
+  claveColumna,
+  claveNombre,
+  descargarPlantilla,
+  enteroCelda,
+  fechaATimestamptzAR,
+  formatoFechaCorta,
+  leerMatrizExcel,
+  numeroCelda,
+  parseFechaCelda,
+  textoCelda,
+  type ErrorFila,
+} from './excelOperaciones'
+import { FORMAS_PAGO } from './ventas'
+
+export const COLUMNAS_PLANTILLA_VENTAS = [
+  'Fecha',
+  'Producto 1',
+  'Cantidad 1',
+  'Precio unitario 1',
+  'Producto 2',
+  'Cantidad 2',
+  'Precio unitario 2',
+  'Producto 3',
+  'Cantidad 3',
+  'Precio unitario 3',
+  'Producto 4',
+  'Cantidad 4',
+  'Precio unitario 4',
+  'Producto 5',
+  'Cantidad 5',
+  'Precio unitario 5',
+  'Forma de pago',
+  'Cliente',
+  'Descuento en ARS',
+  'Notas',
+] as const
+
+const PRODUCTOS_POR_FILA = 5
+
+export type ItemImportVenta = {
+  nombre: string
+  cantidad: number
+  precio: number
+  productoId?: string
+}
+
+export type FilaImportVenta = {
+  filaExcel: number
+  fecha: string
+  items: ItemImportVenta[]
+  formaPago: string
+  formaLabel: string
+  cliente: string
+  descuento: number
+  notas: string
+  error: string | null
+  resumen: string
+}
+
+function mapearFormaPago(raw: string): { id: string; label: string } | null {
+  const k = claveColumna(raw)
+  if (!k) return null
+  if (k === 'efectivo') return { id: 'efectivo', label: 'Efectivo' }
+  if (k === 'transferencia') return { id: 'transferencia', label: 'Transferencia' }
+  if (k === 'debito' || k === 'debito automatico') return { id: 'debito', label: 'Débito' }
+  if (k === 'credito' || k === 'tarjeta de credito') return { id: 'credito', label: 'Crédito' }
+  if (k.includes('qr') || k.includes('mercado pago') || k === 'mp') {
+    return { id: 'qr', label: 'Mercado Pago QR' }
+  }
+  const known = FORMAS_PAGO.find((f) => claveColumna(f.label) === k || f.id === k)
+  return known ? { id: known.id, label: known.label } : null
+}
+
+function itemsDesdeRow(row: unknown[], offset: number, cantidad: number) {
+  const items: ItemImportVenta[] = []
+  for (let i = 0; i < cantidad; i++) {
+    const base = offset + i * 3
+    const nombre = textoCelda(row[base])
+    const cantidadItem = enteroCelda(row[base + 1])
+    const precio = numeroCelda(row[base + 2])
+    if (!nombre && cantidadItem === 0 && precio === 0) continue
+    items.push({ nombre, cantidad: cantidadItem, precio })
+  }
+  return items
+}
+
+function indiceBloquePago(row: unknown[], encabezado: string[]) {
+  const tieneP4 = encabezado.some((h) => claveColumna(h).includes('producto 4'))
+  if (tieneP4) return 1 + PRODUCTOS_POR_FILA * 3
+  if (mapearFormaPago(textoCelda(row[16]))) return 16
+  if (mapearFormaPago(textoCelda(row[10]))) return 10
+  return 1 + PRODUCTOS_POR_FILA * 3
+}
+
+function filasDesdeMatriz(rows: unknown[][]): FilaImportVenta[] {
+  if (rows.length === 0) return []
+  const first = (rows[0] ?? []).map((h) => textoCelda(h))
+  const header = claveColumna(first[0] ?? '').includes('fecha')
+  const encabezado = header ? first : []
+  const data = header ? rows.slice(1) : rows
+  const startExcel = header ? 2 : 1
+  const out: FilaImportVenta[] = []
+
+  data.forEach((row, i) => {
+    if (!Array.isArray(row)) return
+    const filaExcel = startExcel + i
+    const colPago = indiceBloquePago(row, encabezado)
+    const nProductos = (colPago - 1) / 3
+    const fecha = parseFechaCelda(row[0])
+    const items = itemsDesdeRow(row, 1, nProductos)
+    const forma = mapearFormaPago(textoCelda(row[colPago]))
+    const cliente = textoCelda(row[colPago + 1])
+    const descuento = numeroCelda(row[colPago + 2])
+    const notas = textoCelda(row[colPago + 3])
+    const vacia = !fecha && items.length === 0 && !forma && !cliente
+    if (vacia) return
+
+    let error: string | null = null
+    if (!fecha) error = 'Fecha inválida (usá DD/MM/YYYY)'
+    else if (items.length === 0) error = 'Falta al menos un producto'
+    else if (items.some((it) => !it.nombre)) error = 'Hay un producto sin nombre'
+    else if (items.some((it) => it.cantidad <= 0)) error = 'La cantidad tiene que ser un entero mayor a 0'
+    else if (items.some((it) => it.precio < 0)) error = 'El precio unitario no puede ser negativo'
+    else if (!forma) error = 'Forma de pago inválida'
+
+    out.push({
+      filaExcel,
+      fecha: fecha ?? '',
+      items,
+      formaPago: forma?.id ?? '',
+      formaLabel: forma?.label ?? textoCelda(row[colPago]) ?? '',
+      cliente,
+      descuento: descuento < 0 ? 0 : descuento,
+      notas,
+      error,
+      resumen: items.map((it) => `${it.nombre} × ${it.cantidad}`).join(', '),
+    })
+  })
+  return out
+}
+
+export async function descargarPlantillaVentas() {
+  await descargarPlantilla('plantilla_ventas.xlsx', 'Ventas', [
+    [...COLUMNAS_PLANTILLA_VENTAS],
+    [
+      '15/03/2024',
+      'Remera básica',
+      2,
+      15000,
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      'Efectivo',
+      'Juan Pérez',
+      0,
+      '',
+    ],
+  ])
+}
+
+export async function leerArchivoVentas(file: File): Promise<FilaImportVenta[]> {
+  const rows = await leerMatrizExcel(file)
+  return filasDesdeMatriz(rows)
+}
+
+export function aplicarCatalogoVentas(
+  filas: FilaImportVenta[],
+  productos: { id: string; nombre: string }[],
+): FilaImportVenta[] {
+  const mapa = new Map(productos.map((p) => [claveNombre(p.nombre), p]))
+  return filas.map((fila) => {
+    if (fila.error) return fila
+    const resueltos: ItemImportVenta[] = []
+    for (const item of fila.items) {
+      const prod = mapa.get(claveNombre(item.nombre))
+      if (!prod) {
+        return { ...fila, error: `Producto no encontrado: ${item.nombre}` }
+      }
+      resueltos.push({ ...item, productoId: prod.id })
+    }
+    return { ...fila, items: resueltos }
+  })
+}
+
+export async function importarVentas(
+  client: SupabaseClient,
+  filas: FilaImportVenta[],
+  productos: { id: string; nombre: string }[],
+): Promise<{ importados: number; errores: ErrorFila[] }> {
+  const preparadas = aplicarCatalogoVentas(filas, productos)
+  const clientesRes = await client.from('clientes').select('id, nombre').is('deleted_at', null)
+  const clientes = new Map<string, string>()
+  if (!clientesRes.error) {
+    for (const row of clientesRes.data ?? []) {
+      clientes.set(claveNombre(String(row.nombre)), String(row.id))
+    }
+  }
+
+  let importados = 0
+  const errores: ErrorFila[] = []
+
+  for (const fila of preparadas) {
+    if (fila.error) {
+      errores.push({ fila: fila.filaExcel, motivo: fila.error })
+      continue
+    }
+    let clienteId: string | null = null
+    if (fila.cliente) {
+      const clave = claveNombre(fila.cliente)
+      clienteId = clientes.get(clave) ?? null
+      if (!clienteId) {
+        const creado = await crearCliente(client, {
+          nombre: fila.cliente,
+          telefono: '',
+          email: '',
+          cumpleanos: null,
+          notasLibres: '',
+          etiquetas: ['Nuevo'],
+        })
+        if (creado.id) {
+          clienteId = creado.id
+          clientes.set(clave, creado.id)
+        }
+      }
+    }
+
+    const { error } = await client.rpc('importar_venta', {
+      p_items: fila.items.map((it) => ({
+        producto_id: it.productoId,
+        cantidad: it.cantidad,
+        precio_unitario: it.precio,
+      })),
+      p_forma_pago: fila.formaPago,
+      p_descuento: fila.descuento,
+      p_cliente: fila.cliente,
+      p_cliente_id: clienteId,
+      p_fecha: fechaATimestamptzAR(fila.fecha),
+      p_notas: fila.notas,
+    })
+
+    if (error) {
+      const t = error.message.toLowerCase()
+      const motivo =
+        t.includes('could not find the function') || t.includes('schema cache') || t.includes('pgrst202')
+          ? 'Falta correr supabase/021_importar_ventas.sql en el SQL Editor (rol postgres).'
+          : error.message
+      errores.push({ fila: fila.filaExcel, motivo })
+      continue
+    }
+    importados += 1
+  }
+
+  return { importados, errores }
+}
+
+export function etiquetaPreviewVenta(fila: FilaImportVenta) {
+  return fila.fecha ? formatoFechaCorta(fila.fecha) : '—'
+}

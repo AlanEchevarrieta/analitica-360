@@ -17,9 +17,10 @@ import {
   theadClass,
   theadStyle,
 } from '../components/listado'
+import { ImportarComprasModal } from '../components/ImportarComprasModal'
 import { formatoFechaCompra, listarComprasPaginado, type CompraFila } from '../lib/compras'
 import { MSG_ERROR_RED, mensajeCargaTabla } from '../lib/consulta'
-import { formatoARS } from '../lib/productos'
+import { formatoARS, listarProductosNombres } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
 
@@ -31,6 +32,8 @@ export function ComprasPage() {
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
+  const [importar, setImportar] = useState(false)
+  const [productos, setProductos] = useState<{ id: string; nombre: string }[]>([])
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -53,6 +56,12 @@ export function ComprasPage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useEffect(() => {
+    void listarProductosNombres(requireSupabase()).then((res) => {
+      if (!res.error) setProductos(res.filas)
+    })
+  }, [])
 
   if (!perfil) return null
 
@@ -81,9 +90,20 @@ export function ComprasPage() {
             }}
             placeholder="Buscar por proveedor"
           />
-          <Link className={btnPrimary} to="/compras/nueva">
-            Nueva compra
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {perfil.usuario.rol !== 'visor' ? (
+              <button
+                className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
+                type="button"
+                onClick={() => setImportar(true)}
+              >
+                Importar Excel
+              </button>
+            ) : null}
+            <Link className={btnPrimary} to="/compras/nueva">
+              Nueva compra
+            </Link>
+          </div>
         </div>
 
         {error && error !== MSG_ERROR_RED ? (
@@ -139,6 +159,13 @@ export function ComprasPage() {
           onPagina={setPagina}
           entidad="compras"
         />
+        ) : null}
+        {importar ? (
+          <ImportarComprasModal
+            productos={productos}
+            onCerrar={() => setImportar(false)}
+            onListo={cargar}
+          />
         ) : null}
       </div>
     </div>

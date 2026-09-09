@@ -22,6 +22,7 @@ import {
   theadClass,
   theadStyle,
 } from '../components/listado'
+import { AjustarStockModal } from '../components/AjustarStockModal'
 import { ImportarExcelModal } from '../components/ImportarExcelModal'
 import { MSG_ERROR_RED, mensajeCargaTabla } from '../lib/consulta'
 import {
@@ -58,6 +59,7 @@ export function ProductosPage() {
   const [total, setTotal] = useState(0)
   const [activos, setActivos] = useState(0)
   const [categorias, setCategorias] = useState<string[]>([])
+  const [ajuste, setAjuste] = useState<{ id: string; nombre: string; stock: number } | null>(null)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -98,6 +100,7 @@ export function ProductosPage() {
 
   const puedeEditar = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'editar_productos')
   const puedeVerCostos = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'ver_costos')
+  const puedeAjustar = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'ajustar_stock')
 
   async function onDesactivar(fila: ProductoFila) {
     if (!window.confirm(`¿Desactivar “${fila.nombre}”?`)) return
@@ -318,7 +321,19 @@ export function ProductosPage() {
                     </td>
                   ) : null}
                   <td className="px-3 py-3">
-                    <StockCelda stock={fila.stock_actual} />
+                    <StockCelda
+                      stock={fila.stock_actual}
+                      onClick={
+                        puedeAjustar
+                          ? () =>
+                              setAjuste({
+                                id: fila.id,
+                                nombre: fila.nombre,
+                                stock: fila.stock_actual,
+                              })
+                          : undefined
+                      }
+                    />
                   </td>
                   <td className="px-3 py-3">
                     <BadgeEstado activo={fila.activo} />
@@ -373,6 +388,16 @@ export function ProductosPage() {
             existentes={existentesImport}
             onCerrar={() => setImportar(false)}
             onListo={cargar}
+          />
+        ) : null}
+        {ajuste ? (
+          <AjustarStockModal
+            producto={ajuste}
+            onCerrar={() => setAjuste(null)}
+            onOk={() => {
+              setAjuste(null)
+              void cargar()
+            }}
           />
         ) : null}
       </div>

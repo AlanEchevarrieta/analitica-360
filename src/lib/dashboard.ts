@@ -26,6 +26,7 @@ export type DashboardInicio = {
   ultimos7: DashboardDia[]
   top5: DashboardProducto[]
   stock: DashboardStock[]
+  alertasStock: DashboardStock[]
   cumples: CumpleProximo[]
 }
 
@@ -38,6 +39,7 @@ const VACIO: DashboardInicio = {
   ultimos7: [],
   top5: [],
   stock: [],
+  alertasStock: [],
   cumples: [],
 }
 
@@ -110,6 +112,10 @@ export async function cargarDashboardInicio(client: SupabaseClient): Promise<Das
     }),
     top5,
     stock: stock.map((item) => {
+      const p = asRecord(item)
+      return { nombre: String(p.nombre ?? ''), stock: num(p.stock) }
+    }),
+    alertasStock: asArray(row.alertas_stock).map((item) => {
       const p = asRecord(item)
       return { nombre: String(p.nombre ?? ''), stock: num(p.stock) }
     }),

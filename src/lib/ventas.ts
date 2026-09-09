@@ -9,6 +9,18 @@ export type VentaFila = {
   cliente: string | null
   cuotas: number
   productoIds: string[]
+  descuento: number
+  notas: string | null
+  anulada: boolean
+}
+
+export type FiltrosVentas = {
+  desde: string
+  hasta: string
+  forma: string
+  cliente: string
+  productoId: string
+  mostrarAnuladas: boolean
 }
 
 export type ResumenVentasHoy = {
@@ -28,65 +40,29 @@ export function etiquetaFormaPago(id: string) {
   return FORMAS_PAGO.find((f) => f.id === id)?.label ?? id
 }
 
-export async function listarVentasPaginado(
+export function etiquetaCuotas(n: number) {
+  if (n <= 1) return 'Contado'
+  return `${n} cuotas`
+}
+
+function aplicarDeleted<T extends { is: (c: string, v: null) => T; not: (c: string, op: string, v: null) => T }>(
+  q: T,
+  mostrarAnuladas: boolean,
+) {
+  return mostrarAnuladas ? q.not('deleted_at', 'is', null) : q.is('deleted_at', null)
+}
+
+async function hidratarVentas(
   client: SupabaseClient,
-  input: {
-    pagina: number
-    pageSize: number
-    desde: string
-    hasta: string
-    forma: string
-    cliente: string
-    productoId: string
-  },
-): Promise<{ filas: VentaFila[]; total: number; error: string | null }> {
-  const from = (input.pagina - 1) * input.pageSize
-  const to = from + input.pageSize - 1
-
-  const filtrosFecha = {
-    desde: `${input.desde}T00:00:00.000-03:00`,
-    hasta: `${input.hasta}T23:59:59.999-03:00`,
-  }
-  const clienteQ = input.cliente.trim()
-
-  const idsRes = input.productoId
-    ? await (() => {
-        let q = client
-          .from('ventas')
-          .select('id, ventas_items!inner(producto_id)', { count: 'exact' })
-          .is('deleted_at', null)
-          .order('fecha', { ascending: false })
-          .gte('fecha', filtrosFecha.desde)
-          .lte('fecha', filtrosFecha.hasta)
-          .eq('ventas_items.producto_id', input.productoId)
-        if (input.forma) q = q.eq('forma_pago', input.forma)
-        if (clienteQ) q = q.ilike('cliente_nombre', `%${clienteQ}%`)
-        return q.range(from, to)
-      })()
-    : await (() => {
-        let q = client
-          .from('ventas')
-          .select('id', { count: 'exact' })
-          .is('deleted_at', null)
-          .order('fecha', { ascending: false })
-          .gte('fecha', filtrosFecha.desde)
-          .lte('fecha', filtrosFecha.hasta)
-        if (input.forma) q = q.eq('forma_pago', input.forma)
-        if (clienteQ) q = q.ilike('cliente_nombre', `%${clienteQ}%`)
-        return q.range(from, to)
-      })()
-
-  if (idsRes.error) return { filas: [], total: 0, error: idsRes.error.message }
-
-  const total = idsRes.count ?? 0
-  const ids = [...new Set((idsRes.data ?? []).map((row) => String(row.id)))]
-  if (ids.length === 0) return { filas: [], total, error: null }
+  ids: string[],
+): Promise<{ filas: VentaFila[]; error: string | null }> {
+  if (ids.length === 0) return { filas: [], error: null }
 
   const ventasRes = await client
     .from('ventas')
-    .select('id, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_con_interes')
+    .select('id, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_con_interes, notas, deleted_at')
     .in('id', ids)
-  if (ventasRes.error) return { filas: [], total: 0, error: ventasRes.error.message }
+  if (ventasRes.error) return { filas: [], error: ventasRes.error.message }
 
   const itemsRes = await client
     .from('ventas_items')
@@ -124,10 +100,83 @@ export async function listarVentasPaginado(
       cliente: row.cliente_nombre == null || row.cliente_nombre === '' ? null : String(row.cliente_nombre),
       cuotas: Number(row.cuotas ?? 1),
       productoIds: items?.ids ?? [],
+      descuento,
+      notas: row.notas == null || row.notas === '' ? null : String(row.notas),
+      anulada: row.deleted_at != null,
     }
   })
+  return { filas, error: null }
+}
 
-  return { filas, total, error: null }
+export async function listarVentasPaginado(
+  client: SupabaseClient,
+  input: FiltrosVentas & { pagina: number; pageSize: number },
+): Promise<{ filas: VentaFila[]; total: number; error: string | null }> {
+  const from = (input.pagina - 1) * input.pageSize
+  const to = from + input.pageSize - 1
+
+  const filtrosFecha = {
+    desde: `${input.desde}T00:00:00.000-03:00`,
+    hasta: `${input.hasta}T23:59:59.999-03:00`,
+  }
+  const clienteQ = input.cliente.trim()
+
+  const idsRes = input.productoId
+    ? await (() => {
+        let q = client
+          .from('ventas')
+          .select('id, ventas_items!inner(producto_id)', { count: 'exact' })
+          .order('fecha', { ascending: false })
+          .gte('fecha', filtrosFecha.desde)
+          .lte('fecha', filtrosFecha.hasta)
+          .eq('ventas_items.producto_id', input.productoId)
+        q = aplicarDeleted(q, input.mostrarAnuladas)
+        if (input.forma) q = q.eq('forma_pago', input.forma)
+        if (clienteQ) q = q.ilike('cliente_nombre', `%${clienteQ}%`)
+        return q.range(from, to)
+      })()
+    : await (() => {
+        let q = client
+          .from('ventas')
+          .select('id', { count: 'exact' })
+          .order('fecha', { ascending: false })
+          .gte('fecha', filtrosFecha.desde)
+          .lte('fecha', filtrosFecha.hasta)
+        q = aplicarDeleted(q, input.mostrarAnuladas)
+        if (input.forma) q = q.eq('forma_pago', input.forma)
+        if (clienteQ) q = q.ilike('cliente_nombre', `%${clienteQ}%`)
+        return q.range(from, to)
+      })()
+
+  if (idsRes.error) return { filas: [], total: 0, error: idsRes.error.message }
+
+  const total = idsRes.count ?? 0
+  const ids = [...new Set((idsRes.data ?? []).map((row) => String(row.id)))]
+  const hidratado = await hidratarVentas(client, ids)
+  if (hidratado.error) return { filas: [], total: 0, error: hidratado.error }
+  return { filas: hidratado.filas, total, error: null }
+}
+
+export async function listarVentasExport(
+  client: SupabaseClient,
+  input: FiltrosVentas,
+): Promise<{ filas: VentaFila[]; error: string | null }> {
+  const pageSize = 200
+  const todas: VentaFila[] = []
+  let pagina = 1
+  for (;;) {
+    const { filas, total, error } = await listarVentasPaginado(client, {
+      ...input,
+      pagina,
+      pageSize,
+    })
+    if (error) return { filas: [], error }
+    todas.push(...filas)
+    if (todas.length >= total || filas.length === 0) break
+    pagina += 1
+    if (pagina > 50) break
+  }
+  return { filas: todas, error: null }
 }
 
 export async function resumenVentasHoy(
@@ -191,9 +240,22 @@ export async function confirmarVenta(
   return error ? error.message : null
 }
 
-export async function anularVenta(client: SupabaseClient, id: string): Promise<string | null> {
-  const { error } = await client.rpc('anular_venta', { p_id: id })
-  return error ? error.message : null
+export async function anularVenta(
+  client: SupabaseClient,
+  id: string,
+  motivo: string,
+): Promise<string | null> {
+  const { error } = await client.rpc('anular_venta', { p_id: id, p_motivo: motivo })
+  if (!error) return null
+  const msg = error.message
+  if (msg.includes('NO_AUTORIZADO')) return 'Solo el dueño puede anular ventas'
+  if (msg.includes('MOTIVO_OBLIGATORIO')) return 'El motivo de anulación es obligatorio'
+  if (msg.includes('VENTA_INVALIDA')) return 'Esa venta ya no se puede anular'
+  const t = msg.toLowerCase()
+  if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
+    return 'Falta actualizar la anulación en Supabase. Pegá TODO supabase/024_anular_ventas.sql (rol postgres), dale Run y recargá.'
+  }
+  return `No se pudo anular la venta: ${msg}`
 }
 
 export function formatoFechaVenta(iso: string) {

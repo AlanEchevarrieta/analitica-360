@@ -41,6 +41,7 @@ import {
   type CuadranteProducto,
   type PresetPeriodo,
 } from '../lib/analytics'
+import { exportarAnalyticsPdf } from '../lib/exportarReportes'
 import { planTieneAnalytics } from '../lib/planes'
 import { formatoARS } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
@@ -337,9 +338,28 @@ export function AnalyticsPage() {
       <ParticleNetwork />
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-10 text-white">
         <AppNav />
-        <div className="mb-8">
-          <p className="text-xs font-bold uppercase tracking-wide text-[#A5B4FC]">Analítica 360</p>
-          <h1 className="mt-1 text-xl font-bold">Analytics</h1>
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-[#A5B4FC]">Analítica 360</p>
+            <h1 className="mt-1 text-xl font-bold">Analytics</h1>
+          </div>
+          {desbloqueado ? (
+            <button
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 disabled:opacity-50"
+              type="button"
+              disabled={cargando}
+              onClick={() => {
+                void exportarAnalyticsPdf({
+                  empresa: perfil.empresa.nombre,
+                  desde,
+                  hasta,
+                  data,
+                }).catch(() => undefined)
+              }}
+            >
+              Exportar reporte
+            </button>
+          ) : null}
         </div>
 
         {!desbloqueado ? (

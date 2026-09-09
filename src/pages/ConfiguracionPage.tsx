@@ -36,13 +36,14 @@ import { btnPrimary, cardShell } from '../components/listado'
 const inputClass =
   'h-10 w-full rounded-lg border border-[rgba(99,102,241,0.3)] bg-white/5 px-3 text-sm text-[#F1F5F9] outline-none focus:border-[#6366F1]'
 
-type TabId = 'medios' | 'cuotas' | 'usuarios' | 'flujo' | 'plan'
+type TabId = 'medios' | 'cuotas' | 'usuarios' | 'flujo' | 'inventario' | 'plan'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'medios', label: 'Medios de pago' },
   { id: 'cuotas', label: 'Cuotas y tasas' },
   { id: 'usuarios', label: 'Usuarios' },
   { id: 'flujo', label: 'Flujo de ventas' },
+  { id: 'inventario', label: 'Inventario' },
   { id: 'plan', label: 'Mi Plan' },
 ]
 
@@ -88,6 +89,7 @@ export function ConfiguracionPage() {
   const [medios, setMedios] = useState<MedioPagoId[]>([])
   const [tasas, setTasas] = useState<TasaCuota[]>([])
   const [flujo, setFlujo] = useState<FlujoVentas>({ ...FLUJO_VENTAS_DEFAULT })
+  const [umbralStock, setUmbralStock] = useState('5')
   const [usuarios, setUsuarios] = useState<UsuarioEmpresa[]>([])
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
@@ -119,6 +121,7 @@ export function ConfiguracionPage() {
       setMedios(config.mediosPago)
       setTasas(config.tasasCuotas)
       setFlujo(config.flujoVentas)
+      setUmbralStock(String(config.umbralStockBajo ?? 5))
       if (loadError) setError(loadError)
       await cargarUsuarios()
       const sub = await leerSuscripcionActiva(requireSupabase(), perfil.empresa.id)
@@ -172,6 +175,7 @@ export function ConfiguracionPage() {
       mediosPago: medios,
       tasasCuotas: tasasValidas,
       flujoVentas: flujo,
+      umbralStockBajo: Number.parseInt(umbralStock, 10),
     })
     setGuardando(false)
     if (fallo) {
@@ -576,6 +580,26 @@ export function ConfiguracionPage() {
                 </div>
               ) : null}
 
+              {tab === 'inventario' ? (
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-[#F1F5F9]">
+                    Alertar cuando el stock baje de X unidades
+                    <input
+                      className={`${inputClass} mt-2`}
+                      inputMode="numeric"
+                      value={umbralStock}
+                      onChange={(ev) => {
+                        setOk(null)
+                        setUmbralStock(ev.target.value)
+                      }}
+                    />
+                  </label>
+                  <p className="mt-2 text-xs text-[#94A3B8]">
+                    En el inicio vas a ver un aviso si un producto activo queda en 0 o por debajo de este número.
+                  </p>
+                </div>
+              ) : null}
+
               {tab === 'plan' ? (
                 <div className="mt-6 space-y-3 text-sm">
                   <div className="rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-3">
@@ -621,7 +645,7 @@ export function ConfiguracionPage() {
                 <p className="mt-6 rounded-xl bg-green-950/50 px-3 py-2 text-sm text-green-200">{ok}</p>
               ) : null}
 
-              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' ? (
+              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' || tab === 'inventario' ? (
                 <button
                   className={`${btnPrimary} mt-6 w-full`}
                   type="button"

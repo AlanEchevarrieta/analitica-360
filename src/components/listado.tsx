@@ -151,18 +151,33 @@ export function BadgeMargen({ pct }: { pct: number | null }) {
   )
 }
 
-export function StockCelda({ stock }: { stock: number }) {
-  if (stock <= 0) {
+export function StockCelda({
+  stock,
+  onClick,
+}: {
+  stock: number
+  onClick?: () => void
+}) {
+  const clase =
+    stock <= 0
+      ? 'inline-flex items-center gap-1 font-medium text-[#F87171]'
+      : stock <= 5
+        ? 'font-medium text-[#F59E0B]'
+        : 'font-medium text-[#4ADE80]'
+  const contenido = stock <= 0 ? <>⚠️ {stock}</> : stock
+  if (onClick) {
     return (
-      <span className="inline-flex items-center gap-1 font-medium text-[#F87171]">
-        ⚠️ {stock}
-      </span>
+      <button
+        className={`${clase} rounded-md px-1 hover:underline`}
+        type="button"
+        title="Ajustar stock"
+        onClick={onClick}
+      >
+        {contenido}
+      </button>
     )
   }
-  if (stock <= 5) {
-    return <span className="font-medium text-[#F59E0B]">{stock}</span>
-  }
-  return <span className="font-medium text-[#4ADE80]">{stock}</span>
+  return <span className={clase}>{contenido}</span>
 }
 
 export function SearchField({
@@ -322,6 +337,7 @@ export function ThFilter({
 export const PAGE_VENTAS = 50
 export const PAGE_COMPRAS = 50
 export const PAGE_PRODUCTOS = 100
+export const PAGE_PROVEEDORES = 50
 
 export function PaginacionBar({
   pagina,

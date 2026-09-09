@@ -39,6 +39,15 @@ const ComprasPage = lazy(() => import('./pages/ComprasPage').then((m) => ({ defa
 const CompraNuevaPage = lazy(() =>
   import('./pages/CompraNuevaPage').then((m) => ({ default: m.CompraNuevaPage })),
 )
+const ProveedoresPage = lazy(() =>
+  import('./pages/ProveedoresPage').then((m) => ({ default: m.ProveedoresPage })),
+)
+const ProveedorFormPage = lazy(() =>
+  import('./pages/ProveedorFormPage').then((m) => ({ default: m.ProveedorFormPage })),
+)
+const ProveedorFichaPage = lazy(() =>
+  import('./pages/ProveedorFichaPage').then((m) => ({ default: m.ProveedorFichaPage })),
+)
 const ClientesPage = lazy(() =>
   import('./pages/ClientesPage').then((m) => ({ default: m.ClientesPage })),
 )
@@ -130,6 +139,10 @@ function AppRoutes() {
         <Route path="/ventas/nueva" element={<VentaNuevaPage />} />
         <Route path="/compras" element={<ComprasPage />} />
         <Route path="/compras/nueva" element={<CompraNuevaPage />} />
+        <Route path="/proveedores" element={<ProveedoresPage />} />
+        <Route path="/proveedores/nuevo" element={<ProveedorFormPage />} />
+        <Route path="/proveedores/:id/editar" element={<ProveedorFormPage />} />
+        <Route path="/proveedores/:id" element={<ProveedorFichaPage />} />
         <Route path="/clientes" element={<ClientesPage />} />
         <Route path="/clientes/nuevo" element={<ClienteFormPage />} />
         <Route path="/clientes/:id" element={<ClienteFichaPage />} />

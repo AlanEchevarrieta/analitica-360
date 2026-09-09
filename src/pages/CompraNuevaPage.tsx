@@ -9,6 +9,12 @@ import {
   hoyCompraISO,
 } from '../lib/compras'
 import { formatoARS, listarProductos, type ProductoFila } from '../lib/productos'
+import {
+  crearProveedor,
+  etiquetaProveedor,
+  listarProveedoresEmpresa,
+  type ProveedorFila,
+} from '../lib/proveedores'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
 
@@ -30,6 +36,14 @@ export function CompraNuevaPage() {
   const [busqueda, setBusqueda] = useState('')
   const [lineas, setLineas] = useState<Linea[]>([])
   const [proveedor, setProveedor] = useState('')
+  const [proveedorId, setProveedorId] = useState<string | null>(null)
+  const [proveedores, setProveedores] = useState<ProveedorFila[]>([])
+  const [dropdownProveedor, setDropdownProveedor] = useState(false)
+  const [mostrarAltaProveedor, setMostrarAltaProveedor] = useState(false)
+  const [nombreAltaProv, setNombreAltaProv] = useState('')
+  const [telAltaProv, setTelAltaProv] = useState('')
+  const [creandoProveedor, setCreandoProveedor] = useState(false)
+  const comboProvRef = useRef<HTMLDivElement>(null)
   const [fecha, setFecha] = useState(hoyCompraISO)
   const [notas, setNotas] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +64,37 @@ export function CompraNuevaPage() {
 
   useEffect(() => {
     void recargarCatalogo()
+    void listarProveedoresEmpresa(requireSupabase()).then(({ filas }) => {
+      setProveedores(filas)
+    })
+  }, [])
+
+  const sugeridosProveedores = useMemo(() => {
+    const q = proveedor.trim().toLowerCase()
+    if (!q) return []
+    return proveedores
+      .filter((p) => {
+        const etiqueta = etiquetaProveedor(p).toLowerCase()
+        const razon = (p.razon_social ?? '').toLowerCase()
+        const comercial = (p.nombre_comercial ?? '').toLowerCase()
+        const nombre = p.nombre.toLowerCase()
+        return etiqueta.includes(q) || razon.includes(q) || comercial.includes(q) || nombre.includes(q)
+      })
+      .slice(0, 5)
+  }, [proveedor, proveedores])
+
+  const existeNombreExactoProv = useMemo(() => {
+    const q = proveedor.trim().toLowerCase()
+    if (!q) return false
+    return proveedores.some((p) => etiquetaProveedor(p).toLowerCase() === q)
+  }, [proveedor, proveedores])
+
+  useEffect(() => {
+    function onDoc(ev: MouseEvent) {
+      if (!comboProvRef.current?.contains(ev.target as Node)) setDropdownProveedor(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
   }, [])
 
   useEffect(() => {
@@ -141,6 +186,65 @@ export function CompraNuevaPage() {
     setMostrarNuevo(false)
   }
 
+  async function crearProveedorInline() {
+    const nom = nombreAltaProv.trim()
+    if (!nom) {
+      setError('El nombre del proveedor es obligatorio')
+      return
+    }
+    setError(null)
+    setCreandoProveedor(true)
+    const { id, error: fallo } = await crearProveedor(requireSupabase(), {
+      razonSocial: nom,
+      nombreComercial: '',
+      cuit: '',
+      condicionAfip: '',
+      telefono: telAltaProv,
+      email: '',
+      nombreVendedor: '',
+      productosQueProvee: '',
+      condicionesPago: '',
+      formasPagoAceptadas: [],
+      plazoEntrega: '',
+      cbu: '',
+      aliasCbu: '',
+      banco: '',
+      notas: '',
+      activo: true,
+    })
+    setCreandoProveedor(false)
+    if (fallo || !id) {
+      setError(fallo || 'No se pudo crear el proveedor')
+      return
+    }
+    const creado: ProveedorFila = {
+      id,
+      nombre: nom,
+      razon_social: nom,
+      nombre_comercial: null,
+      cuit: null,
+      condicion_afip: null,
+      nombre_vendedor: null,
+      telefono: telAltaProv || null,
+      email: null,
+      productos_que_provee: null,
+      condiciones_pago: null,
+      formas_pago_aceptadas: [],
+      plazo_entrega: null,
+      cbu: null,
+      alias_cbu: null,
+      banco: null,
+      notas: null,
+      activo: true,
+    }
+    setProveedores((prev) => [creado, ...prev])
+    setProveedor(nom)
+    setProveedorId(id)
+    setMostrarAltaProveedor(false)
+    setTelAltaProv('')
+    setNombreAltaProv('')
+  }
+
   function irPaso2() {
     if (lineas.length === 0) {
       setError('Agregá al menos un producto')
@@ -165,6 +269,7 @@ export function CompraNuevaPage() {
         costo_unitario: l.costoUnitario,
       })),
       proveedor,
+      proveedorId,
       fecha,
       notas,
     })
@@ -359,14 +464,93 @@ export function CompraNuevaPage() {
 
               {paso === 2 ? (
                 <div className="mt-5 space-y-4">
-                  <label className="block text-sm font-medium text-[#4A5568]">
-                    Proveedor (opcional)
+                  <div ref={comboProvRef}>
+                    <p className="text-sm font-medium text-[#4A5568]">Proveedor (opcional)</p>
                     <input
                       className={`${inputClass} mt-1.5`}
                       value={proveedor}
-                      onChange={(ev) => setProveedor(ev.target.value)}
+                      placeholder="Buscar proveedor por nombre..."
+                      onFocus={() => {
+                        if (proveedor.trim() && !proveedorId) setDropdownProveedor(true)
+                      }}
+                      onChange={(ev) => {
+                        const v = ev.target.value
+                        setProveedor(v)
+                        setProveedorId(null)
+                        setMostrarAltaProveedor(false)
+                        setDropdownProveedor(v.trim().length > 0)
+                      }}
                     />
-                  </label>
+                    {dropdownProveedor && proveedor.trim() && !mostrarAltaProveedor && !proveedorId ? (
+                      <ul className="mt-1 overflow-hidden rounded-md border border-[#E2E8F0] bg-white shadow-sm">
+                        {sugeridosProveedores.map((p) => (
+                          <li key={p.id}>
+                            <button
+                              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-[#1A2F4A] hover:bg-[#EEF2F6]"
+                              type="button"
+                              onClick={() => {
+                                setProveedor(etiquetaProveedor(p))
+                                setProveedorId(p.id)
+                                setDropdownProveedor(false)
+                              }}
+                            >
+                              <span>{etiquetaProveedor(p)}</span>
+                              <span className="text-[#4A5568]">{p.telefono ?? ''}</span>
+                            </button>
+                          </li>
+                        ))}
+                        {sugeridosProveedores.length === 0 ? (
+                          <li className="px-3 py-2 text-xs text-[#4A5568]">Ningún proveedor coincide</li>
+                        ) : null}
+                        {!existeNombreExactoProv ? (
+                          <li>
+                            <button
+                              className="w-full border-t border-[#E2E8F0] px-3 py-2 text-left text-sm font-semibold text-[#6366F1] hover:bg-[#EEF2FF]"
+                              type="button"
+                              onClick={() => {
+                                setNombreAltaProv(proveedor.trim())
+                                setMostrarAltaProveedor(true)
+                                setDropdownProveedor(false)
+                              }}
+                            >
+                              ➕ Crear proveedor nuevo: {proveedor.trim()}
+                            </button>
+                          </li>
+                        ) : null}
+                      </ul>
+                    ) : null}
+                    {proveedorId ? (
+                      <p className="mt-1.5 text-xs text-[#6366F1]">Proveedor vinculado: {proveedor}</p>
+                    ) : null}
+                    {mostrarAltaProveedor ? (
+                      <div className="mt-2 rounded-md border border-[#E2E8F0] p-3">
+                        <label className="block text-xs text-[#4A5568]">
+                          Nombre
+                          <input
+                            className={`${inputClass} mt-1 h-9`}
+                            value={nombreAltaProv}
+                            onChange={(ev) => setNombreAltaProv(ev.target.value)}
+                          />
+                        </label>
+                        <label className="mt-2 block text-xs text-[#4A5568]">
+                          Teléfono (opcional)
+                          <input
+                            className={`${inputClass} mt-1 h-9`}
+                            value={telAltaProv}
+                            onChange={(ev) => setTelAltaProv(ev.target.value)}
+                          />
+                        </label>
+                        <button
+                          className="mt-3 h-10 w-full rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
+                          type="button"
+                          disabled={creandoProveedor}
+                          onClick={() => void crearProveedorInline()}
+                        >
+                          {creandoProveedor ? 'CREANDO…' : 'Guardar y seleccionar'}
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                   <label className="block text-sm font-medium text-[#4A5568]">
                     Fecha de la compra
                     <input

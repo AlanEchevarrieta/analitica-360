@@ -5,6 +5,7 @@ import { tienePermiso } from '../lib/permisos'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { AppNav } from '../components/AppNav'
 import { actualizarProducto, crearProducto, listarProductos, type ProductoFila } from '../lib/productos'
+import { etiquetaMovimiento, listarMovimientosProducto, type MovimientoFila } from '../lib/stock'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
 
@@ -27,6 +28,7 @@ export function ProductoFormPage() {
   const [enviando, setEnviando] = useState(false)
   const [cargando, setCargando] = useState(!esNuevo)
   const [duplicado, setDuplicado] = useState<ProductoFila | null>(null)
+  const [movimientos, setMovimientos] = useState<MovimientoFila[]>([])
 
   const titulo = useMemo(() => (esNuevo ? 'Nuevo producto' : 'Editar producto'), [esNuevo])
 
@@ -51,6 +53,8 @@ export function ProductoFormPage() {
       setCosto(String(actual.costo))
       setStockActual(actual.stock_actual)
       setActivo(actual.activo)
+      const mov = await listarMovimientosProducto(requireSupabase(), id)
+      if (!mov.error) setMovimientos(mov.filas)
       setCargando(false)
     })()
   }, [esNuevo, id])
@@ -307,6 +311,31 @@ export function ProductoFormPage() {
             </form>
           )}
         </div>
+        {!esNuevo && movimientos.length > 0 ? (
+          <div className="mt-4 rounded-lg bg-white/95 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+            <h2 className="text-sm font-bold text-[#1A2F4A]">Historial de movimientos</h2>
+            <ul className="mt-3 space-y-2">
+              {movimientos.map((m) => {
+                const e = etiquetaMovimiento(m.tipo)
+                const fecha = m.fecha ? new Date(m.fecha).toLocaleString('es-AR') : ''
+                return (
+                  <li key={m.id} className="text-sm text-[#1A2F4A]">
+                    <span className="font-medium">
+                      {e.icono} {e.texto}
+                    </span>
+                    <span className="text-[#4A5568]">
+                      {' '}
+                      {m.signo > 0 ? '+' : '−'}
+                      {m.cantidad}
+                      {m.motivo ? ` · ${m.motivo}` : ''}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-[#94A3B8]">{fecha}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </div>
   )

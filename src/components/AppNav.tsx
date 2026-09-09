@@ -25,6 +25,9 @@ export function AppNav() {
       <NavLink className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`} to="/compras">
         Compras
       </NavLink>
+      <NavLink className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`} to="/proveedores">
+        Proveedores
+      </NavLink>
       <NavLink className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`} to="/analytics">
         <span className="inline-flex items-center gap-1">
           Analytics
