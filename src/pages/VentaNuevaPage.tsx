@@ -129,6 +129,7 @@ export function VentaNuevaPage() {
   const coefNum = Math.max(0, Number(coeficiente.replace(',', '.')) || 0)
   const credito = formaPago === 'credito'
   const totalesCredito = calcularTotalesCredito(total, coefNum, cuotaElegida?.cuotas ?? 1)
+  const totalACobrar = credito ? Number(totalesCredito.totalConInteres.toFixed(2)) : total
 
   useEffect(() => {
     if (mediosActivos.length === 0) return
@@ -273,7 +274,7 @@ export function VentaNuevaPage() {
       cuotas: credito ? (cuotaElegida?.cuotas ?? 1) : 1,
       coeficienteInteres: credito ? coefNum : 0,
       totalSinInteres: total,
-      totalConInteres: credito ? totalesCredito.totalConInteres : total,
+      totalConInteres: totalACobrar,
     })
     setEnviando(false)
     if (fallo) {
@@ -600,7 +601,13 @@ export function VentaNuevaPage() {
                       </p>
                     ))}
                     {desc > 0 ? <p className="mt-1">Descuento: −{formatoARS(desc)}</p> : null}
-                    <p className="mt-2 font-semibold">Total final {formatoARS(total)}</p>
+                    {credito && coefNum > 0 ? (
+                      <>
+                        <p className="mt-1">Total sin interés: {formatoARS(total)}</p>
+                        <p>Interés: {formatoARS(totalesCredito.interes)}</p>
+                      </>
+                    ) : null}
+                    <p className="mt-2 font-semibold">Total final {formatoARS(totalACobrar)}</p>
                     <p className="mt-1 text-[#4A5568]">{etiquetaMedioPago(formaPago)}</p>
                   </div>
                 </div>
@@ -615,7 +622,7 @@ export function VentaNuevaPage() {
                         {l.nombre} × {l.cantidad}
                       </p>
                     ))}
-                    <p className="mt-2 font-semibold">Total {formatoARS(total)}</p>
+                    <p className="mt-2 font-semibold">Total {formatoARS(totalACobrar)}</p>
                     <p>{etiquetaMedioPago(formaPago)}</p>
                     {mostrarCampoCliente && cliente.trim() ? <p>Cliente: {cliente.trim()}</p> : null}
                   </div>

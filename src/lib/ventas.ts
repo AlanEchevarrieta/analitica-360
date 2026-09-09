@@ -60,7 +60,7 @@ async function hidratarVentas(
 
   const ventasRes = await client
     .from('ventas')
-    .select('id, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_con_interes, notas, deleted_at')
+    .select('id, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_sin_interes, total_con_interes, notas, deleted_at')
     .in('id', ids)
   if (ventasRes.error) return { filas: [], error: ventasRes.error.message }
 
@@ -89,13 +89,14 @@ async function hidratarVentas(
     const row = porId.get(id) ?? {}
     const items = itemsPorVenta.get(id)
     const descuento = Number(row.descuento ?? 0)
-    const totalGuardado = Number(row.total_con_interes ?? 0)
+    const totalCon = Number(row.total_con_interes ?? 0)
+    const totalSin = Number(row.total_sin_interes ?? 0)
     const totalCalc = (items?.total ?? 0) - descuento
     return {
       id,
       fecha: String(row.fecha ?? ''),
       productos: items?.nombres.join(', ') ?? '',
-      total: totalGuardado > 0 ? totalGuardado : totalCalc,
+      total: totalCon > 0 ? totalCon : totalSin > 0 ? totalSin : totalCalc,
       forma_pago: String(row.forma_pago ?? ''),
       cliente: row.cliente_nombre == null || row.cliente_nombre === '' ? null : String(row.cliente_nombre),
       cuotas: Number(row.cuotas ?? 1),
@@ -212,9 +213,9 @@ export type OpcionCuotaId = (typeof OPCIONES_CUOTAS)[number]['id']
 
 export function calcularTotalesCredito(totalSinInteres: number, coeficiente: number, cuotas: number) {
   const coef = Math.max(0, Number.isFinite(coeficiente) ? coeficiente : 0)
-  const interes = totalSinInteres * (coef / 100)
-  const totalConInteres = totalSinInteres + interes
-  const valorCuota = cuotas > 0 ? totalConInteres / cuotas : totalConInteres
+  const interes = Number((totalSinInteres * (coef / 100)).toFixed(2))
+  const totalConInteres = Number((totalSinInteres + interes).toFixed(2))
+  const valorCuota = cuotas > 0 ? Number((totalConInteres / cuotas).toFixed(2)) : totalConInteres
   return { interes, totalConInteres, valorCuota }
 }
 
@@ -243,7 +244,13 @@ export async function confirmarVenta(
     p_total_sin_interes: input.totalSinInteres ?? null,
     p_total_con_interes: input.totalConInteres ?? null,
   })
-  return error ? error.message : null
+  if (!error) return null
+  const msg = error.message
+  const t = msg.toLowerCase()
+  if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
+    return 'Falta actualizar confirmar_venta en Supabase. Pegá TODO supabase/034_venta_total_con_interes.sql (rol postgres), dale Run y recargá.'
+  }
+  return msg
 }
 
 export async function anularVenta(
