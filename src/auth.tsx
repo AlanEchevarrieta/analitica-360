@@ -69,8 +69,16 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+function esRateLimitAuth(error: { message: string; status?: number } | null) {
+  if (!error) return false
+  if (error.status === 429) return true
+  const msg = error.message.toLowerCase()
+  return /rate limit|too many requests|over_request_rate_limit|429/.test(msg)
+}
+
 function mensajeAuth(error: { message: string; status?: number } | null): string {
   if (!error) return 'No se pudo completar la acción'
+  if (esRateLimitAuth(error)) return 'Demasiados intentos, esperá unos segundos'
   const msg = error.message.toLowerCase()
   if (msg.includes('invalid login')) return 'Email o contraseña incorrectos'
   if (msg.includes('already registered') || msg.includes('already been registered')) {

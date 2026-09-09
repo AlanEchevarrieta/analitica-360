@@ -24,6 +24,10 @@ export function LoginPage() {
 
   useEffect(() => {
     const desc = params.get('error_description') || params.get('error')
+    if (params.get('inactividad') === '1') {
+      setError('Tu sesión expiró por inactividad')
+      return
+    }
     if (desc) {
       setError(
         desc.includes('redirect') || desc.includes('127.0.0.1') || desc.includes('localhost')

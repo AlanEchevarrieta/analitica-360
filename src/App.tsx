@@ -106,6 +106,44 @@ function RecoveryGate() {
   return null
 }
 
+const INACTIVIDAD_MS = 8 * 60 * 60 * 1000
+
+function InactivityWatch() {
+  const { session } = useAuth()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!session || !supabase) return
+
+    let timer = 0
+    let expirando = false
+
+    function programar() {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        if (expirando) return
+        expirando = true
+        void (async () => {
+          await supabase?.auth.signOut()
+          navigate('/login?inactividad=1', { replace: true })
+        })()
+      }, INACTIVIDAD_MS)
+    }
+
+    programar()
+    const onActividad = () => programar()
+    document.addEventListener('click', onActividad, true)
+    document.addEventListener('keydown', onActividad, true)
+    return () => {
+      window.clearTimeout(timer)
+      document.removeEventListener('click', onActividad, true)
+      document.removeEventListener('keydown', onActividad, true)
+    }
+  }, [session, navigate])
+
+  return null
+}
+
 function AppRoutes() {
   const { configurado } = useAuth()
   if (!configurado) {
@@ -167,6 +205,7 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <RecoveryGate />
+          <InactivityWatch />
           <ToastHost />
           <Suspense fallback={<PageFallback />}>
             <AppRoutes />

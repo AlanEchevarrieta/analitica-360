@@ -36,6 +36,7 @@ export function RegistroPage() {
   const [aviso, setAviso] = useState<string | null>(null)
   const [aceptaTerminos, setAceptaTerminos] = useState(false)
   const [enviando, setEnviando] = useState(false)
+  const [bloqueo, setBloqueo] = useState(false)
 
   const check = evaluarPassword(password)
   const listaOk = passwordValida(check)
@@ -45,6 +46,7 @@ export function RegistroPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
+    if (enviando || bloqueo) return
     setError(null)
     setAviso(null)
     if (!nombreEmpresa.trim()) {
@@ -68,6 +70,8 @@ export function RegistroPage() {
       return
     }
     setEnviando(true)
+    setBloqueo(true)
+    window.setTimeout(() => setBloqueo(false), 3000)
     const result = await registrar({
       email: email.trim(),
       password,
@@ -298,7 +302,7 @@ export function RegistroPage() {
         <button
           className="mt-6 h-11 w-full rounded-md bg-[#6366F1] text-sm font-semibold tracking-wide text-white transition hover:bg-[#4F46E5] disabled:cursor-not-allowed disabled:opacity-40"
           type="submit"
-          disabled={enviando || !puedeCrear || !aceptaTerminos}
+          disabled={enviando || bloqueo || !puedeCrear || !aceptaTerminos}
         >
           {enviando ? 'CREANDO…' : 'CREAR EMPRESA'}
         </button>

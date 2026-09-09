@@ -171,6 +171,12 @@ export async function listarVentasExport(
       pageSize,
     })
     if (error) return { filas: [], error }
+    if (total > 5000) {
+      return {
+        filas: [],
+        error: `Hay ${total} ventas en este período.\nAplicá un filtro de fecha más acotado para exportar.`,
+      }
+    }
     todas.push(...filas)
     if (todas.length >= total || filas.length === 0) break
     pagina += 1

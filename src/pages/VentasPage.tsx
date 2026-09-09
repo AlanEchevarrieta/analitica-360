@@ -143,8 +143,14 @@ export function VentasPage() {
 
   async function onExportar(tipo: 'xlsx' | 'pdf') {
     setError(null)
-    setExportando(true)
     setMenuExportar(false)
+    if (total > 5000) {
+      setError(
+        `Hay ${total} ventas en este período.\nAplicá un filtro de fecha más acotado para exportar.`,
+      )
+      return
+    }
+    setExportando(true)
     const { filas: data, error: fallo } = await listarVentasExport(requireSupabase(), filtrosExport)
     if (fallo) {
       setExportando(false)
@@ -288,7 +294,9 @@ export function VentasPage() {
         </div>
 
         {error && error !== MSG_ERROR_RED ? (
-          <p className="mb-6 rounded-xl bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p>
+          <p className="mb-6 whitespace-pre-line rounded-xl bg-red-950/60 px-3 py-2 text-sm text-red-200">
+            {error}
+          </p>
         ) : null}
 
         <TableCard>

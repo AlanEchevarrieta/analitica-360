@@ -9,14 +9,18 @@ export function CompletarAltaPage() {
   const [nombreUsuario, setNombreUsuario] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const [bloqueo, setBloqueo] = useState(false)
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
+    if (enviando || bloqueo) return
     if (!nombreEmpresa.trim()) {
       setError('El nombre de la empresa es obligatorio')
       return
     }
     setEnviando(true)
+    setBloqueo(true)
+    window.setTimeout(() => setBloqueo(false), 3000)
     const result = await completarAlta({
       nombreEmpresa: nombreEmpresa.trim(),
       rubro: rubro.trim(),
@@ -68,7 +72,7 @@ export function CompletarAltaPage() {
         <button
           className="mt-6 h-11 w-full rounded-md bg-[#6366F1] text-sm font-semibold tracking-wide text-white transition hover:bg-[#4F46E5] disabled:opacity-50"
           type="submit"
-          disabled={enviando}
+          disabled={enviando || bloqueo}
         >
           {enviando ? 'GUARDANDO…' : 'CREAR EMPRESA'}
         </button>
