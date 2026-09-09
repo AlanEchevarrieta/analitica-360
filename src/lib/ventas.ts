@@ -8,6 +8,7 @@ export type VentaFila = {
   forma_pago: string
   cliente: string | null
   cuotas: number
+  productoIds: string[]
 }
 
 export type ResumenVentasHoy = {
@@ -27,34 +28,106 @@ export function etiquetaFormaPago(id: string) {
   return FORMAS_PAGO.find((f) => f.id === id)?.label ?? id
 }
 
-export async function listarVentas(
+export async function listarVentasPaginado(
   client: SupabaseClient,
-): Promise<{ filas: VentaFila[]; error: string | null }> {
-  const { data, error } = await client.rpc('listar_ventas_empresa')
-  if (error) return { filas: [], error: error.message }
-  const filas = ((data ?? []) as Record<string, unknown>[]).map((row) => ({
-    id: String(row.id),
-    fecha: String(row.fecha ?? ''),
-    productos: String(row.productos ?? ''),
-    total: Number(row.total ?? 0),
-    forma_pago: String(row.forma_pago ?? ''),
-    cliente: row.cliente == null || row.cliente === '' ? null : String(row.cliente),
-    cuotas: Number(row.cuotas ?? 1),
-  }))
+  input: {
+    pagina: number
+    pageSize: number
+    desde: string
+    hasta: string
+    forma: string
+    cliente: string
+    productoId: string
+  },
+): Promise<{ filas: VentaFila[]; total: number; error: string | null }> {
+  const from = (input.pagina - 1) * input.pageSize
+  const to = from + input.pageSize - 1
 
-  const ids = filas.map((f) => f.id)
-  if (ids.length > 0) {
-    const extra = await client.from('ventas').select('id, cuotas').in('id', ids)
-    if (!extra.error && extra.data) {
-      const mapa = new Map(extra.data.map((r) => [String(r.id), Number(r.cuotas ?? 1)]))
-      for (const fila of filas) {
-        const n = mapa.get(fila.id)
-        if (Number.isFinite(n)) fila.cuotas = n as number
-      }
-    }
+  const filtrosFecha = {
+    desde: `${input.desde}T00:00:00.000-03:00`,
+    hasta: `${input.hasta}T23:59:59.999-03:00`,
+  }
+  const clienteQ = input.cliente.trim()
+
+  const idsRes = input.productoId
+    ? await (() => {
+        let q = client
+          .from('ventas')
+          .select('id, ventas_items!inner(producto_id)', { count: 'exact' })
+          .is('deleted_at', null)
+          .order('fecha', { ascending: false })
+          .gte('fecha', filtrosFecha.desde)
+          .lte('fecha', filtrosFecha.hasta)
+          .eq('ventas_items.producto_id', input.productoId)
+        if (input.forma) q = q.eq('forma_pago', input.forma)
+        if (clienteQ) q = q.ilike('cliente_nombre', `%${clienteQ}%`)
+        return q.range(from, to)
+      })()
+    : await (() => {
+        let q = client
+          .from('ventas')
+          .select('id', { count: 'exact' })
+          .is('deleted_at', null)
+          .order('fecha', { ascending: false })
+          .gte('fecha', filtrosFecha.desde)
+          .lte('fecha', filtrosFecha.hasta)
+        if (input.forma) q = q.eq('forma_pago', input.forma)
+        if (clienteQ) q = q.ilike('cliente_nombre', `%${clienteQ}%`)
+        return q.range(from, to)
+      })()
+
+  if (idsRes.error) return { filas: [], total: 0, error: idsRes.error.message }
+
+  const total = idsRes.count ?? 0
+  const ids = [...new Set((idsRes.data ?? []).map((row) => String(row.id)))]
+  if (ids.length === 0) return { filas: [], total, error: null }
+
+  const ventasRes = await client
+    .from('ventas')
+    .select('id, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_con_interes')
+    .in('id', ids)
+  if (ventasRes.error) return { filas: [], total: 0, error: ventasRes.error.message }
+
+  const itemsRes = await client
+    .from('ventas_items')
+    .select('venta_id, producto_id, cantidad, precio_unitario, productos(nombre)')
+    .in('venta_id', ids)
+
+  const itemsPorVenta = new Map<string, { nombres: string[]; ids: string[]; total: number }>()
+  for (const row of (itemsRes.data ?? []) as Record<string, unknown>[]) {
+    const vid = String(row.venta_id)
+    const pid = String(row.producto_id)
+    const prod = row.productos as { nombre?: string } | { nombre?: string }[] | null
+    const nombre = Array.isArray(prod) ? prod[0]?.nombre : prod?.nombre
+    const cant = Number(row.cantidad ?? 0)
+    const precio = Number(row.precio_unitario ?? 0)
+    const acc = itemsPorVenta.get(vid) ?? { nombres: [], ids: [], total: 0 }
+    acc.nombres.push(`${nombre ?? 'Producto'} × ${cant}`)
+    acc.ids.push(pid)
+    acc.total += precio * cant
+    itemsPorVenta.set(vid, acc)
   }
 
-  return { filas, error: null }
+  const porId = new Map((ventasRes.data ?? []).map((row) => [String(row.id), row as Record<string, unknown>]))
+  const filas: VentaFila[] = ids.map((id) => {
+    const row = porId.get(id) ?? {}
+    const items = itemsPorVenta.get(id)
+    const descuento = Number(row.descuento ?? 0)
+    const totalGuardado = Number(row.total_con_interes ?? 0)
+    const totalCalc = (items?.total ?? 0) - descuento
+    return {
+      id,
+      fecha: String(row.fecha ?? ''),
+      productos: items?.nombres.join(', ') ?? '',
+      total: totalGuardado > 0 ? totalGuardado : totalCalc,
+      forma_pago: String(row.forma_pago ?? ''),
+      cliente: row.cliente_nombre == null || row.cliente_nombre === '' ? null : String(row.cliente_nombre),
+      cuotas: Number(row.cuotas ?? 1),
+      productoIds: items?.ids ?? [],
+    }
+  })
+
+  return { filas, total, error: null }
 }
 
 export async function resumenVentasHoy(

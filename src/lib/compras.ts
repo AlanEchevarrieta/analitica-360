@@ -9,17 +9,6 @@ export type CompraFila = {
   notas: string | null
 }
 
-function mapearFilas(data: unknown): CompraFila[] {
-  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
-    id: String(row.id),
-    fecha: String(row.fecha ?? ''),
-    proveedor: row.proveedor == null || row.proveedor === '' ? null : String(row.proveedor),
-    productos: String(row.productos ?? ''),
-    total: Number(row.total ?? 0),
-    notas: row.notas == null || row.notas === '' ? null : String(row.notas),
-  }))
-}
-
 function mensajeErrorCompras(msg: string) {
   const t = msg.toLowerCase()
   if (
@@ -33,43 +22,47 @@ function mensajeErrorCompras(msg: string) {
   return `No se pudieron cargar las compras: ${msg}`
 }
 
-export async function listarCompras(
+export async function listarComprasPaginado(
   client: SupabaseClient,
-): Promise<{ filas: CompraFila[]; error: string | null }> {
-  const rpc = await client.rpc('listar_compras_empresa')
-  if (!rpc.error) {
-    return { filas: mapearFilas(rpc.data), error: null }
-  }
+  input: { pagina: number; pageSize: number; proveedor: string },
+): Promise<{ filas: CompraFila[]; total: number; error: string | null }> {
+  const from = (input.pagina - 1) * input.pageSize
+  const to = from + input.pageSize - 1
+  const qProveedor = input.proveedor.trim()
 
-  const tabla = await client
+  let q = client
     .from('compras')
-    .select('id, fecha, proveedor, total, notas, compras_items(producto_nombre, cantidad)')
+    .select('id, fecha, proveedor, total, notas, compras_items(producto_nombre, cantidad)', { count: 'exact' })
     .is('deleted_at', null)
     .order('fecha', { ascending: false })
 
-  if (!tabla.error && tabla.data) {
-    const filas = (tabla.data as Record<string, unknown>[]).map((row) => {
-      const items = Array.isArray(row.compras_items) ? row.compras_items : []
-      const productos = items
-        .map((item) => {
-          const i = item as Record<string, unknown>
-          return `${String(i.producto_nombre ?? '')} × ${String(i.cantidad ?? '')}`
-        })
-        .filter(Boolean)
-        .join(', ')
-      return {
-        id: String(row.id),
-        fecha: String(row.fecha ?? ''),
-        proveedor: row.proveedor == null || row.proveedor === '' ? null : String(row.proveedor),
-        productos,
-        total: Number(row.total ?? 0),
-        notas: row.notas == null || row.notas === '' ? null : String(row.notas),
-      }
-    })
-    return { filas, error: null }
+  if (qProveedor) q = q.ilike('proveedor', `%${qProveedor}%`)
+
+  const tabla = await q.range(from, to)
+  if (tabla.error) {
+    return { filas: [], total: 0, error: mensajeErrorCompras(tabla.error.message) }
   }
 
-  return { filas: [], error: mensajeErrorCompras(rpc.error.message) }
+  const filas = (tabla.data as Record<string, unknown>[]).map((row) => {
+    const items = Array.isArray(row.compras_items) ? row.compras_items : []
+    const productos = items
+      .map((item) => {
+        const i = item as Record<string, unknown>
+        return `${String(i.producto_nombre ?? '')} × ${String(i.cantidad ?? '')}`
+      })
+      .filter(Boolean)
+      .join(', ')
+    return {
+      id: String(row.id),
+      fecha: String(row.fecha ?? ''),
+      proveedor: row.proveedor == null || row.proveedor === '' ? null : String(row.proveedor),
+      productos,
+      total: Number(row.total ?? 0),
+      notas: row.notas == null || row.notas === '' ? null : String(row.notas),
+    }
+  })
+
+  return { filas, total: tabla.count ?? 0, error: null }
 }
 
 export async function confirmarCompra(

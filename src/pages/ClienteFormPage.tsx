@@ -123,7 +123,8 @@ export function ClienteFormPage() {
                 <button
                   key={e}
                   type="button"
-                  className="rounded-full px-3 py-1 text-xs font-semibold"
+                  className={`etiqueta-cliente rounded-full px-3 py-1 text-xs font-semibold${on ? ' etiqueta-on' : ''}`}
+                  data-etiqueta={e}
                   style={{
                     background: on ? c.bg : '#EEF2F6',
                     color: on ? c.fg : '#4A5568',

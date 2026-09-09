@@ -15,7 +15,7 @@ import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { cargarDashboardInicio, type DashboardInicio } from '../lib/dashboard'
-import { listarCumpleanosProximos, textoCumpleProximo, type CumpleProximo } from '../lib/clientes'
+import { textoCumpleProximo } from '../lib/clientes'
 import { formatoARS } from '../lib/productos'
 import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
@@ -27,6 +27,7 @@ import {
   type SuscripcionActiva,
 } from '../lib/suscripcion'
 import { theme } from '../theme'
+import { coloresGrafico, useTema } from '../lib/tema'
 
 const DASH_VACIO: DashboardInicio = {
   hoy: { cantidad: 0, total: 0 },
@@ -37,11 +38,52 @@ const DASH_VACIO: DashboardInicio = {
   ultimos7: [],
   top5: [],
   stock: [],
+  cumples: [],
+}
+
+function KpiCardSkeleton() {
+  return (
+    <div
+      className="rounded-lg p-4"
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+      }}
+    >
+      <div className="kpi-skeleton-bar" style={{ width: '60%', height: 14 }} />
+      <div className="kpi-skeleton-bar mt-3" style={{ width: '80%', height: 32 }} />
+      <div className="kpi-skeleton-bar mt-2" style={{ width: '40%', height: 12 }} />
+    </div>
+  )
+}
+
+function DashboardSkeleton() {
+  return (
+    <section className="mt-6" aria-busy="true" aria-label="Cargando dashboard">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <KpiCardSkeleton />
+        <KpiCardSkeleton />
+        <KpiCardSkeleton />
+        <KpiCardSkeleton />
+        <KpiCardSkeleton />
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div
+          className="kpi-skeleton-bar h-72"
+          style={{ borderRadius: 8 }}
+        />
+        <div
+          className="kpi-skeleton-bar h-72"
+          style={{ borderRadius: 8 }}
+        />
+      </div>
+    </section>
+  )
 }
 
 function IconoBolsa() {
   return (
-    <svg className="h-8 w-8 text-[#A5B4FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+    <svg className="h-8 w-8" style={{ color: 'var(--kpi-sub)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 10-8 0v4M5 9h14l-1 11H6L5 9z" />
     </svg>
   )
@@ -49,7 +91,7 @@ function IconoBolsa() {
 
 function IconoCalendario() {
   return (
-    <svg className="h-8 w-8 text-[#A5B4FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+    <svg className="h-8 w-8" style={{ color: 'var(--kpi-sub)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
     </svg>
   )
@@ -57,7 +99,7 @@ function IconoCalendario() {
 
 function IconoMes() {
   return (
-    <svg className="h-8 w-8 text-[#A5B4FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+    <svg className="h-8 w-8" style={{ color: 'var(--kpi-sub)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6m6 0h6m-6 0V9a2 2 0 012-2h2a2 2 0 012 2v10m6 0V5a2 2 0 00-2-2h-2a2 2 0 00-2 2v14" />
     </svg>
   )
@@ -65,7 +107,7 @@ function IconoMes() {
 
 function IconoCompras() {
   return (
-    <svg className="h-8 w-8 text-[#A5B4FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+    <svg className="h-8 w-8" style={{ color: 'var(--kpi-sub)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l3-8H6.4M7 13L5.4 5M7 13l-2 9m12-9l2 9M9 22a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" />
     </svg>
   )
@@ -73,7 +115,7 @@ function IconoCompras() {
 
 function IconoProducto() {
   return (
-    <svg className="h-8 w-8 text-[#A5B4FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+    <svg className="h-8 w-8" style={{ color: 'var(--kpi-sub)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
     </svg>
   )
@@ -96,21 +138,28 @@ function KpiCard({
     <div
       className="rounded-lg p-4"
       style={{
-        background: 'rgba(255,255,255,0.05)',
-        border: '1px solid rgba(99,102,241,0.2)',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
       }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-[#94A3B8]">{label}</p>
+          <p className="text-xs font-medium" style={{ color: 'var(--kpi-label)' }}>
+            {label}
+          </p>
           <p
-            className={`mt-2 font-bold leading-tight text-white ${
+            className={`mt-2 font-bold leading-tight ${
               wrap ? 'text-lg break-words' : 'whitespace-nowrap text-[24px]'
             }`}
+            style={{ color: 'var(--kpi-value)' }}
           >
             {valor}
           </p>
-          {detalle ? <p className="mt-1 text-xs text-[#A5B4FC]">{detalle}</p> : null}
+          {detalle ? (
+            <p className="mt-1 text-xs" style={{ color: 'var(--kpi-sub)' }}>
+              {detalle}
+            </p>
+          ) : null}
         </div>
         <div className="shrink-0">{icono}</div>
       </div>
@@ -142,23 +191,33 @@ function formatoKPI(valor: number) {
 }
 
 export function HomePage() {
-  const { perfil, session, cerrarSesion, error } = useAuth()
+  const { perfil, session, error } = useAuth()
+  const { tema } = useTema()
+  const g = coloresGrafico(tema)
+  const cumpleFg = tema === 'light' ? '#92400E' : '#FCD34D'
   const [suscripcion, setSuscripcion] = useState<SuscripcionActiva | null>(null)
   const [dash, setDash] = useState<DashboardInicio>(DASH_VACIO)
-  const [cumples, setCumples] = useState<CumpleProximo[]>([])
+  const [cargandoDash, setCargandoDash] = useState(true)
 
   useEffect(() => {
     if (!perfil) return
     const client = requireSupabase()
     void (async () => {
-      let actual = await leerSuscripcionActiva(client, perfil.empresa.id)
-      if (!actual) {
-        await iniciarPeriodoPrueba(client, perfil.empresa.id, perfil.usuario.id)
-        actual = await leerSuscripcionActiva(client, perfil.empresa.id)
-      }
-      setSuscripcion(actual)
-      setDash(await cargarDashboardInicio(client))
-      setCumples(await listarCumpleanosProximos(client))
+      setCargandoDash(true)
+      const [sub, dashData] = await Promise.all([
+        (async () => {
+          let actual = await leerSuscripcionActiva(client, perfil.empresa.id)
+          if (!actual) {
+            await iniciarPeriodoPrueba(client, perfil.empresa.id, perfil.usuario.id)
+            actual = await leerSuscripcionActiva(client, perfil.empresa.id)
+          }
+          return actual
+        })(),
+        cargarDashboardInicio(client),
+      ])
+      setSuscripcion(sub)
+      setDash(dashData)
+      setCargandoDash(false)
     })()
   }, [perfil])
 
@@ -194,21 +253,16 @@ export function HomePage() {
       <ParticleNetwork />
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-8">
         <AppNav />
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-[#A5B4FC]">Analítica 360</p>
-            <h1 className="text-xl font-bold text-white">{perfil.empresa.nombre}</h1>
-            <p className="mt-1 text-xs text-[#94A3B8]">
-              Hola, {perfil.usuario.nombre} · {rolLabel} · Plan {perfil.empresa.plan_actual}
-            </p>
-          </div>
-          <button
-            className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold text-white"
-            type="button"
-            onClick={() => void cerrarSesion()}
-          >
-            Cerrar sesión
-          </button>
+        <header className="mb-6">
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--nav-idle)' }}>
+            Analítica 360
+          </p>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>
+            {perfil.empresa.nombre}
+          </h1>
+          <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+            Hola, {perfil.usuario.nombre} · {rolLabel} · Plan {perfil.empresa.plan_actual}
+          </p>
         </header>
 
         {suscripcion?.estado === 'periodo_prueba' ? (
@@ -227,21 +281,23 @@ export function HomePage() {
           <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>
         ) : null}
 
-        {!verReportes && cumples.length > 0 ? (
+        {!verReportes && dash.cumples.length > 0 ? (
           <p
             className="mb-4 rounded-lg px-3 py-3 text-sm"
             style={{
               background: 'rgba(251,191,36,0.1)',
-              border: '1px solid #FCD34D',
-              color: '#FCD34D',
+              border: `1px solid ${cumpleFg}`,
+              color: cumpleFg,
               borderRadius: 8,
             }}
           >
-            🎂 Cumpleaños próximos: {cumples.map(textoCumpleProximo).join(', ')}
+            🎂 Cumpleaños próximos: {dash.cumples.map(textoCumpleProximo).join(', ')}
           </p>
         ) : null}
 
-        {verReportes ? (
+        {verReportes && cargandoDash ? <DashboardSkeleton /> : null}
+
+        {verReportes && !cargandoDash ? (
           <section className="mt-6">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
               <KpiCard
@@ -278,17 +334,17 @@ export function HomePage() {
               />
             </div>
 
-            {cumples.length > 0 ? (
+            {dash.cumples.length > 0 ? (
               <p
                 className="mt-4 rounded-lg px-3 py-3 text-sm"
                 style={{
                   background: 'rgba(251,191,36,0.1)',
-                  border: '1px solid #FCD34D',
-                  color: '#FCD34D',
+                  border: `1px solid ${cumpleFg}`,
+                  color: cumpleFg,
                   borderRadius: 8,
                 }}
               >
-                🎂 Cumpleaños próximos: {cumples.map(textoCumpleProximo).join(', ')}
+                🎂 Cumpleaños próximos: {dash.cumples.map(textoCumpleProximo).join(', ')}
               </p>
             ) : null}
 
@@ -296,18 +352,20 @@ export function HomePage() {
               <div
                 className="rounded-lg p-4"
                 style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(99,102,241,0.2)',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
                 }}
               >
-                <p className="text-xs font-medium text-[#94A3B8]">Ventas últimos 7 días</p>
+                <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                  Ventas últimos 7 días
+                </p>
                 <div className="mt-3 h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={dash.ultimos7} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                      <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-                      <XAxis dataKey="dia" tick={{ fill: '#94A3B8', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <CartesianGrid stroke={g.grilla} vertical={false} />
+                      <XAxis dataKey="dia" tick={{ fill: g.eje, fontSize: 12 }} axisLine={false} tickLine={false} />
                       <YAxis
-                        tick={{ fill: '#94A3B8', fontSize: 11 }}
+                        tick={{ fill: g.eje, fontSize: 11 }}
                         axisLine={false}
                         tickLine={false}
                         width={56}
@@ -317,10 +375,10 @@ export function HomePage() {
                         cursor={{ fill: 'rgba(99,102,241,0.12)' }}
                         formatter={(value) => [formatoARS(Number(value ?? 0)), 'Total']}
                         contentStyle={{
-                          background: '#1A2F4A',
-                          border: '1px solid rgba(99,102,241,0.3)',
+                          background: g.tooltipBg,
+                          border: `1px solid ${g.tooltipBorder}`,
                           borderRadius: 8,
-                          color: '#fff',
+                          color: g.tooltipFg,
                         }}
                       />
                       <Bar dataKey="total" fill="#6366F1" radius={[4, 4, 0, 0]} maxBarSize={36} />
@@ -332,14 +390,16 @@ export function HomePage() {
               <div
                 className="rounded-lg p-4"
                 style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(99,102,241,0.2)',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
                 }}
               >
-                <p className="text-xs font-medium text-[#94A3B8]">Top 5 productos más vendidos</p>
+                <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                  Top 5 productos más vendidos
+                </p>
                 <div className="mt-3" style={{ height: 320 }}>
                   {dash.top5.length === 0 ? (
-                    <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">
+                    <p className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
                       Todavía no hay ventas
                     </p>
                   ) : (
@@ -350,10 +410,10 @@ export function HomePage() {
                         margin={{ top: 8, right: 40, left: 120, bottom: 0 }}
                         barCategoryGap="30%"
                       >
-                        <CartesianGrid stroke="rgba(255,255,255,0.06)" horizontal={false} />
+                        <CartesianGrid stroke={g.grilla} horizontal={false} />
                         <XAxis
                           type="number"
-                          tick={{ fill: '#94A3B8', fontSize: 11 }}
+                          tick={{ fill: g.eje, fontSize: 11 }}
                           axisLine={false}
                           tickLine={false}
                           allowDecimals={false}
@@ -362,7 +422,7 @@ export function HomePage() {
                           type="category"
                           dataKey="etiqueta"
                           width={120}
-                          tick={{ fill: '#E2E8F0', fontSize: 12 }}
+                          tick={{ fill: g.eje, fontSize: 12 }}
                           axisLine={false}
                           tickLine={false}
                         />
@@ -370,10 +430,10 @@ export function HomePage() {
                           cursor={{ fill: 'rgba(74,222,128,0.12)' }}
                           formatter={(value) => [`${Number(value ?? 0)} u.`, 'Unidades']}
                           contentStyle={{
-                            background: '#1A2F4A',
-                            border: '1px solid rgba(99,102,241,0.3)',
+                            background: g.tooltipBg,
+                            border: `1px solid ${g.tooltipBorder}`,
                             borderRadius: 8,
-                            color: '#fff',
+                            color: g.tooltipFg,
                           }}
                         />
                         <Bar dataKey="unidades" fill="#4ADE80" radius={[0, 4, 4, 0]} maxBarSize={18}>
@@ -389,14 +449,16 @@ export function HomePage() {
             <div
               className="mt-3 rounded-lg p-4"
               style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(99,102,241,0.2)',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
               }}
             >
-              <p className="text-xs font-medium text-[#94A3B8]">Estado de stock — productos activos</p>
+              <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                Estado de stock — productos activos
+              </p>
               <div className="mt-3" style={{ height: gestionaStock ? alturaStock : 160 }}>
                 {!gestionaStock ? (
-                  <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">
+                  <p className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
                     Este negocio no gestiona stock por unidades
                   </p>
                 ) : (
@@ -406,10 +468,10 @@ export function HomePage() {
                       data={dash.stock}
                       margin={{ top: 8, right: 36, left: 8, bottom: 0 }}
                     >
-                      <CartesianGrid stroke="rgba(255,255,255,0.06)" horizontal={false} />
+                      <CartesianGrid stroke={g.grilla} horizontal={false} />
                       <XAxis
                         type="number"
-                        tick={{ fill: '#94A3B8', fontSize: 11 }}
+                        tick={{ fill: g.eje, fontSize: 11 }}
                         axisLine={false}
                         tickLine={false}
                         allowDecimals={false}
@@ -419,7 +481,7 @@ export function HomePage() {
                         dataKey="nombre"
                         reversed
                         width={110}
-                        tick={{ fill: '#E2E8F0', fontSize: 11 }}
+                        tick={{ fill: g.eje, fontSize: 11 }}
                         axisLine={false}
                         tickLine={false}
                       />
@@ -427,10 +489,10 @@ export function HomePage() {
                         cursor={{ fill: 'rgba(99,102,241,0.12)' }}
                         formatter={(value) => [`${Number(value ?? 0)} u.`, 'Stock']}
                         contentStyle={{
-                          background: '#1A2F4A',
-                          border: '1px solid rgba(99,102,241,0.3)',
+                          background: g.tooltipBg,
+                          border: `1px solid ${g.tooltipBorder}`,
                           borderRadius: 8,
-                          color: '#fff',
+                          color: g.tooltipFg,
                         }}
                       />
                       <Bar dataKey="stock" radius={[0, 4, 4, 0]} maxBarSize={18}>
@@ -440,7 +502,7 @@ export function HomePage() {
                         <LabelList
                           dataKey="stock"
                           position="right"
-                          fill="#E2E8F0"
+                          fill={g.eje}
                           fontSize={11}
                         />
                       </Bar>

@@ -1,28 +1,84 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { ToastHost } from './components/ToastHost'
 import { AuthProvider, useAuth } from './auth'
+import { ThemeProvider } from './lib/tema'
 import { supabase } from './lib/supabase'
-import { AdminPage } from './pages/AdminPage'
-import { CompletarAltaPage } from './pages/CompletarAltaPage'
-import { HomePage } from './pages/HomePage'
-import { LoginPage } from './pages/LoginPage'
-import { ResetPasswordPage } from './pages/ResetPasswordPage'
-import { PrivacidadPage } from './pages/PrivacidadPage'
-import { RegistroPage } from './pages/RegistroPage'
-import { SetupPage } from './pages/SetupPage'
-import { TerminosPage } from './pages/TerminosPage'
-import { ProductosPage } from './pages/ProductosPage'
-import { ProductoFormPage } from './pages/ProductoFormPage'
-import { VentasPage } from './pages/VentasPage'
-import { VentaNuevaPage } from './pages/VentaNuevaPage'
-import { ComprasPage } from './pages/ComprasPage'
-import { CompraNuevaPage } from './pages/CompraNuevaPage'
-import { ClientesPage } from './pages/ClientesPage'
-import { ClienteFormPage } from './pages/ClienteFormPage'
-import { ClienteFichaPage } from './pages/ClienteFichaPage'
-import { ConfiguracionPage } from './pages/ConfiguracionPage'
-import { AnalyticsPage } from './pages/AnalyticsPage'
 import { RequireAuth, RequireCompletarAlta, RequireDueno, RequireGuest } from './routes'
+
+const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
+const CompletarAltaPage = lazy(() =>
+  import('./pages/CompletarAltaPage').then((m) => ({ default: m.CompletarAltaPage })),
+)
+const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })))
+const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })))
+const ResetPasswordPage = lazy(() =>
+  import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
+)
+const PrivacidadPage = lazy(() =>
+  import('./pages/PrivacidadPage').then((m) => ({ default: m.PrivacidadPage })),
+)
+const RegistroPage = lazy(() =>
+  import('./pages/RegistroPage').then((m) => ({ default: m.RegistroPage })),
+)
+const SetupPage = lazy(() => import('./pages/SetupPage').then((m) => ({ default: m.SetupPage })))
+const TerminosPage = lazy(() =>
+  import('./pages/TerminosPage').then((m) => ({ default: m.TerminosPage })),
+)
+const ProductosPage = lazy(() =>
+  import('./pages/ProductosPage').then((m) => ({ default: m.ProductosPage })),
+)
+const ProductoFormPage = lazy(() =>
+  import('./pages/ProductoFormPage').then((m) => ({ default: m.ProductoFormPage })),
+)
+const VentasPage = lazy(() => import('./pages/VentasPage').then((m) => ({ default: m.VentasPage })))
+const VentaNuevaPage = lazy(() =>
+  import('./pages/VentaNuevaPage').then((m) => ({ default: m.VentaNuevaPage })),
+)
+const ComprasPage = lazy(() => import('./pages/ComprasPage').then((m) => ({ default: m.ComprasPage })))
+const CompraNuevaPage = lazy(() =>
+  import('./pages/CompraNuevaPage').then((m) => ({ default: m.CompraNuevaPage })),
+)
+const ClientesPage = lazy(() =>
+  import('./pages/ClientesPage').then((m) => ({ default: m.ClientesPage })),
+)
+const ClienteFormPage = lazy(() =>
+  import('./pages/ClienteFormPage').then((m) => ({ default: m.ClienteFormPage })),
+)
+const ClienteFichaPage = lazy(() =>
+  import('./pages/ClienteFichaPage').then((m) => ({ default: m.ClienteFichaPage })),
+)
+const ConfiguracionPage = lazy(() =>
+  import('./pages/ConfiguracionPage').then((m) => ({ default: m.ConfiguracionPage })),
+)
+const AnalyticsPage = lazy(() =>
+  import('./pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })),
+)
+
+function PageFallback() {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        background: '#080C14',
+      }}
+    >
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          border: '3px solid rgba(99,102,241,0.3)',
+          borderTop: '3px solid #6366F1',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+        }}
+      />
+    </div>
+  )
+}
 
 function RecoveryGate() {
   const navigate = useNavigate()
@@ -95,10 +151,15 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <RecoveryGate />
-        <AppRoutes />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <RecoveryGate />
+          <ToastHost />
+          <Suspense fallback={<PageFallback />}>
+            <AppRoutes />
+          </Suspense>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   )
 }

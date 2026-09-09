@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { fetchSupabase } from './consulta'
 
 const url = import.meta.env.VITE_SUPABASE_URL
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -11,6 +12,9 @@ export const supabase: SupabaseClient | null = supabaseConfigured
         detectSessionInUrl: true,
         persistSession: true,
         autoRefreshToken: true,
+      },
+      global: {
+        fetch: fetchSupabase,
       },
     })
   : null

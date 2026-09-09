@@ -14,6 +14,7 @@ import {
   limpiarAltaPendiente,
 } from './lib/altaPendiente'
 import { requireSupabase, supabase, supabaseConfigured } from './lib/supabase'
+import { esErrorAuth } from './lib/consulta'
 import { iniciarPeriodoPrueba, registrarAceptacionTerminos } from './lib/suscripcion'
 import { parsePermisos, PERMISOS_DUENO } from './lib/permisos'
 import type { Empresa, Perfil, Usuario } from './types'
@@ -95,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle()
 
     if (qError) {
+      if (esErrorAuth(qError)) return
       setError('No se pudo leer tu empresa. ¿Corriste el SQL en Supabase?')
       setPerfil(null)
       return
@@ -275,7 +277,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const cerrarSesion = useCallback(async () => {
     if (!supabase) return
     await supabase.auth.signOut()
+    setSession(null)
     setPerfil(null)
+    setError(null)
   }, [])
 
   const recargarPerfil = useCallback(async () => {

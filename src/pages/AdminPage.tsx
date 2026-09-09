@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { ThemeToggle } from '../lib/tema'
 import {
   asignarSuscripcionAdmin,
   cambiarEstadoSuscripcionAdmin,
@@ -127,13 +128,16 @@ export function AdminPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#0F1B2D] px-4 py-8 text-[#E2E8F0]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div className="min-h-dvh px-4 py-8" style={{ fontFamily: 'Inter, system-ui, sans-serif', background: 'var(--canvas-from)', color: 'var(--text)' }}>
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 flex items-center justify-between gap-3">
           <h1 className="text-xl font-bold">Admin · Analítica 360</h1>
-          <Link className="text-sm text-[#A5B4FC]" to="/">
-            Volver
-          </Link>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Link className="text-sm" style={{ color: 'var(--nav-idle)' }} to="/">
+              Volver
+            </Link>
+          </div>
         </div>
         {error ? <p className="mb-4 rounded-md bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p> : null}
         <div className="overflow-x-auto rounded-lg bg-white/95 text-[#1A2F4A]">

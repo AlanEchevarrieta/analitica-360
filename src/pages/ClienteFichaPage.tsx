@@ -351,7 +351,8 @@ export function ClienteFichaPage() {
                         <button
                           key={e}
                           type="button"
-                          className="rounded-full px-3 py-1 text-xs font-semibold"
+                          className={`etiqueta-cliente rounded-full px-3 py-1 text-xs font-semibold${on ? ' etiqueta-on' : ''}`}
+                          data-etiqueta={e}
                           style={{ background: on ? c.bg : 'rgba(255,255,255,0.06)', color: on ? c.fg : '#94A3B8' }}
                           onClick={() =>
                             setEtiquetas((prev) => (prev.includes(e) ? prev.filter((x) => x !== e) : [...prev, e]))
@@ -382,7 +383,8 @@ export function ClienteFichaPage() {
                       return (
                         <span
                           key={e}
-                          className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                          className="etiqueta-cliente etiqueta-on rounded-full px-2.5 py-0.5 text-xs font-medium"
+                          data-etiqueta={e}
                           style={{ background: c.bg, color: c.fg }}
                         >
                           {e}

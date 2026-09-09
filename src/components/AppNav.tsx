@@ -1,41 +1,31 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { ThemeToggle } from '../lib/tema'
 import { planTieneAnalytics } from '../lib/planes'
 import { theme } from '../theme'
 
-const linkClass = (tone: 'dark' | 'light', isActive: boolean) => {
-  if (tone === 'light') {
-    return `rounded-md px-3 py-2 text-sm font-semibold ${
-      isActive ? 'bg-[#6366F1] text-white' : 'text-[#6366F1] hover:text-[#4F46E5]'
-    }`
-  }
-  return `rounded-md px-3 py-2 text-sm font-semibold ${
-    isActive ? 'bg-white/15 text-white' : 'text-[#A5B4FC] hover:text-white'
-  }`
-}
-
-export function AppNav({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
-  const { perfil } = useAuth()
+export function AppNav() {
+  const { perfil, cerrarSesion } = useAuth()
   const esDueno = perfil?.usuario.rol === 'dueno'
 
   return (
-    <nav className="mb-6 flex flex-wrap items-center gap-1" style={{ fontFamily: theme.font }}>
-      <NavLink className={({ isActive }) => linkClass(tone, isActive)} to="/" end>
+    <nav className="app-nav mb-6 flex flex-wrap items-center gap-1" style={{ fontFamily: theme.font }}>
+      <NavLink className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`} to="/" end>
         Inicio
       </NavLink>
-      <NavLink className={({ isActive }) => linkClass(tone, isActive)} to="/productos">
+      <NavLink className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`} to="/productos">
         Productos
       </NavLink>
-      <NavLink className={({ isActive }) => linkClass(tone, isActive)} to="/ventas">
+      <NavLink className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`} to="/ventas">
         Ventas
       </NavLink>
-      <NavLink className={({ isActive }) => linkClass(tone, isActive)} to="/clientes">
+      <NavLink className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`} to="/clientes">
         Clientes
       </NavLink>
-      <NavLink className={({ isActive }) => linkClass(tone, isActive)} to="/compras">
+      <NavLink className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`} to="/compras">
         Compras
       </NavLink>
-      <NavLink className={({ isActive }) => linkClass(tone, isActive)} to="/analytics">
+      <NavLink className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`} to="/analytics">
         <span className="inline-flex items-center gap-1">
           Analytics
           {perfil && !planTieneAnalytics(perfil.empresa.plan_actual) ? (
@@ -50,10 +40,16 @@ export function AppNav({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
         </span>
       </NavLink>
       {esDueno ? (
-        <NavLink className={({ isActive }) => linkClass(tone, isActive)} to="/configuracion">
+        <NavLink className={({ isActive }) => `app-nav-link${isActive ? ' active' : ''}`} to="/configuracion">
           Configuración
         </NavLink>
       ) : null}
+      <div className="ml-auto flex items-center gap-2">
+        <ThemeToggle />
+        <button className="btn-sesion" type="button" onClick={() => void cerrarSesion()}>
+          Cerrar sesión
+        </button>
+      </div>
     </nav>
   )
 }

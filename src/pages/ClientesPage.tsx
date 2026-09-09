@@ -7,6 +7,8 @@ import {
   PageTitle,
   SearchField,
   TableCard,
+  TableErrorRed,
+  TableSkeleton,
   Th,
   Tr,
   btnPrimary,
@@ -14,6 +16,7 @@ import {
   theadStyle,
 } from '../components/listado'
 import { COLOR_ETIQUETA, listarClientes, type ClienteFila } from '../lib/clientes'
+import { MSG_ERROR_RED, mensajeCargaTabla } from '../lib/consulta'
 import { formatoARS } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
@@ -27,7 +30,7 @@ function formatoDia(iso: string | null) {
 }
 
 export function ClientesPage() {
-  const { perfil, cerrarSesion } = useAuth()
+  const { perfil } = useAuth()
   const [filas, setFilas] = useState<ClienteFila[]>([])
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -38,7 +41,8 @@ export function ClientesPage() {
     const { filas: data, error: listError } = await listarClientes(requireSupabase())
     setCargando(false)
     if (listError) {
-      setError(listError)
+      const msg = mensajeCargaTabla(listError)
+      if (msg) setError(msg)
       return
     }
     setError(null)
@@ -69,20 +73,11 @@ export function ClientesPage() {
       }}
     >
       <ParticleNetwork />
-      <div className="relative z-10 mx-auto max-w-5xl px-4 py-8 text-white">
+      <div className="relative z-10 mx-auto max-w-5xl px-4 py-8">
         <AppNav />
         <PageTitle
           titulo="Clientes"
           subtitulo={`${filas.length} ${filas.length === 1 ? 'cliente' : 'clientes'}`}
-          accion={
-            <button
-              className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold text-white"
-              type="button"
-              onClick={() => void cerrarSesion()}
-            >
-              Cerrar sesión
-            </button>
-          }
         />
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -94,7 +89,7 @@ export function ClientesPage() {
           ) : null}
         </div>
 
-        {error ? (
+        {error && error !== MSG_ERROR_RED ? (
           <p className="mb-6 rounded-xl bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p>
         ) : null}
 
@@ -111,6 +106,7 @@ export function ClientesPage() {
                 <Th />
               </tr>
             </thead>
+            {!cargando && error !== MSG_ERROR_RED ? (
             <tbody>
               {visibles.map((fila, index) => (
                 <Tr key={fila.id} index={index}>
@@ -136,7 +132,8 @@ export function ClientesPage() {
                           return (
                             <span
                               key={e}
-                              className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                              className="etiqueta-cliente etiqueta-on rounded-full px-2 py-0.5 text-[11px] font-medium"
+                              data-etiqueta={e}
                               style={{ background: c.bg, color: c.fg }}
                             >
                               {e}
@@ -160,7 +157,12 @@ export function ClientesPage() {
                 </Tr>
               ))}
             </tbody>
+            ) : null}
           </table>
+          {cargando ? <TableSkeleton /> : null}
+          {!cargando && error === MSG_ERROR_RED ? (
+            <TableErrorRed onReintentar={() => void cargar()} />
+          ) : null}
           {!cargando && visibles.length === 0 && !error ? (
             <p className="px-3 py-6 text-center text-sm text-[#94A3B8]">
               {filas.length === 0 ? 'Todavía no hay clientes.' : 'Ningún cliente coincide con la búsqueda.'}

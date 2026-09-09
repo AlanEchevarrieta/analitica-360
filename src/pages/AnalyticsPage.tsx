@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AreaChart, Card, Metric, Text } from '@tremor/react'
+import { AreaChart, Card, Text } from '@tremor/react'
 import {
   Bar,
   BarChart,
@@ -45,6 +45,7 @@ import { planTieneAnalytics } from '../lib/planes'
 import { formatoARS } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
+import { coloresGrafico, useTema } from '../lib/tema'
 
 const VACIO: AnalyticsPeriodo = {
   total: 0,
@@ -79,7 +80,65 @@ const PRESETS: { id: PresetPeriodo; label: string }[] = [
 type Columna = 'producto' | 'unidades' | 'total' | 'costo' | 'margen' | 'margen_pct'
 
 const cardStyle = { borderColor: 'rgba(99,102,241,0.2)' }
-const cardClass = '!rounded-lg !border !bg-white/[0.05] !ring-0 !p-5'
+const cardClass = 'analytics-card !rounded-lg !border !ring-0 !p-5'
+
+function IconoKpi() {
+  return (
+    <svg className="h-8 w-8 text-[#6366F1]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 13h4v8H3v-8zm7-6h4v14h-4V7zm7 3h4v11h-4V10z" />
+    </svg>
+  )
+}
+
+function KpiShell({
+  label,
+  valor,
+  detalle,
+  detalleColor,
+  wrap,
+}: {
+  label: string
+  valor?: string
+  detalle?: string
+  detalleColor?: string
+  wrap?: boolean
+}) {
+  return (
+    <div
+      className="rounded-lg p-4"
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid rgba(99,102,241,0.2)',
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-medium" style={{ color: 'var(--kpi-label)' }}>
+            {label}
+          </p>
+          {valor ? (
+            <p
+              className={`mt-2 font-bold leading-tight ${
+                wrap ? 'text-lg break-words' : 'whitespace-nowrap text-[24px]'
+              }`}
+              style={{ color: 'var(--kpi-value)' }}
+            >
+              {valor}
+            </p>
+          ) : null}
+          {detalle ? (
+            <p className="mt-1 text-xs leading-snug" style={{ color: detalleColor ?? 'var(--kpi-label)' }}>
+              {detalle}
+            </p>
+          ) : null}
+        </div>
+        <div className="shrink-0">
+          <IconoKpi />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function Kpi({
   label,
@@ -90,18 +149,28 @@ function Kpi({
   valor: string
   pct: number
 }) {
+  const { tema } = useTema()
   const up = pct > 0.05
   const down = pct < -0.05
-  const color = up ? '#4ADE80' : down ? '#F87171' : '#94A3B8'
+  const color = up
+    ? tema === 'light'
+      ? '#15803D'
+      : '#4ADE80'
+    : down
+      ? tema === 'light'
+        ? '#DC2626'
+        : '#F87171'
+      : tema === 'light'
+        ? '#3730A3'
+        : '#94A3B8'
   const flecha = up ? '↑' : down ? '↓' : '→'
   return (
-    <Card className={cardClass} style={cardStyle}>
-      <Text className="!text-[#94A3B8]">{label}</Text>
-      <Metric className="!text-white">{valor}</Metric>
-      <p className="mt-1 text-xs leading-snug" style={{ color }}>
-        {flecha} {Math.abs(pct).toFixed(0)}% vs período anterior
-      </p>
-    </Card>
+    <KpiShell
+      label={label}
+      valor={valor}
+      detalle={`${flecha} ${Math.abs(pct).toFixed(0)}% vs período anterior`}
+      detalleColor={color}
+    />
   )
 }
 
@@ -118,8 +187,8 @@ function TooltipVentas({
   const iso = payload[0]?.payload?.fechaExacta
   const fecha = iso ? fechaExactaLarga(iso) : String(label ?? '')
   return (
-    <div className="rounded-md bg-[#0F1B2D] px-3 py-2 text-xs text-white shadow-lg ring-1 ring-white/15">
-      <p className="text-[#A5B4FC]">{fecha}</p>
+    <div className="chart-tooltip">
+      <p style={{ color: 'var(--text-muted)' }}>{fecha}</p>
       <p className="mt-1 font-semibold">{formatoARS(Number(payload[0].value ?? 0))}</p>
     </div>
   )
@@ -139,7 +208,9 @@ function BarraMargen({ pct }: { pct: number }) {
 }
 
 export function AnalyticsPage() {
-  const { perfil, cerrarSesion } = useAuth()
+  const { perfil } = useAuth()
+  const { tema } = useTema()
+  const g = coloresGrafico(tema)
   const [preset, setPreset] = useState<PresetPeriodo>('mes')
   const [desdeDraft, setDesdeDraft] = useState(() => rangoPreset('mes').desde)
   const [hastaDraft, setHastaDraft] = useState(() => rangoPreset('mes').hasta)
@@ -266,18 +337,9 @@ export function AnalyticsPage() {
       <ParticleNetwork />
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-10 text-white">
         <AppNav />
-        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-[#A5B4FC]">Analítica 360</p>
-            <h1 className="mt-1 text-xl font-bold">Analytics</h1>
-          </div>
-          <button
-            className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold text-white"
-            type="button"
-            onClick={() => void cerrarSesion()}
-          >
-            Cerrar sesión
-          </button>
+        <div className="mb-8">
+          <p className="text-xs font-bold uppercase tracking-wide text-[#A5B4FC]">Analítica 360</p>
+          <h1 className="mt-1 text-xl font-bold">Analytics</h1>
         </div>
 
         {!desbloqueado ? (
@@ -382,10 +444,10 @@ export function AnalyticsPage() {
                       pct={variacionPct(margen, margenAnt)}
                     />
                   ) : (
-                    <Card className={cardClass} style={cardStyle}>
-                      <Text className="!text-[#94A3B8]">Margen bruto estimado</Text>
-                      <p className="mt-3 text-sm text-[#94A3B8]">Cargá el costo de tus productos para ver el margen</p>
-                    </Card>
+                    <KpiShell
+                      label="Margen bruto estimado"
+                      detalle="Cargá el costo de tus productos para ver el margen"
+                    />
                   )}
                 </div>
 
@@ -431,10 +493,10 @@ export function AnalyticsPage() {
                               <RechartsTooltip
                                 formatter={(value) => formatoARS(Number(value ?? 0))}
                                 contentStyle={{
-                                  background: '#0F1B2D',
-                                  border: '1px solid rgba(255,255,255,0.15)',
+                                  background: g.tooltipBg,
+                                  border: `1px solid ${g.tooltipBorder}`,
                                   borderRadius: 8,
-                                  color: '#fff',
+                                  color: g.tooltipFg,
                                   fontSize: 12,
                                 }}
                               />
@@ -481,10 +543,10 @@ export function AnalyticsPage() {
                             margin={{ top: 8, right: 40, left: 120, bottom: 0 }}
                             barCategoryGap="30%"
                           >
-                            <CartesianGrid stroke="rgba(255,255,255,0.06)" horizontal={false} />
+                            <CartesianGrid stroke={g.grilla} horizontal={false} />
                             <XAxis
                               type="number"
-                              tick={{ fill: '#94A3B8', fontSize: 11 }}
+                              tick={{ fill: g.eje, fontSize: 11 }}
                               axisLine={false}
                               tickLine={false}
                               allowDecimals={false}
@@ -493,17 +555,17 @@ export function AnalyticsPage() {
                               type="category"
                               dataKey="etiqueta"
                               width={120}
-                              tick={{ fill: '#E2E8F0', fontSize: 12 }}
+                              tick={{ fill: g.eje, fontSize: 12 }}
                               axisLine={false}
                               tickLine={false}
                             />
                             <RechartsTooltip
                               formatter={(value) => [`${Number(value ?? 0)} u.`, 'Unidades']}
                               contentStyle={{
-                                background: '#0F1B2D',
-                                border: '1px solid rgba(255,255,255,0.15)',
+                                background: g.tooltipBg,
+                                border: `1px solid ${g.tooltipBorder}`,
                                 borderRadius: 8,
-                                color: '#fff',
+                                color: g.tooltipFg,
                                 fontSize: 12,
                               }}
                             />
@@ -564,29 +626,29 @@ export function AnalyticsPage() {
                       <div className="mt-4" style={{ height: 360 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <ScatterChart margin={{ top: 16, right: 24, left: 8, bottom: 8 }}>
-                            <CartesianGrid stroke="rgba(255,255,255,0.06)" />
+                            <CartesianGrid stroke={g.grilla} />
                             <XAxis
                               type="number"
                               dataKey="unidades"
                               name="Rotación"
-                              tick={{ fill: '#94A3B8', fontSize: 11 }}
+                              tick={{ fill: g.eje, fontSize: 11 }}
                               axisLine={false}
                               tickLine={false}
                               allowDecimals={false}
-                              label={{ value: 'Rotación (unidades)', fill: '#94A3B8', fontSize: 11, position: 'insideBottom', offset: -4 }}
+                              label={{ value: 'Rotación (unidades)', fill: g.eje, fontSize: 11, position: 'insideBottom', offset: -4 }}
                             />
                             <YAxis
                               type="number"
                               dataKey="margen_pct"
                               name="Margen"
-                              tick={{ fill: '#94A3B8', fontSize: 11 }}
+                              tick={{ fill: g.eje, fontSize: 11 }}
                               axisLine={false}
                               tickLine={false}
                               unit="%"
-                              label={{ value: 'Margen %', fill: '#94A3B8', fontSize: 11, angle: -90, position: 'insideLeft' }}
+                              label={{ value: 'Margen %', fill: g.eje, fontSize: 11, angle: -90, position: 'insideLeft' }}
                             />
-                            <ReferenceLine x={matriz.avgU} stroke="#94A3B8" strokeDasharray="4 4" />
-                            <ReferenceLine y={matriz.avgM} stroke="#94A3B8" strokeDasharray="4 4" />
+                            <ReferenceLine x={matriz.avgU} stroke={g.eje} strokeDasharray="4 4" />
+                            <ReferenceLine y={matriz.avgM} stroke={g.eje} strokeDasharray="4 4" />
                             <RechartsTooltip
                               cursor={{ strokeDasharray: '3 3' }}
                               content={({ active, payload }) => {
@@ -598,10 +660,10 @@ export function AnalyticsPage() {
                                   cuadrante: CuadranteProducto
                                 }
                                 return (
-                                  <div className="rounded-md bg-[#0F1B2D] px-3 py-2 text-xs text-white shadow-lg ring-1 ring-white/15">
+                                  <div className="chart-tooltip">
                                     <p className="font-semibold">{p.producto}</p>
-                                    <p className="mt-1 text-[#94A3B8]">Margen: {p.margen_pct.toFixed(1)}%</p>
-                                    <p className="text-[#94A3B8]">Unidades vendidas: {p.unidades}</p>
+                                    <p className="mt-1">Margen: {p.margen_pct.toFixed(1)}%</p>
+                                    <p>Unidades vendidas: {p.unidades}</p>
                                     <p className="mt-1" style={{ color: COLOR_CUADRANTE[p.cuadrante] }}>
                                       Cuadrante: {p.cuadrante}
                                     </p>
@@ -613,7 +675,7 @@ export function AnalyticsPage() {
                               {matriz.puntos.map((p) => (
                                 <Cell key={p.producto} fill={p.color} />
                               ))}
-                              <LabelList dataKey="etiqueta" position="top" fill="#94A3B8" fontSize={10} />
+                              <LabelList dataKey="etiqueta" position="top" fill={g.eje} fontSize={10} />
                             </Scatter>
                           </ScatterChart>
                         </ResponsiveContainer>
@@ -635,10 +697,10 @@ export function AnalyticsPage() {
                   <div className="mt-4" style={{ height: 280 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={data.evolucion} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-                        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-                        <XAxis dataKey="fecha" tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <CartesianGrid stroke={g.grilla} vertical={false} />
+                        <XAxis dataKey="fecha" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
                         <YAxis
-                          tick={{ fill: '#94A3B8', fontSize: 11 }}
+                          tick={{ fill: g.eje, fontSize: 11 }}
                           axisLine={false}
                           tickLine={false}
                           tickFormatter={formatoEjeCompacto}
@@ -651,17 +713,17 @@ export function AnalyticsPage() {
                             const ant = Number(payload.find((x) => x.dataKey === 'Anterior')?.value ?? 0)
                             const iso = (payload[0]?.payload as { fechaExacta?: string } | undefined)?.fechaExacta
                             return (
-                              <div className="rounded-md bg-[#0F1B2D] px-3 py-2 text-xs text-white shadow-lg ring-1 ring-white/15">
-                                <p className="text-[#A5B4FC]">{iso ? fechaExactaLarga(iso) : String(label ?? '')}</p>
+                              <div className="chart-tooltip">
+                                <p>{iso ? fechaExactaLarga(iso) : String(label ?? '')}</p>
                                 <p className="mt-1" style={{ color: '#6366F1' }}>
                                   Período actual: {formatoARS(actual)}
                                 </p>
-                                <p style={{ color: '#94A3B8' }}>Período anterior: {formatoARS(ant)}</p>
+                                <p style={{ color: g.muted }}>Período anterior: {formatoARS(ant)}</p>
                               </div>
                             )
                           }}
                         />
-                        <Legend wrapperStyle={{ color: '#94A3B8', fontSize: 12 }} />
+                        <Legend wrapperStyle={{ color: g.eje, fontSize: 12 }} />
                         <Line
                           type="monotone"
                           dataKey="Ventas"
@@ -674,7 +736,7 @@ export function AnalyticsPage() {
                           type="monotone"
                           dataKey="Anterior"
                           name="Período anterior"
-                          stroke="#94A3B8"
+                          stroke={g.muted}
                           strokeWidth={2}
                           dot={false}
                         />
@@ -688,10 +750,10 @@ export function AnalyticsPage() {
                   <div className="mt-4" style={{ height: 280 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={diasSemana} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                        <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-                        <XAxis dataKey="dia" tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <CartesianGrid stroke={g.grilla} vertical={false} />
+                        <XAxis dataKey="dia" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
                         <YAxis
-                          tick={{ fill: '#94A3B8', fontSize: 11 }}
+                          tick={{ fill: g.eje, fontSize: 11 }}
                           axisLine={false}
                           tickLine={false}
                           tickFormatter={formatoEjeCompacto}
@@ -700,10 +762,10 @@ export function AnalyticsPage() {
                         <RechartsTooltip
                           formatter={(value) => formatoARS(Number(value ?? 0))}
                           contentStyle={{
-                            background: '#0F1B2D',
-                            border: '1px solid rgba(255,255,255,0.15)',
+                            background: g.tooltipBg,
+                            border: `1px solid ${g.tooltipBorder}`,
                             borderRadius: 8,
-                            color: '#fff',
+                            color: g.tooltipFg,
                             fontSize: 12,
                           }}
                         />
@@ -719,29 +781,27 @@ export function AnalyticsPage() {
 
                 {data.clientes.hay ? (
                   <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                    <Card className={cardClass} style={cardStyle}>
-                      <Text className="!text-[#94A3B8]">Clientes activos</Text>
-                      <Metric className="!text-white">{data.clientes.activos}</Metric>
-                      <p className="mt-1 text-xs text-[#94A3B8]">Compraron en el período</p>
-                    </Card>
-                    <Card className={cardClass} style={cardStyle}>
-                      <Text className="!text-[#94A3B8]">Ticket promedio por cliente</Text>
-                      <Metric className="!text-white">{formatoARS(data.clientes.ticket)}</Metric>
-                    </Card>
-                    <Card className={cardClass} style={cardStyle}>
-                      <Text className="!text-[#94A3B8]">Cliente que más gastó</Text>
-                      <Metric className="!text-white !text-lg !break-words">
-                        {data.clientes.topNombre || '—'}
-                      </Metric>
-                      <p className="mt-1 text-xs text-[#4ADE80]">{formatoARS(data.clientes.topTotal)}</p>
-                    </Card>
-                    <Card className={cardClass} style={cardStyle}>
-                      <Text className="!text-[#94A3B8]">Nuevos vs recurrentes</Text>
-                      <Metric className="!text-white">
-                        {data.clientes.pctNuevos.toFixed(0)}% / {data.clientes.pctRecurrentes.toFixed(0)}%
-                      </Metric>
-                      <p className="mt-1 text-xs text-[#94A3B8]">nuevos · recurrentes</p>
-                    </Card>
+                    <KpiShell
+                      label="Clientes activos"
+                      valor={String(data.clientes.activos)}
+                      detalle="Compraron en el período"
+                    />
+                    <KpiShell
+                      label="Ticket promedio por cliente"
+                      valor={formatoARS(data.clientes.ticket)}
+                    />
+                    <KpiShell
+                      label="Cliente que más gastó"
+                      valor={data.clientes.topNombre || '—'}
+                      wrap
+                      detalle={formatoARS(data.clientes.topTotal)}
+                      detalleColor={tema === 'light' ? '#15803D' : '#4ADE80'}
+                    />
+                    <KpiShell
+                      label="Nuevos vs recurrentes"
+                      valor={`${data.clientes.pctNuevos.toFixed(0)}% / ${data.clientes.pctRecurrentes.toFixed(0)}%`}
+                      detalle="nuevos · recurrentes"
+                    />
                   </div>
                 ) : null}
               </>

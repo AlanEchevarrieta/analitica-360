@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ParticleNetwork } from '../components/ParticleNetwork'
+import { ThemeToggle } from '../lib/tema'
 
 export function LegalLayout({
   title,
@@ -12,6 +13,9 @@ export function LegalLayout({
   return (
     <div className="relative min-h-dvh bg-canvas">
       <ParticleNetwork />
+      <div className="absolute right-4 top-4 z-20">
+        <ThemeToggle />
+      </div>
       <div className="relative z-10 mx-auto max-w-[640px] px-4 py-10">
         <article
           className="rounded-lg bg-white/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)] backdrop-blur-md"

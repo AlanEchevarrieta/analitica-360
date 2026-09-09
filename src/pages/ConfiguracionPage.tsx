@@ -249,20 +249,20 @@ export function ConfiguracionPage() {
       <ParticleNetwork />
       <div className="relative z-10 mx-auto max-w-[440px] px-4 py-8">
         <AppNav />
-        <div className="p-6 backdrop-blur-xl" style={{ ...cardShell, background: 'rgba(15,23,41,0.8)' }}>
-          <h1 className="text-[28px] font-semibold text-[#F1F5F9]" style={{ fontFamily: theme.fontDisplay }}>
+        <div className="p-6 backdrop-blur-xl" style={cardShell}>
+          <h1 className="text-[28px] font-semibold" style={{ fontFamily: theme.fontDisplay, color: 'var(--text)' }}>
             Configuración
           </h1>
-          <p className="mt-1 text-[13px] text-[#94A3B8]" style={{ fontFamily: theme.fontSubtitle }}>
+          <p className="mt-1 text-[13px]" style={{ fontFamily: theme.fontSubtitle, color: 'var(--text-muted)' }}>
             {perfil.empresa.nombre}
           </p>
 
-          <div className="mt-6 flex flex-wrap gap-2">
+          <div className="mt-6 flex flex-nowrap gap-1 overflow-x-auto pb-1">
             {TABS.map((item) => (
               <button
                 key={item.id}
                 type="button"
-                className={`rounded-full px-3 py-2 text-[11px] font-semibold leading-tight ${
+                className={`shrink-0 rounded-md px-3 py-2 text-sm font-semibold whitespace-nowrap ${
                   tab === item.id ? 'bg-[#6366F1] text-white' : 'bg-transparent text-[#94A3B8]'
                 }`}
                 onClick={() => {
@@ -287,12 +287,12 @@ export function ConfiguracionPage() {
                     return (
                       <li
                         key={medio.id}
-                        className={`flex items-center justify-between rounded-xl border px-3 py-3 transition-opacity ${
-                          activo ? 'opacity-100' : 'opacity-45'
+                        className={`medio-pago-card flex items-center justify-between rounded-xl border px-3 py-3 ${
+                          activo ? '' : 'is-off'
                         }`}
                         style={{ borderColor: 'rgba(99,102,241,0.15)', background: 'rgba(15,23,41,0.45)' }}
                       >
-                        <span className="text-sm font-medium text-[#F1F5F9]">
+                        <span className="medio-pago-nombre text-sm font-medium text-[#F1F5F9]">
                           {ICONO_MEDIO[medio.id]} {medio.label}
                         </span>
                         <Toggle on={activo} onChange={() => toggleMedio(medio.id)} />

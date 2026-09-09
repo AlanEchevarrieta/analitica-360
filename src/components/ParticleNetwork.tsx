@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { theme } from '../theme'
 
 type Particle = {
   x: number
@@ -13,9 +12,6 @@ const MIN_WIDTH = 768
 const COUNT = 120
 const LINK_DIST = 130
 const MOUSE_RADIUS = 150
-
-const DOT = theme.particle
-const LINE = theme.particleLine
 
 function speed() {
   return 0.6 + Math.random() * 0.6
@@ -42,6 +38,19 @@ function shouldAnimate() {
   return true
 }
 
+function leerColores() {
+  const s = getComputedStyle(document.documentElement)
+  const r = Number.parseFloat(s.getPropertyValue('--particle-r').trim())
+  return {
+    from: s.getPropertyValue('--canvas-from').trim() || '#0F1B2D',
+    to: s.getPropertyValue('--canvas-to').trim() || '#1A2F4A',
+    dot: s.getPropertyValue('--particle').trim() || 'rgba(99,179,237,0.7)',
+    line: s.getPropertyValue('--particle-line').trim() || 'rgba(99,179,237,0.25)',
+    fill: s.getPropertyValue('--particle-fill').trim() !== '0',
+    radius: Number.isFinite(r) && r > 0 ? r : 0,
+  }
+}
+
 export function ParticleNetwork() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -57,6 +66,7 @@ export function ParticleNetwork() {
     let particles: Particle[] = []
     let raf = 0
     let running = false
+    let colors = leerColores()
     const mouse = { x: 0, y: 0, active: false }
 
     function resize() {
@@ -72,13 +82,18 @@ export function ParticleNetwork() {
     }
 
     function draw() {
+      colors = leerColores()
       const width = window.innerWidth
       const height = window.innerHeight
-      const g = brush.createLinearGradient(0, 0, 0, height)
-      g.addColorStop(0, theme.canvasFrom)
-      g.addColorStop(1, theme.canvasTo)
-      brush.fillStyle = g
-      brush.fillRect(0, 0, width, height)
+      if (colors.fill) {
+        const g = brush.createLinearGradient(0, 0, 0, height)
+        g.addColorStop(0, colors.from)
+        g.addColorStop(1, colors.to)
+        brush.fillStyle = g
+        brush.fillRect(0, 0, width, height)
+      } else {
+        brush.clearRect(0, 0, width, height)
+      }
 
       for (const p of particles) {
         if (mouse.active) {
@@ -107,7 +122,7 @@ export function ParticleNetwork() {
         p.y = Math.min(height, Math.max(0, p.y))
       }
 
-      brush.strokeStyle = LINE
+      brush.strokeStyle = colors.line
       brush.lineWidth = 1
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
@@ -127,10 +142,10 @@ export function ParticleNetwork() {
       }
       brush.globalAlpha = 1
 
-      brush.fillStyle = DOT
+      brush.fillStyle = colors.dot
       for (const p of particles) {
         brush.beginPath()
-        brush.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+        brush.arc(p.x, p.y, colors.radius || p.r, 0, Math.PI * 2)
         brush.fill()
       }
 

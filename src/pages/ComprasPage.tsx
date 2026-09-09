@@ -1,51 +1,58 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import {
+  PAGE_COMPRAS,
   PageTitle,
+  PaginacionBar,
   SearchField,
   TableCard,
+  TableErrorRed,
+  TableSkeleton,
   Th,
   Tr,
   btnPrimary,
   theadClass,
   theadStyle,
 } from '../components/listado'
-import { formatoFechaCompra, listarCompras, type CompraFila } from '../lib/compras'
+import { formatoFechaCompra, listarComprasPaginado, type CompraFila } from '../lib/compras'
+import { MSG_ERROR_RED, mensajeCargaTabla } from '../lib/consulta'
 import { formatoARS } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
 
 export function ComprasPage() {
-  const { perfil, cerrarSesion } = useAuth()
+  const { perfil } = useAuth()
   const [filas, setFilas] = useState<CompraFila[]>([])
+  const [total, setTotal] = useState(0)
+  const [pagina, setPagina] = useState(1)
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
 
   const cargar = useCallback(async () => {
     setCargando(true)
-    const { filas: data, error: listError } = await listarCompras(requireSupabase())
+    const { filas: data, total: n, error: listError } = await listarComprasPaginado(requireSupabase(), {
+      pagina,
+      pageSize: PAGE_COMPRAS,
+      proveedor: busqueda,
+    })
     setCargando(false)
     if (listError) {
-      setError(listError)
+      const msg = mensajeCargaTabla(listError)
+      if (msg) setError(msg)
       return
     }
     setError(null)
     setFilas(data)
-  }, [])
+    setTotal(n)
+  }, [pagina, busqueda])
 
   useEffect(() => {
     void cargar()
   }, [cargar])
-
-  const visibles = useMemo(() => {
-    const q = busqueda.trim().toLowerCase()
-    if (!q) return filas
-    return filas.filter((f) => (f.proveedor ?? '').toLowerCase().includes(q))
-  }, [busqueda, filas])
 
   if (!perfil) return null
 
@@ -62,26 +69,24 @@ export function ComprasPage() {
         <AppNav />
         <PageTitle
           titulo="Compras"
-          subtitulo={`${filas.length} ${filas.length === 1 ? 'compra registrada' : 'compras registradas'}`}
-          accion={
-            <button
-              className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold text-white"
-              type="button"
-              onClick={() => void cerrarSesion()}
-            >
-              Cerrar sesión
-            </button>
-          }
+          subtitulo={`${total} ${total === 1 ? 'compra registrada' : 'compras registradas'}`}
         />
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por proveedor" />
+          <SearchField
+            value={busqueda}
+            onChange={(v) => {
+              setPagina(1)
+              setBusqueda(v)
+            }}
+            placeholder="Buscar por proveedor"
+          />
           <Link className={btnPrimary} to="/compras/nueva">
             Nueva compra
           </Link>
         </div>
 
-        {error ? (
+        {error && error !== MSG_ERROR_RED ? (
           <p className="mb-6 rounded-xl bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p>
         ) : null}
 
@@ -96,8 +101,9 @@ export function ComprasPage() {
                 <Th>Notas</Th>
               </tr>
             </thead>
+            {!cargando && error !== MSG_ERROR_RED ? (
             <tbody>
-              {visibles.map((fila, index) => (
+              {filas.map((fila, index) => (
                 <Tr key={fila.id} index={index}>
                   <td className="px-3 py-3 whitespace-nowrap text-[#E2E8F0]">{formatoFechaCompra(fila.fecha)}</td>
                   <td className="px-3 py-3">
@@ -113,13 +119,27 @@ export function ComprasPage() {
                 </Tr>
               ))}
             </tbody>
+            ) : null}
           </table>
-          {!cargando && visibles.length === 0 && !error ? (
+          {cargando ? <TableSkeleton /> : null}
+          {!cargando && error === MSG_ERROR_RED ? (
+            <TableErrorRed onReintentar={() => void cargar()} />
+          ) : null}
+          {!cargando && filas.length === 0 && !error ? (
             <p className="px-3 py-6 text-center text-sm text-[#94A3B8]">
-              {filas.length === 0 ? 'Todavía no hay compras.' : 'Ningún proveedor coincide con la búsqueda.'}
+              {total === 0 ? 'Todavía no hay compras.' : 'Ningún proveedor coincide con la búsqueda.'}
             </p>
           ) : null}
         </TableCard>
+        {!cargando && error !== MSG_ERROR_RED ? (
+        <PaginacionBar
+          pagina={pagina}
+          total={total}
+          pageSize={PAGE_COMPRAS}
+          onPagina={setPagina}
+          entidad="compras"
+        />
+        ) : null}
       </div>
     </div>
   )
