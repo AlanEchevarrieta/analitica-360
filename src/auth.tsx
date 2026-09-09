@@ -289,7 +289,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const recuperarPassword = useCallback(async (email: string) => {
     const client = requireSupabase()
     const { error: authError } = await client.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://analitica-360.vercel.app/reset-password',
+      redirectTo: 'https://analitica360.app/reset-password',
     })
     if (authError) return mensajeAuth(authError)
     return null
