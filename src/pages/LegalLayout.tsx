@@ -13,14 +13,17 @@ export function LegalLayout({
   return (
     <div className="relative min-h-dvh bg-canvas">
       <ParticleNetwork />
-      <div className="absolute right-4 top-4 z-20">
+      <div className="auth-toggle-float absolute right-4 top-4 z-20 hidden md:block">
         <ThemeToggle />
       </div>
       <div className="relative z-10 mx-auto max-w-[640px] px-4 py-10">
         <article
-          className="rounded-lg bg-white/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)] backdrop-blur-md"
+          className="rounded-lg bg-white/95 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.3)] backdrop-blur-md md:p-8"
           style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
         >
+          <div className="mb-3 flex justify-end md:hidden">
+            <ThemeToggle />
+          </div>
           <p className="text-center text-sm font-semibold text-[#6366F1]">Analítica 360</p>
           <h1 className="mt-2 text-center text-[22px] font-bold text-[#1A2F4A]">{title}</h1>
           <p className="mt-1 text-center text-xs text-[#94A3B8]">Versión 1.0</p>

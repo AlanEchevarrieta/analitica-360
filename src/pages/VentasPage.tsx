@@ -241,7 +241,7 @@ export function VentasPage() {
               Mostrar anuladas
             </label>
           </FilterCollapse>
-          <div className="hidden flex-wrap gap-2 md:flex">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <div className="relative" ref={exportRef}>
               <button
                 className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 disabled:opacity-50"
@@ -252,7 +252,7 @@ export function VentasPage() {
                 {exportando ? 'Exportando…' : 'Exportar'}
               </button>
               {menuExportar ? (
-                <div className="absolute right-0 z-20 mt-1 min-w-[220px] overflow-hidden rounded-lg border border-[rgba(99,102,241,0.35)] bg-[#0F1729] shadow-lg">
+                <div className="dropdown-panel absolute left-0 z-20 mt-1 overflow-hidden rounded-lg border border-[rgba(99,102,241,0.35)] bg-[#0F1729] shadow-lg md:left-auto md:right-0">
                   <button
                     className="block w-full px-4 py-2.5 text-left text-sm text-[#F1F5F9] hover:bg-white/10"
                     type="button"
@@ -270,6 +270,7 @@ export function VentasPage() {
                 </div>
               ) : null}
             </div>
+            <div className="hidden flex-wrap gap-2 md:flex">
             {tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'registrar_ventas') ? (
               <button
                 className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"

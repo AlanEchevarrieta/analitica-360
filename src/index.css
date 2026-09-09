@@ -369,8 +369,8 @@ select option:checked:hover {
 }
 
 .col-filter-menu {
-  min-width: 200px;
-  max-width: 260px;
+  min-width: 160px;
+  max-width: min(260px, calc(100vw - 32px));
   padding: 0.4rem;
   border-radius: 0.5rem;
   border: 1px solid rgba(99, 102, 241, 0.3);
@@ -781,6 +781,13 @@ select option:checked:hover {
   text-decoration: none;
 }
 
+.dropdown-panel {
+  left: 0;
+  right: auto;
+  min-width: 160px;
+  max-width: min(280px, calc(100vw - 32px));
+}
+
 .venta-sticky-bar {
   position: fixed;
   right: 0;
@@ -802,9 +809,23 @@ select option:checked:hover {
     background: transparent;
     padding: 0;
   }
+
+  .dropdown-panel {
+    left: auto;
+    right: 0;
+  }
+
+  .fab-plus {
+    display: none;
+  }
 }
 
 @media (max-width: 767px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
   body {
     padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
   }
@@ -820,10 +841,16 @@ select option:checked:hover {
   .hidden-desktop-table {
     display: none;
   }
-}
 
-@media (min-width: 768px) {
-  .fab-plus {
-    display: none;
+  .auth-card {
+    padding: 16px;
+    min-height: 0;
+  }
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+    box-sizing: border-box;
   }
 }

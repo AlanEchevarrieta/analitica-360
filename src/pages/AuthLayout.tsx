@@ -18,14 +18,17 @@ export function AuthLayout({
   return (
     <div className="relative min-h-dvh bg-canvas">
       <ParticleNetwork />
-      <div className="absolute right-4 top-4 z-20">
+      <div className="auth-toggle-float absolute right-4 top-4 z-20 hidden md:block">
         <ThemeToggle />
       </div>
       <div className="relative z-10 flex min-h-dvh items-center justify-center px-4 py-10">
         <div
-          className="auth-card flex w-full min-h-[820px] max-w-[440px] flex-col rounded-lg bg-white/95 p-10 shadow-[0_20px_60px_rgba(0,0,0,0.3)] backdrop-blur-md"
+          className="auth-card flex w-full min-h-0 max-w-[440px] flex-col rounded-lg bg-white/95 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.3)] backdrop-blur-md md:min-h-[820px] md:p-10"
           style={{ fontFamily: 'Inter, system-ui, sans-serif', width: 'min(440px, 100%)' }}
         >
+          <div className="mb-3 flex justify-end md:hidden">
+            <ThemeToggle />
+          </div>
           {tabs ? (
             <div className="mb-6 grid grid-cols-2 gap-1 rounded-md bg-[#F1F5F9] p-1 text-sm font-semibold">
               <NavLink
