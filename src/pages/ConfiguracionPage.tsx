@@ -76,8 +76,8 @@ function Toggle({
       } ${disabled ? 'cursor-not-allowed opacity-40' : ''}`}
     >
       <span
-        className="absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow transition-[left] duration-200"
-        style={{ left: on ? 23 : 3 }}
+        className="absolute top-[3px] left-[3px] h-[22px] w-[22px] rounded-full bg-white shadow transition-transform duration-200 will-change-transform"
+        style={{ transform: on ? 'translate3d(20px, 0, 0)' : 'translate3d(0, 0, 0)' }}
       />
     </button>
   )

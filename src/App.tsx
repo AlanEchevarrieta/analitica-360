@@ -87,6 +87,8 @@ function PageFallback() {
           borderTop: '3px solid #6366F1',
           borderRadius: '50%',
           animation: 'spin 1s linear infinite',
+          willChange: 'transform',
+          transform: 'translateZ(0)',
         }}
       />
     </div>

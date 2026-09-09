@@ -1,6 +1,9 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { visualizer } from 'rollup-plugin-visualizer'
 import { defineConfig, type Plugin } from 'vite'
+
+const reportarBundle = process.env.BUNDLE_REPORT === '1'
 
 function cssNoBloqueante(): Plugin {
   return {
@@ -18,7 +21,21 @@ function cssNoBloqueante(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), cssNoBloqueante()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    cssNoBloqueante(),
+    ...(reportarBundle
+      ? [
+          visualizer({
+            filename: 'dist/stats.html',
+            gzipSize: true,
+            template: 'treemap',
+            emitFile: true,
+          }),
+        ]
+      : []),
+  ],
   optimizeDeps: {
     include: ['react-is', 'recharts', '@tremor/react', 'papaparse', 'xlsx'],
   },
@@ -26,6 +43,13 @@ export default defineConfig({
     dedupe: ['react', 'react-dom', 'react-is'],
   },
   build: {
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
     modulePreload: {
       resolveDependencies: (_filename, deps) =>
         deps.filter(

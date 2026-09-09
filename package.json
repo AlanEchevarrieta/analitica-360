@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "prebuild": "echo 'xlsx vulnerability known - low risk in authenticated context'",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && node scripts/vite-build.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -34,7 +34,9 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
     "oxlint": "^1.79.0",
+    "rollup-plugin-visualizer": "^7.1.1",
     "tailwindcss": "^4.3.3",
+    "terser": "^5.51.2",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   }

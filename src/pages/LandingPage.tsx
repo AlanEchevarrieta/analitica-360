@@ -1,8 +1,30 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ParticleNetwork } from '../components/ParticleNetwork'
 import { ThemeToggle } from '../lib/tema'
 import { linkWhatsAppPlanes } from '../lib/planes'
+
+const ParticleNetwork = lazy(() =>
+  import('../components/ParticleNetwork').then((m) => ({ default: m.ParticleNetwork })),
+)
+
+function FondoParticulasLanding() {
+  const [mostrar, setMostrar] = useState(false)
+  useEffect(() => {
+    const go = () => setMostrar(true)
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(go, { timeout: 500 })
+      return () => window.cancelIdleCallback(id)
+    }
+    const t = window.setTimeout(go, 500)
+    return () => window.clearTimeout(t)
+  }, [])
+  if (!mostrar) return null
+  return (
+    <Suspense fallback={null}>
+      <ParticleNetwork enableMobile desktopCount={100} mobileCount={60} />
+    </Suspense>
+  )
+}
 
 const FEATURES = [
   {
@@ -126,7 +148,7 @@ export function LandingPage() {
 
   return (
     <div className="landing">
-      <ParticleNetwork enableMobile startWhenIdle desktopCount={100} mobileCount={60} />
+      <FondoParticulasLanding />
       <div className="relative z-10">
         <header className="landing-nav sticky top-0 z-30 flex items-center justify-between gap-3 px-4 py-3 md:px-8">
           <Link to="/" className="shrink-0 text-base font-semibold tracking-tight md:text-lg">
