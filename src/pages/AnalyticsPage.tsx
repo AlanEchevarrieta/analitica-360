@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AreaChart, Card, Text } from '@tremor/react'
+import { Card, Text } from '@tremor/react'
 import {
+  Area,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
   LabelList,
   Legend,
   Line,
   LineChart,
   Pie,
   PieChart,
+  Rectangle,
   ReferenceLine,
   ResponsiveContainer,
   Scatter,
@@ -28,7 +31,6 @@ import {
   cargarAnalyticsPeriodo,
   colorFormaPago,
   cuadranteProducto,
-  fechaExactaLarga,
   formatoEjeCompacto,
   margenPct,
   rangoPreset,
@@ -47,6 +49,19 @@ import { formatoARS } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
 import { coloresGrafico, useTema } from '../lib/tema'
+import {
+  CHART_ACTIVE_BAR,
+  CHART_BAR_BG,
+  CHART_CURSOR_FILL,
+  ChartTooltipBox,
+  colorBarraMargen,
+  TooltipEvolucion,
+  TooltipFormaPago,
+  TooltipMontoSimple,
+  TooltipTopProductos,
+  asRechartsTooltip,
+  useIndiceBarraActiva,
+} from '../components/CustomTooltip'
 
 const VACIO: AnalyticsPeriodo = {
   total: 0,
@@ -78,7 +93,18 @@ const PRESETS: { id: PresetPeriodo; label: string }[] = [
   { id: 'personalizado', label: 'Rango personalizado' },
 ]
 
-type Columna = 'producto' | 'unidades' | 'total' | 'costo' | 'margen' | 'margen_pct'
+type Columna = 'producto' | 'unidades' | 'total' | 'costo' | 'margen' | 'margen_pct' | 'rotacion'
+
+function diasIncluidosPeriodo(desde: string, hasta: string) {
+  const a = Date.parse(`${desde}T00:00:00`)
+  const b = Date.parse(`${hasta}T00:00:00`)
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return 1
+  return Math.max(1, Math.round((b - a) / 86400000) + 1)
+}
+
+function rotacionUnidadesDia(unidades: number, dias: number) {
+  return unidades / dias
+}
 
 const cardStyle = { borderColor: 'rgba(99,102,241,0.2)' }
 const cardClass = 'analytics-card !rounded-lg !border !ring-0 !p-5'
@@ -175,26 +201,6 @@ function Kpi({
   )
 }
 
-function TooltipVentas({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean
-  payload?: { value?: unknown; payload?: { fechaExacta?: string } }[]
-  label?: unknown
-}) {
-  if (!active || !payload?.length) return null
-  const iso = payload[0]?.payload?.fechaExacta
-  const fecha = iso ? fechaExactaLarga(iso) : String(label ?? '')
-  return (
-    <div className="chart-tooltip">
-      <p style={{ color: 'var(--text-muted)' }}>{fecha}</p>
-      <p className="mt-1 font-semibold">{formatoARS(Number(payload[0].value ?? 0))}</p>
-    </div>
-  )
-}
-
 function BarraMargen({ pct }: { pct: number }) {
   const color = pct > 30 ? '#4ADE80' : pct >= 15 ? '#F59E0B' : '#F87171'
   const width = Math.max(0, Math.min(100, pct))
@@ -224,6 +230,8 @@ export function AnalyticsPage() {
     dir: 'desc',
   })
   const [modalPlanes, setModalPlanes] = useState(false)
+  const top10Hover = useIndiceBarraActiva()
+  const diasHover = useIndiceBarraActiva()
 
   useEffect(() => {
     if (!perfil || !planTieneAnalytics(perfil.empresa.plan_actual)) {
@@ -237,6 +245,7 @@ export function AnalyticsPage() {
     })
   }, [perfil, desde, hasta])
 
+  const diasPeriodo = diasIncluidosPeriodo(desde, hasta)
   const tieneCostos = data.costo > 0 || data.productos.some((p) => p.costo > 0)
   const ticket = ticketPromedio(data.total, data.cantidad)
   const ticketAnt = ticketPromedio(data.totalAnt, data.cantidadAnt)
@@ -252,16 +261,28 @@ export function AnalyticsPage() {
     [data.formasPago],
   )
 
+  const donutData = useMemo(() => {
+    const total = data.formasPago.reduce((acc, x) => acc + x.value, 0)
+    return data.formasPago.map((f) => ({
+      ...f,
+      porcentaje: total > 0 ? (f.value / total) * 100 : 0,
+    }))
+  }, [data.formasPago])
+
   const tabla = useMemo(() => {
     const filas = [...data.productos]
     filas.sort((a, b) => {
+      if (orden.col === 'rotacion') {
+        const cmp = rotacionUnidadesDia(a.unidades, diasPeriodo) - rotacionUnidadesDia(b.unidades, diasPeriodo)
+        return orden.dir === 'asc' ? cmp : -cmp
+      }
       const va = a[orden.col]
       const vb = b[orden.col]
       const cmp = typeof va === 'string' ? va.localeCompare(String(vb), 'es') : Number(va) - Number(vb)
       return orden.dir === 'asc' ? cmp : -cmp
     })
     return filas
-  }, [data.productos, orden])
+  }, [data.productos, orden, diasPeriodo])
 
   const matriz = useMemo(() => {
     const filas = data.productos.filter((p) => p.unidades > 0)
@@ -283,10 +304,21 @@ export function AnalyticsPage() {
   }, [data.productos])
 
   const diasSemana = useMemo(() => ventasPorDiaSemana(data.evolucion), [data.evolucion])
-  const top10Data = useMemo(
-    () => data.top10.map((p) => ({ ...p, etiqueta: truncarEtiqueta(p.nombre) })),
-    [data.top10],
-  )
+  const top10Data = useMemo(() => {
+    const porNombre = new Map(data.productos.map((p) => [p.producto, p]))
+    return data.top10.map((p) => {
+      const extra = porNombre.get(p.nombre)
+      const tieneCosto = extra != null && extra.costo > 0
+      return {
+        ...p,
+        etiqueta: truncarEtiqueta(p.nombre),
+        total: extra?.total,
+        margen_pct: extra?.margen_pct,
+        tieneCosto,
+        color: colorBarraMargen(extra?.margen_pct, tieneCosto),
+      }
+    })
+  }, [data.top10, data.productos])
 
   if (!perfil) return null
 
@@ -473,18 +505,49 @@ export function AnalyticsPage() {
 
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
                   <Text className="!text-[#94A3B8]">Evolución de ventas diarias</Text>
-                  <AreaChart
-                    className="mt-6 h-72"
-                    data={data.evolucion}
-                    index="fecha"
-                    categories={['Ventas']}
-                    colors={['indigo']}
-                    valueFormatter={formatoEjeCompacto}
-                    customTooltip={TooltipVentas as never}
-                    yAxisWidth={56}
-                    showLegend={false}
-                    showTooltip
-                  />
+                  <div className="mt-6 h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={data.evolucion} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                        <CartesianGrid stroke={g.grilla} vertical={false} />
+                        <XAxis
+                          dataKey="fecha"
+                          tick={{ fill: g.eje, fontSize: 11 }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          tick={{ fill: g.eje, fontSize: 11 }}
+                          axisLine={false}
+                          tickLine={false}
+                          tickFormatter={formatoEjeCompacto}
+                          width={56}
+                        />
+                        <RechartsTooltip content={asRechartsTooltip(TooltipEvolucion)} />
+                        <Legend
+                          wrapperStyle={{ color: g.eje, fontSize: 12 }}
+                          formatter={(value) => String(value)}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="Ventas"
+                          name="Período actual"
+                          stroke="#6366F1"
+                          fill="rgba(99,102,241,0.2)"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="Anterior"
+                          name="Período anterior"
+                          stroke="#94A3B8"
+                          strokeWidth={2}
+                          strokeDasharray="5 5"
+                          dot={false}
+                        />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
                 </Card>
 
                 <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -498,7 +561,7 @@ export function AnalyticsPage() {
                           <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                               <Pie
-                                data={data.formasPago}
+                                data={donutData}
                                 dataKey="value"
                                 nameKey="name"
                                 innerRadius="72%"
@@ -506,20 +569,11 @@ export function AnalyticsPage() {
                                 paddingAngle={2}
                                 stroke="rgba(15,27,45,0.9)"
                               >
-                                {data.formasPago.map((f, i) => (
+                                {donutData.map((f, i) => (
                                   <Cell key={f.name} fill={coloresDonut[i]} />
                                 ))}
                               </Pie>
-                              <RechartsTooltip
-                                formatter={(value) => formatoARS(Number(value ?? 0))}
-                                contentStyle={{
-                                  background: g.tooltipBg,
-                                  border: `1px solid ${g.tooltipBorder}`,
-                                  borderRadius: 8,
-                                  color: g.tooltipFg,
-                                  fontSize: 12,
-                                }}
-                              />
+                              <RechartsTooltip content={asRechartsTooltip(TooltipFormaPago)} />
                             </PieChart>
                           </ResponsiveContainer>
                           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -562,6 +616,8 @@ export function AnalyticsPage() {
                             data={top10Data}
                             margin={{ top: 8, right: 40, left: 120, bottom: 0 }}
                             barCategoryGap="30%"
+                            onMouseMove={top10Hover.onMouseMove as never}
+                            onMouseLeave={top10Hover.onMouseLeave}
                           >
                             <CartesianGrid stroke={g.grilla} horizontal={false} />
                             <XAxis
@@ -580,17 +636,24 @@ export function AnalyticsPage() {
                               tickLine={false}
                             />
                             <RechartsTooltip
-                              formatter={(value) => [`${Number(value ?? 0)} u.`, 'Unidades']}
-                              contentStyle={{
-                                background: g.tooltipBg,
-                                border: `1px solid ${g.tooltipBorder}`,
-                                borderRadius: 8,
-                                color: g.tooltipFg,
-                                fontSize: 12,
-                              }}
+                              cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
+                              content={asRechartsTooltip(TooltipTopProductos)}
                             />
-                            <Bar dataKey="unidades" fill="#4ADE80" radius={[0, 4, 4, 0]} maxBarSize={18}>
-                              <LabelList dataKey="unidades" position="right" fill="#4ADE80" fontSize={11} />
+                            <Bar
+                              dataKey="unidades"
+                              radius={[0, 4, 4, 0]}
+                              maxBarSize={18}
+                              background={{ fill: CHART_BAR_BG }}
+                              activeBar={<Rectangle fill={CHART_ACTIVE_BAR} />}
+                            >
+                              {top10Data.map((fila, i) => (
+                                <Cell
+                                  key={`${fila.nombre}-${i}`}
+                                  fill={fila.color}
+                                  fillOpacity={top10Hover.activo == null || top10Hover.activo === i ? 1 : 0.5}
+                                />
+                              ))}
+                              <LabelList dataKey="unidades" position="right" fill="#94A3B8" fontSize={11} />
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
@@ -607,11 +670,12 @@ export function AnalyticsPage() {
                     </p>
                   ) : (
                     <div className="mt-5 overflow-x-auto">
-                      <table className="w-full min-w-[760px] text-left text-sm">
+                      <table className="w-full min-w-[860px] text-left text-sm">
                         <thead className="text-xs text-[#94A3B8]">
                           <tr>
                             <th className="px-3 py-3">{encabezado('producto', 'Producto')}</th>
                             <th className="px-3 py-3">{encabezado('unidades', 'Unidades vendidas')}</th>
+                            <th className="px-3 py-3">{encabezado('rotacion', 'Rotación')}</th>
                             <th className="px-3 py-3">{encabezado('total', 'Total $')}</th>
                             <th className="px-3 py-3">{encabezado('costo', 'Costo total')}</th>
                             <th className="px-3 py-3">{encabezado('margen', 'Margen $')}</th>
@@ -623,6 +687,9 @@ export function AnalyticsPage() {
                             <tr key={fila.producto} className="border-t border-white/10">
                               <td className="px-3 py-3 font-medium">{fila.producto}</td>
                               <td className="px-3 py-3">{fila.unidades}</td>
+                              <td className="px-3 py-3">
+                                {rotacionUnidadesDia(fila.unidades, diasPeriodo).toFixed(1)} u/día
+                              </td>
                               <td className="px-3 py-3">{formatoARS(fila.total)}</td>
                               <td className="px-3 py-3">{formatoARS(fila.costo)}</td>
                               <td className="px-3 py-3">{formatoARS(fila.margen)}</td>
@@ -680,14 +747,23 @@ export function AnalyticsPage() {
                                   cuadrante: CuadranteProducto
                                 }
                                 return (
-                                  <div className="chart-tooltip">
-                                    <p className="font-semibold">{p.producto}</p>
-                                    <p className="mt-1">Margen: {p.margen_pct.toFixed(1)}%</p>
-                                    <p>Unidades vendidas: {p.unidades}</p>
-                                    <p className="mt-1" style={{ color: COLOR_CUADRANTE[p.cuadrante] }}>
+                                  <ChartTooltipBox>
+                                    <p style={{ color: '#F1F5F9', fontSize: 13, fontWeight: 600 }}>{p.producto}</p>
+                                    <p style={{ color: '#94A3B8', fontSize: 12, marginTop: 6 }}>
+                                      Margen: {p.margen_pct.toFixed(1)}%
+                                    </p>
+                                    <p style={{ color: '#94A3B8', fontSize: 12 }}>Unidades vendidas: {p.unidades}</p>
+                                    <p
+                                      style={{
+                                        color: COLOR_CUADRANTE[p.cuadrante],
+                                        fontSize: 12,
+                                        marginTop: 4,
+                                        fontWeight: 600,
+                                      }}
+                                    >
                                       Cuadrante: {p.cuadrante}
                                     </p>
-                                  </div>
+                                  </ChartTooltipBox>
                                 )
                               }}
                             />
@@ -726,23 +802,7 @@ export function AnalyticsPage() {
                           tickFormatter={formatoEjeCompacto}
                           width={56}
                         />
-                        <RechartsTooltip
-                          content={({ active, payload, label }) => {
-                            if (!active || !payload?.length) return null
-                            const actual = Number(payload.find((x) => x.dataKey === 'Ventas')?.value ?? 0)
-                            const ant = Number(payload.find((x) => x.dataKey === 'Anterior')?.value ?? 0)
-                            const iso = (payload[0]?.payload as { fechaExacta?: string } | undefined)?.fechaExacta
-                            return (
-                              <div className="chart-tooltip">
-                                <p>{iso ? fechaExactaLarga(iso) : String(label ?? '')}</p>
-                                <p className="mt-1" style={{ color: '#6366F1' }}>
-                                  Período actual: {formatoARS(actual)}
-                                </p>
-                                <p style={{ color: g.muted }}>Período anterior: {formatoARS(ant)}</p>
-                              </div>
-                            )
-                          }}
-                        />
+                        <RechartsTooltip content={asRechartsTooltip(TooltipEvolucion)} />
                         <Legend wrapperStyle={{ color: g.eje, fontSize: 12 }} />
                         <Line
                           type="monotone"
@@ -756,8 +816,9 @@ export function AnalyticsPage() {
                           type="monotone"
                           dataKey="Anterior"
                           name="Período anterior"
-                          stroke={g.muted}
+                          stroke="#94A3B8"
                           strokeWidth={2}
+                          strokeDasharray="5 5"
                           dot={false}
                         />
                       </LineChart>
@@ -769,7 +830,12 @@ export function AnalyticsPage() {
                   <Text className="!text-[#94A3B8]">¿Qué días vendés más?</Text>
                   <div className="mt-4" style={{ height: 280 }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={diasSemana} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                      <BarChart
+                        data={diasSemana}
+                        margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
+                        onMouseMove={diasHover.onMouseMove as never}
+                        onMouseLeave={diasHover.onMouseLeave}
+                      >
                         <CartesianGrid stroke={g.grilla} vertical={false} />
                         <XAxis dataKey="dia" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
                         <YAxis
@@ -780,18 +846,30 @@ export function AnalyticsPage() {
                           width={56}
                         />
                         <RechartsTooltip
-                          formatter={(value) => formatoARS(Number(value ?? 0))}
-                          contentStyle={{
-                            background: g.tooltipBg,
-                            border: `1px solid ${g.tooltipBorder}`,
-                            borderRadius: 8,
-                            color: g.tooltipFg,
-                            fontSize: 12,
-                          }}
+                          cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
+                          content={asRechartsTooltip(TooltipMontoSimple)}
                         />
-                        <Bar dataKey="total" radius={[4, 4, 0, 0]} maxBarSize={36}>
-                          {diasSemana.map((d) => (
-                            <Cell key={d.dia} fill={d.destacado ? '#4ADE80' : '#6366F1'} fillOpacity={d.destacado ? 1 : 0.45} />
+                        <Bar
+                          dataKey="total"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={36}
+                          background={{ fill: CHART_BAR_BG }}
+                          activeBar={<Rectangle fill={CHART_ACTIVE_BAR} radius={4} />}
+                        >
+                          {diasSemana.map((d, i) => (
+                            <Cell
+                              key={d.dia}
+                              fill={d.destacado ? '#4ADE80' : '#6366F1'}
+                              fillOpacity={
+                                diasHover.activo == null
+                                  ? d.destacado
+                                    ? 1
+                                    : 0.45
+                                  : diasHover.activo === i
+                                    ? 1
+                                    : 0.5
+                              }
+                            />
                           ))}
                         </Bar>
                       </BarChart>

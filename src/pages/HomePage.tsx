@@ -6,6 +6,7 @@ import {
   CartesianGrid,
   Cell,
   LabelList,
+  Rectangle,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -16,7 +17,6 @@ import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { cargarDashboardInicio, type DashboardInicio } from '../lib/dashboard'
 import { textoCumpleProximo } from '../lib/clientes'
-import { formatoARS } from '../lib/productos'
 import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
 import {
@@ -28,6 +28,15 @@ import {
 } from '../lib/suscripcion'
 import { theme } from '../theme'
 import { coloresGrafico, useTema } from '../lib/tema'
+import {
+  CHART_ACTIVE_BAR,
+  CHART_BAR_BG,
+  CHART_CURSOR_FILL,
+  asRechartsTooltip,
+  ChartTooltipBox,
+  TooltipBarras7Dias,
+  useIndiceBarraActiva,
+} from '../components/CustomTooltip'
 
 function resumenAlerta(nombres: string[], extraLabel?: string) {
   const vis = nombres.slice(0, 3)
@@ -81,6 +90,48 @@ const DASH_VACIO: DashboardInicio = {
   stock: [],
   cumples: [],
   alertasStock: [],
+}
+
+function Grafico7Dias({ data }: { data: DashboardInicio['ultimos7'] }) {
+  const { tema } = useTema()
+  const g = coloresGrafico(tema)
+  const { activo, onMouseMove, onMouseLeave } = useIndiceBarraActiva()
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart
+        data={data}
+        margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+        onMouseMove={onMouseMove as never}
+        onMouseLeave={onMouseLeave}
+      >
+        <CartesianGrid stroke={g.grilla} vertical={false} />
+        <XAxis dataKey="dia" tick={{ fill: g.eje, fontSize: 12 }} axisLine={false} tickLine={false} />
+        <YAxis
+          tick={{ fill: g.eje, fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+          width={56}
+          tickFormatter={(v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : String(v))}
+        />
+        <Tooltip cursor={<Rectangle fill={CHART_CURSOR_FILL} />} content={asRechartsTooltip(TooltipBarras7Dias)} />
+        <Bar
+          dataKey="total"
+          radius={[4, 4, 0, 0]}
+          maxBarSize={36}
+          background={{ fill: CHART_BAR_BG }}
+          activeBar={<Rectangle fill={CHART_ACTIVE_BAR} radius={4} />}
+        >
+          {data.map((fila, i) => (
+            <Cell
+              key={`${fila.fecha}-${i}`}
+              fill="#6366F1"
+              fillOpacity={activo == null || activo === i ? 1 : 0.5}
+            />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  )
 }
 
 function KpiCardSkeleton() {
@@ -243,6 +294,8 @@ export function HomePage() {
   const [suscripcion, setSuscripcion] = useState<SuscripcionActiva | null>(null)
   const [dash, setDash] = useState<DashboardInicio>(DASH_VACIO)
   const [cargandoDash, setCargandoDash] = useState(true)
+  const top5Hover = useIndiceBarraActiva()
+  const stockHover = useIndiceBarraActiva()
 
   useEffect(() => {
     if (!perfil) return
@@ -441,30 +494,7 @@ export function HomePage() {
                   Ventas últimos 7 días
                 </p>
                 <div className="mt-3 h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dash.ultimos7} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                      <CartesianGrid stroke={g.grilla} vertical={false} />
-                      <XAxis dataKey="dia" tick={{ fill: g.eje, fontSize: 12 }} axisLine={false} tickLine={false} />
-                      <YAxis
-                        tick={{ fill: g.eje, fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                        width={56}
-                        tickFormatter={(v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : String(v))}
-                      />
-                      <Tooltip
-                        cursor={{ fill: 'rgba(99,102,241,0.12)' }}
-                        formatter={(value) => [formatoARS(Number(value ?? 0)), 'Total']}
-                        contentStyle={{
-                          background: g.tooltipBg,
-                          border: `1px solid ${g.tooltipBorder}`,
-                          borderRadius: 8,
-                          color: g.tooltipFg,
-                        }}
-                      />
-                      <Bar dataKey="total" fill="#6366F1" radius={[4, 4, 0, 0]} maxBarSize={36} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <Grafico7Dias data={dash.ultimos7} />
                 </div>
               </div>
 
@@ -490,6 +520,8 @@ export function HomePage() {
                         data={dash.top5.map((p) => ({ ...p, etiqueta: truncarEtiqueta(p.nombre) }))}
                         margin={{ top: 8, right: 40, left: 120, bottom: 0 }}
                         barCategoryGap="30%"
+                        onMouseMove={top5Hover.onMouseMove as never}
+                        onMouseLeave={top5Hover.onMouseLeave}
                       >
                         <CartesianGrid stroke={g.grilla} horizontal={false} />
                         <XAxis
@@ -508,16 +540,34 @@ export function HomePage() {
                           tickLine={false}
                         />
                         <Tooltip
-                          cursor={{ fill: 'rgba(74,222,128,0.12)' }}
-                          formatter={(value) => [`${Number(value ?? 0)} u.`, 'Unidades']}
-                          contentStyle={{
-                            background: g.tooltipBg,
-                            border: `1px solid ${g.tooltipBorder}`,
-                            borderRadius: 8,
-                            color: g.tooltipFg,
+                          cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
+                          content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null
+                            const p = payload[0].payload as { nombre?: string; unidades?: number }
+                            return (
+                              <ChartTooltipBox>
+                                <p style={{ color: '#F1F5F9', fontSize: 13, fontWeight: 600 }}>{p.nombre}</p>
+                                <p style={{ color: '#94A3B8', fontSize: 12, marginTop: 6 }}>
+                                  Unidades vendidas: {Number(p.unidades ?? 0)} u
+                                </p>
+                              </ChartTooltipBox>
+                            )
                           }}
                         />
-                        <Bar dataKey="unidades" fill="#4ADE80" radius={[0, 4, 4, 0]} maxBarSize={18}>
+                        <Bar
+                          dataKey="unidades"
+                          radius={[0, 4, 4, 0]}
+                          maxBarSize={18}
+                          background={{ fill: CHART_BAR_BG }}
+                          activeBar={<Rectangle fill={CHART_ACTIVE_BAR} />}
+                        >
+                          {dash.top5.map((fila, i) => (
+                            <Cell
+                              key={`${fila.nombre}-${i}`}
+                              fill="#4ADE80"
+                              fillOpacity={top5Hover.activo == null || top5Hover.activo === i ? 1 : 0.5}
+                            />
+                          ))}
                           <LabelList dataKey="unidades" position="right" fill="#4ADE80" fontSize={11} />
                         </Bar>
                       </BarChart>
@@ -548,6 +598,8 @@ export function HomePage() {
                       layout="vertical"
                       data={dash.stock}
                       margin={{ top: 8, right: 36, left: 8, bottom: 0 }}
+                      onMouseMove={stockHover.onMouseMove as never}
+                      onMouseLeave={stockHover.onMouseLeave}
                     >
                       <CartesianGrid stroke={g.grilla} horizontal={false} />
                       <XAxis
@@ -567,18 +619,33 @@ export function HomePage() {
                         tickLine={false}
                       />
                       <Tooltip
-                        cursor={{ fill: 'rgba(99,102,241,0.12)' }}
-                        formatter={(value) => [`${Number(value ?? 0)} u.`, 'Stock']}
-                        contentStyle={{
-                          background: g.tooltipBg,
-                          border: `1px solid ${g.tooltipBorder}`,
-                          borderRadius: 8,
-                          color: g.tooltipFg,
+                        cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null
+                          const p = payload[0].payload as { nombre?: string; stock?: number }
+                          return (
+                            <ChartTooltipBox>
+                              <p style={{ color: '#F1F5F9', fontSize: 13, fontWeight: 600 }}>{p.nombre}</p>
+                              <p style={{ color: '#94A3B8', fontSize: 12, marginTop: 6 }}>
+                                Stock: {Number(p.stock ?? 0)} u
+                              </p>
+                            </ChartTooltipBox>
+                          )
                         }}
                       />
-                      <Bar dataKey="stock" radius={[0, 4, 4, 0]} maxBarSize={18}>
+                      <Bar
+                        dataKey="stock"
+                        radius={[0, 4, 4, 0]}
+                        maxBarSize={18}
+                        background={{ fill: CHART_BAR_BG }}
+                        activeBar={<Rectangle fill={CHART_ACTIVE_BAR} />}
+                      >
                         {dash.stock.map((fila, i) => (
-                          <Cell key={`${fila.nombre}-${i}`} fill={colorStock(fila.stock)} />
+                          <Cell
+                            key={`${fila.nombre}-${i}`}
+                            fill={colorStock(fila.stock)}
+                            fillOpacity={stockHover.activo == null || stockHover.activo === i ? 1 : 0.5}
+                          />
                         ))}
                         <LabelList
                           dataKey="stock"
