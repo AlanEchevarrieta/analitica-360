@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { errorArchivoImportacion } from '../lib/validarArchivoImportacion'
 import { theme } from '../theme'
 
 function linkAyudaFormato() {
@@ -50,9 +51,9 @@ export function ImportarOperacionModal({
     setError(null)
     setAdvertencias([])
     if (!file) return
-    const nombre = file.name.toLowerCase()
-    if (!nombre.endsWith('.xlsx') && !nombre.endsWith('.xls') && !nombre.endsWith('.csv')) {
-      setError('Subí un archivo .xlsx o .csv')
+    const rechazo = errorArchivoImportacion(file)
+    if (rechazo) {
+      setError(rechazo)
       return
     }
     setArchivo(file.name)
@@ -151,7 +152,7 @@ export function ImportarOperacionModal({
             ref={inputRef}
             className="hidden"
             type="file"
-            accept=".xlsx,.xls,.csv"
+            accept=".xlsx,.csv"
             onChange={(ev) => void cargar(ev.target.files?.[0])}
           />
           <button

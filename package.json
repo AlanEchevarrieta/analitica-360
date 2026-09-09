@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "prebuild": "echo 'xlsx vulnerability known - low risk in authenticated context'",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

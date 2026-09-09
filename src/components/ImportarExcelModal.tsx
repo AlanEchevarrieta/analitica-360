@@ -8,6 +8,7 @@ import {
 import type { ProductoFila } from '../lib/productos'
 import { formatoARS } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
+import { errorArchivoImportacion } from '../lib/validarArchivoImportacion'
 import { theme } from '../theme'
 
 const sep = { borderTop: '1px solid rgba(255,255,255,0.06)' } as const
@@ -43,9 +44,9 @@ export function ImportarExcelModal({
     setError(null)
     setAdvertencias([])
     if (!file) return
-    const nombre = file.name.toLowerCase()
-    if (!nombre.endsWith('.xlsx') && !nombre.endsWith('.xls') && !nombre.endsWith('.csv')) {
-      setError('Subí un archivo .xlsx o .csv')
+    const rechazo = errorArchivoImportacion(file)
+    if (rechazo) {
+      setError(rechazo)
       return
     }
     setArchivo(file.name)
@@ -142,7 +143,7 @@ export function ImportarExcelModal({
             ref={inputRef}
             className="hidden"
             type="file"
-            accept=".xlsx,.xls,.csv"
+            accept=".xlsx,.csv"
             onChange={(ev) => void onArchivo(ev.target.files?.[0])}
           />
           <button
