@@ -9,44 +9,12 @@ function linkClass({ isActive }: { isActive: boolean }) {
   return `app-nav-link${isActive ? ' active' : ''}`
 }
 
-function IconoCasa() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 10.5 12 4l9 6.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9.5z" />
-    </svg>
-  )
+function sideClass({ isActive }: { isActive: boolean }) {
+  return `app-sidebar-link${isActive ? ' active' : ''}`
 }
 
-function IconoVentas() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 7h18M5 7v12a1 1 0 001 1h12a1 1 0 001-1V7M9 11h6" />
-    </svg>
-  )
-}
-
-function IconoCaja() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 8H3l2-4h14l2 4zm-18 0v11a1 1 0 001 1h16a1 1 0 001-1V8" />
-    </svg>
-  )
-}
-
-function IconoPersonas() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 19v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M12 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zm7 8v-1a4 4 0 00-3-3.87M16.5 7.13a3.5 3.5 0 010 6.74" />
-    </svg>
-  )
-}
-
-function IconoMas() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 7h16M4 12h16M4 17h16" />
-    </svg>
-  )
+function sheetClass({ isActive }: { isActive: boolean }) {
+  return `app-sheet-link${isActive ? ' active' : ''}`
 }
 
 function CandadoAnalytics({ mostrar }: { mostrar: boolean }) {
@@ -73,6 +41,11 @@ export function AppNav() {
   )
 
   useEffect(() => {
+    document.body.classList.add('has-app-nav')
+    return () => document.body.classList.remove('has-app-nav')
+  }, [])
+
+  useEffect(() => {
     setMas(false)
   }, [location.pathname])
 
@@ -85,16 +58,17 @@ export function AppNav() {
     }
   }, [mas])
 
+  const analyticsLabel = (
+    <span className="inline-flex items-center gap-1">
+      Analytics
+      <CandadoAnalytics mostrar={sinAnalytics} />
+    </span>
+  )
+
   return (
     <>
-      <div className="mb-4 flex items-center justify-between md:hidden" style={{ fontFamily: theme.font }}>
-        <p className="text-sm font-bold tracking-wide" style={{ color: 'var(--text)' }}>
-          Analítica 360
-        </p>
-        <ThemeToggle />
-      </div>
-
-      <nav className="app-nav mb-6 hidden items-center gap-1 md:flex" style={{ fontFamily: theme.font }}>
+      {/* Desktop > 1024: navbar horizontal actual */}
+      <nav className="app-nav mb-6 hidden items-center gap-1 lg:flex" style={{ fontFamily: theme.font }}>
         <NavLink className={linkClass} to="/" end>
           Inicio
         </NavLink>
@@ -114,10 +88,7 @@ export function AppNav() {
           Proveedores
         </NavLink>
         <NavLink className={linkClass} to="/analytics">
-          <span className="inline-flex items-center gap-1">
-            Analytics
-            <CandadoAnalytics mostrar={sinAnalytics} />
-          </span>
+          {analyticsLabel}
         </NavLink>
         {esDueno ? (
           <NavLink className={linkClass} to="/configuracion">
@@ -132,21 +103,61 @@ export function AppNav() {
         </div>
       </nav>
 
+      {/* Tablet 768–1024: sidebar */}
+      <aside className="app-sidebar hidden md:flex lg:hidden" aria-label="Navegación">
+        <p className="app-sidebar-brand">Analítica 360</p>
+        <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
+          <NavLink className={sideClass} to="/" end>
+            🏠 Inicio
+          </NavLink>
+          <NavLink className={sideClass} to="/ventas">
+            💸 Ventas
+          </NavLink>
+          <NavLink className={sideClass} to="/productos">
+            📦 Productos
+          </NavLink>
+          <NavLink className={sideClass} to="/clientes">
+            👥 Clientes
+          </NavLink>
+          <NavLink className={sideClass} to="/compras">
+            🛒 Compras
+          </NavLink>
+          <NavLink className={sideClass} to="/proveedores">
+            🏭 Proveedores
+          </NavLink>
+          <NavLink className={sideClass} to="/analytics">
+            📊 {analyticsLabel}
+          </NavLink>
+          {esDueno ? (
+            <NavLink className={sideClass} to="/configuracion">
+              ⚙️ Configuración
+            </NavLink>
+          ) : null}
+        </div>
+        <div className="mt-auto flex flex-col gap-2 border-t border-[rgba(99,102,241,0.2)] pt-3">
+          <ThemeToggle />
+          <button className="btn-sesion w-full" type="button" onClick={() => void cerrarSesion()}>
+            Cerrar sesión
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile: bottom bar */}
       <nav className="app-nav-bottom md:hidden" aria-label="Navegación principal">
         <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/" end>
-          <IconoCasa />
+          <span aria-hidden>🏠</span>
           Inicio
         </NavLink>
         <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/ventas">
-          <IconoVentas />
+          <span aria-hidden>💸</span>
           Ventas
         </NavLink>
         <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/productos">
-          <IconoCaja />
+          <span aria-hidden>📦</span>
           Productos
         </NavLink>
         <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/clientes">
-          <IconoPersonas />
+          <span aria-hidden>👥</span>
           Clientes
         </NavLink>
         <button
@@ -154,7 +165,7 @@ export function AppNav() {
           type="button"
           onClick={() => setMas(true)}
         >
-          <IconoMas />
+          <span aria-hidden>☰</span>
           Más
         </button>
       </nav>
@@ -162,29 +173,30 @@ export function AppNav() {
       {mas ? (
         <div className="app-nav-drawer-root md:hidden">
           <button className="app-nav-drawer-bg" type="button" aria-label="Cerrar menú" onClick={() => setMas(false)} />
-          <aside className="app-nav-drawer" aria-label="Más secciones">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-              Más
-            </p>
-            <NavLink className={linkClass} to="/compras" onClick={() => setMas(false)}>
-              Compras
+          <aside className="app-nav-sheet" aria-label="Más secciones">
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" />
+            <NavLink className={sheetClass} to="/compras" onClick={() => setMas(false)}>
+              🛒 Compras
             </NavLink>
-            <NavLink className={linkClass} to="/analytics" onClick={() => setMas(false)}>
-              <span className="inline-flex items-center gap-1">
-                Analytics
-                <CandadoAnalytics mostrar={sinAnalytics} />
-              </span>
+            <NavLink className={sheetClass} to="/proveedores" onClick={() => setMas(false)}>
+              🏭 Proveedores
+            </NavLink>
+            <NavLink className={sheetClass} to="/analytics" onClick={() => setMas(false)}>
+              📊 {analyticsLabel}
             </NavLink>
             {esDueno ? (
-              <NavLink className={linkClass} to="/configuracion" onClick={() => setMas(false)}>
-                Configuración
+              <NavLink className={sheetClass} to="/configuracion" onClick={() => setMas(false)}>
+                ⚙️ Configuración
               </NavLink>
             ) : null}
-            <NavLink className={linkClass} to="/proveedores" onClick={() => setMas(false)}>
-              Proveedores
-            </NavLink>
+            <div className="mt-3 flex items-center justify-between gap-2 border-t border-[rgba(99,102,241,0.2)] pt-3">
+              <span className="text-sm" style={{ color: '#94A3B8' }}>
+                Tema
+              </span>
+              <ThemeToggle />
+            </div>
             <button
-              className="btn-sesion mt-4 w-full"
+              className="btn-sesion mt-3 w-full"
               type="button"
               onClick={() => {
                 setMas(false)

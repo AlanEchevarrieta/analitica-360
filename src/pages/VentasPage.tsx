@@ -252,7 +252,7 @@ export function VentasPage() {
                 {exportando ? 'Exportando…' : 'Exportar'}
               </button>
               {menuExportar ? (
-                <div className="dropdown-panel absolute left-0 z-20 mt-1 overflow-hidden rounded-lg border border-[rgba(99,102,241,0.35)] bg-[#0F1729] shadow-lg md:left-auto md:right-0">
+                <div className="dropdown-panel absolute left-0 z-20 overflow-hidden rounded-lg border border-[rgba(99,102,241,0.35)] bg-[#0F1729] shadow-lg md:left-auto md:right-0">
                   <button
                     className="block w-full px-4 py-2.5 text-left text-sm text-[#F1F5F9] hover:bg-white/10"
                     type="button"
