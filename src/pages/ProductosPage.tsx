@@ -18,7 +18,11 @@ import {
   Th,
   ThFilter,
   Tr,
-  btnPrimary,
+  btnPrimaryDesk,
+  FabLink,
+  FilterCollapse,
+  ListCard,
+  MobileCards,
   theadClass,
   theadStyle,
 } from '../components/listado'
@@ -162,7 +166,7 @@ export function ProductosPage() {
             placeholder="Buscar producto..."
           />
           {puedeEditar ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="hidden flex-wrap gap-2 md:flex">
               <button
                 className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
                 type="button"
@@ -181,11 +185,70 @@ export function ProductosPage() {
               >
                 Importar Excel
               </button>
-              <Link className={btnPrimary} to="/productos/nuevo">
+              <Link className={btnPrimaryDesk} to="/productos/nuevo">
                 <span aria-hidden>➕</span> Nuevo producto
               </Link>
             </div>
           ) : null}
+        </div>
+        <div className="mb-4">
+          <FilterCollapse
+            soloMobile
+            activo={stockFiltro !== 'todos' || estado !== 'todos' || Boolean(categoria) || margenFiltro !== 'todos'}
+          >
+            <div className="filter-field">
+              <label htmlFor="prod-cat">Categoría</label>
+              <select
+                id="prod-cat"
+                className="filter-control"
+                value={categoria}
+                onChange={(ev) => {
+                  setPagina(1)
+                  setCategoria(ev.target.value)
+                }}
+              >
+                <option value="">Todas</option>
+                {categorias.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="filter-field">
+              <label htmlFor="prod-stock">Stock</label>
+              <select
+                id="prod-stock"
+                className="filter-control"
+                value={stockFiltro}
+                onChange={(ev) => {
+                  setPagina(1)
+                  setStockFiltro(ev.target.value as typeof stockFiltro)
+                }}
+              >
+                <option value="todos">Todos</option>
+                <option value="con">Con stock</option>
+                <option value="sin">Sin stock</option>
+                <option value="bajo">Stock bajo</option>
+              </select>
+            </div>
+            <div className="filter-field">
+              <label htmlFor="prod-estado">Estado</label>
+              <select
+                id="prod-estado"
+                className="filter-control"
+                value={estado}
+                onChange={(ev) => {
+                  setPagina(1)
+                  setEstado(ev.target.value as typeof estado)
+                }}
+              >
+                <option value="todos">Todos</option>
+                <option value="activos">Activos</option>
+                <option value="inactivos">Inactivos</option>
+              </select>
+            </div>
+          </FilterCollapse>
         </div>
 
         {error && error !== MSG_ERROR_RED ? (
@@ -193,6 +256,7 @@ export function ProductosPage() {
         ) : null}
 
         <TableCard>
+          <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[800px] text-left">
             <thead className={theadClass} style={theadStyle}>
               <tr>
@@ -378,6 +442,41 @@ export function ProductosPage() {
             </tbody>
             ) : null}
           </table>
+          </div>
+          {!cargando && error !== MSG_ERROR_RED ? (
+            <MobileCards>
+              {filas.map((fila) => (
+                <ListCard key={fila.id}>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold">{fila.nombre}</p>
+                    <BadgeEstado activo={fila.activo} />
+                  </div>
+                  <p className="mt-1 text-sm">{formatoARS(fila.precio_venta)}</p>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Stock:{' '}
+                    <StockCelda
+                      stock={fila.stock_actual}
+                      onClick={
+                        puedeAjustar
+                          ? () =>
+                              setAjuste({
+                                id: fila.id,
+                                nombre: fila.nombre,
+                                stock: fila.stock_actual,
+                              })
+                          : undefined
+                      }
+                    />
+                  </p>
+                  {puedeEditar ? (
+                    <Link className="mt-2 inline-block text-xs font-semibold text-[#6366F1]" to={`/productos/${fila.id}`}>
+                      Editar
+                    </Link>
+                  ) : null}
+                </ListCard>
+              ))}
+            </MobileCards>
+          ) : null}
           {cargando ? <TableSkeleton /> : null}
           {!cargando && error === MSG_ERROR_RED ? (
             <TableErrorRed onReintentar={() => void cargar()} />
@@ -416,6 +515,7 @@ export function ProductosPage() {
             }}
           />
         ) : null}
+        {puedeEditar ? <FabLink to="/productos/nuevo" label="Nuevo producto" /> : null}
       </div>
     </div>
   )

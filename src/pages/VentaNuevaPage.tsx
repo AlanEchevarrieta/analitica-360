@@ -28,7 +28,7 @@ type Linea = {
 }
 
 const inputClass =
-  'h-11 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A] outline-none focus:border-[#6366F1] focus:bg-white focus:shadow-[0_0_0_3px_rgba(99,102,241,0.18)]'
+  'min-h-12 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-4 py-3 text-base text-[#1A2F4A] outline-none focus:border-[#6366F1] focus:bg-white focus:shadow-[0_0_0_3px_rgba(99,102,241,0.18)]'
 
 export function VentaNuevaPage() {
   const { perfil } = useAuth()
@@ -181,6 +181,14 @@ export function VentaNuevaPage() {
     setError(null)
   }
 
+  function cambiarCantidad(productoId: string, delta: number) {
+    setLineas((prev) =>
+      prev.map((l) =>
+        l.productoId === productoId ? { ...l, cantidad: Math.max(1, l.cantidad + delta) } : l,
+      ),
+    )
+  }
+
   function elegirCliente(c: ClienteFila) {
     setClienteId(c.id)
     setCliente(c.nombre)
@@ -287,7 +295,7 @@ export function VentaNuevaPage() {
       }}
     >
       <ParticleNetwork />
-      <div className="relative z-10 mx-auto max-w-[440px] px-4 py-8">
+      <div className="relative z-10 mx-auto max-w-[440px] px-4 py-8 pb-28 md:pb-8">
         <AppNav />
         <div className="rounded-lg bg-white/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
           <h1 className="text-xl font-bold text-[#1A2F4A]">Nueva venta</h1>
@@ -301,7 +309,7 @@ export function VentaNuevaPage() {
             <>
               {paso === 1 ? (
                 <div className="mt-5">
-                  <label className="text-sm font-medium text-[#4A5568]">
+                  <label className="block w-full text-sm font-medium text-[#4A5568]">
                     Buscar producto
                     <input
                       className={`${inputClass} mt-1.5`}
@@ -333,7 +341,7 @@ export function VentaNuevaPage() {
                     {lineas.map((linea) => (
                       <div
                         key={linea.productoId}
-                        className={`rounded-md border p-3 transition-colors duration-300 ${
+                        className={`rounded-md border px-3 py-2 transition-colors duration-300 ${
                           lineaResaltada === linea.productoId
                             ? 'border-[#6366F1] bg-[#EEF2FF]'
                             : 'border-[#E2E8F0] bg-white'
@@ -351,29 +359,32 @@ export function VentaNuevaPage() {
                             Quitar
                           </button>
                         </div>
-                        <div className="mt-2 grid grid-cols-2 gap-2">
-                          <label className="text-xs text-[#4A5568]">
-                            Cantidad
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="flex h-11 w-11 items-center justify-center rounded-md border border-[#E2E8F0] text-lg font-bold text-[#1A2F4A]"
+                              type="button"
+                              aria-label="Quitar uno"
+                              onClick={() => cambiarCantidad(linea.productoId, -1)}
+                            >
+                              −
+                            </button>
+                            <span className="min-w-8 text-center text-base font-semibold text-[#1A2F4A]">
+                              {linea.cantidad}
+                            </span>
+                            <button
+                              className="flex h-11 w-11 items-center justify-center rounded-md border border-[#E2E8F0] text-lg font-bold text-[#1A2F4A]"
+                              type="button"
+                              aria-label="Agregar uno"
+                              onClick={() => cambiarCantidad(linea.productoId, 1)}
+                            >
+                              +
+                            </button>
+                          </div>
+                          <label className="min-w-0 flex-1 text-xs text-[#4A5568]">
+                            Precio
                             <input
-                              className={`${inputClass} mt-1 h-9`}
-                              inputMode="numeric"
-                              value={linea.cantidad}
-                              onChange={(ev) => {
-                                const n = Number.parseInt(ev.target.value, 10)
-                                setLineas((prev) =>
-                                  prev.map((l) =>
-                                    l.productoId === linea.productoId
-                                      ? { ...l, cantidad: Number.isFinite(n) ? n : 0 }
-                                      : l,
-                                  ),
-                                )
-                              }}
-                            />
-                          </label>
-                          <label className="text-xs text-[#4A5568]">
-                            Precio unitario
-                            <input
-                              className={`${inputClass} mt-1 h-9`}
+                              className={`${inputClass} mt-1 min-h-11 py-2 text-sm`}
                               inputMode="decimal"
                               value={linea.precioUnitario}
                               onChange={(ev) => {
@@ -608,14 +619,6 @@ export function VentaNuevaPage() {
                     <p>{etiquetaMedioPago(formaPago)}</p>
                     {mostrarCampoCliente && cliente.trim() ? <p>Cliente: {cliente.trim()}</p> : null}
                   </div>
-                  <button
-                    className="mt-6 h-11 w-full rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
-                    type="button"
-                    disabled={enviando}
-                    onClick={() => void confirmar()}
-                  >
-                    {enviando ? 'GUARDANDO…' : 'CONFIRMAR VENTA'}
-                  </button>
                 </div>
               ) : null}
 
@@ -623,10 +626,10 @@ export function VentaNuevaPage() {
                 <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
               ) : null}
 
-              <div className="mt-5 flex gap-2">
+              <div className="venta-sticky-bar md:static md:mx-0 md:mb-0 md:mt-5 md:border-0 md:bg-transparent md:p-0">
                 {paso > 1 ? (
                   <button
-                    className="h-11 flex-1 rounded-md border border-[#E2E8F0] text-sm font-semibold text-[#4A5568]"
+                    className="h-12 flex-1 rounded-md border border-[#E2E8F0] text-sm font-semibold text-[#4A5568]"
                     type="button"
                     onClick={() => {
                       setError(null)
@@ -638,7 +641,7 @@ export function VentaNuevaPage() {
                 ) : null}
                 {paso === 1 ? (
                   <button
-                    className="h-11 flex-1 rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"
+                    className="h-12 flex-1 rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"
                     type="button"
                     onClick={irPaso2}
                   >
@@ -647,7 +650,7 @@ export function VentaNuevaPage() {
                 ) : null}
                 {paso === 2 ? (
                   <button
-                    className="h-11 flex-1 rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"
+                    className="h-12 flex-1 rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"
                     type="button"
                     onClick={() => {
                       if (formaPago === 'credito' && cuotasActivas.length === 0) {
@@ -663,6 +666,16 @@ export function VentaNuevaPage() {
                     }}
                   >
                     Siguiente
+                  </button>
+                ) : null}
+                {paso === 3 ? (
+                  <button
+                    className="h-12 flex-1 rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
+                    type="button"
+                    disabled={enviando}
+                    onClick={() => void confirmar()}
+                  >
+                    {enviando ? 'GUARDANDO…' : 'CONFIRMAR VENTA'}
                   </button>
                 ) : null}
               </div>

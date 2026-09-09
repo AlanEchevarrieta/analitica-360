@@ -13,7 +13,10 @@ import {
   TableSkeleton,
   Th,
   Tr,
-  btnPrimary,
+  btnPrimaryDesk,
+  FabLink,
+  ListCard,
+  MobileCards,
   theadClass,
   theadStyle,
 } from '../components/listado'
@@ -90,7 +93,7 @@ export function ComprasPage() {
             }}
             placeholder="Buscar por proveedor"
           />
-          <div className="flex flex-wrap gap-2">
+          <div className="hidden flex-wrap gap-2 md:flex">
             {perfil.usuario.rol !== 'visor' ? (
               <button
                 className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
@@ -100,7 +103,7 @@ export function ComprasPage() {
                 Importar Excel
               </button>
             ) : null}
-            <Link className={btnPrimary} to="/compras/nueva">
+            <Link className={btnPrimaryDesk} to="/compras/nueva">
               Nueva compra
             </Link>
           </div>
@@ -111,6 +114,7 @@ export function ComprasPage() {
         ) : null}
 
         <TableCard>
+          <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[720px] text-left">
             <thead className={theadClass} style={theadStyle}>
               <tr>
@@ -141,6 +145,20 @@ export function ComprasPage() {
             </tbody>
             ) : null}
           </table>
+          </div>
+          {!cargando && error !== MSG_ERROR_RED ? (
+            <MobileCards>
+              {filas.map((fila) => (
+                <ListCard key={fila.id}>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {formatoFechaCompra(fila.fecha)}
+                  </p>
+                  <p className="mt-1 text-sm font-medium">{fila.proveedor || 'Sin proveedor'}</p>
+                  <p className="mt-1 font-bold text-[#6366F1]">{formatoARS(fila.total)}</p>
+                </ListCard>
+              ))}
+            </MobileCards>
+          ) : null}
           {cargando ? <TableSkeleton /> : null}
           {!cargando && error === MSG_ERROR_RED ? (
             <TableErrorRed onReintentar={() => void cargar()} />
@@ -160,6 +178,7 @@ export function ComprasPage() {
           entidad="compras"
         />
         ) : null}
+        {perfil.usuario.rol !== 'visor' ? <FabLink to="/compras/nueva" label="Nueva compra" /> : null}
         {importar ? (
           <ImportarComprasModal
             productos={productos}

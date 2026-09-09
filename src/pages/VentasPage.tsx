@@ -16,7 +16,11 @@ import {
   Th,
   ThFilter,
   Tr,
-  btnPrimary,
+  btnPrimaryDesk,
+  FabLink,
+  FilterCollapse,
+  ListCard,
+  MobileCards,
   theadClass,
   theadStyle,
 } from '../components/listado'
@@ -178,7 +182,7 @@ export function VentasPage() {
         <PageTitle titulo="Ventas" subtitulo={subtitulo} />
 
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div className="filter-bar mb-0">
+          <FilterCollapse activo={Boolean(productoId) || mostrarAnuladas}>
             <div className="filter-field">
               <label htmlFor="venta-desde">Desde</label>
               <input
@@ -236,8 +240,8 @@ export function VentasPage() {
               />
               Mostrar anuladas
             </label>
-          </div>
-          <div className="flex flex-wrap gap-2">
+          </FilterCollapse>
+          <div className="hidden flex-wrap gap-2 md:flex">
             <div className="relative" ref={exportRef}>
               <button
                 className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 disabled:opacity-50"
@@ -275,7 +279,7 @@ export function VentasPage() {
                 Importar Excel
               </button>
             ) : null}
-            <Link className={btnPrimary} to="/ventas/nueva">
+            <Link className={btnPrimaryDesk} to="/ventas/nueva">
               Nueva venta
             </Link>
           </div>
@@ -286,6 +290,7 @@ export function VentasPage() {
         ) : null}
 
         <TableCard>
+          <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[860px] text-left">
             <thead className={theadClass} style={theadStyle}>
               <tr>
@@ -389,6 +394,33 @@ export function VentasPage() {
             </tbody>
             ) : null}
           </table>
+          </div>
+          {!cargando && error !== MSG_ERROR_RED ? (
+            <MobileCards>
+              {filas.map((fila) => (
+                <ListCard key={fila.id}>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {formatoFechaVenta(fila.fecha)}
+                      {fila.anulada ? ' · Anulada' : ''}
+                    </p>
+                    <BadgePago forma={fila.forma_pago} />
+                  </div>
+                  <p className="mt-1 text-sm font-medium">{fila.productos || '—'}</p>
+                  <p className="mt-1 font-bold text-[#4ADE80]">{formatoARS(fila.total)}</p>
+                  {puedeAnular && !fila.anulada ? (
+                    <button
+                      className="mt-2 text-xs text-[#F87171]"
+                      type="button"
+                      onClick={() => setAnular(fila)}
+                    >
+                      Anular
+                    </button>
+                  ) : null}
+                </ListCard>
+              ))}
+            </MobileCards>
+          ) : null}
           {cargando ? <TableSkeleton /> : null}
           {!cargando && error === MSG_ERROR_RED ? (
             <TableErrorRed onReintentar={() => void cargar()} />
@@ -415,15 +447,8 @@ export function VentasPage() {
             onListo={cargar}
           />
         ) : null}
-        {anular ? (
-          <AnularVentaModal
-            venta={anular}
-            onCerrar={() => setAnular(null)}
-            onOk={() => {
-              setAnular(null)
-              void cargar()
-            }}
-          />
+        {tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'registrar_ventas') ? (
+          <FabLink to="/ventas/nueva" label="Nueva venta" />
         ) : null}
       </div>
     </div>

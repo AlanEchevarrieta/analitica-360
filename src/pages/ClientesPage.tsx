@@ -11,7 +11,10 @@ import {
   TableSkeleton,
   Th,
   Tr,
-  btnPrimary,
+  btnPrimaryDesk,
+  FabLink,
+  ListCard,
+  MobileCards,
   theadClass,
   theadStyle,
 } from '../components/listado'
@@ -83,7 +86,7 @@ export function ClientesPage() {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre o teléfono" />
           {perfil.usuario.rol !== 'visor' ? (
-            <Link className={btnPrimary} to="/clientes/nuevo">
+            <Link className={btnPrimaryDesk} to="/clientes/nuevo">
               Nuevo cliente
             </Link>
           ) : null}
@@ -94,6 +97,7 @@ export function ClientesPage() {
         ) : null}
 
         <TableCard>
+          <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[860px] text-left">
             <thead className={theadClass} style={theadStyle}>
               <tr>
@@ -159,6 +163,20 @@ export function ClientesPage() {
             </tbody>
             ) : null}
           </table>
+          </div>
+          {!cargando && error !== MSG_ERROR_RED ? (
+            <MobileCards>
+              {visibles.map((fila) => (
+                <ListCard key={fila.id} to={`/clientes/${fila.id}`}>
+                  <p className="text-sm font-semibold">{fila.nombre}</p>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {fila.telefono ?? 'Sin teléfono'}
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-[#4ADE80]">{formatoARS(fila.total_gastado)}</p>
+                </ListCard>
+              ))}
+            </MobileCards>
+          ) : null}
           {cargando ? <TableSkeleton /> : null}
           {!cargando && error === MSG_ERROR_RED ? (
             <TableErrorRed onReintentar={() => void cargar()} />
@@ -169,6 +187,7 @@ export function ClientesPage() {
             </p>
           ) : null}
         </TableCard>
+        {perfil.usuario.rol !== 'visor' ? <FabLink to="/clientes/nuevo" label="Nuevo cliente" /> : null}
       </div>
     </div>
   )

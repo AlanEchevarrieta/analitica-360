@@ -102,7 +102,7 @@ function KpiCardSkeleton() {
 function DashboardSkeleton() {
   return (
     <section className="mt-6" aria-busy="true" aria-label="Cargando dashboard">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
         <KpiCardSkeleton />
         <KpiCardSkeleton />
         <KpiCardSkeleton />
@@ -191,7 +191,7 @@ function KpiCard({
           </p>
           <p
             className={`mt-2 font-bold leading-tight ${
-              wrap ? 'text-lg break-words' : 'whitespace-nowrap text-[24px]'
+            wrap ? 'text-base break-words md:text-lg' : 'whitespace-nowrap text-[18px] md:text-[24px]'
             }`}
             style={{ color: 'var(--kpi-value)' }}
           >
@@ -203,7 +203,7 @@ function KpiCard({
             </p>
           ) : null}
         </div>
-        <div className="shrink-0">{icono}</div>
+        <div className="shrink-0 hidden xl:block">{icono}</div>
       </div>
     </div>
   )
@@ -224,6 +224,9 @@ function formatoKPI(valor: number) {
     const m = abs / 1_000_000
     const s = m.toFixed(1).replace('.', ',').replace(/,0$/, '')
     return `${signo}$${s}M`
+  }
+  if (abs >= 10_000) {
+    return `${signo}$${Math.round(abs / 1000).toLocaleString('es-AR')} mil`
   }
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',
@@ -341,7 +344,7 @@ export function HomePage() {
 
         {verReportes && !cargandoDash ? (
           <section className="mt-6">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
               <KpiCard
                 label="Ventas hoy"
                 valor={formatoKPI(dash.hoy.total)}
@@ -363,6 +366,7 @@ export function HomePage() {
                 valor={formatoKPI(dash.comprasMes)}
                 icono={<IconoCompras />}
               />
+              <div className="col-span-2 w-full max-w-[calc(50%-0.375rem)] justify-self-center xl:col-span-1 xl:max-w-none xl:justify-self-auto">
               <KpiCard
                 label="Producto más vendido hoy"
                 valor={dash.topHoy?.nombre ?? 'Sin ventas'}
@@ -374,6 +378,7 @@ export function HomePage() {
                 }
                 icono={<IconoProducto />}
               />
+              </div>
             </div>
 
             {(() => {

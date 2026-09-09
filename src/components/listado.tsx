@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Link } from 'react-router-dom'
 import { theme } from '../theme'
 
 export const cardShell = {
@@ -11,6 +12,8 @@ export const cardShell = {
 
 export const btnPrimary =
   'inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#6366F1] px-4 text-sm font-semibold text-white hover:bg-[#4F46E5]'
+
+export const btnPrimaryDesk = `${btnPrimary} hidden md:inline-flex`
 
 export function PageTitle({
   titulo,
@@ -43,7 +46,7 @@ export function PageTitle({
 
 export function TableCard({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-x-auto text-sm" style={{ ...cardShell, color: 'var(--text)' }}>
+    <div className="text-sm" style={{ ...cardShell, color: 'var(--text)' }}>
       {children}
     </div>
   )
@@ -332,6 +335,57 @@ export function ThFilter({
         : null}
     </th>
   )
+}
+
+export function FabLink({ to, label }: { to: string; label: string }) {
+  return (
+    <Link className="fab-plus md:hidden" to={to} aria-label={label} title={label}>
+      +
+    </Link>
+  )
+}
+
+export function FilterCollapse({
+  children,
+  activo,
+  soloMobile,
+}: {
+  children: ReactNode
+  activo?: boolean
+  soloMobile?: boolean
+}) {
+  const [abierto, setAbierto] = useState(false)
+  return (
+    <div className={soloMobile ? 'w-full md:hidden' : 'w-full'}>
+      <button
+        className="filter-toggle md:hidden"
+        type="button"
+        aria-expanded={abierto}
+        onClick={() => setAbierto((v) => !v)}
+      >
+        Filtrar{activo ? ' •' : ''}
+      </button>
+      <div className={`filter-bar mb-0 ${abierto ? 'flex' : 'hidden'} ${soloMobile ? '' : 'md:flex'}`}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+export function MobileCards({ children }: { children: ReactNode }) {
+  return <div className="space-y-2 p-2 md:hidden">{children}</div>
+}
+
+export function ListCard({ children, to }: { children: ReactNode; to?: string }) {
+  const clase = 'list-card'
+  if (to) {
+    return (
+      <Link className={clase} to={to}>
+        {children}
+      </Link>
+    )
+  }
+  return <div className={clase}>{children}</div>
 }
 
 export const PAGE_VENTAS = 50
