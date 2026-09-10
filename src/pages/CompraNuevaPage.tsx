@@ -272,6 +272,7 @@ export function CompraNuevaPage() {
       precio_venta: precio,
       costo: 0,
       stock_actual: 0,
+      codigo_barra: null,
     }
     setNuevoNombre('')
     setNuevoPrecio('')

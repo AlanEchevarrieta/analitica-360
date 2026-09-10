@@ -9,6 +9,12 @@ export type ProductoFila = {
   precio_venta: number
   costo: number
   stock_actual: number
+  codigo_barra: string | null
+}
+
+export function esBusquedaCodigoBarras(texto: string) {
+  const q = texto.trim()
+  return q.length > 8 && /^\d+$/.test(q)
 }
 
 function filaProducto(row: Record<string, unknown>): ProductoFila {
@@ -21,6 +27,7 @@ function filaProducto(row: Record<string, unknown>): ProductoFila {
     precio_venta: Number(row.precio_venta ?? 0),
     costo: Number(row.costo ?? 0),
     stock_actual: Number(row.stock_actual ?? 0),
+    codigo_barra: row.codigo_barra == null || row.codigo_barra === '' ? null : String(row.codigo_barra),
   }
 }
 
@@ -42,11 +49,17 @@ export async function listarProductosPaginado(
 
   let query = client
     .from('productos')
-    .select('id, nombre, categoria, activo, precio_venta, costo', { count: 'exact' })
+    .select('id, nombre, categoria, activo, precio_venta, costo, codigo_barra', { count: 'exact' })
     .is('deleted_at', null)
     .order('nombre', { ascending: true })
 
-  if (q) query = query.ilike('nombre', `%${q}%`)
+  if (q) {
+    if (esBusquedaCodigoBarras(q)) {
+      query = query.or(`nombre.ilike.%${q}%,codigo_barra.eq.${q}`)
+    } else {
+      query = query.ilike('nombre', `%${q}%`)
+    }
+  }
   if (input.categoria) query = query.eq('categoria', input.categoria)
   if (input.estado === 'activos') query = query.eq('activo', true)
   if (input.estado === 'inactivos') query = query.eq('activo', false)
@@ -77,10 +90,16 @@ export async function listarProductosPaginado(
   if (input.stock !== 'todos' || input.margen !== 'todos') {
     let full = client
       .from('productos')
-      .select('id, nombre, categoria, activo, precio_venta, costo')
+      .select('id, nombre, categoria, activo, precio_venta, costo, codigo_barra')
       .is('deleted_at', null)
       .order('nombre', { ascending: true })
-    if (q) full = full.ilike('nombre', `%${q}%`)
+    if (q) {
+      if (esBusquedaCodigoBarras(q)) {
+        full = full.or(`nombre.ilike.%${q}%,codigo_barra.eq.${q}`)
+      } else {
+        full = full.ilike('nombre', `%${q}%`)
+      }
+    }
     if (input.categoria) full = full.eq('categoria', input.categoria)
     if (input.estado === 'activos') full = full.eq('activo', true)
     if (input.estado === 'inactivos') full = full.eq('activo', false)
@@ -189,6 +208,21 @@ export async function crearProducto(
   })
   if (error) return { id: null, error: error.message }
   return { id: data ? String(data) : null, error: null }
+}
+
+export async function guardarCodigoBarra(
+  client: SupabaseClient,
+  productoId: string,
+  codigo: string | null,
+): Promise<string | null> {
+  const valor = codigo?.trim() ? codigo.trim() : null
+  const { error } = await client.from('productos').update({ codigo_barra: valor }).eq('id', productoId)
+  if (!error) return null
+  const t = error.message.toLowerCase()
+  if (t.includes('codigo_barra') || t.includes('schema cache') || t.includes('does not exist')) {
+    return 'Falta codigo_barra. Pegá supabase/040_codigo_barra.sql (rol postgres), dale Run y recargá.'
+  }
+  return error.message
 }
 
 export async function asignarCategoriaProducto(

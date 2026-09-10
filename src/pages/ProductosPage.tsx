@@ -470,7 +470,14 @@ export function ProductosPage() {
                 return (
                 <Tr key={fila.id} index={index}>
                   <td className="px-3 py-3 font-medium">
-                    <p>{fila.nombre}</p>
+                    <p className="flex items-center gap-1.5">
+                      {fila.nombre}
+                      {fila.codigo_barra ? (
+                        <span title="Tiene código de barras" aria-label="Tiene código de barras">
+                          📷
+                        </span>
+                      ) : null}
+                    </p>
                     {usaVariantes && (variantesActivas.get(fila.id) ?? 0) > 0 ? (
                       <p className="mt-0.5 text-xs font-normal text-[#94A3B8]">
                         {variantesActivas.get(fila.id)}{' '}
@@ -543,7 +550,14 @@ export function ProductosPage() {
                 return (
                 <ListCard key={fila.id}>
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold">{fila.nombre}</p>
+                    <p className="text-sm font-semibold">
+                      {fila.nombre}
+                      {fila.codigo_barra ? (
+                        <span className="ml-1.5" title="Tiene código de barras" aria-label="Tiene código de barras">
+                          📷
+                        </span>
+                      ) : null}
+                    </p>
                     <BadgeEstado activo={fila.activo} />
                   </div>
                   {usaVariantes && (variantesActivas.get(fila.id) ?? 0) > 0 ? (

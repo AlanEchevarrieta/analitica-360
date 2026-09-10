@@ -5,9 +5,10 @@ import { tienePermiso } from '../lib/permisos'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { AppNav } from '../components/AppNav'
 import { Breadcrumb, PageSkeleton } from '../components/listado'
-import { actualizarProducto, asignarCategoriaProducto, crearProducto, guardarDimensionesProducto, leerDimensionesProducto, listarProductos, type ProductoFila } from '../lib/productos'
+import { actualizarProducto, asignarCategoriaProducto, crearProducto, guardarCodigoBarra, guardarDimensionesProducto, leerDimensionesProducto, listarProductos, type ProductoFila } from '../lib/productos'
 import { listarCategorias, type CategoriaFila } from '../lib/categorias'
 import { ProductoVariantesEditor, type ProductoVariantesHandle } from '../components/ProductoVariantesEditor'
+import { EscanerCodigoBarras } from '../components/EscanerCodigoBarras'
 import { obtenerConfiguracion } from '../lib/configuracion'
 import { estiloTipoMovimiento } from '../lib/inventario'
 import { listarMovimientosProducto, type MovimientoFila } from '../lib/stock'
@@ -42,6 +43,8 @@ export function ProductoFormPage() {
   const [largoCm, setLargoCm] = useState('')
   const [anchoCm, setAnchoCm] = useState('')
   const [pesoGr, setPesoGr] = useState('')
+  const [codigoBarra, setCodigoBarra] = useState('')
+  const [escaner, setEscaner] = useState(false)
   const [costoDesdeVariantes, setCostoDesdeVariantes] = useState<number | null>(null)
   const variantesRef = useRef<ProductoVariantesHandle>(null)
   const onCostoCalculado = useCallback((valor: number | null) => {
@@ -105,9 +108,12 @@ export function ProductoFormPage() {
       setCosto(String(actual.costo))
       setStockActual(actual.stock_actual)
       setActivo(actual.activo)
-      const extraCat = await requireSupabase().from('productos').select('categoria_id').eq('id', id).maybeSingle()
-      if (!extraCat.error && extraCat.data && (extraCat.data as { categoria_id?: string | null }).categoria_id) {
-        setCategoriaId(String((extraCat.data as { categoria_id: string }).categoria_id))
+      setCodigoBarra(actual.codigo_barra ?? '')
+      const extraCat = await requireSupabase().from('productos').select('categoria_id, codigo_barra').eq('id', id).maybeSingle()
+      if (!extraCat.error && extraCat.data) {
+        const extra = extraCat.data as { categoria_id?: string | null; codigo_barra?: string | null }
+        if (extra.categoria_id) setCategoriaId(String(extra.categoria_id))
+        if (extra.codigo_barra != null) setCodigoBarra(String(extra.codigo_barra))
       }
       const dim = await leerDimensionesProducto(requireSupabase(), id)
       setAltoCm(dim.altoCm)
@@ -184,11 +190,12 @@ export function ProductoFormPage() {
         return
       }
       await asignarCategoriaProducto(client, creado.id, categoriaIdGuardar)
+      const barraError = await guardarCodigoBarra(client, creado.id, codigoBarra)
       const varError = await variantesRef.current?.persistir(creado.id)
       const dimError = await persistirDimensiones(creado.id)
       setEnviando(false)
-      if (varError || dimError) {
-        setError(varError || dimError)
+      if (barraError || varError || dimError) {
+        setError(barraError || varError || dimError)
         navigate(`/productos/${creado.id}`, { replace: true })
         return
       }
@@ -209,11 +216,12 @@ export function ProductoFormPage() {
       return
     }
     await asignarCategoriaProducto(client, id!, categoriaIdGuardar)
+    const barraError = await guardarCodigoBarra(client, id!, codigoBarra)
     const varError = await variantesRef.current?.persistir(id!)
     const dimError = await persistirDimensiones(id!)
     setEnviando(false)
-    if (varError || dimError) {
-      setError(varError || dimError)
+    if (barraError || varError || dimError) {
+      setError(barraError || varError || dimError)
       return
     }
     navigate('/productos', { replace: true })
@@ -281,6 +289,14 @@ export function ProductoFormPage() {
       }}
     >
       <ParticleNetwork />
+      <EscanerCodigoBarras
+        activo={escaner}
+        onDetected={(codigo) => {
+          setCodigoBarra(codigo)
+          setEscaner(false)
+        }}
+        onClose={() => setEscaner(false)}
+      />
       <div className={`relative z-10 mx-auto px-4 py-8 ${usaVariantes ? 'max-w-3xl' : 'max-w-[440px]'}`}>
         <AppNav />
         <Breadcrumb
@@ -303,6 +319,25 @@ export function ProductoFormPage() {
                   setNombre(ev.target.value)
                   setDuplicado(null)
                 }} />
+              </label>
+              <label className="mt-4 text-sm font-medium text-[#4A5568]">
+                Código de barras
+                <span className="mt-1.5 flex gap-2">
+                  <input
+                    className="h-11 min-w-0 flex-1 rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A] outline-none focus:border-[#6366F1] focus:bg-white focus:shadow-[0_0_0_3px_rgba(99,102,241,0.18)]"
+                    value={codigoBarra}
+                    placeholder="Opcional"
+                    onChange={(ev) => setCodigoBarra(ev.target.value)}
+                  />
+                  <button
+                    className="btn-camara"
+                    type="button"
+                    aria-label="Escanear código de barras"
+                    onClick={() => setEscaner(true)}
+                  >
+                    📷
+                  </button>
+                </span>
               </label>
               {categorias.length === 0 ? (
                 <p className="mt-4 text-sm text-[#4A5568]">

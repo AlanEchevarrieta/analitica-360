@@ -15,7 +15,9 @@ import {
   type TasaCuota,
 } from '../lib/configuracion'
 import { crearCliente, listarClientes, type ClienteFila } from '../lib/clientes'
-import { formatoARS, listarProductos, type ProductoFila } from '../lib/productos'
+import { EscanerCodigoBarras } from '../components/EscanerCodigoBarras'
+import { formatoARS, esBusquedaCodigoBarras, listarProductos, type ProductoFila } from '../lib/productos'
+import { mostrarToast } from '../lib/consulta'
 import { requireSupabase } from '../lib/supabase'
 import { calcularTotalesCredito, confirmarVenta } from '../lib/ventas'
 import {
@@ -77,6 +79,8 @@ export function VentaNuevaPage() {
   const [stockVar, setStockVar] = useState<Map<string, number>>(new Map())
   const [atributosVentas, setAtributosVentas] = useState<AtributoFila[]>([])
   const [picker, setPicker] = useState<ProductoFila | null>(null)
+  const [escaner, setEscaner] = useState(false)
+  const busquedaRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     void listarProductos(requireSupabase()).then(({ filas }) => {
@@ -114,9 +118,17 @@ export function VentaNuevaPage() {
   }, [perfil])
 
   const sugeridos = useMemo(() => {
-    const q = busqueda.trim().toLowerCase()
+    const raw = busqueda.trim()
+    const q = raw.toLowerCase()
     if (!q) return catalogo.slice(0, 8)
-    return catalogo.filter((p) => p.nombre.toLowerCase().includes(q)).slice(0, 8)
+    const porBarra = esBusquedaCodigoBarras(raw)
+    return catalogo
+      .filter((p) => {
+        if (p.nombre.toLowerCase().includes(q)) return true
+        if (porBarra && p.codigo_barra === raw) return true
+        return false
+      })
+      .slice(0, 8)
   }, [busqueda, catalogo])
 
   const flujo = config?.flujoVentas ?? FLUJO_VENTAS_DEFAULT
@@ -268,6 +280,17 @@ export function VentaNuevaPage() {
     agregarLinea(producto, null)
   }
 
+  function onCodigoDetectado(codigo: string) {
+    const hit = catalogo.find((p) => p.codigo_barra === codigo)
+    if (hit) {
+      void agregarProducto(hit)
+      return
+    }
+    setBusqueda(codigo)
+    mostrarToast('Código no encontrado — agregá el producto manualmente')
+    window.setTimeout(() => busquedaRef.current?.focus(), 50)
+  }
+
   function cambiarCantidad(clave: string, delta: number) {
     setLineas((prev) =>
       prev.map((l) =>
@@ -389,6 +412,11 @@ export function VentaNuevaPage() {
       }}
     >
       <ParticleNetwork />
+      <EscanerCodigoBarras
+        activo={escaner}
+        onDetected={onCodigoDetectado}
+        onClose={() => setEscaner(false)}
+      />
       <div className="relative z-10 mx-auto max-w-[440px] px-4 py-8 pb-28 md:pb-8">
         <AppNav />
         <div className="rounded-lg bg-white/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
@@ -405,12 +433,23 @@ export function VentaNuevaPage() {
                 <div className="mt-5">
                   <label className="block w-full text-sm font-medium text-[#4A5568]">
                     Buscar producto
-                    <input
-                      className={`${inputClass} mt-1.5`}
-                      value={busqueda}
-                      placeholder="Nombre del producto"
-                      onChange={(ev) => setBusqueda(ev.target.value)}
-                    />
+                    <span className="mt-1.5 flex gap-2">
+                      <input
+                        ref={busquedaRef}
+                        className={inputClass}
+                        value={busqueda}
+                        placeholder="Buscar producto..."
+                        onChange={(ev) => setBusqueda(ev.target.value)}
+                      />
+                      <button
+                        className="btn-camara"
+                        type="button"
+                        aria-label="Escanear código de barras"
+                        onClick={() => setEscaner(true)}
+                      >
+                        📷
+                      </button>
+                    </span>
                   </label>
                   {sugeridos.length > 0 ? (
                     <ul className="mt-2 max-h-40 overflow-auto rounded-md border border-[#E2E8F0]">
