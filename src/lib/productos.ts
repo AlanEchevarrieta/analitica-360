@@ -211,6 +211,61 @@ export async function actualizarProducto(
   return error ? error.message : null
 }
 
+export async function guardarDimensionesProducto(
+  client: SupabaseClient,
+  input: {
+    id: string
+    altoCm: number | null
+    largoCm: number | null
+    anchoCm: number | null
+    pesoGr: number | null
+  },
+): Promise<string | null> {
+  const { error } = await client
+    .from('productos')
+    .update({
+      alto_cm: input.altoCm,
+      largo_cm: input.largoCm,
+      ancho_cm: input.anchoCm,
+      peso_gr: input.pesoGr,
+    })
+    .eq('id', input.id)
+  if (!error) return null
+  const t = error.message.toLowerCase()
+  if (t.includes('alto_cm') || t.includes('schema cache') || t.includes('does not exist')) {
+    if (
+      input.altoCm == null &&
+      input.largoCm == null &&
+      input.anchoCm == null &&
+      input.pesoGr == null
+    ) {
+      return null
+    }
+    return 'Faltan las columnas de dimensiones. Pegá supabase/036_variantes_compras_dimensiones.sql (rol postgres) y recargá.'
+  }
+  return error.message
+}
+
+export async function leerDimensionesProducto(
+  client: SupabaseClient,
+  id: string,
+): Promise<{ altoCm: string; largoCm: string; anchoCm: string; pesoGr: string }> {
+  const vacio = { altoCm: '', largoCm: '', anchoCm: '', pesoGr: '' }
+  const { data, error } = await client
+    .from('productos')
+    .select('alto_cm, largo_cm, ancho_cm, peso_gr')
+    .eq('id', id)
+    .maybeSingle()
+  if (error || !data) return vacio
+  const n = (v: unknown) => (v == null || v === '' ? '' : String(v))
+  return {
+    altoCm: n(data.alto_cm),
+    largoCm: n(data.largo_cm),
+    anchoCm: n(data.ancho_cm),
+    pesoGr: n(data.peso_gr),
+  }
+}
+
 export function formatoARS(valor: number) {
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',

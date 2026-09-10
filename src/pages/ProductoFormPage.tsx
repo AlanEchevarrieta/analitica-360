@@ -4,7 +4,7 @@ import { useAuth } from '../auth'
 import { tienePermiso } from '../lib/permisos'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { AppNav } from '../components/AppNav'
-import { actualizarProducto, crearProducto, listarProductos, type ProductoFila } from '../lib/productos'
+import { actualizarProducto, crearProducto, guardarDimensionesProducto, leerDimensionesProducto, listarProductos, type ProductoFila } from '../lib/productos'
 import { ProductoVariantesEditor, type ProductoVariantesHandle } from '../components/ProductoVariantesEditor'
 import { obtenerConfiguracion } from '../lib/configuracion'
 import { estiloTipoMovimiento } from '../lib/inventario'
@@ -33,9 +33,31 @@ export function ProductoFormPage() {
   const [duplicado, setDuplicado] = useState<ProductoFila | null>(null)
   const [movimientos, setMovimientos] = useState<MovimientoFila[]>([])
   const [usaVariantes, setUsaVariantes] = useState(false)
+  const [dimOpen, setDimOpen] = useState(false)
+  const [altoCm, setAltoCm] = useState('')
+  const [largoCm, setLargoCm] = useState('')
+  const [anchoCm, setAnchoCm] = useState('')
+  const [pesoGr, setPesoGr] = useState('')
   const variantesRef = useRef<ProductoVariantesHandle>(null)
 
   const titulo = useMemo(() => (esNuevo ? 'Nuevo producto' : 'Editar producto'), [esNuevo])
+
+  function numOpcional(s: string): number | null {
+    const t = s.trim()
+    if (!t) return null
+    const n = Number(t.replace(',', '.'))
+    return Number.isFinite(n) ? n : null
+  }
+
+  async function persistirDimensiones(productoId: string) {
+    return guardarDimensionesProducto(requireSupabase(), {
+      id: productoId,
+      altoCm: numOpcional(altoCm),
+      largoCm: numOpcional(largoCm),
+      anchoCm: numOpcional(anchoCm),
+      pesoGr: numOpcional(pesoGr),
+    })
+  }
 
   useEffect(() => {
     if (!perfil) return
@@ -65,6 +87,12 @@ export function ProductoFormPage() {
       setCosto(String(actual.costo))
       setStockActual(actual.stock_actual)
       setActivo(actual.activo)
+      const dim = await leerDimensionesProducto(requireSupabase(), id)
+      setAltoCm(dim.altoCm)
+      setLargoCm(dim.largoCm)
+      setAnchoCm(dim.anchoCm)
+      setPesoGr(dim.pesoGr)
+      if (dim.altoCm || dim.largoCm || dim.anchoCm || dim.pesoGr) setDimOpen(true)
       const mov = await listarMovimientosProducto(requireSupabase(), id)
       if (!mov.error) setMovimientos(mov.filas)
       setCargando(false)
@@ -127,9 +155,10 @@ export function ProductoFormPage() {
         return
       }
       const varError = await variantesRef.current?.persistir(creado.id)
+      const dimError = await persistirDimensiones(creado.id)
       setEnviando(false)
-      if (varError) {
-        setError(varError)
+      if (varError || dimError) {
+        setError(varError || dimError)
         navigate(`/productos/${creado.id}`, { replace: true })
         return
       }
@@ -144,9 +173,16 @@ export function ProductoFormPage() {
       costo: costoNum,
       activo,
     })
-    setEnviando(false)
     if (fallo) {
+      setEnviando(false)
       setError(fallo)
+      return
+    }
+    const varError = await variantesRef.current?.persistir(id!)
+    const dimError = await persistirDimensiones(id!)
+    setEnviando(false)
+    if (varError || dimError) {
+      setError(varError || dimError)
       return
     }
     navigate('/productos', { replace: true })
@@ -280,6 +316,37 @@ export function ProductoFormPage() {
                 />
                 Activo
               </label>
+              <button
+                className="mt-6 flex w-full items-center justify-between text-left text-sm font-bold text-[#1A2F4A]"
+                type="button"
+                onClick={() => setDimOpen((v) => !v)}
+              >
+                Dimensiones para envío
+                <span className="text-xs font-medium text-[#4A5568]">{dimOpen ? 'Ocultar' : 'Mostrar'}</span>
+              </button>
+              {dimOpen ? (
+                <div className="mt-2 space-y-3">
+                  <p className="text-xs text-[#4A5568]">Útil para calcular envíos con Andreani/OCA</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="text-sm font-medium text-[#4A5568]">
+                      Alto (cm)
+                      <input className={inputClass} inputMode="decimal" value={altoCm} onChange={(ev) => setAltoCm(ev.target.value)} />
+                    </label>
+                    <label className="text-sm font-medium text-[#4A5568]">
+                      Largo (cm)
+                      <input className={inputClass} inputMode="decimal" value={largoCm} onChange={(ev) => setLargoCm(ev.target.value)} />
+                    </label>
+                    <label className="text-sm font-medium text-[#4A5568]">
+                      Ancho (cm)
+                      <input className={inputClass} inputMode="decimal" value={anchoCm} onChange={(ev) => setAnchoCm(ev.target.value)} />
+                    </label>
+                    <label className="text-sm font-medium text-[#4A5568]">
+                      Peso (gramos)
+                      <input className={inputClass} inputMode="decimal" value={pesoGr} onChange={(ev) => setPesoGr(ev.target.value)} />
+                    </label>
+                  </div>
+                </div>
+              ) : null}
               {usaVariantes && perfil ? (
                 <ProductoVariantesEditor
                   ref={variantesRef}

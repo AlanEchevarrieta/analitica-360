@@ -4,6 +4,7 @@ export type AtributoFila = {
   id: string
   nombre: string
   valores: string[]
+  activoVentas: boolean
 }
 
 export type VarianteFila = {
@@ -77,7 +78,7 @@ function msgSqlFaltante(error: string) {
 function mapAtributo(row: Record<string, unknown>): AtributoFila {
   const raw = row.valores
   const valores = Array.isArray(raw) ? raw.map((v) => String(v)).filter(Boolean) : []
-  return { id: String(row.id), nombre: String(row.nombre ?? ''), valores }
+  return { id: String(row.id), nombre: String(row.nombre ?? ''), valores, activoVentas: row.activo_ventas !== false }
 }
 
 function mapVariante(row: Record<string, unknown>): VarianteFila {
@@ -100,9 +101,13 @@ function mapVariante(row: Record<string, unknown>): VarianteFila {
 export async function listarAtributos(
   client: SupabaseClient,
 ): Promise<{ filas: AtributoFila[]; error: string | null }> {
-  const { data, error } = await client.from('atributos').select('id, nombre, valores').order('created_at')
-  if (error) return { filas: [], error: msgSqlFaltante(error.message) }
-  return { filas: ((data ?? []) as Record<string, unknown>[]).map(mapAtributo), error: null }
+  const conActivo = await client.from('atributos').select('id, nombre, valores, activo_ventas').order('created_at')
+  const res =
+    conActivo.error && /activo_ventas/i.test(conActivo.error.message)
+      ? await client.from('atributos').select('id, nombre, valores').order('created_at')
+      : conActivo
+  if (res.error) return { filas: [], error: msgSqlFaltante(res.error.message) }
+  return { filas: ((res.data ?? []) as Record<string, unknown>[]).map(mapAtributo), error: null }
 }
 
 export async function sembrarAtributosDefault(
@@ -113,32 +118,70 @@ export async function sembrarAtributosDefault(
   if (actuales.error) return actuales.error
   if (actuales.filas.length > 0) return null
   const { error } = await client.from('atributos').insert(
-    ATRIBUTOS_DEFAULT.map((a) => ({ empresa_id: empresaId, nombre: a.nombre, valores: a.valores })),
+    ATRIBUTOS_DEFAULT.map((a) => ({
+      empresa_id: empresaId,
+      nombre: a.nombre,
+      valores: a.valores,
+      activo_ventas: true,
+    })),
   )
+  if (error && /activo_ventas/i.test(error.message)) {
+    const retry = await client.from('atributos').insert(
+      ATRIBUTOS_DEFAULT.map((a) => ({ empresa_id: empresaId, nombre: a.nombre, valores: a.valores })),
+    )
+    return retry.error ? msgSqlFaltante(retry.error.message) : null
+  }
   return error ? msgSqlFaltante(error.message) : null
 }
 
 export async function guardarAtributo(
   client: SupabaseClient,
-  input: { id?: string; empresaId: string; nombre: string; valores: string[] },
+  input: { id?: string; empresaId: string; nombre: string; valores: string[]; activoVentas?: boolean },
 ): Promise<string | null> {
   const nombre = input.nombre.trim()
   const valores = [...new Set(input.valores.map((v) => v.trim()).filter(Boolean))]
   if (!nombre) return 'El nombre del atributo es obligatorio'
   if (valores.length === 0) return 'Agregá al menos un valor'
+  const activo = input.activoVentas !== false
   if (input.id) {
-    const { error } = await client
+    const upd = await client
       .from('atributos')
-      .update({ nombre, valores })
+      .update({ nombre, valores, activo_ventas: activo })
       .eq('id', input.id)
-    return error ? msgSqlFaltante(error.message) : null
+    if (upd.error && /activo_ventas/i.test(upd.error.message)) {
+      const { error } = await client.from('atributos').update({ nombre, valores }).eq('id', input.id)
+      return error ? msgSqlFaltante(error.message) : null
+    }
+    return upd.error ? msgSqlFaltante(upd.error.message) : null
   }
-  const { error } = await client.from('atributos').insert({
+  const ins = await client.from('atributos').insert({
     empresa_id: input.empresaId,
     nombre,
     valores,
+    activo_ventas: activo,
   })
-  return error ? msgSqlFaltante(error.message) : null
+  if (ins.error && /activo_ventas/i.test(ins.error.message)) {
+    const { error } = await client.from('atributos').insert({ empresa_id: input.empresaId, nombre, valores })
+    return error ? msgSqlFaltante(error.message) : null
+  }
+  return ins.error ? msgSqlFaltante(ins.error.message) : null
+}
+
+export async function atributoTieneVariantesActivas(
+  client: SupabaseClient,
+  nombre: string,
+): Promise<boolean> {
+  const { data, error } = await client
+    .from('producto_variantes')
+    .select('atributos')
+    .is('deleted_at', null)
+    .eq('activo', true)
+    .limit(500)
+  if (error || !data) return false
+  return (data as Record<string, unknown>[]).some((row) => {
+    const attrs = row.atributos as Record<string, unknown> | null
+    return attrs != null && Object.prototype.hasOwnProperty.call(attrs, nombre)
+  })
 }
 
 export async function eliminarAtributo(client: SupabaseClient, id: string): Promise<string | null> {
@@ -239,6 +282,40 @@ export async function guardarVariantesProducto(
     if (error) return msgSqlFaltante(error.message)
   }
   return null
+}
+
+export async function asegurarVariante(
+  client: SupabaseClient,
+  input: {
+    productoId: string
+    empresaId: string
+    atributos: Record<string, string>
+    precioVenta: number | null
+    costo: number | null
+    nombreProducto: string
+  },
+): Promise<{ fila: VarianteFila | null; error: string | null }> {
+  const actuales = await listarVariantesProducto(client, input.productoId)
+  if (actuales.error) return { fila: null, error: actuales.error }
+  const existente = actuales.filas.find((v) => mismaCombinacion(v.atributos, input.atributos))
+  if (existente) return { fila: existente, error: null }
+  const sku = skuAutomatico(input.nombreProducto, input.atributos)
+  const { data, error } = await client
+    .from('producto_variantes')
+    .insert({
+      producto_id: input.productoId,
+      empresa_id: input.empresaId,
+      sku,
+      atributos: input.atributos,
+      precio_venta: input.precioVenta,
+      costo: input.costo,
+      activo: true,
+    })
+    .select('id, producto_id, sku, atributos, precio_venta, costo, activo')
+    .maybeSingle()
+  if (error) return { fila: null, error: msgSqlFaltante(error.message) }
+  if (!data) return { fila: null, error: 'No se pudo crear la variante' }
+  return { fila: mapVariante(data as Record<string, unknown>), error: null }
 }
 
 export async function stockPorVariante(

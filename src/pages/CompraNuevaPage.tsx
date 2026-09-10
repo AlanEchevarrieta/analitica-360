@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
+import { VarianteChipsPicker } from '../components/VarianteChipsPicker'
 import {
   confirmarCompra,
   crearProductoParaCompra,
   hoyCompraISO,
 } from '../lib/compras'
+import { obtenerConfiguracion } from '../lib/configuracion'
 import { formatoARS, listarProductos, type ProductoFila } from '../lib/productos'
 import {
   crearProveedor,
@@ -17,12 +19,26 @@ import {
 } from '../lib/proveedores'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
+import {
+  asegurarVariante,
+  etiquetaCombo,
+  listarAtributos,
+  listarVariantesDeProductos,
+  stockPorVariante,
+  type AtributoFila,
+  type VarianteFila,
+} from '../lib/variantes'
 
 type Linea = {
   productoId: string
+  varianteId: string | null
   nombre: string
   cantidad: number
   costoUnitario: number
+}
+
+function claveLinea(productoId: string, varianteId: string | null) {
+  return varianteId ? `${productoId}:${varianteId}` : productoId
 }
 
 const inputClass =
@@ -44,6 +60,7 @@ export function CompraNuevaPage() {
   const [telAltaProv, setTelAltaProv] = useState('')
   const [creandoProveedor, setCreandoProveedor] = useState(false)
   const comboProvRef = useRef<HTMLDivElement>(null)
+  const comboProdRef = useRef<HTMLDivElement>(null)
   const [fecha, setFecha] = useState(hoyCompraISO)
   const [notas, setNotas] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -51,10 +68,17 @@ export function CompraNuevaPage() {
   const [exito, setExito] = useState(false)
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoPrecio, setNuevoPrecio] = useState('')
+  const [nuevoCategoria, setNuevoCategoria] = useState('')
   const [mostrarNuevo, setMostrarNuevo] = useState(false)
+  const [dropdownProducto, setDropdownProducto] = useState(false)
   const [creandoProducto, setCreandoProducto] = useState(false)
   const [lineaResaltada, setLineaResaltada] = useState<string | null>(null)
   const resaltadoTimer = useRef<number | null>(null)
+  const [usaVariantes, setUsaVariantes] = useState(false)
+  const [variantesCatalogo, setVariantesCatalogo] = useState<VarianteFila[]>([])
+  const [stockVar, setStockVar] = useState<Map<string, number>>(new Map())
+  const [atributosVentas, setAtributosVentas] = useState<AtributoFila[]>([])
+  const [picker, setPicker] = useState<ProductoFila | null>(null)
 
   async function recargarCatalogo() {
     const { filas } = await listarProductos(requireSupabase())
@@ -68,6 +92,30 @@ export function CompraNuevaPage() {
       setProveedores(filas)
     })
   }, [])
+
+  useEffect(() => {
+    if (!perfil) return
+    void obtenerConfiguracion(requireSupabase(), perfil.empresa.id).then(async ({ config }) => {
+      const usa = Boolean(config.usaVariantes)
+      setUsaVariantes(usa)
+      if (!usa) {
+        setVariantesCatalogo([])
+        setAtributosVentas([])
+        return
+      }
+      const atr = await listarAtributos(requireSupabase())
+      if (!atr.error) setAtributosVentas(atr.filas.filter((a) => a.activoVentas))
+      const { filas } = await listarProductos(requireSupabase())
+      const vars = await listarVariantesDeProductos(
+        requireSupabase(),
+        filas.map((p) => p.id),
+      )
+      if (!vars.error) {
+        setVariantesCatalogo(vars.filas)
+        setStockVar(await stockPorVariante(requireSupabase(), vars.filas.map((v) => v.id)))
+      }
+    })
+  }, [perfil])
 
   const sugeridosProveedores = useMemo(() => {
     const q = proveedor.trim().toLowerCase()
@@ -92,6 +140,7 @@ export function CompraNuevaPage() {
   useEffect(() => {
     function onDoc(ev: MouseEvent) {
       if (!comboProvRef.current?.contains(ev.target as Node)) setDropdownProveedor(false)
+      if (!comboProdRef.current?.contains(ev.target as Node)) setDropdownProducto(false)
     }
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
@@ -109,48 +158,90 @@ export function CompraNuevaPage() {
     return catalogo.filter((p) => p.nombre.toLowerCase().includes(q)).slice(0, 8)
   }, [busqueda, catalogo])
 
-  const hayCoincidencia = useMemo(() => {
+  const coincidenciaExacta = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
-    if (!q) return catalogo.length > 0
-    return catalogo.some((p) => p.nombre.toLowerCase().includes(q))
+    if (!q) return false
+    return catalogo.some((p) => p.nombre.toLowerCase() === q)
   }, [busqueda, catalogo])
 
   const total = lineas.reduce((acc, l) => acc + l.cantidad * l.costoUnitario, 0)
 
-  function resaltarLinea(productoId: string) {
-    setLineaResaltada(productoId)
+  function resaltarLinea(clave: string) {
+    setLineaResaltada(clave)
     if (resaltadoTimer.current != null) window.clearTimeout(resaltadoTimer.current)
     resaltadoTimer.current = window.setTimeout(() => setLineaResaltada(null), 1600)
   }
 
-  function agregarProducto(producto: ProductoFila) {
-    const yaEstaba = lineas.some((l) => l.productoId === producto.id)
+  function agregarLinea(producto: ProductoFila, variante: VarianteFila | null) {
+    const varianteId = variante?.id ?? null
+    const etiqueta = variante ? ` — ${etiquetaCombo(variante.atributos)}` : ''
+    const costo = variante && variante.costo != null ? variante.costo : producto.costo
+    const clave = claveLinea(producto.id, varianteId)
     setLineas((prev) => {
-      const existente = prev.find((l) => l.productoId === producto.id)
+      const existente = prev.find((l) => claveLinea(l.productoId, l.varianteId) === clave)
       if (existente) {
-        return prev.map((l) =>
-          l.productoId === producto.id ? { ...l, cantidad: l.cantidad + 1 } : l,
-        )
+        return [ { ...existente, cantidad: existente.cantidad + 1 }, ...prev.filter((l) => claveLinea(l.productoId, l.varianteId) !== clave) ]
       }
       return [
         {
           productoId: producto.id,
-          nombre: producto.nombre,
+          varianteId,
+          nombre: `${producto.nombre}${etiqueta}`,
           cantidad: 1,
-          costoUnitario: producto.costo,
+          costoUnitario: costo,
         },
         ...prev,
       ]
     })
-    if (yaEstaba) resaltarLinea(producto.id)
+    resaltarLinea(clave)
     setBusqueda('')
     setMostrarNuevo(false)
+    setDropdownProducto(false)
+    setPicker(null)
     setError(null)
   }
 
+  function productoRequiereVariante(producto: ProductoFila) {
+    if (!usaVariantes) return false
+    return variantesCatalogo.some((v) => v.productoId === producto.id && v.activo)
+  }
+
+  function agregarProducto(producto: ProductoFila) {
+    if (productoRequiereVariante(producto)) {
+      setPicker(producto)
+      setDropdownProducto(false)
+      setError(null)
+      return
+    }
+    agregarLinea(producto, null)
+  }
+
+  async function confirmarVarianteCompra(variante: VarianteFila | null, sel: Record<string, string>) {
+    if (!picker || !perfil) return
+    if (variante) {
+      agregarLinea(picker, variante)
+      return
+    }
+    const creado = await asegurarVariante(requireSupabase(), {
+      productoId: picker.id,
+      empresaId: perfil.empresa.id,
+      atributos: sel,
+      precioVenta: picker.precio_venta,
+      costo: picker.costo,
+      nombreProducto: picker.nombre,
+    })
+    if (creado.error || !creado.fila) {
+      setError(creado.error || 'No se pudo crear la variante')
+      return
+    }
+    setVariantesCatalogo((prev) => [...prev.filter((v) => v.id !== creado.fila!.id), creado.fila!])
+    agregarLinea(picker, creado.fila)
+  }
+
   async function crearProductoInline() {
-    const nombre = nuevoNombre.trim()
-    const precio = Number(nuevoPrecio.replace(',', '.'))
+    const nombre = nuevoNombre.trim() || busqueda.trim()
+    const precioRaw = nuevoPrecio.trim()
+    const precio = precioRaw === '' ? 0 : Number(precioRaw.replace(',', '.'))
     if (!nombre) {
       setError('Ingresá el nombre del producto')
       return
@@ -163,6 +254,7 @@ export function CompraNuevaPage() {
     setCreandoProducto(true)
     const { id, error: fallo } = await crearProductoParaCompra(requireSupabase(), {
       nombre,
+      categoria: nuevoCategoria.trim(),
       precioVenta: precio,
     })
     setCreandoProducto(false)
@@ -174,16 +266,23 @@ export function CompraNuevaPage() {
     const creado = filas.find((p) => p.id === id) ?? {
       id,
       nombre,
-      categoria: null,
+      categoria: nuevoCategoria.trim() || null,
       activo: true,
       precio_venta: precio,
       costo: 0,
       stock_actual: 0,
     }
-    agregarProducto(creado)
     setNuevoNombre('')
     setNuevoPrecio('')
+    setNuevoCategoria('')
     setMostrarNuevo(false)
+    setDropdownProducto(false)
+    if (usaVariantes && atributosVentas.length > 0) {
+      setPicker(creado)
+      setBusqueda('')
+      return
+    }
+    agregarLinea(creado, null)
   }
 
   async function crearProveedorInline() {
@@ -246,6 +345,10 @@ export function CompraNuevaPage() {
   }
 
   function irPaso2() {
+    if (picker) {
+      setError('Completá la variante del producto antes de continuar')
+      return
+    }
     if (lineas.length === 0) {
       setError('Agregá al menos un producto')
       return
@@ -267,6 +370,7 @@ export function CompraNuevaPage() {
         producto_nombre: l.nombre,
         cantidad: l.cantidad,
         costo_unitario: l.costoUnitario,
+        variante_id: l.varianteId,
       })),
       proveedor,
       proveedorId,
@@ -307,58 +411,63 @@ export function CompraNuevaPage() {
             <>
               {paso === 1 ? (
                 <div className="mt-5">
-                  <label className="text-sm font-medium text-[#4A5568]">
-                    Buscar producto
-                    <input
-                      className={`${inputClass} mt-1.5`}
-                      value={busqueda}
-                      placeholder="Nombre del producto"
-                      onChange={(ev) => {
-                        setBusqueda(ev.target.value)
-                        setMostrarNuevo(false)
-                      }}
-                    />
-                  </label>
-                  {sugeridos.length > 0 ? (
-                    <ul className="mt-2 max-h-40 overflow-auto rounded-md border border-[#E2E8F0]">
-                      {sugeridos.map((p) => (
-                        <li key={p.id}>
-                          <button
-                            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-[#1A2F4A] hover:bg-[#EEF2F6]"
-                            type="button"
-                            onClick={() => agregarProducto(p)}
-                          >
-                            <span>
-                              {p.nombre}
-                              {!p.activo ? (
-                                <span className="ml-2 text-xs text-[#4A5568]">(inactivo)</span>
-                              ) : null}
-                            </span>
-                            <span className="text-[#4A5568]">{formatoARS(p.costo)}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="mt-2 text-xs text-[#4A5568]">
-                      {catalogo.length === 0
-                        ? 'No hay productos en el catálogo.'
-                        : 'Ningún producto coincide con la búsqueda.'}
-                    </p>
-                  )}
-
-                  {!hayCoincidencia ? (
-                    <button
-                      className="mt-3 text-sm font-semibold text-[#6366F1]"
-                      type="button"
-                      onClick={() => {
-                        setMostrarNuevo(true)
-                        if (!nuevoNombre && busqueda.trim()) setNuevoNombre(busqueda.trim())
-                      }}
-                    >
-                      Agregar producto nuevo
-                    </button>
-                  ) : null}
+                  <div ref={comboProdRef}>
+                    <label className="text-sm font-medium text-[#4A5568]">
+                      Buscar producto
+                      <input
+                        className={`${inputClass} mt-1.5`}
+                        value={busqueda}
+                        placeholder="Nombre del producto"
+                        onFocus={() => {
+                          if (busqueda.trim()) setDropdownProducto(true)
+                        }}
+                        onChange={(ev) => {
+                          setBusqueda(ev.target.value)
+                          setMostrarNuevo(false)
+                          setDropdownProducto(true)
+                        }}
+                      />
+                    </label>
+                    {dropdownProducto && busqueda.trim() ? (
+                      <ul className="mt-2 max-h-48 overflow-auto rounded-md border border-[#E2E8F0]">
+                        {sugeridos.map((p) => (
+                          <li key={p.id}>
+                            <button
+                              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-[#1A2F4A] hover:bg-[#EEF2F6]"
+                              type="button"
+                              onClick={() => agregarProducto(p)}
+                            >
+                              <span>
+                                {p.nombre}
+                                {!p.activo ? (
+                                  <span className="ml-2 text-xs text-[#4A5568]">(inactivo)</span>
+                                ) : null}
+                              </span>
+                              <span className="text-[#4A5568]">{formatoARS(p.costo)}</span>
+                            </button>
+                          </li>
+                        ))}
+                        {busqueda.trim() && !coincidenciaExacta ? (
+                          <li>
+                            <button
+                              className="w-full px-3 py-2 text-left text-sm font-semibold text-[#6366F1] hover:bg-[#EEF2F6]"
+                              type="button"
+                              onClick={() => {
+                                setMostrarNuevo(true)
+                                setNuevoNombre(busqueda.trim())
+                                setDropdownProducto(false)
+                              }}
+                            >
+                              ➕ Crear producto: {busqueda.trim()}
+                            </button>
+                          </li>
+                        ) : null}
+                      </ul>
+                    ) : null}
+                    {!dropdownProducto && !busqueda.trim() && catalogo.length === 0 ? (
+                      <p className="mt-2 text-xs text-[#4A5568]">No hay productos en el catálogo.</p>
+                    ) : null}
+                  </div>
 
                   {mostrarNuevo ? (
                     <div className="mt-3 rounded-md border border-[#E2E8F0] p-3">
@@ -371,7 +480,15 @@ export function CompraNuevaPage() {
                         />
                       </label>
                       <label className="mt-2 block text-xs text-[#4A5568]">
-                        Precio de venta
+                        Categoría (opcional)
+                        <input
+                          className={`${inputClass} mt-1 h-9`}
+                          value={nuevoCategoria}
+                          onChange={(ev) => setNuevoCategoria(ev.target.value)}
+                        />
+                      </label>
+                      <label className="mt-2 block text-xs text-[#4A5568]">
+                        Precio de venta base (opcional)
                         <input
                           className={`${inputClass} mt-1 h-9`}
                           inputMode="decimal"
@@ -385,17 +502,33 @@ export function CompraNuevaPage() {
                         disabled={creandoProducto}
                         onClick={() => void crearProductoInline()}
                       >
-                        {creandoProducto ? 'CREANDO…' : 'Guardar producto'}
+                        {creandoProducto ? 'CREANDO…' : 'Guardar y seleccionar'}
                       </button>
                     </div>
                   ) : null}
 
+                  {picker ? (
+                    <VarianteChipsPicker
+                      producto={picker}
+                      variantes={variantesCatalogo.filter((v) => v.productoId === picker.id && v.activo)}
+                      stockPorId={stockVar}
+                      clavesVisibles={atributosVentas.map((a) => a.nombre)}
+                      atributosCatalogo={atributosVentas}
+                      exigirStock={false}
+                      etiquetaAccion="Agregar a la compra"
+                      onElegir={(variante, sel) => void confirmarVarianteCompra(variante, sel)}
+                      onCancelar={() => setPicker(null)}
+                    />
+                  ) : null}
+
                   <div className="mt-4 space-y-3">
-                    {lineas.map((linea) => (
+                    {lineas.map((linea) => {
+                      const clave = claveLinea(linea.productoId, linea.varianteId)
+                      return (
                       <div
-                        key={linea.productoId}
+                        key={clave}
                         className={`rounded-md border p-3 transition-colors duration-300 ${
-                          lineaResaltada === linea.productoId
+                          lineaResaltada === clave
                             ? 'border-[#6366F1] bg-[#EEF2FF]'
                             : 'border-[#E2E8F0] bg-white'
                         }`}
@@ -406,7 +539,9 @@ export function CompraNuevaPage() {
                             className="text-xs text-[#DC2626]"
                             type="button"
                             onClick={() =>
-                              setLineas((prev) => prev.filter((l) => l.productoId !== linea.productoId))
+                              setLineas((prev) =>
+                                prev.filter((l) => claveLinea(l.productoId, l.varianteId) !== clave),
+                              )
                             }
                           >
                             Quitar
@@ -423,7 +558,7 @@ export function CompraNuevaPage() {
                                 const n = Number.parseInt(ev.target.value, 10)
                                 setLineas((prev) =>
                                   prev.map((l) =>
-                                    l.productoId === linea.productoId
+                                    claveLinea(l.productoId, l.varianteId) === clave
                                       ? { ...l, cantidad: Number.isFinite(n) ? n : 0 }
                                       : l,
                                   ),
@@ -441,7 +576,7 @@ export function CompraNuevaPage() {
                                 const n = Number(ev.target.value.replace(',', '.'))
                                 setLineas((prev) =>
                                   prev.map((l) =>
-                                    l.productoId === linea.productoId
+                                    claveLinea(l.productoId, l.varianteId) === clave
                                       ? { ...l, costoUnitario: Number.isFinite(n) ? n : 0 }
                                       : l,
                                   ),
@@ -454,7 +589,8 @@ export function CompraNuevaPage() {
                           Subtotal {formatoARS(linea.cantidad * linea.costoUnitario)}
                         </p>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                   <p className="mt-3 text-right text-sm font-semibold text-[#1A2F4A]">
                     Total {formatoARS(total)}

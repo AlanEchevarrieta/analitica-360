@@ -32,6 +32,7 @@ import { etiquetaEstadoSuscripcion, etiquetaPlan } from '../lib/planes'
 import { diasRestantes, leerSuscripcionActiva, type SuscripcionActiva } from '../lib/suscripcion'
 import { theme } from '../theme'
 import {
+  atributoTieneVariantesActivas,
   eliminarAtributo,
   guardarAtributo,
   listarAtributos,
@@ -105,6 +106,7 @@ export function ConfiguracionPage() {
   const [nombreAtr, setNombreAtr] = useState('')
   const [valoresAtr, setValoresAtr] = useState<string[]>([])
   const [chipAtr, setChipAtr] = useState('')
+  const [activoVentasAtr, setActivoVentasAtr] = useState(true)
   const [usuarios, setUsuarios] = useState<UsuarioEmpresa[]>([])
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
@@ -239,6 +241,7 @@ export function ConfiguracionPage() {
     setNombreAtr('')
     setValoresAtr([])
     setChipAtr('')
+    setActivoVentasAtr(true)
   }
 
   async function onGuardarAtributo() {
@@ -252,6 +255,7 @@ export function ConfiguracionPage() {
       empresaId: perfil.empresa.id,
       nombre: nombreAtr,
       valores,
+      activoVentas: activoVentasAtr,
     })
     if (fallo) {
       setError(fallo)
@@ -693,34 +697,69 @@ export function ConfiguracionPage() {
                               <div>
                                 <p className="text-sm font-medium text-[#F1F5F9]">{a.nombre}</p>
                                 <p className="mt-1 text-xs text-[#94A3B8]">{a.valores.join(', ')}</p>
+                                <p className="mt-1 text-[11px] text-[#94A3B8]">
+                                  Activo en ventas: {a.activoVentas ? 'ON' : 'OFF'}
+                                </p>
                               </div>
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  className="text-xs font-semibold text-[#A5B4FC]"
-                                  onClick={() => {
-                                    setEditAtributo(a)
-                                    setAltaAtributo(true)
-                                    setNombreAtr(a.nombre)
-                                    setValoresAtr(a.valores)
-                                    setChipAtr('')
-                                    setOk(null)
-                                  }}
-                                >
-                                  Editar
-                                </button>
-                                <button
-                                  type="button"
-                                  className="text-xs font-semibold text-[#DC2626]"
-                                  onClick={() => {
-                                    void eliminarAtributo(requireSupabase(), a.id).then((fallo) => {
-                                      if (fallo) setError(fallo)
-                                      else void recargarAtributos()
-                                    })
-                                  }}
-                                >
-                                  Eliminar
-                                </button>
+                              <div className="flex flex-col items-end gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[11px] text-[#94A3B8]">Activo en ventas</span>
+                                  <Toggle
+                                    on={a.activoVentas}
+                                    onChange={() => {
+                                      void guardarAtributo(requireSupabase(), {
+                                        id: a.id,
+                                        empresaId: perfil.empresa.id,
+                                        nombre: a.nombre,
+                                        valores: a.valores,
+                                        activoVentas: !a.activoVentas,
+                                      }).then((fallo) => {
+                                        if (fallo) setError(fallo)
+                                        else void recargarAtributos()
+                                      })
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    className="text-xs font-semibold text-[#A5B4FC]"
+                                    onClick={() => {
+                                      setEditAtributo(a)
+                                      setAltaAtributo(true)
+                                      setNombreAtr(a.nombre)
+                                      setValoresAtr(a.valores)
+                                      setChipAtr('')
+                                      setActivoVentasAtr(a.activoVentas)
+                                      setOk(null)
+                                    }}
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="text-xs font-semibold text-[#DC2626]"
+                                    onClick={() => {
+                                      void (async () => {
+                                        const usado = await atributoTieneVariantesActivas(
+                                          requireSupabase(),
+                                          a.nombre,
+                                        )
+                                        if (usado) {
+                                          const okEliminar = window.confirm(
+                                            `“${a.nombre}” tiene variantes activas. Si lo eliminás, esas combinaciones pueden quedar desalineadas. ¿Eliminar igual?`,
+                                          )
+                                          if (!okEliminar) return
+                                        }
+                                        const fallo = await eliminarAtributo(requireSupabase(), a.id)
+                                        if (fallo) setError(fallo)
+                                        else void recargarAtributos()
+                                      })()
+                                    }}
+                                  >
+                                    Eliminar
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </li>
@@ -774,6 +813,10 @@ export function ConfiguracionPage() {
                                 setChipAtr('')
                               }}
                             />
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm font-medium text-[#94A3B8]">Activo en ventas</p>
+                            <Toggle on={activoVentasAtr} onChange={() => setActivoVentasAtr((v) => !v)} />
                           </div>
                           <button
                             className="h-10 w-full rounded-lg bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"

@@ -49,6 +49,8 @@ export const ProductoVariantesEditor = forwardRef<
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
+  const [continuarMuchas, setContinuarMuchas] = useState(false)
+  const [hidratar, setHidratar] = useState(false)
 
   useEffect(() => {
     void listarAtributos(requireSupabase()).then((res) => {
@@ -62,6 +64,7 @@ export const ProductoVariantesEditor = forwardRef<
       if (res.error || res.filas.length === 0) return
       setExistentes(res.filas)
       const keys = [...new Set(res.filas.flatMap((v) => Object.keys(v.atributos)))]
+      setHidratar(true)
       setElegidos(keys)
       setDrafts(
         res.filas.map((v) => ({
@@ -82,12 +85,18 @@ export const ProductoVariantesEditor = forwardRef<
     [atributos, elegidos],
   )
 
+  const cantidadPrevista = useMemo(() => combinacionesDe(attrsActivos).length, [attrsActivos])
+  const esperaConfirmacion = cantidadPrevista > 50 && !continuarMuchas && !hidratar
+
   useEffect(() => {
     if (attrsActivos.length === 0) {
       if (existentes.length === 0) setDrafts([])
       return
     }
-    const combos = combinacionesDe(attrsActivos).slice(0, 200)
+    if (cantidadPrevista > 50 && !continuarMuchas) {
+      return
+    }
+    const combos = combinacionesDe(attrsActivos)
     setDrafts((prev) =>
       combos.map((atributosCombo) => {
         const prevMatch = prev.find((d) => mismaCombinacion(d.atributos, atributosCombo))
@@ -105,7 +114,7 @@ export const ProductoVariantesEditor = forwardRef<
         }
       }),
     )
-  }, [attrsActivos, nombreProducto, existentes])
+  }, [attrsActivos, nombreProducto, existentes, cantidadPrevista, continuarMuchas])
 
   useEffect(() => {
     setDrafts((prev) =>
@@ -168,10 +177,25 @@ export const ProductoVariantesEditor = forwardRef<
   }
 
   const cols = attrsActivos.map((a) => a.nombre)
+  const cantidadUi = esperaConfirmacion ? cantidadPrevista : drafts.length
 
   return (
     <div className="mt-6 rounded-lg border border-[#E2E8F0] p-4">
-      <h2 className="text-sm font-bold text-[#1A2F4A]">Variantes</h2>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-sm font-bold text-[#1A2F4A]">Variantes</h2>
+        {cantidadUi > 100 ? (
+          <span className="rounded-full bg-[#7F1D1D] px-2.5 py-0.5 text-[11px] font-semibold text-[#FECACA]">
+            🔴 Demasiadas variantes — reducí los atributos
+          </span>
+        ) : cantidadUi > 30 ? (
+          <span className="rounded-full bg-[#78350F] px-2.5 py-0.5 text-[11px] font-semibold text-[#FCD34D]">
+            ⚠️ Muchas variantes
+          </span>
+        ) : null}
+        {cantidadUi > 0 ? (
+          <span className="text-xs text-[#4A5568]">{cantidadUi} variantes a crear</span>
+        ) : null}
+      </div>
       <p className="mt-1 text-xs text-[#4A5568]">Este producto tiene:</p>
       <div className="mt-2 flex flex-wrap gap-3">
         {atributos.map((a) => (
@@ -180,6 +204,8 @@ export const ProductoVariantesEditor = forwardRef<
               type="checkbox"
               checked={elegidos.includes(a.nombre)}
               onChange={(ev) => {
+                setHidratar(false)
+                setContinuarMuchas(false)
                 setElegidos((prev) =>
                   ev.target.checked ? [...prev, a.nombre] : prev.filter((n) => n !== a.nombre),
                 )
@@ -194,8 +220,40 @@ export const ProductoVariantesEditor = forwardRef<
           Configurá atributos globales en Configuración → Variantes.
         </p>
       ) : null}
-      {drafts.length > 0 ? (
+      {esperaConfirmacion ? (
+        <div className="mt-4 rounded-md border border-[#F59E0B] bg-[#FFFBEB] px-3 py-3 text-sm text-[#1A2F4A]">
+          <p>
+            Vas a generar {cantidadPrevista} variantes. ¿Querés continuar o reducir los atributos?
+          </p>
+          <p className="mt-2 text-xs text-[#4A5568]">
+            Si continuás, desactivá las combinaciones que no vendés antes de guardar.
+          </p>
+          <div className="mt-3 flex flex-col gap-2">
+            <button
+              className="h-10 w-full rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"
+              type="button"
+              onClick={() => setContinuarMuchas(true)}
+            >
+              Continuar
+            </button>
+            <button
+              className="h-10 w-full rounded-md border border-[#E2E8F0] text-sm font-semibold text-[#4A5568]"
+              type="button"
+              onClick={() => {
+                setContinuarMuchas(false)
+                setElegidos((prev) => prev.slice(0, -1))
+              }}
+            >
+              Reducir
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {drafts.length > 0 && !esperaConfirmacion ? (
         <div className="mt-4 overflow-x-auto">
+          <p className="mb-2 text-xs text-[#4A5568]">
+            Desactivá las combinaciones que no vendés antes de guardar.
+          </p>
           <table className="w-full min-w-[560px] text-left text-xs">
             <thead>
               <tr className="text-[#4A5568]">
@@ -255,14 +313,25 @@ export const ProductoVariantesEditor = forwardRef<
                     />
                   </td>
                   <td className="py-2">
-                    <input
-                      type="checkbox"
-                      checked={d.activo}
-                      onChange={(ev) => {
-                        const activo = ev.target.checked
-                        setDrafts((prev) => prev.map((x, j) => (j === i ? { ...x, activo } : x)))
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={d.activo}
+                      className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${
+                        d.activo ? 'bg-[#6366F1]' : 'bg-[#CBD5E1]'
+                      }`}
+                      onClick={() => {
+                        setDrafts((prev) =>
+                          prev.map((x, j) => (j === i ? { ...x, activo: !x.activo } : x)),
+                        )
                       }}
-                    />
+                    >
+                      <span
+                        className={`mt-0.5 inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                          d.activo ? 'translate-x-5' : 'translate-x-0.5'
+                        }`}
+                      />
+                    </button>
                   </td>
                 </tr>
               ))}

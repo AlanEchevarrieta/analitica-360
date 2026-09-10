@@ -20,10 +20,13 @@ import { requireSupabase } from '../lib/supabase'
 import { calcularTotalesCredito, confirmarVenta } from '../lib/ventas'
 import {
   etiquetaCombo,
+  listarAtributos,
   listarVariantesActivas,
   stockPorVariante,
+  type AtributoFila,
   type VarianteFila,
 } from '../lib/variantes'
+import { VarianteChipsPicker } from '../components/VarianteChipsPicker'
 import { theme } from '../theme'
 
 type Linea = {
@@ -71,9 +74,8 @@ export function VentaNuevaPage() {
   const resaltadoTimer = useRef<number | null>(null)
   const [variantesCatalogo, setVariantesCatalogo] = useState<VarianteFila[]>([])
   const [stockVar, setStockVar] = useState<Map<string, number>>(new Map())
-  const [picker, setPicker] = useState<{ producto: ProductoFila; sel: Record<string, string> } | null>(
-    null,
-  )
+  const [atributosVentas, setAtributosVentas] = useState<AtributoFila[]>([])
+  const [picker, setPicker] = useState<ProductoFila | null>(null)
 
   useEffect(() => {
     void listarProductos(requireSupabase()).then(({ filas }) => {
@@ -90,8 +92,11 @@ export function VentaNuevaPage() {
       setConfig(cfg)
       if (!cfg.usaVariantes) {
         setVariantesCatalogo([])
+        setAtributosVentas([])
         return
       }
+      const atr = await listarAtributos(requireSupabase())
+      if (!atr.error) setAtributosVentas(atr.filas.filter((a) => a.activoVentas))
       const { filas } = await listarProductos(requireSupabase())
       const activos = filas.filter((p) => p.activo)
       const vars = await listarVariantesActivas(
@@ -223,7 +228,7 @@ export function VentaNuevaPage() {
   function agregarProducto(producto: ProductoFila) {
     const vars = variantesCatalogo.filter((v) => v.productoId === producto.id)
     if (config?.usaVariantes && vars.length > 0) {
-      setPicker({ producto, sel: {} })
+      setPicker(producto)
       setError(null)
       return
     }
@@ -292,6 +297,10 @@ export function VentaNuevaPage() {
   }
 
   function irPaso2() {
+    if (picker) {
+      setError('Completá la variante del producto antes de continuar')
+      return
+    }
     if (lineas.length === 0) {
       setError('Agregá al menos un producto')
       return
@@ -390,94 +399,18 @@ export function VentaNuevaPage() {
                   )}
 
                   {picker ? (
-                    <div className="mt-3 rounded-md border border-[#E2E8F0] p-3">
-                      <p className="text-sm font-semibold text-[#1A2F4A]">{picker.producto.nombre}</p>
-                      {(() => {
-                        const vars = variantesCatalogo.filter((v) => v.productoId === picker.producto.id)
-                        const grupos = new Map<string, string[]>()
-                        for (const v of vars) {
-                          for (const [k, val] of Object.entries(v.atributos)) {
-                            const arr = grupos.get(k) ?? []
-                            if (!arr.includes(val)) arr.push(val)
-                            grupos.set(k, arr)
-                          }
-                        }
-                        const keys = [...grupos.keys()]
-                        const completa = keys.every((k) => picker.sel[k])
-                        const match = completa
-                          ? vars.find((v) => keys.every((k) => v.atributos[k] === picker.sel[k]))
-                          : undefined
-                        const stock = match ? (stockVar.get(match.id) ?? 0) : null
-                        const precio =
-                          match && match.precioVenta != null
-                            ? match.precioVenta
-                            : picker.producto.precio_venta
-                        return (
-                          <>
-                            {[...grupos.entries()].map(([nombre, valores]) => (
-                              <div key={nombre} className="mt-3">
-                                <p className="text-xs font-medium text-[#4A5568]">{nombre}</p>
-                                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                  {valores.map((val) => {
-                                    const on = picker.sel[nombre] === val
-                                    return (
-                                      <button
-                                        key={val}
-                                        type="button"
-                                        className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                                          on
-                                            ? 'bg-[#6366F1] text-white'
-                                            : 'border border-[#E2E8F0] bg-white text-[#1A2F4A]'
-                                        }`}
-                                        onClick={() =>
-                                          setPicker((prev) =>
-                                            prev
-                                              ? { ...prev, sel: { ...prev.sel, [nombre]: val } }
-                                              : prev,
-                                          )
-                                        }
-                                      >
-                                        {val}
-                                      </button>
-                                    )
-                                  })}
-                                </div>
-                              </div>
-                            ))}
-                            {completa ? (
-                              <div className="mt-3 text-sm text-[#1A2F4A]">
-                                {match ? (
-                                  <>
-                                    <p>
-                                      Stock: {stock}{' '}
-                                      {stock != null && stock <= 0 ? <span>⚠️</span> : null}
-                                    </p>
-                                    <p>Precio: {formatoARS(precio)}</p>
-                                    <button
-                                      className="mt-2 h-10 w-full rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
-                                      type="button"
-                                      disabled={!match.activo}
-                                      onClick={() => agregarLinea(picker.producto, match)}
-                                    >
-                                      Agregar a la venta
-                                    </button>
-                                  </>
-                                ) : (
-                                  <p className="text-xs text-[#EA580C]">Esa combinación no se vende.</p>
-                                )}
-                              </div>
-                            ) : null}
-                            <button
-                              className="mt-2 text-xs text-[#4A5568]"
-                              type="button"
-                              onClick={() => setPicker(null)}
-                            >
-                              Cancelar
-                            </button>
-                          </>
-                        )
-                      })()}
-                    </div>
+                    <VarianteChipsPicker
+                      producto={picker}
+                      variantes={variantesCatalogo.filter((v) => v.productoId === picker.id)}
+                      stockPorId={stockVar}
+                      clavesVisibles={atributosVentas.map((a) => a.nombre)}
+                      exigirStock
+                      etiquetaAccion="Agregar a la venta"
+                      onElegir={(variante) => {
+                        if (variante) agregarLinea(picker, variante)
+                      }}
+                      onCancelar={() => setPicker(null)}
+                    />
                   ) : null}
 
                   <div className="mt-4 space-y-3">

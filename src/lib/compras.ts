@@ -73,6 +73,7 @@ export async function confirmarCompra(
       producto_nombre: string
       cantidad: number
       costo_unitario: number
+      variante_id?: string | null
     }[]
     proveedor: string
     proveedorId?: string | null
@@ -93,17 +94,18 @@ export async function confirmarCompra(
   if (msg.includes('NO_AUTORIZADO')) return 'No tenés permiso para registrar compras'
   if (msg.includes('PRODUCTO_INVALIDO')) return 'Hay un producto que ya no está disponible'
   if (msg.includes('PROVEEDOR_INVALIDO')) return 'Ese proveedor ya no está disponible'
-  return 'No se pudo confirmar la compra. Corré supabase/016_compras.sql y supabase/022_proveedores.sql en el SQL Editor.'
+  if (msg.includes('VARIANTE_INVALIDA')) return 'La variante elegida no es válida'
+  return 'No se pudo confirmar la compra. Corré supabase/016_compras.sql, supabase/022_proveedores.sql y supabase/036_variantes_compras_dimensiones.sql en el SQL Editor.'
 }
 
 export async function crearProductoParaCompra(
   client: SupabaseClient,
-  input: { nombre: string; precioVenta: number },
+  input: { nombre: string; categoria?: string; precioVenta?: number },
 ): Promise<{ id: string | null; error: string | null }> {
   const { data, error } = await client.rpc('crear_producto', {
     p_nombre: input.nombre,
-    p_categoria: '',
-    p_precio_venta: input.precioVenta,
+    p_categoria: input.categoria ?? '',
+    p_precio_venta: input.precioVenta ?? 0,
     p_costo: 0,
     p_stock_inicial: 0,
     p_activo: true,
