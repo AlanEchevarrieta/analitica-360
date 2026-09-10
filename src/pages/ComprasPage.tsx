@@ -90,15 +90,31 @@ export function ComprasPage() {
           subtitulo={`${total} ${total === 1 ? 'compra registrada' : 'compras registradas'}`}
         />
 
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <SearchField
-            value={busqueda}
-            onChange={(v) => {
-              setPagina(1)
-              setBusqueda(v)
-            }}
-            placeholder="Buscar por proveedor"
-          />
+        <div className="mb-6 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <SearchField
+              value={busqueda}
+              onChange={(v) => {
+                setPagina(1)
+                setBusqueda(v)
+              }}
+              placeholder="Buscar por proveedor"
+            />
+            <div className="hidden flex-wrap gap-2 md:flex">
+              {perfil.usuario.rol !== 'visor' ? (
+                <button
+                  className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
+                  type="button"
+                  onClick={() => setImportar(true)}
+                >
+                  Importar Excel
+                </button>
+              ) : null}
+              <Link className={btnPrimaryDesk} to="/compras/nueva">
+                Nueva compra
+              </Link>
+            </div>
+          </div>
           <FilterCollapse activo={mostrarAnuladas}>
             <label className="filter-anuladas">
               <input
@@ -113,20 +129,6 @@ export function ComprasPage() {
               Mostrar anuladas
             </label>
           </FilterCollapse>
-          <div className="hidden flex-wrap gap-2 md:flex">
-            {perfil.usuario.rol !== 'visor' ? (
-              <button
-                className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
-                type="button"
-                onClick={() => setImportar(true)}
-              >
-                Importar Excel
-              </button>
-            ) : null}
-            <Link className={btnPrimaryDesk} to="/compras/nueva">
-              Nueva compra
-            </Link>
-          </div>
         </div>
 
         {error && error !== MSG_ERROR_RED ? (

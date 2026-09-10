@@ -193,15 +193,61 @@ export function VentasPage() {
         <AppNav />
         <PageTitle titulo="Ventas" subtitulo={subtitulo} />
 
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <SearchField
-            value={numeroVenta}
-            onChange={(v) => {
-              setPagina(1)
-              setNumeroVenta(v)
-            }}
-            placeholder="Buscar por N° venta"
-          />
+        <div className="mb-6 space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <SearchField
+              value={numeroVenta}
+              onChange={(v) => {
+                setPagina(1)
+                setNumeroVenta(v)
+              }}
+              placeholder="Buscar por N° venta"
+            />
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <div className="relative" ref={exportRef}>
+                <button
+                  className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 disabled:opacity-50"
+                  type="button"
+                  disabled={exportando}
+                  onClick={() => setMenuExportar((v) => !v)}
+                >
+                  {exportando ? 'Exportando…' : 'Exportar'}
+                </button>
+                {menuExportar ? (
+                  <div className="dropdown-panel absolute left-0 z-20 overflow-hidden rounded-lg border border-[rgba(99,102,241,0.35)] bg-[#0F1729] shadow-lg md:left-auto md:right-0">
+                    <button
+                      className="block w-full px-4 py-2.5 text-left text-sm text-[#F1F5F9] hover:bg-white/10"
+                      type="button"
+                      onClick={() => void onExportar('xlsx')}
+                    >
+                      Exportar a Excel (.xlsx)
+                    </button>
+                    <button
+                      className="block w-full px-4 py-2.5 text-left text-sm text-[#F1F5F9] hover:bg-white/10"
+                      type="button"
+                      onClick={() => void onExportar('pdf')}
+                    >
+                      Exportar a PDF
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="hidden flex-wrap gap-2 md:flex">
+                {tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'registrar_ventas') ? (
+                  <button
+                    className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
+                    type="button"
+                    onClick={() => setImportar(true)}
+                  >
+                    Importar Excel
+                  </button>
+                ) : null}
+                <Link className={btnPrimaryDesk} to="/ventas/nueva">
+                  Nueva venta
+                </Link>
+              </div>
+            </div>
+          </div>
           <FilterCollapse activo={Boolean(productoId) || Boolean(numeroVenta.trim()) || mostrarAnuladas}>
             <div className="filter-field">
               <label htmlFor="venta-desde">Desde</label>
@@ -261,50 +307,6 @@ export function VentasPage() {
               Mostrar anuladas
             </label>
           </FilterCollapse>
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <div className="relative" ref={exportRef}>
-              <button
-                className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 disabled:opacity-50"
-                type="button"
-                disabled={exportando}
-                onClick={() => setMenuExportar((v) => !v)}
-              >
-                {exportando ? 'Exportando…' : 'Exportar'}
-              </button>
-              {menuExportar ? (
-                <div className="dropdown-panel absolute left-0 z-20 overflow-hidden rounded-lg border border-[rgba(99,102,241,0.35)] bg-[#0F1729] shadow-lg md:left-auto md:right-0">
-                  <button
-                    className="block w-full px-4 py-2.5 text-left text-sm text-[#F1F5F9] hover:bg-white/10"
-                    type="button"
-                    onClick={() => void onExportar('xlsx')}
-                  >
-                    Exportar a Excel (.xlsx)
-                  </button>
-                  <button
-                    className="block w-full px-4 py-2.5 text-left text-sm text-[#F1F5F9] hover:bg-white/10"
-                    type="button"
-                    onClick={() => void onExportar('pdf')}
-                  >
-                    Exportar a PDF
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            <div className="hidden flex-wrap gap-2 md:flex">
-            {tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'registrar_ventas') ? (
-              <button
-                className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
-                type="button"
-                onClick={() => setImportar(true)}
-              >
-                Importar Excel
-              </button>
-            ) : null}
-            <Link className={btnPrimaryDesk} to="/ventas/nueva">
-              Nueva venta
-            </Link>
-          </div>
-          </div>
         </div>
 
         {error && error !== MSG_ERROR_RED ? (

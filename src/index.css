@@ -172,9 +172,9 @@ body {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--nav-idle);
-  border: 1px solid transparent;
-  box-sizing: border-box;
-  overflow: visible;
+  border: none;
+  box-shadow: none;
+  outline: none;
 }
 
 .app-nav-link:hover {
@@ -185,7 +185,8 @@ body {
   background: var(--nav-active-bg);
   color: var(--nav-active-fg);
   font-weight: 600;
-  border-color: transparent;
+  padding: 0.5rem 0.75rem;
+  border: none;
 }
 
 .theme-toggle {
@@ -220,6 +221,13 @@ body {
   align-items: end;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .filter-bar {
+    flex-wrap: nowrap;
+  }
 }
 
 .filter-anuladas {
@@ -351,10 +359,20 @@ select,
   border-color: var(--input-border);
 }
 
+select {
+  background-color: #0F1729;
+  color: #F1F5F9;
+}
+
+select option {
+  background-color: #0F1729;
+  color: #F1F5F9;
+}
+
 .dark select,
 select {
-  background-color: #0f1729 !important;
-  color: #f1f5f9 !important;
+  background-color: #0F1729 !important;
+  color: #F1F5F9 !important;
   border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
@@ -362,11 +380,6 @@ select:focus {
   border-color: #6366f1 !important;
   outline: none;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
-}
-
-select option {
-  background-color: #0f1729 !important;
-  color: #f1f5f9 !important;
 }
 
 :root[data-theme='light'] select {
