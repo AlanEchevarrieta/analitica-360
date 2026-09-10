@@ -37,9 +37,15 @@ export function AppNav() {
   const [mas, setMas] = useState(false)
   const sinAnalytics = Boolean(perfil && !planTieneAnalytics(perfil.empresa.plan_actual))
   const sinInsights = Boolean(perfil && !planTieneInsights(perfil.empresa.plan_actual))
-  const masActivo = ['/compras', '/proveedores', '/analytics', '/insights', '/configuracion', '/inventario'].some((p) =>
-    location.pathname.startsWith(p),
-  )
+  const masActivo = [
+    '/compras',
+    '/proveedores',
+    '/analytics',
+    '/insights',
+    '/configuracion',
+    '/inventario',
+    '/soporte',
+  ].some((p) => location.pathname.startsWith(p))
 
   useEffect(() => {
     document.body.classList.add('has-app-nav')
@@ -98,6 +104,9 @@ export function AppNav() {
         <NavLink className={linkClass} to="/inventario">
           Inventario
         </NavLink>
+        <NavLink className={linkClass} to="/soporte">
+          Soporte
+        </NavLink>
         <NavLink className={linkClass} to="/analytics">
           {analyticsLabel}
         </NavLink>
@@ -141,6 +150,9 @@ export function AppNav() {
           </NavLink>
           <NavLink className={sideClass} to="/inventario">
             📋 Inventario
+          </NavLink>
+          <NavLink className={sideClass} to="/soporte">
+            🎫 Soporte
           </NavLink>
           <NavLink className={sideClass} to="/analytics">
             📊 {analyticsLabel}
@@ -203,6 +215,9 @@ export function AppNav() {
             </NavLink>
             <NavLink className={sheetClass} to="/inventario" onClick={() => setMas(false)}>
               📋 Inventario
+            </NavLink>
+            <NavLink className={sheetClass} to="/soporte" onClick={() => setMas(false)}>
+              🎫 Soporte
             </NavLink>
             <NavLink className={sheetClass} to="/analytics" onClick={() => setMas(false)}>
               📊 {analyticsLabel}

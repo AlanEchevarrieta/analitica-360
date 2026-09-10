@@ -28,6 +28,7 @@ import {
 import { textoCumpleProximo } from '../lib/clientes'
 import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
+import { bannerTicketsHome, type BannerTicketHome } from '../lib/tickets'
 import {
   esAdminEmail,
   diasRestantes,
@@ -405,6 +406,7 @@ export function HomePage() {
   const [serieHome, setSerieHome] = useState<DashboardInicio['ultimos7']>([])
   const [rangoHome, setRangoHome] = useState<RangoHome>(7)
   const [cargandoDash, setCargandoDash] = useState(true)
+  const [bannerTicket, setBannerTicket] = useState<BannerTicketHome | null>(null)
 
   useEffect(() => {
     if (!perfil) return
@@ -427,6 +429,8 @@ export function HomePage() {
       setDash(dashData)
       setSerieHome(serie.length > 0 ? serie : dashData.ultimos7)
       setCargandoDash(false)
+      const banner = await bannerTicketsHome(client)
+      setBannerTicket(banner)
     })()
   }, [perfil])
 
@@ -488,6 +492,22 @@ export function HomePage() {
 
         {error ? (
           <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>
+        ) : null}
+
+        {bannerTicket ? (
+          <Link
+            className="mb-4 block rounded-lg px-3 py-3 text-sm"
+            style={{
+              background: 'rgba(99,102,241,0.12)',
+              border: '1px solid rgba(99,102,241,0.28)',
+              color: 'var(--text)',
+            }}
+            to={bannerTicket.tipo === 'respuesta' ? `/soporte/${bannerTicket.id}` : '/soporte'}
+          >
+            {bannerTicket.tipo === 'respuesta'
+              ? `💬 Tenés una respuesta nueva en ${bannerTicket.numero}`
+              : `🎫 Tu ticket ${bannerTicket.numero} está siendo revisado`}
+          </Link>
         ) : null}
 
         {!verReportes && dash.cumples.length > 0 ? (

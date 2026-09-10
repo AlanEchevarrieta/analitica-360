@@ -70,6 +70,15 @@ const AnalyticsPage = lazy(() =>
 const InsightsPage = lazy(() =>
   import('./pages/InsightsPage').then((m) => ({ default: m.InsightsPage })),
 )
+const SoportePage = lazy(() =>
+  import('./pages/SoportePage').then((m) => ({ default: m.SoportePage })),
+)
+const SoporteNuevoPage = lazy(() =>
+  import('./pages/SoporteNuevoPage').then((m) => ({ default: m.SoporteNuevoPage })),
+)
+const SoporteFichaPage = lazy(() =>
+  import('./pages/SoporteFichaPage').then((m) => ({ default: m.SoporteFichaPage })),
+)
 
 function PageFallback() {
   return (
@@ -202,6 +211,9 @@ function AppRoutes() {
         <Route path="/productos/nuevo" element={<ProductoFormPage />} />
         <Route path="/productos/:id" element={<ProductoFormPage />} />
         <Route path="/inventario" element={<InventarioPage />} />
+        <Route path="/soporte" element={<SoportePage />} />
+        <Route path="/soporte/nuevo" element={<SoporteNuevoPage />} />
+        <Route path="/soporte/:id" element={<SoporteFichaPage />} />
         <Route path="/ventas" element={<VentasPage />} />
         <Route path="/ventas/nueva" element={<VentaNuevaPage />} />
         <Route path="/compras" element={<ComprasPage />} />

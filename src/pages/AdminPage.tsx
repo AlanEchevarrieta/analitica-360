@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { ThemeToggle } from '../lib/tema'
 import {
@@ -16,6 +16,8 @@ import { claseBadgePlan, clavePlan, etiquetaPlan } from '../lib/planes'
 import { listarPagosAdmin, registrarPagoAdmin, type AdminPagoFila } from '../lib/adminSaaS'
 import { requireSupabase } from '../lib/supabase'
 import { formatoARS } from '../lib/productos'
+import { listarTicketsAdmin } from '../lib/tickets'
+import { AdminSoportePanel } from './AdminSoportePanel'
 
 const ESTADOS = ['periodo_prueba', 'pendiente_pago', 'activa', 'vencida', 'cancelada'] as const
 
@@ -151,6 +153,7 @@ function fechaMasDias(dias: number) {
 
 export function AdminPage() {
   const { session, perfil, listo } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const email = session?.user.email ?? perfil?.usuario.email
   const [filas, setFilas] = useState<FilaAdminSuscripcion[]>([])
   const [planes, setPlanes] = useState<PlanAdmin[]>([])
@@ -159,7 +162,11 @@ export function AdminPage() {
   const [asignandoId, setAsignandoId] = useState<string | null>(null)
   const [planElegido, setPlanElegido] = useState('')
   const [fechaElegida, setFechaElegida] = useState(fechaMasDias(14))
-  const [tab, setTab] = useState<'empresas' | 'pagos'>('empresas')
+  const tabInicial = searchParams.get('tab')
+  const [tab, setTab] = useState<'empresas' | 'pagos' | 'soporte'>(
+    tabInicial === 'soporte' || tabInicial === 'pagos' ? tabInicial : 'empresas',
+  )
+  const [ticketsAbiertos, setTicketsAbiertos] = useState(0)
   const [metrics, setMetrics] = useState<AdminMetricsRpc>(METRICS_CERO)
   const [pagos, setPagos] = useState<AdminPagoFila[]>([])
   const [errorPagos, setErrorPagos] = useState<string | null>(null)
@@ -194,10 +201,11 @@ export function AdminPage() {
 
   const cargar = useCallback(async () => {
     const client = requireSupabase()
-    const [subs, listaPlanes, metsRpc] = await Promise.all([
+    const [subs, listaPlanes, metsRpc, tickets] = await Promise.all([
       listarSuscripcionesAdmin(client),
       listarPlanesAdmin(client),
       client.rpc('admin_saas_metrics'),
+      listarTicketsAdmin(client),
     ])
     const { data: metricsData, error: metricsError } = metsRpc
     if (metricsError) {
@@ -206,7 +214,8 @@ export function AdminPage() {
     setFilas(subs.filas)
     setPlanes(listaPlanes)
     setMetrics(parseAdminMetrics(metricsData))
-    setError(subs.error || metricsError?.message || null)
+    setTicketsAbiertos(tickets.filas.filter((t) => t.estado === 'abierto').length)
+    setError(subs.error || metricsError?.message || tickets.error || null)
   }, [])
 
   const cargarPagos = useCallback(async () => {
@@ -223,6 +232,17 @@ export function AdminPage() {
       setPagos(data)
     }
   }, [filtroPagoEstado, filtroPagoMes])
+
+  function irTab(siguiente: 'empresas' | 'pagos' | 'soporte') {
+    setTab(siguiente)
+    if (siguiente === 'empresas') setSearchParams({})
+    else setSearchParams({ tab: siguiente })
+  }
+
+  useEffect(() => {
+    const t = searchParams.get('tab')
+    if (t === 'soporte' || t === 'pagos' || t === 'empresas') setTab(t)
+  }, [searchParams])
 
   useEffect(() => {
     if (listo && esAdminEmail(email)) void cargar()
@@ -418,20 +438,38 @@ export function AdminPage() {
           <button
             className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === 'empresas' ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'}`}
             type="button"
-            onClick={() => setTab('empresas')}
+            onClick={() => irTab('empresas')}
           >
             Empresas
           </button>
           <button
             className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === 'pagos' ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'}`}
             type="button"
-            onClick={() => setTab('pagos')}
+            onClick={() => irTab('pagos')}
           >
             Pagos
           </button>
+          <button
+            className={`inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold ${tab === 'soporte' ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'}`}
+            type="button"
+            onClick={() => irTab('soporte')}
+          >
+            {ticketsAbiertos > 0 ? (
+              <>
+                Soporte{' '}
+                <span className="ml-1 rounded-full bg-[#F87171] px-1.5 py-0.5 text-[11px] font-bold text-white">
+                  {ticketsAbiertos}
+                </span>
+              </>
+            ) : (
+              'Soporte'
+            )}
+          </button>
         </div>
 
-        {tab === 'pagos' ? (
+        {tab === 'soporte' ? (
+          <AdminSoportePanel />
+        ) : tab === 'pagos' ? (
           <div>
             <div className="mb-4 flex flex-wrap items-end gap-3">
               <label className="text-xs">
