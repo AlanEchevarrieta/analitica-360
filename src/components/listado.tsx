@@ -246,7 +246,7 @@ export function SearchField({
         </svg>
       </span>
       <input
-        className="h-11 w-full rounded-lg border py-2 pl-10 pr-3 text-sm outline-none"
+        className="search-input h-11 w-full rounded-lg border py-2 pl-10 pr-3 text-sm outline-none"
         style={{
           borderColor: 'var(--input-border)',
           background: 'var(--input-bg)',

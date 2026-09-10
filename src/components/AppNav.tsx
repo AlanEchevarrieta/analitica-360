@@ -120,44 +120,49 @@ export function AppNav() {
 
   return (
     <>
-      {/* Desktop > 1024: navbar horizontal actual */}
-      <nav className="app-nav mb-6 hidden items-center gap-1 lg:flex" style={{ fontFamily: theme.font }}>
-        <NavLink className={linkClass} to="/inicio" end>
-          Inicio
-        </NavLink>
-        <NavLink className={linkClass} to="/productos">
-          Productos
-        </NavLink>
-        <NavLink className={linkClass} to="/ventas">
-          Ventas
-        </NavLink>
-        <NavLink className={linkClass} to="/clientes">
-          Clientes
-        </NavLink>
-        <NavLink className={linkClass} to="/compras">
-          Compras
-        </NavLink>
-        <NavLink className={linkClass} to="/proveedores">
-          Proveedores
-        </NavLink>
-        <NavLink className={linkClass} to="/inventario">
-          Inventario
-        </NavLink>
-        <NavLink className={linkClass} to="/soporte">
-          <LabelSoporte n={soporteNuevos} />
-        </NavLink>
-        <NavLink className={linkClass} to="/analytics">
-          {analyticsLabel}
-        </NavLink>
-        <NavLink className={linkClass} to="/insights">
-          {insightsLabel}
-        </NavLink>
-        {esDueno ? (
-          <NavLink className={linkClass} to="/configuracion">
-            Configuración
+      <nav className="app-nav mb-6 hidden lg:flex" style={{ fontFamily: theme.font }} aria-label="Navegación">
+        <div className="app-nav-brand">
+          <span className="app-nav-brand-name">Analítica 360</span>
+          <span className="app-nav-brand-empresa">{perfil?.empresa.nombre ?? ''}</span>
+        </div>
+        <div className="app-nav-pills">
+          <NavLink className={linkClass} to="/inicio" end>
+            Inicio
           </NavLink>
-        ) : null}
-        <div className="ml-auto flex items-center gap-2">
+          <NavLink className={linkClass} to="/productos">
+            Productos
+          </NavLink>
+          <NavLink className={linkClass} to="/ventas">
+            Ventas
+          </NavLink>
+          <NavLink className={linkClass} to="/clientes">
+            Clientes
+          </NavLink>
+          <NavLink className={linkClass} to="/compras">
+            Compras
+          </NavLink>
+          <NavLink className={linkClass} to="/proveedores">
+            Proveedores
+          </NavLink>
+          <NavLink className={linkClass} to="/inventario">
+            Inventario
+          </NavLink>
+          <NavLink className={linkClass} to="/soporte">
+            <LabelSoporte n={soporteNuevos} />
+          </NavLink>
+          <NavLink className={linkClass} to="/analytics">
+            {analyticsLabel}
+          </NavLink>
+          <NavLink className={linkClass} to="/insights">
+            {insightsLabel}
+          </NavLink>
+          {esDueno ? (
+            <NavLink className={linkClass} to="/configuracion">
+              Configuración
+            </NavLink>
+          ) : null}
+        </div>
+        <div className="app-nav-actions">
           <ThemeToggle />
           <button className="btn-sesion" type="button" onClick={() => void cerrarSesion()}>
             Cerrar sesión

@@ -53,16 +53,23 @@ const inputClass =
 
 type TabId = 'medios' | 'categorias' | 'cuotas' | 'usuarios' | 'flujo' | 'inventario' | 'variantes' | 'plan'
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'medios', label: 'Medios de pago' },
-  { id: 'categorias', label: 'Categorías' },
-  { id: 'cuotas', label: 'Cuotas y tasas' },
-  { id: 'usuarios', label: 'Usuarios' },
-  { id: 'flujo', label: 'Flujo de ventas' },
-  { id: 'inventario', label: 'Inventario' },
-  { id: 'variantes', label: 'Variantes' },
-  { id: 'plan', label: 'Mi Plan' },
+const MOSAICO: {
+  id: TabId
+  icono: string
+  titulo: string
+  subtitulo: string
+}[] = [
+  { id: 'medios', icono: '💳', titulo: 'Medios de pago', subtitulo: 'Configurá cómo aceptás pagos' },
+  { id: 'cuotas', icono: '📊', titulo: 'Cuotas y tasas', subtitulo: 'Configurá los intereses por cuotas' },
+  { id: 'categorias', icono: '🏷️', titulo: 'Categorías', subtitulo: 'Organizá tus productos' },
+  { id: 'variantes', icono: '🎨', titulo: 'Variantes', subtitulo: 'Color, talle, material y más' },
+  { id: 'usuarios', icono: '👥', titulo: 'Usuarios', subtitulo: 'Gestioná el acceso de tu equipo' },
+  { id: 'flujo', icono: '💸', titulo: 'Flujo de ventas', subtitulo: 'Configurá el proceso de venta' },
+  { id: 'inventario', icono: '📦', titulo: 'Inventario', subtitulo: 'Umbral de stock bajo y alertas' },
+  { id: 'plan', icono: '⭐', titulo: 'Mi Plan', subtitulo: 'Plan actual y facturación' },
 ]
+
+const TABS: { id: TabId; label: string }[] = MOSAICO.map((c) => ({ id: c.id, label: c.titulo }))
 
 const ICONO_MEDIO: Record<MedioPagoId, string> = {
   efectivo: '💵',
@@ -104,8 +111,8 @@ export function ConfiguracionPage() {
   const { perfil } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const [tab, setTab] = useState<TabId>(
-    TABS.some((t) => t.id === tabParam) ? (tabParam as TabId) : 'medios',
+  const [tab, setTab] = useState<TabId | null>(
+    TABS.some((t) => t.id === tabParam) ? (tabParam as TabId) : null,
   )
   const [medios, setMedios] = useState<MedioPagoId[]>([])
   const [tasas, setTasas] = useState<TasaCuota[]>([])
@@ -366,7 +373,7 @@ export function ConfiguracionPage() {
       }}
     >
       <ParticleNetwork />
-      <div className="relative z-10 mx-auto max-w-[440px] px-4 py-8">
+      <div className="relative z-10 mx-auto max-w-3xl px-4 py-8">
         <AppNav />
         <div className="p-6 backdrop-blur-xl" style={cardShell}>
           <h1 className="text-[28px] font-semibold" style={{ fontFamily: theme.fontDisplay, color: 'var(--text)' }}>
@@ -376,29 +383,58 @@ export function ConfiguracionPage() {
             {perfil.empresa.nombre}
           </p>
 
-          <div className="mt-6 flex flex-nowrap gap-1 overflow-x-auto pb-1">
-            {TABS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`shrink-0 rounded-md px-3 py-2 text-sm font-semibold whitespace-nowrap ${
-                  tab === item.id ? 'bg-[#6366F1] text-white' : 'bg-transparent text-[#94A3B8]'
-                }`}
-                onClick={() => {
-                  setTab(item.id)
-                  setSearchParams(item.id === 'medios' ? {} : { tab: item.id }, { replace: true })
-                  setError(null)
-                  setOk(null)
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          {cargando ? (
-            <p className="mt-6 text-sm text-[#94A3B8]">Cargando…</p>
+          {tab ? (
+            <button
+              className="mt-5 text-sm font-semibold text-[#A5B4FC] hover:underline"
+              type="button"
+              onClick={() => {
+                setTab(null)
+                setSearchParams({}, { replace: true })
+                setError(null)
+                setOk(null)
+              }}
+            >
+              ← Volver
+            </button>
           ) : (
+            <div className="config-mosaic mt-6">
+              {MOSAICO.map((card) => (
+                <button
+                  key={card.id}
+                  type="button"
+                  className="config-mosaic-card"
+                  onClick={() => {
+                    setTab(card.id)
+                    setSearchParams(card.id === 'medios' ? { tab: card.id } : { tab: card.id }, { replace: true })
+                    setError(null)
+                    setOk(null)
+                  }}
+                >
+                  <span className="config-mosaic-icon" aria-hidden>
+                    {card.icono}
+                  </span>
+                  <span className="config-mosaic-body">
+                    <span className="config-mosaic-title">
+                      {card.titulo}
+                      {card.id === 'plan' ? (
+                        <span className="config-plan-badge">{etiquetaPlan(perfil.empresa.plan_actual)}</span>
+                      ) : null}
+                    </span>
+                    <span className="config-mosaic-sub">{card.subtitulo}</span>
+                  </span>
+                  <span className="config-mosaic-arrow" aria-hidden>
+                    →
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {tab && cargando ? (
+            <p className="mt-6 text-sm text-[#94A3B8]">Cargando…</p>
+          ) : null}
+
+          {tab && !cargando ? (
             <>
               {tab === 'medios' ? (
                 <ul className="mt-6 space-y-3">
@@ -1047,7 +1083,7 @@ export function ConfiguracionPage() {
                 </button>
               ) : null}
             </>
-          )}
+          ) : null}
 
           <Link className="mt-6 block text-center text-sm font-medium text-[#A5B4FC]" to="/inicio">
             Volver al inicio
