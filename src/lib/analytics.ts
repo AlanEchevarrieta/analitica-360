@@ -190,18 +190,37 @@ export function colorFormaPago(nombre: string) {
 
 export const LIMITE_ANALYTICS_VENTAS = 50000
 
+export async function leerEmpresaIdAnalytics(
+  client: SupabaseClient,
+  fallback?: string | null,
+): Promise<string | null> {
+  const { data: userData, error } = await client.from('usuarios').select('empresa_id').limit(1).maybeSingle()
+  console.log('[analytics debug]', { rpc: 'usuarios.empresa_id', userData, error, fallback })
+  if (userData?.empresa_id) return String(userData.empresa_id)
+  return fallback ?? null
+}
+
 export async function contarVentasPeriodo(
   client: SupabaseClient,
   desde: string,
   hasta: string,
+  empresaId?: string | null,
 ): Promise<{ total: number; error: string | null }> {
   const fechaInicio = desde
   const fechaFin = hasta
   const { data, error } = await client.rpc('analytics_contar_ventas', {
     p_desde: fechaInicio,
     p_hasta: fechaFin,
+    p_empresa_id: empresaId ?? null,
   })
-  console.log('[analytics debug]', { rpc: 'analytics_contar_ventas', data, error, fechaInicio, fechaFin })
+  console.log('[analytics debug]', {
+    rpc: 'analytics_contar_ventas',
+    data,
+    error,
+    fechaInicio,
+    fechaFin,
+    p_empresa_id: empresaId,
+  })
   if (!error && data != null) return { total: Number(data), error: null }
   const fallback = await client
     .from('ventas')
@@ -227,6 +246,7 @@ export async function cargarAnalyticsEvolucion(
   desde: string,
   hasta: string,
   granularidad: GranularidadEje,
+  empresaId?: string | null,
 ): Promise<AnalyticsPunto[] | null> {
   const fechaInicio = desde
   const fechaFin = hasta
@@ -234,8 +254,9 @@ export async function cargarAnalyticsEvolucion(
     p_desde: fechaInicio,
     p_hasta: fechaFin,
     p_granularidad: granularidad,
+    p_empresa_id: empresaId ?? null,
   })
-  console.log('[analytics debug]', { data, error, fechaInicio, fechaFin, granularidad })
+  console.log('[analytics debug]', { data, error, fechaInicio, fechaFin, granularidad, p_empresa_id: empresaId })
   if (error || data == null) return null
   return parseEvolucion(data, granularidad)
 }
@@ -245,18 +266,19 @@ export async function cargarAnalyticsPeriodo(
   desde: string,
   hasta: string,
   granularidad: GranularidadEje = 'dia',
+  empresaId?: string | null,
 ): Promise<{ data: AnalyticsPeriodo; error: string | null }> {
   const fechaInicio = desde
   const fechaFin = hasta
+  const args = { p_desde: fechaInicio, p_hasta: fechaFin, p_empresa_id: empresaId ?? null }
   const [periodoRes, evoRes, pagosRes, topRes] = await Promise.all([
-    client.rpc('analytics_periodo', { p_desde: fechaInicio, p_hasta: fechaFin }),
+    client.rpc('analytics_periodo', args),
     client.rpc('analytics_evolucion', {
-      p_desde: fechaInicio,
-      p_hasta: fechaFin,
+      ...args,
       p_granularidad: granularidad,
     }),
-    client.rpc('analytics_formas_pago', { p_desde: fechaInicio, p_hasta: fechaFin }),
-    client.rpc('analytics_top_productos', { p_desde: fechaInicio, p_hasta: fechaFin }),
+    client.rpc('analytics_formas_pago', args),
+    client.rpc('analytics_top_productos', args),
   ])
   console.log('[analytics debug]', {
     rpc: 'analytics_periodo',
@@ -264,6 +286,7 @@ export async function cargarAnalyticsPeriodo(
     error: periodoRes.error,
     fechaInicio,
     fechaFin,
+    p_empresa_id: empresaId,
   })
   console.log('[analytics debug]', {
     data: evoRes.data,
@@ -271,6 +294,7 @@ export async function cargarAnalyticsPeriodo(
     fechaInicio,
     fechaFin,
     granularidad,
+    p_empresa_id: empresaId,
   })
   console.log('[analytics debug]', {
     rpc: 'analytics_formas_pago',
@@ -278,6 +302,7 @@ export async function cargarAnalyticsPeriodo(
     error: pagosRes.error,
     fechaInicio,
     fechaFin,
+    p_empresa_id: empresaId,
   })
   console.log('[analytics debug]', {
     rpc: 'analytics_top_productos',
@@ -285,6 +310,7 @@ export async function cargarAnalyticsPeriodo(
     error: topRes.error,
     fechaInicio,
     fechaFin,
+    p_empresa_id: empresaId,
   })
 
   const errores = [periodoRes, evoRes, pagosRes, topRes]

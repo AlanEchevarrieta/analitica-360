@@ -500,6 +500,7 @@ export async function cargarAnalyticsVariantes(
   client: SupabaseClient,
   desde: string,
   hasta: string,
+  empresaId?: string | null,
 ): Promise<AnalyticsVariantes> {
   const vacio: AnalyticsVariantes = {
     porColor: [],
@@ -508,7 +509,19 @@ export async function cargarAnalyticsVariantes(
     insightCombo: '',
     insightPct: 0,
   }
-  const { data, error } = await client.rpc('analytics_variantes', { p_desde: desde, p_hasta: hasta })
+  const { data, error } = await client.rpc('analytics_variantes', {
+    p_desde: desde,
+    p_hasta: hasta,
+    p_empresa_id: empresaId ?? null,
+  })
+  console.log('[analytics debug]', {
+    rpc: 'analytics_variantes',
+    data,
+    error,
+    fechaInicio: desde,
+    fechaFin: hasta,
+    p_empresa_id: empresaId,
+  })
   if (error || data == null) return vacio
   const row = data as Record<string, unknown>
   const asArr = (v: unknown) => (Array.isArray(v) ? v : [])

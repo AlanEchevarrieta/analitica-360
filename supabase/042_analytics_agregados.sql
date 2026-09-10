@@ -12,7 +12,49 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.dia_venta(timestamptz) TO authenticated;
 
-CREATE OR REPLACE FUNCTION public.analytics_contar_ventas(p_desde date, p_hasta date)
+DROP FUNCTION IF EXISTS public.analytics_contar_ventas(date, date);
+DROP FUNCTION IF EXISTS public.analytics_contar_ventas(date, date, uuid);
+DROP FUNCTION IF EXISTS public.analytics_evolucion(date, date, text);
+DROP FUNCTION IF EXISTS public.analytics_evolucion(date, date, text, uuid);
+DROP FUNCTION IF EXISTS public.analytics_formas_pago(date, date);
+DROP FUNCTION IF EXISTS public.analytics_formas_pago(date, date, uuid);
+DROP FUNCTION IF EXISTS public.analytics_top_productos(date, date);
+DROP FUNCTION IF EXISTS public.analytics_top_productos(date, date, uuid);
+DROP FUNCTION IF EXISTS public.analytics_periodo(date, date);
+DROP FUNCTION IF EXISTS public.analytics_periodo(date, date, uuid);
+DROP FUNCTION IF EXISTS public.analytics_variantes(date, date);
+DROP FUNCTION IF EXISTS public.analytics_variantes(date, date, uuid);
+
+CREATE OR REPLACE FUNCTION public.analytics_resolver_empresa(p_empresa_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO public
+AS $function$
+DECLARE
+  v_auth uuid;
+  v_empresa uuid;
+BEGIN
+  v_auth := public.get_empresa_id();
+  v_empresa := COALESCE(p_empresa_id, v_auth);
+  IF v_empresa IS NULL THEN
+    RAISE EXCEPTION 'NO_AUTENTICADO';
+  END IF;
+  IF v_auth IS NOT NULL AND v_empresa IS DISTINCT FROM v_auth THEN
+    RAISE EXCEPTION 'NO_AUTORIZADO';
+  END IF;
+  RETURN v_empresa;
+END;
+$function$;
+
+GRANT EXECUTE ON FUNCTION public.analytics_resolver_empresa(uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.analytics_contar_ventas(
+  p_desde date,
+  p_hasta date,
+  p_empresa_id uuid DEFAULT NULL
+)
 RETURNS bigint
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -22,10 +64,7 @@ DECLARE
   v_empresa uuid;
   v_cant bigint;
 BEGIN
-  v_empresa := public.get_empresa_id();
-  IF v_empresa IS NULL THEN
-    RAISE EXCEPTION 'NO_AUTENTICADO';
-  END IF;
+  v_empresa := public.analytics_resolver_empresa(p_empresa_id);
   IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
     RAISE EXCEPTION 'PERIODO_INVALIDO';
   END IF;
@@ -41,12 +80,13 @@ BEGIN
 END;
 $function$;
 
-GRANT EXECUTE ON FUNCTION public.analytics_contar_ventas(date, date) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.analytics_contar_ventas(date, date, uuid) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.analytics_evolucion(
   p_desde date,
   p_hasta date,
-  p_granularidad text DEFAULT 'semana'
+  p_granularidad text DEFAULT 'semana',
+  p_empresa_id uuid DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -61,10 +101,7 @@ DECLARE
   v_ant_hasta date;
   v_out jsonb;
 BEGIN
-  v_empresa := public.get_empresa_id();
-  IF v_empresa IS NULL THEN
-    RAISE EXCEPTION 'NO_AUTENTICADO';
-  END IF;
+  v_empresa := public.analytics_resolver_empresa(p_empresa_id);
   IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
     RAISE EXCEPTION 'PERIODO_INVALIDO';
   END IF;
@@ -119,9 +156,13 @@ BEGIN
 END;
 $function$;
 
-GRANT EXECUTE ON FUNCTION public.analytics_evolucion(date, date, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.analytics_evolucion(date, date, text, uuid) TO authenticated;
 
-CREATE OR REPLACE FUNCTION public.analytics_formas_pago(p_desde date, p_hasta date)
+CREATE OR REPLACE FUNCTION public.analytics_formas_pago(
+  p_desde date,
+  p_hasta date,
+  p_empresa_id uuid DEFAULT NULL
+)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -131,10 +172,7 @@ DECLARE
   v_empresa uuid;
   v_out jsonb;
 BEGIN
-  v_empresa := public.get_empresa_id();
-  IF v_empresa IS NULL THEN
-    RAISE EXCEPTION 'NO_AUTENTICADO';
-  END IF;
+  v_empresa := public.analytics_resolver_empresa(p_empresa_id);
   IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
     RAISE EXCEPTION 'PERIODO_INVALIDO';
   END IF;
@@ -169,9 +207,13 @@ BEGIN
 END;
 $function$;
 
-GRANT EXECUTE ON FUNCTION public.analytics_formas_pago(date, date) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.analytics_formas_pago(date, date, uuid) TO authenticated;
 
-CREATE OR REPLACE FUNCTION public.analytics_top_productos(p_desde date, p_hasta date)
+CREATE OR REPLACE FUNCTION public.analytics_top_productos(
+  p_desde date,
+  p_hasta date,
+  p_empresa_id uuid DEFAULT NULL
+)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -181,10 +223,7 @@ DECLARE
   v_empresa uuid;
   v_out jsonb;
 BEGIN
-  v_empresa := public.get_empresa_id();
-  IF v_empresa IS NULL THEN
-    RAISE EXCEPTION 'NO_AUTENTICADO';
-  END IF;
+  v_empresa := public.analytics_resolver_empresa(p_empresa_id);
   IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
     RAISE EXCEPTION 'PERIODO_INVALIDO';
   END IF;
@@ -215,9 +254,13 @@ BEGIN
 END;
 $function$;
 
-GRANT EXECUTE ON FUNCTION public.analytics_top_productos(date, date) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.analytics_top_productos(date, date, uuid) TO authenticated;
 
-CREATE OR REPLACE FUNCTION public.analytics_periodo(p_desde date, p_hasta date)
+CREATE OR REPLACE FUNCTION public.analytics_periodo(
+  p_desde date,
+  p_hasta date,
+  p_empresa_id uuid DEFAULT NULL
+)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -247,10 +290,7 @@ DECLARE
   v_nuevos int;
   v_rec int;
 BEGIN
-  v_empresa := public.get_empresa_id();
-  IF v_empresa IS NULL THEN
-    RAISE EXCEPTION 'NO_AUTENTICADO';
-  END IF;
+  v_empresa := public.analytics_resolver_empresa(p_empresa_id);
   IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
     RAISE EXCEPTION 'PERIODO_INVALIDO';
   END IF;
@@ -463,9 +503,13 @@ BEGIN
 END;
 $function$;
 
-GRANT EXECUTE ON FUNCTION public.analytics_periodo(date, date) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.analytics_periodo(date, date, uuid) TO authenticated;
 
-CREATE OR REPLACE FUNCTION public.analytics_variantes(p_desde date, p_hasta date)
+CREATE OR REPLACE FUNCTION public.analytics_variantes(
+  p_desde date,
+  p_hasta date,
+  p_empresa_id uuid DEFAULT NULL
+)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -480,10 +524,7 @@ DECLARE
   v_top_u numeric;
   v_total numeric;
 BEGIN
-  v_empresa := public.get_empresa_id();
-  IF v_empresa IS NULL THEN
-    RAISE EXCEPTION 'NO_AUTENTICADO';
-  END IF;
+  v_empresa := public.analytics_resolver_empresa(p_empresa_id);
   IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
     RAISE EXCEPTION 'PERIODO_INVALIDO';
   END IF;
@@ -582,6 +623,6 @@ BEGIN
 END;
 $function$;
 
-GRANT EXECUTE ON FUNCTION public.analytics_variantes(date, date) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.analytics_variantes(date, date, uuid) TO authenticated;
 
 NOTIFY pgrst, 'reload schema';

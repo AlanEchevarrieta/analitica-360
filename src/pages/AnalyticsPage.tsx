@@ -33,6 +33,7 @@ import {
   contarVentasPeriodo,
   cuadranteProducto,
   formatoEjeCompacto,
+  leerEmpresaIdAnalytics,
   LIMITE_ANALYTICS_VENTAS,
   margenPct,
   rangoPreset,
@@ -263,7 +264,9 @@ export function AnalyticsPage() {
     setErrorDebug(null)
     void (async () => {
       try {
-        const conteo = await contarVentasPeriodo(requireSupabase(), desde, hasta)
+        const client = requireSupabase()
+        const empresaId = await leerEmpresaIdAnalytics(client, perfil.empresa.id)
+        const conteo = await contarVentasPeriodo(client, desde, hasta, empresaId)
         if (conteo.error) setErrorDebug(conteo.error)
         const totalVentas = conteo.total
         if (totalVentas > LIMITE_ANALYTICS_VENTAS) {
@@ -275,19 +278,19 @@ export function AnalyticsPage() {
         }
         setAvisoLimite(null)
         const [res, cfg] = await Promise.all([
-          cargarAnalyticsPeriodo(requireSupabase(), desde, hasta, granularidadEvo),
-          obtenerConfiguracion(requireSupabase(), perfil.empresa.id),
+          cargarAnalyticsPeriodo(client, desde, hasta, granularidadEvo, empresaId),
+          obtenerConfiguracion(client, perfil.empresa.id),
         ])
         setData(res.data)
         if (res.error) setErrorDebug((prev) => (prev ? `${prev} · ${res.error}` : res.error))
         const usa = Boolean(cfg.config.usaVariantes)
         setUsaVariantes(usa)
         if (usa) {
-          setDataVar(await cargarAnalyticsVariantes(requireSupabase(), desde, hasta))
-          const prods = await listarProductos(requireSupabase())
+          setDataVar(await cargarAnalyticsVariantes(client, desde, hasta, empresaId))
+          const prods = await listarProductos(client)
           if (!prods.error && prods.filas.length > 0) {
             const vars = await listarVariantesDeProductos(
-              requireSupabase(),
+              client,
               prods.filas.map((p) => p.id),
             )
             const porProducto = new Map<string, typeof vars.filas>()
