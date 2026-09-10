@@ -542,7 +542,10 @@ export function AnalyticsPage() {
                           tickFormatter={formatoEjeCompacto}
                           width={56}
                         />
-                        <RechartsTooltip content={asRechartsTooltip(TooltipEvolucion)} />
+                        <RechartsTooltip
+                          cursor={{ fill: CHART_CURSOR_FILL }}
+                          content={asRechartsTooltip(TooltipEvolucion)}
+                        />
                         <Legend
                           wrapperStyle={{ color: g.eje, fontSize: 12 }}
                           formatter={(value) => String(value)}
@@ -555,6 +558,7 @@ export function AnalyticsPage() {
                           fill="rgba(99,102,241,0.2)"
                           strokeWidth={2}
                           dot={false}
+                          activeDot={{ r: 4, fill: '#6366F1' }}
                         />
                         <Line
                           type="monotone"
@@ -562,8 +566,9 @@ export function AnalyticsPage() {
                           name="Período anterior"
                           stroke="#94A3B8"
                           strokeWidth={2}
-                          strokeDasharray="5 5"
+                          strokeDasharray="6 4"
                           dot={false}
+                          connectNulls
                         />
                       </ComposedChart>
                     </ResponsiveContainer>
@@ -822,7 +827,10 @@ export function AnalyticsPage() {
                           tickFormatter={formatoEjeCompacto}
                           width={56}
                         />
-                        <RechartsTooltip content={asRechartsTooltip(TooltipEvolucion)} />
+                        <RechartsTooltip
+                          cursor={{ fill: CHART_CURSOR_FILL }}
+                          content={asRechartsTooltip(TooltipEvolucion)}
+                        />
                         <Legend wrapperStyle={{ color: g.eje, fontSize: 12 }} />
                         <Line
                           type="monotone"
@@ -838,8 +846,9 @@ export function AnalyticsPage() {
                           name="Período anterior"
                           stroke="#94A3B8"
                           strokeWidth={2}
-                          strokeDasharray="5 5"
+                          strokeDasharray="6 4"
                           dot={false}
+                          connectNulls
                         />
                       </LineChart>
                     </ResponsiveContainer>

@@ -35,6 +35,7 @@ import {
   asRechartsTooltip,
   ChartTooltipBox,
   TooltipBarras7Dias,
+  TooltipTopProductos,
   useIndiceBarraActiva,
 } from '../components/CustomTooltip'
 
@@ -549,18 +550,7 @@ export function HomePage() {
                         />
                         <Tooltip
                           cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null
-                            const p = payload[0].payload as { nombre?: string; unidades?: number }
-                            return (
-                              <ChartTooltipBox>
-                                <p style={{ color: '#F1F5F9', fontSize: 13, fontWeight: 600 }}>{p.nombre}</p>
-                                <p style={{ color: '#94A3B8', fontSize: 12, marginTop: 6 }}>
-                                  Unidades vendidas: {Number(p.unidades ?? 0)} u
-                                </p>
-                              </ChartTooltipBox>
-                            )
-                          }}
+                          content={asRechartsTooltip(TooltipTopProductos)}
                         />
                         <Bar
                           dataKey="unidades"

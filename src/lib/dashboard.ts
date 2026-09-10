@@ -5,6 +5,7 @@ export type DashboardDia = {
   fecha: string
   dia: string
   total: number
+  cantidad?: number
 }
 
 export type DashboardProducto = {
@@ -108,7 +109,12 @@ export async function cargarDashboardInicio(client: SupabaseClient): Promise<Das
     ultimos7: ultimos7.map((item) => {
       const d = asRecord(item)
       const fecha = String(d.fecha ?? d.dia ?? '')
-      return { fecha, dia: etiquetaDia(String(d.dia ?? d.fecha ?? '')), total: num(d.total) }
+      return {
+        fecha,
+        dia: etiquetaDia(String(d.dia ?? d.fecha ?? '')),
+        total: num(d.total),
+        cantidad: d.cantidad == null ? undefined : num(d.cantidad),
+      }
     }),
     top5,
     stock: stock.map((item) => {

@@ -5,7 +5,8 @@ import { tienePermiso } from '../lib/permisos'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { AppNav } from '../components/AppNav'
 import { actualizarProducto, crearProducto, listarProductos, type ProductoFila } from '../lib/productos'
-import { etiquetaMovimiento, listarMovimientosProducto, type MovimientoFila } from '../lib/stock'
+import { estiloTipoMovimiento } from '../lib/inventario'
+import { listarMovimientosProducto, type MovimientoFila } from '../lib/stock'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
 
@@ -314,22 +315,38 @@ export function ProductoFormPage() {
         {!esNuevo && movimientos.length > 0 ? (
           <div className="mt-4 rounded-lg bg-white/95 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
             <h2 className="text-sm font-bold text-[#1A2F4A]">Historial de movimientos</h2>
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-3 overflow-hidden rounded-md">
               {movimientos.map((m) => {
-                const e = etiquetaMovimiento(m.tipo)
+                const e = estiloTipoMovimiento(m.tipo, m.signo)
                 const fecha = m.fecha ? new Date(m.fecha).toLocaleString('es-AR') : ''
+                const entrada = m.signo >= 0
                 return (
-                  <li key={m.id} className="text-sm text-[#1A2F4A]">
-                    <span className="font-medium">
+                  <li
+                    key={m.id}
+                    className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm"
+                    style={{
+                      background: 'rgba(15,23,41,0.95)',
+                      borderBottom: '1px solid rgba(99,102,241,0.15)',
+                      color: '#F1F5F9',
+                    }}
+                  >
+                    <span
+                      className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold"
+                      style={{ background: e.fondo, color: e.color }}
+                    >
                       {e.icono} {e.texto}
                     </span>
-                    <span className="text-[#4A5568]">
-                      {' '}
-                      {m.signo > 0 ? '+' : '−'}
+                    <span
+                      className="font-semibold tabular-nums"
+                      style={{ color: entrada ? '#4ADE80' : '#F87171' }}
+                    >
+                      {entrada ? '+' : '-'}
                       {m.cantidad}
-                      {m.motivo ? ` · ${m.motivo}` : ''}
                     </span>
-                    <span className="mt-0.5 block text-xs text-[#94A3B8]">{fecha}</span>
+                    <span className="text-xs" style={{ color: '#94A3B8' }}>
+                      {m.motivo ? `${m.motivo} · ` : ''}
+                      {fecha}
+                    </span>
                   </li>
                 )
               })}

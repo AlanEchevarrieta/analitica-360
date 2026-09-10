@@ -45,7 +45,11 @@ export type MovimientoKardex = {
   ubicacionOrigen: string | null
   ubicacionDestino: string | null
   ventaFecha: string | null
+  precioUnitario: number | null
 }
+
+const BADGE_ENTRADA = { fondo: '#14532D', color: '#4ADE80' }
+const BADGE_SALIDA = { fondo: '#7F1D1D', color: '#F87171' }
 
 export function estiloTipoMovimiento(tipo: string, signo: number) {
   const t = tipo.toLowerCase()
@@ -55,28 +59,41 @@ export function estiloTipoMovimiento(tipo: string, signo: number) {
     t === 'devolucion' ||
     t === 'ajuste_positivo' ||
     signo === 1
-  if (t === 'compra') return { icono: '🛒', texto: 'Compra', clase: 'text-[#4ADE80]' }
-  if (t === 'venta') return { icono: '💸', texto: 'Venta', clase: 'text-[#F87171]' }
-  if (t === 'devolucion_cliente' || t === 'devolucion') {
-    return { icono: '↩️', texto: 'Devolución', clase: 'text-[#4ADE80]' }
+  if (t === 'compra') {
+    return { icono: '🛒', texto: 'Compra', clase: 'text-[#4ADE80]', ...BADGE_ENTRADA }
   }
-  if (t === 'ajuste_positivo') return { icono: '📦', texto: 'Ajuste +', clase: 'text-[#4ADE80]' }
-  if (t === 'consumo_interno') return { icono: '🎁', texto: 'Consumo interno', clase: 'text-[#F87171]' }
+  if (t === 'venta') {
+    return { icono: '💸', texto: 'Venta', clase: 'text-[#F87171]', ...BADGE_SALIDA }
+  }
+  if (t === 'devolucion_cliente' || t === 'devolucion') {
+    return { icono: '↩️', texto: 'Devolución cliente', clase: 'text-[#93C5FD]', fondo: '#1E3A5F', color: '#93C5FD' }
+  }
+  if (t === 'ajuste_positivo') {
+    return { icono: '📦', texto: 'Ajuste +', clase: 'text-[#4ADE80]', ...BADGE_ENTRADA }
+  }
+  if (t === 'consumo_interno') {
+    return { icono: '🎁', texto: 'Consumo interno', clase: 'text-[#FCD34D]', fondo: '#422006', color: '#FCD34D' }
+  }
   if (t === 'transferencia') {
     return {
       icono: '🔁',
       texto: signo === 1 ? 'Traslado (entra)' : 'Traslado (sale)',
-      clase: positivo ? 'text-[#4ADE80]' : 'text-[#F87171]',
+      clase: 'text-[#C4B5FD]',
+      fondo: '#312E81',
+      color: '#C4B5FD',
     }
   }
   if (t === 'ajuste_negativo' || t === 'merma' || t === 'rotura' || t === 'perdida') {
-    const label = t === 'ajuste_negativo' ? 'Ajuste −' : t.charAt(0).toUpperCase() + t.slice(1)
-    return { icono: '⚠️', texto: label, clase: 'text-[#F87171]' }
+    const label =
+      t === 'ajuste_negativo' ? 'Ajuste −' : t === 'rotura' ? 'Rotura' : t === 'merma' ? 'Merma' : 'Pérdida'
+    return { icono: '⚠️', texto: label, clase: 'text-[#F87171]', ...BADGE_SALIDA }
   }
   return {
     icono: '•',
     texto: tipo,
     clase: positivo ? 'text-[#4ADE80]' : 'text-[#F87171]',
+    fondo: positivo ? BADGE_ENTRADA.fondo : BADGE_SALIDA.fondo,
+    color: positivo ? BADGE_ENTRADA.color : BADGE_SALIDA.color,
   }
 }
 
@@ -236,8 +253,9 @@ export async function listarKardexProducto(
   const from = (input.pagina - 1) * input.pageSize
   const to = from + input.pageSize - 1
   const colsConUbic =
-    'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino'
-  const colsSinUbic = 'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id'
+    'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino, precio_unitario, costo_unitario'
+  const colsSinUbic =
+    'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, precio_unitario, costo_unitario'
 
   const pedirPagina = (cols: string) =>
     client
@@ -252,6 +270,14 @@ export async function listarKardexProducto(
   let pagina = await pedirPagina(colsConUbic)
   if (pagina.error && /ubicacion/i.test(pagina.error.message)) {
     pagina = await pedirPagina(colsSinUbic)
+  }
+  if (pagina.error && /(precio_unitario|costo_unitario)/i.test(pagina.error.message)) {
+    pagina = await pedirPagina(
+      'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino',
+    )
+    if (pagina.error && /ubicacion/i.test(pagina.error.message)) {
+      pagina = await pedirPagina('id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id')
+    }
   }
   if (pagina.error) return { filas: [], total: 0, error: pagina.error.message }
 
@@ -316,6 +342,13 @@ export async function listarKardexProducto(
       ubicacionOrigen: row.ubicacion_origen == null ? null : String(row.ubicacion_origen),
       ubicacionDestino: row.ubicacion_destino == null ? null : String(row.ubicacion_destino),
       ventaFecha: ref ? ventas.get(ref) ?? null : null,
+      precioUnitario: (() => {
+        const precio = Number(row.precio_unitario ?? 0)
+        const costo = Number(row.costo_unitario ?? 0)
+        if (precio > 0) return precio
+        if (costo > 0) return costo
+        return null
+      })(),
     }
     saldo -= deltaStockKardex(tipo, cant, signo)
     return item

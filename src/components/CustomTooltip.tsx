@@ -55,6 +55,8 @@ export function ChartTooltipBox({ children }: { children: ReactNode }) {
   )
 }
 
+export const CustomTooltip = ChartTooltipBox
+
 export function etiquetaDiaLargo(fecha: string) {
   const raw = String(fecha).slice(0, 10)
   const [y, m, d] = raw.split('-').map(Number)
@@ -161,7 +163,7 @@ export function TooltipTopProductos({ active, payload }: TipProps) {
   return (
     <ChartTooltipBox>
       <p style={{ color: '#F1F5F9', fontSize: 13, fontWeight: 600 }}>{nombre}</p>
-      <p style={{ color: '#94A3B8', fontSize: 12, marginTop: 6 }}>Unidades vendidas: {unidades} u</p>
+      <p style={{ color: '#94A3B8', fontSize: 12, marginTop: 6 }}>Unidades: {unidades} u</p>
       {total != null ? (
         <p style={{ color: '#F1F5F9', fontSize: 12, marginTop: 2 }}>Total $: {formatoARS(Number(total))}</p>
       ) : null}
@@ -185,7 +187,10 @@ export function TooltipFormaPago({ active, payload }: TipProps) {
   const trans = row.cantidad
   return (
     <ChartTooltipBox>
-      <p style={{ color: '#F1F5F9', fontSize: 13, fontWeight: 600 }}>{nombre}</p>
+      <p style={{ color: '#94A3B8', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        Forma de pago
+      </p>
+      <p style={{ color: '#F1F5F9', fontSize: 13, fontWeight: 600, marginTop: 4 }}>{nombre}</p>
       <p style={{ color: '#F1F5F9', fontSize: 12, marginTop: 6 }}>Monto: {formatoARS(monto)}</p>
       <p style={{ color: '#94A3B8', fontSize: 12, marginTop: 2 }}>Porcentaje: {pct.toFixed(0)}%</p>
       {trans != null ? (

@@ -7,7 +7,13 @@ import {
   listarKardexProducto,
   type MovimientoKardex,
 } from '../lib/inventario'
+import { formatoARS } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
+
+const FILA_BG = 'rgba(15,23,41,0.95)'
+const FILA_BORDE = '1px solid rgba(99,102,241,0.15)'
+const TXT = '#F1F5F9'
+const TXT_SEC = '#94A3B8'
 
 function textoReferencia(m: MovimientoKardex) {
   if (m.tipo === 'venta' && m.referenciaId) {
@@ -62,7 +68,7 @@ export function HistorialMovimientosPanel({
     <div className="fixed inset-0 z-50 flex justify-end">
       <button className="absolute inset-0 bg-black/50" type="button" aria-label="Cerrar" onClick={onCerrar} />
       <aside
-        className="relative flex h-full w-full max-w-lg flex-col shadow-[-20px_0_60px_rgba(0,0,0,0.35)]"
+        className="relative flex h-full w-full max-w-2xl flex-col shadow-[-20px_0_60px_rgba(0,0,0,0.35)]"
         style={{ background: 'var(--card-bg)', color: 'var(--text)', borderLeft: '1px solid var(--border)' }}
       >
         <div className="flex items-start justify-between gap-3 border-b px-4 py-4" style={{ borderColor: 'var(--border)' }}>
@@ -100,12 +106,13 @@ export function HistorialMovimientosPanel({
             </p>
           ) : null}
           {!cargando && filas.length > 0 ? (
-            <table className="w-full min-w-[520px] text-left text-xs">
+            <table className="w-full min-w-[640px] text-left text-xs">
               <thead>
-                <tr style={{ color: 'var(--th-fg)' }}>
+                <tr style={{ color: TXT_SEC }}>
                   <th className="py-2 pr-2 font-semibold">Fecha</th>
                   <th className="py-2 pr-2 font-semibold">Tipo</th>
                   <th className="py-2 pr-2 font-semibold">Cant.</th>
+                  <th className="py-2 pr-2 font-semibold">Precio unitario</th>
                   <th className="py-2 pr-2 font-semibold">Referencia</th>
                   <th className="py-2 pr-2 font-semibold">Usuario</th>
                   <th className="py-2 font-semibold">Saldo</th>
@@ -115,15 +122,38 @@ export function HistorialMovimientosPanel({
                 {filas.map((m) => {
                   const tipo = estiloTipoMovimiento(m.tipo, m.signo)
                   const ref = textoReferencia(m)
-                  const cant = `${m.signo < 0 ? '−' : '+'}${m.cantidad}`
+                  const entrada = m.signo >= 0
                   return (
-                    <tr key={m.id} className="border-t" style={{ borderColor: 'var(--row-border)' }}>
-                      <td className="py-2 pr-2 whitespace-nowrap">{formatoFechaMov(m.fecha)}</td>
-                      <td className={`py-2 pr-2 ${tipo.clase}`}>
-                        {tipo.icono} {tipo.texto}
+                    <tr
+                      key={m.id}
+                      style={{
+                        background: FILA_BG,
+                        borderBottom: FILA_BORDE,
+                        color: TXT,
+                      }}
+                    >
+                      <td className="py-2.5 pr-2 whitespace-nowrap" style={{ color: TXT_SEC }}>
+                        {formatoFechaMov(m.fecha)}
                       </td>
-                      <td className={`py-2 pr-2 font-medium ${tipo.clase}`}>{cant}</td>
-                      <td className="py-2 pr-2">
+                      <td className="py-2.5 pr-2">
+                        <span
+                          className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
+                          style={{ background: tipo.fondo, color: tipo.color }}
+                        >
+                          {tipo.icono} {tipo.texto}
+                        </span>
+                      </td>
+                      <td
+                        className="py-2.5 pr-2 font-semibold tabular-nums"
+                        style={{ color: entrada ? '#4ADE80' : '#F87171' }}
+                      >
+                        {entrada ? '+' : '-'}
+                        {m.cantidad}
+                      </td>
+                      <td className="py-2.5 pr-2 tabular-nums" style={{ color: TXT }}>
+                        {m.precioUnitario != null ? formatoARS(m.precioUnitario) : '—'}
+                      </td>
+                      <td className="py-2.5 pr-2" style={{ color: TXT_SEC }}>
                         {ref.to ? (
                           <Link className="text-[#A5B4FC] underline" to={ref.to}>
                             {ref.label}
@@ -132,8 +162,18 @@ export function HistorialMovimientosPanel({
                           ref.label
                         )}
                       </td>
-                      <td className="py-2 pr-2">{m.usuarioNombre}</td>
-                      <td className="py-2 font-medium">{m.saldo}</td>
+                      <td className="py-2.5 pr-2" style={{ color: TXT_SEC }}>
+                        {m.usuarioNombre}
+                      </td>
+                      <td
+                        className="py-2.5 font-medium tabular-nums"
+                        style={{
+                          background: m.saldo > 0 ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
+                          color: TXT,
+                        }}
+                      >
+                        {m.saldo}
+                      </td>
                     </tr>
                   )
                 })}
