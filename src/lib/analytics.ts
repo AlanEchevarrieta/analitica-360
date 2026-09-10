@@ -149,6 +149,37 @@ function labelFecha(iso: string) {
   return new Date(y, m - 1, d).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
 }
 
+function evolucionDesdeVentas(raw: unknown): AnalyticsPunto[] {
+  const ventas = Array.isArray(raw) ? raw : []
+  const porDia = new Map<string, number>()
+  for (const item of ventas) {
+    const v = item as Record<string, unknown>
+    const iso = String(v.fecha ?? '').slice(0, 10)
+    if (!iso) continue
+    porDia.set(iso, (porDia.get(iso) ?? 0) + num(v.total))
+  }
+  return [...porDia.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([iso, Ventas]) => ({
+      fecha: labelFecha(iso),
+      fechaExacta: iso,
+      Ventas,
+      Anterior: 0,
+    }))
+}
+
+function formasDesdeVentas(raw: unknown): AnalyticsPago[] {
+  const ventas = Array.isArray(raw) ? raw : []
+  const porPago = new Map<string, number>()
+  for (const item of ventas) {
+    const v = item as Record<string, unknown>
+    const name = String(v.forma_pago ?? '')
+    if (!name) continue
+    porPago.set(name, (porPago.get(name) ?? 0) + num(v.total))
+  }
+  return [...porPago.entries()].map(([name, value]) => ({ name, value }))
+}
+
 export function fechaExactaLarga(iso: string) {
   const raw = String(iso).slice(0, 10)
   const [y, m, d] = raw.split('-').map(Number)
@@ -321,10 +352,13 @@ export async function cargarAnalyticsPeriodo(
   if (periodoRes.error || periodoRes.data == null) return { data: VACIO, error: errorTexto }
   const row = periodoRes.data as Record<string, unknown>
   const productos = Array.isArray(row.productos) ? row.productos : []
-  const evolucionDiaria = parseEvolucion(row.evolucion, 'dia')
+  const evolucionDiaria =
+    Array.isArray(row.evolucion) && row.evolucion.length > 0
+      ? parseEvolucion(row.evolucion, 'dia')
+      : evolucionDesdeVentas(row.ventas)
   return {
     data: {
-      total: num(row.total),
+      total: num(row.total ?? row.total_ventas),
       cantidad: num(row.cantidad),
       costo: num(row.costo),
       totalAnt: num(row.total_ant),
@@ -337,7 +371,7 @@ export async function cargarAnalyticsPeriodo(
       evolucionDiaria,
       formasPago:
         pagosRes.error || pagosRes.data == null
-          ? parseFormasPago(row.formas_pago)
+          ? (Array.isArray(row.formas_pago) ? parseFormasPago(row.formas_pago) : formasDesdeVentas(row.ventas))
           : parseFormasPago(pagosRes.data),
       top10: topRes.error || topRes.data == null ? parseTop10(row.top_10) : parseTop10(topRes.data),
       productos: productos.map((item) => {
