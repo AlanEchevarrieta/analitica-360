@@ -88,6 +88,46 @@ export function sumarDiasIso(iso: string, dias: number) {
   return dt.toISOString().slice(0, 10)
 }
 
+export function lunesIso(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  const dow = dt.getUTCDay()
+  dt.setUTCDate(dt.getUTCDate() + (dow === 0 ? -6 : 1 - dow))
+  return dt.toISOString().slice(0, 10)
+}
+
+export function inicioMesIso(iso: string) {
+  return `${iso.slice(0, 7)}-01`
+}
+
+export type GranularidadEje = 'dia' | 'semana' | 'mes'
+
+export function agruparEvolucion(puntos: AnalyticsPunto[], g: GranularidadEje): AnalyticsPunto[] {
+  if (g === 'dia' || puntos.length === 0) return puntos
+  const map = new Map<string, { Ventas: number; Anterior: number }>()
+  for (const p of puntos) {
+    const iso = p.fechaExacta.slice(0, 10)
+    const key = g === 'semana' ? lunesIso(iso) : inicioMesIso(iso)
+    const prev = map.get(key) ?? { Ventas: 0, Anterior: 0 }
+    prev.Ventas += p.Ventas
+    prev.Anterior += p.Anterior
+    map.set(key, prev)
+  }
+  return [...map.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([key, v]) => ({
+      fecha: g === 'mes' ? labelMes(key) : labelFecha(key),
+      fechaExacta: key,
+      Ventas: v.Ventas,
+      Anterior: v.Anterior,
+    }))
+}
+
+function labelMes(iso: string) {
+  const [y, m] = iso.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' }).replace('.', '')
+}
+
 export type PresetPeriodo = 'semana' | 'mes' | 'tres_meses' | 'anio' | 'personalizado'
 
 export function rangoPreset(preset: PresetPeriodo, desde?: string, hasta?: string) {

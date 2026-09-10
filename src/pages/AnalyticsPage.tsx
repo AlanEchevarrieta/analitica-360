@@ -23,10 +23,12 @@ import {
 } from 'recharts'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
+import { GraficoExpandible, SelectorChips } from '../components/GraficoExpandible'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { PlanesModal } from '../components/PlanesModal'
 import {
   COLOR_CUADRANTE,
+  agruparEvolucion,
   cargarAnalyticsPeriodo,
   colorFormaPago,
   contarVentasPeriodo,
@@ -43,6 +45,7 @@ import {
   type AnalyticsPeriodo,
   type AnalyticsProducto,
   type CuadranteProducto,
+  type GranularidadEje,
   type PresetPeriodo,
 } from '../lib/analytics'
 import { exportarAnalyticsPdf } from '../lib/exportarReportes'
@@ -247,6 +250,7 @@ export function AnalyticsPage() {
     new Map(),
   )
   const [avisoLimite, setAvisoLimite] = useState<number | null>(null)
+  const [granularidadEvo, setGranularidadEvo] = useState<GranularidadEje>('dia')
   const top10Hover = useIndiceBarraActiva()
   const diasHover = useIndiceBarraActiva()
 
@@ -391,6 +395,10 @@ export function AnalyticsPage() {
   }, [data.productos])
 
   const diasSemana = useMemo(() => ventasPorDiaSemana(data.evolucion), [data.evolucion])
+  const evolucionVista = useMemo(
+    () => agruparEvolucion(data.evolucion, granularidadEvo),
+    [data.evolucion, granularidadEvo],
+  )
   const top10Data = useMemo(() => {
     const porNombre = new Map(data.productos.map((p) => [p.producto, p]))
     return data.top10.map((p) => {
@@ -598,10 +606,29 @@ export function AnalyticsPage() {
                 </div>
 
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
-                  <Text className="!text-[#94A3B8]">Evolución de ventas diarias</Text>
-                  <div className="mt-6 h-72">
+                  <GraficoExpandible
+                    titulo={
+                      granularidadEvo === 'dia'
+                        ? 'Evolución de ventas diarias'
+                        : granularidadEvo === 'semana'
+                          ? 'Evolución de ventas semanales'
+                          : 'Evolución de ventas mensuales'
+                    }
+                    compactoClass="h-72"
+                    toolbar={
+                      <SelectorChips
+                        valor={granularidadEvo}
+                        opciones={[
+                          { id: 'dia', label: 'Día' },
+                          { id: 'semana', label: 'Semana' },
+                          { id: 'mes', label: 'Mes' },
+                        ]}
+                        onChange={setGranularidadEvo}
+                      />
+                    }
+                  >
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={data.evolucion} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                      <ComposedChart data={evolucionVista} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
                         <CartesianGrid stroke={g.grilla} vertical={false} />
                         <XAxis
                           dataKey="fecha"
@@ -646,17 +673,18 @@ export function AnalyticsPage() {
                         />
                       </ComposedChart>
                     </ResponsiveContainer>
-                  </div>
+                  </GraficoExpandible>
                 </Card>
 
                 <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
                   <Card className={cardClass} style={cardStyle}>
-                    <Text className="!text-[#94A3B8]">Ventas por forma de pago</Text>
-                    {data.formasPago.length === 0 ? (
-                      <p className="mt-8 text-center text-sm text-[#94A3B8]">Sin ventas en el período</p>
-                    ) : (
-                      <>
-                        <div className="relative mt-6 h-52">
+                    <GraficoExpandible titulo="Ventas por forma de pago" compactoClass="h-52">
+                      {data.formasPago.length === 0 ? (
+                        <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">
+                          Sin ventas en el período
+                        </p>
+                      ) : (
+                        <div className="relative h-full">
                           <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                               <Pie
@@ -681,6 +709,9 @@ export function AnalyticsPage() {
                             </p>
                           </div>
                         </div>
+                      )}
+                    </GraficoExpandible>
+                    {data.formasPago.length > 0 ? (
                         <ul className="mt-5 space-y-2 text-xs text-[#94A3B8]">
                           {data.formasPago.map((f) => {
                             const pct = totalPagos > 0 ? (f.value / totalPagos) * 100 : 0
@@ -700,15 +731,13 @@ export function AnalyticsPage() {
                             )
                           })}
                         </ul>
-                      </>
-                    )}
+                    ) : null}
                   </Card>
                   <Card className={cardClass} style={cardStyle}>
-                    <Text className="!text-[#94A3B8]">Top 10 productos más vendidos</Text>
+                    <GraficoExpandible titulo="Top 10 productos más vendidos" compactoClass="h-[320px]">
                     {data.top10.length === 0 ? (
-                      <p className="mt-8 text-center text-sm text-[#94A3B8]">Sin ventas en el período</p>
+                      <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">Sin ventas en el período</p>
                     ) : (
-                      <div className="mt-4" style={{ height: 320 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart
                             layout="vertical"
@@ -756,8 +785,8 @@ export function AnalyticsPage() {
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
-                      </div>
                     )}
+                    </GraficoExpandible>
                   </Card>
                 </div>
 
@@ -811,13 +840,11 @@ export function AnalyticsPage() {
                 </Card>
 
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
-                  <Text className="!text-[#94A3B8]">Matriz de productos — Rotación vs Rentabilidad</Text>
+                  <GraficoExpandible titulo="Matriz de productos — Rotación vs Rentabilidad" compactoClass="h-[360px]">
                   {matriz.puntos.length === 0 ? (
-                    <p className="mt-8 text-center text-sm text-[#94A3B8]">Sin ventas en el período</p>
+                    <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">Sin ventas en el período</p>
                   ) : (
-                    <>
-                      <div className="mt-4" style={{ height: 360 }}>
-                        <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height="100%">
                           <ScatterChart margin={{ top: 16, right: 24, left: 8, bottom: 8 }}>
                             <CartesianGrid stroke={g.grilla} />
                             <XAxis
@@ -881,7 +908,9 @@ export function AnalyticsPage() {
                             </Scatter>
                           </ScatterChart>
                         </ResponsiveContainer>
-                      </div>
+                  )}
+                  </GraficoExpandible>
+                  {matriz.puntos.length > 0 ? (
                       <ul className="mt-4 flex flex-wrap gap-4 text-xs text-[#94A3B8]">
                         {(Object.keys(COLOR_CUADRANTE) as CuadranteProducto[]).map((c) => (
                           <li key={c} className="flex items-center gap-2">
@@ -890,13 +919,11 @@ export function AnalyticsPage() {
                           </li>
                         ))}
                       </ul>
-                    </>
-                  )}
+                  ) : null}
                 </Card>
 
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
-                  <Text className="!text-[#94A3B8]">¿Qué días vendés más?</Text>
-                  <div className="mt-4" style={{ height: 280 }}>
+                  <GraficoExpandible titulo="¿Qué días vendés más?" compactoClass="h-[280px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={diasSemana}
@@ -942,7 +969,7 @@ export function AnalyticsPage() {
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
-                  </div>
+                  </GraficoExpandible>
                 </Card>
 
                 {usaVariantes && dataVar ? (

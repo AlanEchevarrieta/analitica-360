@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { truncarEtiqueta } from './analytics'
+import { fechaHoyAR, lunesIso, sumarDiasIso, truncarEtiqueta } from './analytics'
 import type { CumpleProximo } from './clientes'
 
 export type DashboardDia = {
@@ -136,4 +136,87 @@ export async function cargarDashboardInicio(client: SupabaseClient): Promise<Das
     }),
     cumples,
   }
+}
+
+export type RangoHome = 7 | 30 | 90
+
+function fechaCalendario(raw: unknown): string {
+  const s = String(raw ?? '').trim()
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (m && (s.length === 10 || (!s.includes('T') && !s.includes(' ')))) return m[1]
+  if (s.includes('T') || /[zZ]|[+-]\d{2}:?\d{2}/.test(s)) {
+    return new Date(s).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
+  }
+  if (m) return m[1]
+  return s.slice(0, 10)
+}
+
+function totalVenta(row: Record<string, unknown>) {
+  const con = num(row.total_con_interes)
+  if (con > 0) return con
+  return num(row.total_sin_interes)
+}
+
+export async function cargarSerieVentasHome(client: SupabaseClient): Promise<DashboardDia[]> {
+  const hoy = fechaHoyAR()
+  const desde = sumarDiasIso(hoy, -89)
+  const filas: { fecha: string; total: number; cantidad: number }[] = []
+  let from = 0
+  const PAGE = 1000
+  for (;;) {
+    const res = await client
+      .from('ventas')
+      .select('fecha, total_con_interes, total_sin_interes')
+      .is('deleted_at', null)
+      .gte('fecha', `${desde}T00:00:00.000-03:00`)
+      .lte('fecha', `${hoy}T23:59:59.999-03:00`)
+      .order('fecha', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (res.error) return []
+    const chunk = (res.data ?? []) as Record<string, unknown>[]
+    for (const row of chunk) {
+      filas.push({
+        fecha: fechaCalendario(row.fecha),
+        total: totalVenta(row),
+        cantidad: 1,
+      })
+    }
+    if (chunk.length < PAGE) break
+    from += PAGE
+    if (from >= 12_000) break
+  }
+  const porDia = new Map<string, { total: number; cantidad: number }>()
+  for (const f of filas) {
+    if (f.fecha < desde || f.fecha > hoy) continue
+    const prev = porDia.get(f.fecha) ?? { total: 0, cantidad: 0 }
+    prev.total += f.total
+    prev.cantidad += f.cantidad
+    porDia.set(f.fecha, prev)
+  }
+  const out: DashboardDia[] = []
+  for (let d = desde; d <= hoy; d = sumarDiasIso(d, 1)) {
+    const v = porDia.get(d) ?? { total: 0, cantidad: 0 }
+    out.push({ fecha: d, dia: etiquetaDia(d), total: v.total, cantidad: v.cantidad })
+  }
+  return out
+}
+
+export function recortarSerieHome(serie: DashboardDia[], rango: RangoHome): DashboardDia[] {
+  if (rango !== 90) return serie.slice(-rango)
+  const map = new Map<string, { total: number; cantidad: number }>()
+  for (const p of serie) {
+    const lun = lunesIso(p.fecha)
+    const prev = map.get(lun) ?? { total: 0, cantidad: 0 }
+    prev.total += p.total
+    prev.cantidad += (p.cantidad ?? 0)
+    map.set(lun, prev)
+  }
+  return [...map.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([fecha, v]) => ({
+      fecha,
+      dia: etiquetaDia(fecha),
+      total: v.total,
+      cantidad: v.cantidad,
+    }))
 }

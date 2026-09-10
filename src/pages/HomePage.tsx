@@ -15,7 +15,16 @@ import {
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
-import { cargarDashboardInicio, procesarDatosGrafico, procesarTopProductos, type DashboardInicio } from '../lib/dashboard'
+import { GraficoExpandible, SelectorChips } from '../components/GraficoExpandible'
+import {
+  cargarDashboardInicio,
+  cargarSerieVentasHome,
+  procesarDatosGrafico,
+  procesarTopProductos,
+  recortarSerieHome,
+  type DashboardInicio,
+  type RangoHome,
+} from '../lib/dashboard'
 import { textoCumpleProximo } from '../lib/clientes'
 import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
@@ -393,6 +402,8 @@ export function HomePage() {
   const cumpleFg = tema === 'light' ? '#92400E' : '#FCD34D'
   const [suscripcion, setSuscripcion] = useState<SuscripcionActiva | null>(null)
   const [dash, setDash] = useState<DashboardInicio>(DASH_VACIO)
+  const [serieHome, setSerieHome] = useState<DashboardInicio['ultimos7']>([])
+  const [rangoHome, setRangoHome] = useState<RangoHome>(7)
   const [cargandoDash, setCargandoDash] = useState(true)
 
   useEffect(() => {
@@ -400,7 +411,7 @@ export function HomePage() {
     const client = requireSupabase()
     void (async () => {
       setCargandoDash(true)
-      const [sub, dashData] = await Promise.all([
+      const [sub, dashData, serie] = await Promise.all([
         (async () => {
           let actual = await leerSuscripcionActiva(client, perfil.empresa.id)
           if (!actual) {
@@ -410,14 +421,19 @@ export function HomePage() {
           return actual
         })(),
         cargarDashboardInicio(client),
+        cargarSerieVentasHome(client),
       ])
       setSuscripcion(sub)
       setDash(dashData)
+      setSerieHome(serie.length > 0 ? serie : dashData.ultimos7)
       setCargandoDash(false)
     })()
   }, [perfil])
 
-  const datosGrafico7Dias = useMemo(() => procesarDatosGrafico(dash.ultimos7), [dash.ultimos7])
+  const datosGrafico7Dias = useMemo(
+    () => procesarDatosGrafico(recortarSerieHome(serieHome, rangoHome)),
+    [serieHome, rangoHome],
+  )
   const datosTopProductos = useMemo(() => procesarTopProductos(dash.top5), [dash.top5])
 
   if (!perfil) return null
@@ -585,12 +601,29 @@ export function HomePage() {
                   border: '1px solid var(--border)',
                 }}
               >
-                <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                  Ventas últimos 7 días
-                </p>
-                <div className="mt-3 h-56">
+                <GraficoExpandible
+                  titulo={
+                    rangoHome === 7
+                      ? 'Ventas últimos 7 días'
+                      : rangoHome === 30
+                        ? 'Ventas últimos 30 días'
+                        : 'Ventas últimos 3 meses'
+                  }
+                  compactoClass="h-56"
+                  toolbar={
+                    <SelectorChips
+                      valor={String(rangoHome)}
+                      opciones={[
+                        { id: '7', label: '7 días' },
+                        { id: '30', label: '30 días' },
+                        { id: '90', label: '3 meses' },
+                      ]}
+                      onChange={(id) => setRangoHome(Number(id) as RangoHome)}
+                    />
+                  }
+                >
                   <Grafico7Dias data={datosGrafico7Dias} />
-                </div>
+                </GraficoExpandible>
               </div>
 
               <div
@@ -600,12 +633,9 @@ export function HomePage() {
                   border: '1px solid var(--border)',
                 }}
               >
-                <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                  Top 5 productos más vendidos
-                </p>
-                <div className="mt-3" style={{ height: 320 }}>
+                <GraficoExpandible titulo="Top 5 productos más vendidos" compactoClass="h-[320px]">
                   <GraficoTop5 data={datosTopProductos} />
-                </div>
+                </GraficoExpandible>
               </div>
             </div>
 
@@ -616,12 +646,12 @@ export function HomePage() {
                 border: '1px solid var(--border)',
               }}
             >
-              <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                Estado de stock — productos activos
-              </p>
-              <div className="mt-3" style={{ height: gestionaStock ? alturaStock : 160 }}>
+              <GraficoExpandible
+                titulo="Estado de stock — productos activos"
+                compactoStyle={{ height: gestionaStock ? alturaStock : 160 }}
+              >
                 <GraficoStock data={dash.stock} gestionaStock={gestionaStock} />
-              </div>
+              </GraficoExpandible>
             </div>
           </section>
         ) : null}

@@ -18,6 +18,7 @@ import {
 } from 'recharts'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
+import { GraficoExpandible, SelectorChips } from '../components/GraficoExpandible'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { PlanesModal } from '../components/PlanesModal'
 import { ChartTooltipBox } from '../components/CustomTooltip'
@@ -109,91 +110,6 @@ function tickRadar(props: {
     >
       {label}
     </text>
-  )
-}
-
-function IconMaximize() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"
-      />
-    </svg>
-  )
-}
-
-function MarcoGrafico({
-  titulo,
-  toolbar,
-  compactoClass,
-  children,
-}: {
-  titulo: string
-  toolbar?: ReactNode
-  compactoClass: string
-  children: (ampliado: boolean) => ReactNode
-}) {
-  const [ampliado, setAmpliado] = useState(false)
-
-  useEffect(() => {
-    if (!ampliado) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') setAmpliado(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = prev
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [ampliado])
-
-  return (
-    <>
-      <div className="relative">
-        <div className="mb-2 flex items-center justify-end gap-2">
-          {toolbar}
-          <button
-            type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[rgba(99,102,241,0.45)] text-[#A5B4FC] hover:bg-white/5"
-            aria-label="Maximizar gráfico"
-            onClick={() => setAmpliado(true)}
-          >
-            <IconMaximize />
-          </button>
-        </div>
-        <div className={compactoClass}>{children(false)}</div>
-      </div>
-      {ampliado ? (
-        <div
-          className="fixed inset-0 z-50 flex flex-col"
-          style={{ background: 'rgba(8,12,20,0.92)' }}
-          onClick={() => setAmpliado(false)}
-        >
-          <div className="flex h-full flex-col px-4 py-4" onClick={(ev) => ev.stopPropagation()}>
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h3 style={{ fontFamily: theme.fontDisplay, fontSize: 22, color: '#F1F5F9', fontWeight: 600 }}>
-                {titulo}
-              </h3>
-              <button
-                type="button"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-xl text-[#F1F5F9] hover:bg-white/10"
-                aria-label="Cerrar"
-                onClick={() => setAmpliado(false)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="mx-auto" style={{ width: '90vw', height: '80vh' }}>
-              {children(true)}
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </>
   )
 }
 
@@ -461,9 +377,13 @@ export function InsightsPage() {
                 </div>
               ) : data.salud ? (
                 <>
-                  <MarcoGrafico titulo="🎯 Radar de salud del negocio" compactoClass="mx-auto mt-2 h-[320px] max-w-lg">
-                    {() => <GraficoRadar ejes={data.salud!.ejes} />}
-                  </MarcoGrafico>
+                  <GraficoExpandible
+                    titulo="🎯 Radar de salud del negocio"
+                    compactoClass="mx-auto h-[320px] max-w-lg"
+                    ocultarTitulo
+                  >
+                    <GraficoRadar ejes={data.salud.ejes} />
+                  </GraficoExpandible>
                   <p className="mt-2 text-center text-5xl font-bold" style={{ color: data.salud.color }}>
                     {data.salud.score}
                   </p>
@@ -559,31 +479,20 @@ export function InsightsPage() {
                 </p>
               ) : forecast ? (
                 <>
-                  <MarcoGrafico
+                  <GraficoExpandible
                     titulo="🔮 Proyección de ventas"
-                    compactoClass="mt-2 h-64"
+                    compactoClass="h-64"
+                    ocultarTitulo
                     toolbar={
-                      <div className="flex rounded-md border border-[rgba(99,102,241,0.45)] p-0.5">
-                        {GRANULARIDADES.map((g) => (
-                          <button
-                            key={g.id}
-                            type="button"
-                            className="h-8 rounded px-3 text-xs font-semibold"
-                            style={
-                              granularidad === g.id
-                                ? { background: '#6366F1', color: '#fff' }
-                                : { background: 'transparent', color: '#A5B4FC' }
-                            }
-                            onClick={() => setGranularidad(g.id)}
-                          >
-                            {g.label}
-                          </button>
-                        ))}
-                      </div>
+                      <SelectorChips
+                        valor={granularidad}
+                        opciones={GRANULARIDADES}
+                        onChange={setGranularidad}
+                      />
                     }
                   >
-                    {() => <GraficoForecast data={forecast} />}
-                  </MarcoGrafico>
+                    <GraficoForecast data={forecast} />
+                  </GraficoExpandible>
                   {cargandoForecast ? (
                     <p className="mt-2 text-xs text-[#94A3B8]">Actualizando proyección…</p>
                   ) : null}
@@ -605,6 +514,30 @@ export function InsightsPage() {
                       </span>
                     )}
                   </div>
+                  <p
+                    className="mt-4 rounded-lg px-3 py-3"
+                    style={{
+                      background: 'rgba(99,102,241,0.1)',
+                      border: '1px solid rgba(99,102,241,0.35)',
+                      color: '#94A3B8',
+                      fontSize: 12,
+                    }}
+                  >
+                    ℹ️ Esta proyección usa regresión lineal sobre {forecast.periodosHistorial}{' '}
+                    {forecast.granularidad === 'dia'
+                      ? forecast.periodosHistorial === 1
+                        ? 'día'
+                        : 'días'
+                      : forecast.granularidad === 'semana'
+                        ? forecast.periodosHistorial === 1
+                          ? 'semana'
+                          : 'semanas'
+                        : forecast.periodosHistorial === 1
+                          ? 'mes'
+                          : 'meses'}{' '}
+                    de historial real. Los picos estacionales (ferias, fechas especiales) pueden afectar la
+                    precisión. Usala como orientación, no como certeza.
+                  </p>
                 </>
               ) : (
                 <p className="mt-4 text-sm text-[#94A3B8]">Hace falta al menos dos períodos con ventas para proyectar.</p>
@@ -627,12 +560,13 @@ export function InsightsPage() {
                         {data.variantes.porAtributo.map((grupo) => (
                           <div key={grupo.atributo}>
                             <p className="mb-2 text-sm font-semibold text-[#F1F5F9]">{grupo.atributo}</p>
-                            <MarcoGrafico
+                            <GraficoExpandible
                               titulo={`🎨 ${grupo.atributo}`}
                               compactoClass="h-48"
+                              ocultarTitulo
                             >
-                              {() => <GraficoBarrasAtributo valores={grupo.valores} />}
-                            </MarcoGrafico>
+                              <GraficoBarrasAtributo valores={grupo.valores} />
+                            </GraficoExpandible>
                           </div>
                         ))}
                       </div>

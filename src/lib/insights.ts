@@ -38,6 +38,7 @@ export type PuntoForecast = {
 
 export type InsightForecast = {
   diasHistorial: number
+  periodosHistorial: number
   puntos: PuntoForecast[]
   totalProyeccion: number
   tendencia: 'positiva' | 'negativa' | 'neutra'
@@ -498,7 +499,15 @@ export async function armarForecast(
   })
 
   const tendencia: InsightForecast['tendencia'] = reg.m > 1 ? 'positiva' : reg.m < -1 ? 'negativa' : 'neutra'
-  return { diasHistorial, puntos, totalProyeccion, tendencia, granularidad, etiquetaProyeccion }
+  return {
+    diasHistorial,
+    periodosHistorial: puntosReg.length,
+    puntos,
+    totalProyeccion,
+    tendencia,
+    granularidad,
+    etiquetaProyeccion,
+  }
 }
 
 export function preciosOptimos(
