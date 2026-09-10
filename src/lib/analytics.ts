@@ -195,12 +195,14 @@ export async function contarVentasPeriodo(
   desde: string,
   hasta: string,
 ): Promise<number> {
+  const rpc = await client.rpc('analytics_contar_ventas', { p_desde: desde, p_hasta: hasta })
+  if (!rpc.error && rpc.data != null) return Number(rpc.data)
   const { count, error } = await client
     .from('ventas')
     .select('id', { count: 'exact', head: true })
     .is('deleted_at', null)
-    .gte('fecha', `${desde}T00:00:00.000-03:00`)
-    .lte('fecha', `${hasta}T23:59:59.999-03:00`)
+    .gte('fecha', `${desde}T00:00:00-03:00`)
+    .lt('fecha', `${sumarDiasIso(hasta, 1)}T00:00:00-03:00`)
   if (error || count == null) return 0
   return count
 }
