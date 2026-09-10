@@ -30,6 +30,7 @@ export type AnalyticsPeriodo = {
   cantidadAnt: number
   costoAnt: number
   evolucion: AnalyticsPunto[]
+  evolucionDiaria: AnalyticsPunto[]
   formasPago: AnalyticsPago[]
   top10: AnalyticsTop[]
   productos: AnalyticsProducto[]
@@ -44,6 +45,7 @@ const VACIO: AnalyticsPeriodo = {
   cantidadAnt: 0,
   costoAnt: 0,
   evolucion: [],
+  evolucionDiaria: [],
   formasPago: [],
   top10: [],
   productos: [],
@@ -186,7 +188,7 @@ export function colorFormaPago(nombre: string) {
   return COLOR_FORMA_PAGO[nombre] ?? '#94A3B8'
 }
 
-export const LIMITE_ANALYTICS_VENTAS = 5000
+export const LIMITE_ANALYTICS_VENTAS = 50_000
 
 export async function contarVentasPeriodo(
   client: SupabaseClient,
@@ -203,39 +205,71 @@ export async function contarVentasPeriodo(
   return count
 }
 
-export async function fechaCorteUltimasVentas(
+function parseEvolucion(raw: unknown, granularidad: GranularidadEje = 'dia'): AnalyticsPunto[] {
+  const evolucion = Array.isArray(raw) ? raw : []
+  return evolucion.map((item) => {
+    const p = item as Record<string, unknown>
+    const iso = String(p.fecha ?? '').slice(0, 10)
+    return {
+      fecha: granularidad === 'mes' ? labelMes(iso) : labelFecha(iso),
+      fechaExacta: iso,
+      Ventas: num(p.Ventas),
+      Anterior: num(p.Anterior),
+    }
+  })
+}
+
+function parseFormasPago(raw: unknown): AnalyticsPago[] {
+  const formas = Array.isArray(raw) ? raw : []
+  return formas.map((item) => {
+    const p = item as Record<string, unknown>
+    return { name: String(p.name ?? ''), value: num(p.value) }
+  })
+}
+
+function parseTop10(raw: unknown): AnalyticsTop[] {
+  const top10 = Array.isArray(raw) ? raw : []
+  return top10.map((item) => {
+    const p = item as Record<string, unknown>
+    return { nombre: String(p.nombre ?? ''), unidades: num(p.unidades) }
+  })
+}
+
+export async function cargarAnalyticsEvolucion(
   client: SupabaseClient,
   desde: string,
   hasta: string,
-  limite: number,
-): Promise<string | null> {
-  const { data, error } = await client
-    .from('ventas')
-    .select('fecha')
-    .is('deleted_at', null)
-    .gte('fecha', `${desde}T00:00:00.000-03:00`)
-    .lte('fecha', `${hasta}T23:59:59.999-03:00`)
-    .order('fecha', { ascending: false })
-    .range(limite - 1, limite - 1)
-  if (error || !data?.[0]?.fecha) return null
-  return String(data[0].fecha).slice(0, 10)
+  granularidad: GranularidadEje,
+): Promise<AnalyticsPunto[] | null> {
+  const { data, error } = await client.rpc('analytics_evolucion', {
+    p_desde: desde,
+    p_hasta: hasta,
+    p_granularidad: granularidad,
+  })
+  if (error || data == null) return null
+  return parseEvolucion(data, granularidad)
 }
 
 export async function cargarAnalyticsPeriodo(
   client: SupabaseClient,
   desde: string,
   hasta: string,
+  granularidad: GranularidadEje = 'dia',
 ): Promise<AnalyticsPeriodo> {
-  const { data, error } = await client.rpc('analytics_periodo', {
-    p_desde: desde,
-    p_hasta: hasta,
-  })
-  if (error || data == null) return VACIO
-  const row = data as Record<string, unknown>
-  const evolucion = Array.isArray(row.evolucion) ? row.evolucion : []
-  const formas = Array.isArray(row.formas_pago) ? row.formas_pago : []
-  const top10 = Array.isArray(row.top_10) ? row.top_10 : []
+  const [periodoRes, evoRes, pagosRes, topRes] = await Promise.all([
+    client.rpc('analytics_periodo', { p_desde: desde, p_hasta: hasta }),
+    client.rpc('analytics_evolucion', {
+      p_desde: desde,
+      p_hasta: hasta,
+      p_granularidad: granularidad,
+    }),
+    client.rpc('analytics_formas_pago', { p_desde: desde, p_hasta: hasta }),
+    client.rpc('analytics_top_productos', { p_desde: desde, p_hasta: hasta }),
+  ])
+  if (periodoRes.error || periodoRes.data == null) return VACIO
+  const row = periodoRes.data as Record<string, unknown>
   const productos = Array.isArray(row.productos) ? row.productos : []
+  const evolucionDiaria = parseEvolucion(row.evolucion, 'dia')
   return {
     total: num(row.total),
     cantidad: num(row.cantidad),
@@ -243,19 +277,16 @@ export async function cargarAnalyticsPeriodo(
     totalAnt: num(row.total_ant),
     cantidadAnt: num(row.cantidad_ant),
     costoAnt: num(row.costo_ant),
-    evolucion: evolucion.map((item) => {
-      const p = item as Record<string, unknown>
-      const iso = String(p.fecha ?? '').slice(0, 10)
-      return { fecha: labelFecha(iso), fechaExacta: iso, Ventas: num(p.Ventas), Anterior: num(p.Anterior) }
-    }),
-    formasPago: formas.map((item) => {
-      const p = item as Record<string, unknown>
-      return { name: String(p.name ?? ''), value: num(p.value) }
-    }),
-    top10: top10.map((item) => {
-      const p = item as Record<string, unknown>
-      return { nombre: String(p.nombre ?? ''), unidades: num(p.unidades) }
-    }),
+    evolucion:
+      evoRes.error || evoRes.data == null
+        ? agruparEvolucion(evolucionDiaria, granularidad)
+        : parseEvolucion(evoRes.data, granularidad),
+    evolucionDiaria,
+    formasPago:
+      pagosRes.error || pagosRes.data == null
+        ? parseFormasPago(row.formas_pago)
+        : parseFormasPago(pagosRes.data),
+    top10: topRes.error || topRes.data == null ? parseTop10(row.top_10) : parseTop10(topRes.data),
     productos: productos.map((item) => {
       const p = item as Record<string, unknown>
       return {

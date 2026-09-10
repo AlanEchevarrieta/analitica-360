@@ -28,12 +28,10 @@ import { ParticleNetwork } from '../components/ParticleNetwork'
 import { PlanesModal } from '../components/PlanesModal'
 import {
   COLOR_CUADRANTE,
-  agruparEvolucion,
   cargarAnalyticsPeriodo,
   colorFormaPago,
   contarVentasPeriodo,
   cuadranteProducto,
-  fechaCorteUltimasVentas,
   formatoEjeCompacto,
   LIMITE_ANALYTICS_VENTAS,
   margenPct,
@@ -85,6 +83,7 @@ const VACIO: AnalyticsPeriodo = {
   cantidadAnt: 0,
   costoAnt: 0,
   evolucion: [],
+  evolucionDiaria: [],
   formasPago: [],
   top10: [],
   productos: [],
@@ -263,28 +262,23 @@ export function AnalyticsPage() {
     void (async () => {
       try {
         const totalVentas = await contarVentasPeriodo(requireSupabase(), desde, hasta)
-        let desdeEfectivo = desde
         if (totalVentas > LIMITE_ANALYTICS_VENTAS) {
-          const corte = await fechaCorteUltimasVentas(
-            requireSupabase(),
-            desde,
-            hasta,
-            LIMITE_ANALYTICS_VENTAS,
-          )
-          if (corte) desdeEfectivo = corte
           setAvisoLimite(totalVentas)
-        } else {
-          setAvisoLimite(null)
+          setData(VACIO)
+          setDataVar(null)
+          setRangosMargen(new Map())
+          return
         }
+        setAvisoLimite(null)
         const [fila, cfg] = await Promise.all([
-          cargarAnalyticsPeriodo(requireSupabase(), desdeEfectivo, hasta),
+          cargarAnalyticsPeriodo(requireSupabase(), desde, hasta, granularidadEvo),
           obtenerConfiguracion(requireSupabase(), perfil.empresa.id),
         ])
         setData(fila)
         const usa = Boolean(cfg.config.usaVariantes)
         setUsaVariantes(usa)
         if (usa) {
-          setDataVar(await cargarAnalyticsVariantes(requireSupabase(), desdeEfectivo, hasta))
+          setDataVar(await cargarAnalyticsVariantes(requireSupabase(), desde, hasta))
           const prods = await listarProductos(requireSupabase())
           if (!prods.error && prods.filas.length > 0) {
             const vars = await listarVariantesDeProductos(
@@ -314,7 +308,7 @@ export function AnalyticsPage() {
         setCargando(false)
       }
     })()
-  }, [perfil, desde, hasta])
+  }, [perfil, desde, hasta, granularidadEvo])
 
   const diasPeriodo = diasIncluidosPeriodo(desde, hasta)
   const dataPeriodoAnterior = useMemo(
@@ -394,11 +388,8 @@ export function AnalyticsPage() {
     return { puntos, avgU, avgM }
   }, [data.productos])
 
-  const diasSemana = useMemo(() => ventasPorDiaSemana(data.evolucion), [data.evolucion])
-  const evolucionVista = useMemo(
-    () => agruparEvolucion(data.evolucion, granularidadEvo),
-    [data.evolucion, granularidadEvo],
-  )
+  const diasSemana = useMemo(() => ventasPorDiaSemana(data.evolucionDiaria), [data.evolucionDiaria])
+  const evolucionVista = data.evolucion
   const top10Data = useMemo(() => {
     const porNombre = new Map(data.productos.map((p) => [p.producto, p]))
     return data.top10.map((p) => {
@@ -574,12 +565,12 @@ export function AnalyticsPage() {
 
             {avisoLimite != null ? (
               <p className="mt-4 rounded-lg bg-amber-100 px-3 py-3 text-sm text-amber-950">
-                Este período tiene {avisoLimite} ventas. Mostrando las últimas 5.000. Aplicá un filtro
-                más acotado para ver todo.
+                Este período tiene {avisoLimite.toLocaleString('es-AR')} ventas — aplicá un filtro más
+                acotado para ver los gráficos.
               </p>
             ) : null}
 
-            {cargando ? (
+            {avisoLimite != null ? null : cargando ? (
               <p className="mt-8 text-sm text-[#94A3B8]">Cargando…</p>
             ) : (
               <>
