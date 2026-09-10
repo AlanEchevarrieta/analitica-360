@@ -4,10 +4,14 @@ import { requireSupabase } from '../lib/supabase'
 
 export function AjustarStockModal({
   producto,
+  varianteId,
+  empresaId,
   onCerrar,
   onOk,
 }: {
   producto: { id: string; nombre: string; stock: number }
+  varianteId?: string | null
+  empresaId?: string
   onCerrar: () => void
   onOk: () => void
 }) {
@@ -34,6 +38,8 @@ export function AjustarStockModal({
       tipo,
       cantidad: n,
       motivo: motivo.trim(),
+      varianteId: varianteId ?? null,
+      empresaId,
     })
     setEnviando(false)
     if (fallo) {

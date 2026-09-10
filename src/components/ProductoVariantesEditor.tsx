@@ -1,4 +1,5 @@
 import { useEffect, useImperativeHandle, useMemo, useState, forwardRef } from 'react'
+import { AjustarStockModal } from './AjustarStockModal'
 import {
   combinacionesDe,
   etiquetaCombo,
@@ -8,6 +9,7 @@ import {
   mismaCombinacion,
   registrarStockInicialVariante,
   skuAutomatico,
+  stockPorVariante,
   type AtributoFila,
   type VarianteFila,
 } from '../lib/variantes'
@@ -25,10 +27,62 @@ export type VarianteDraft = {
   activo: boolean
   skuManual: boolean
   stockInicial?: string
+  stockActual?: number
 }
 
 export type ProductoVariantesHandle = {
   persistir: (productoId: string) => Promise<string | null>
+}
+
+function CeldaStockActual({
+  draft,
+  index,
+  productoId,
+  nombreProducto,
+  stockMap,
+  onStock,
+  onAjustar,
+}: {
+  draft: VarianteDraft
+  index: number
+  productoId: string | null
+  nombreProducto: string
+  stockMap: Map<string, number>
+  onStock: (index: number, value: string) => void
+  onAjustar: (input: { varianteId: string; nombre: string; stock: number }) => void
+}) {
+  const actual = draft.id ? (stockMap.get(draft.id) ?? draft.stockActual ?? 0) : 0
+  if (draft.id && actual > 0 && productoId) {
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="text-[#1A2F4A]">{actual}</span>
+        <button
+          type="button"
+          className="text-[11px] font-semibold text-[#6366F1]"
+          onClick={() =>
+            onAjustar({
+              varianteId: draft.id!,
+              nombre: `${nombreProducto} — ${etiquetaCombo(draft.atributos)}`,
+              stock: actual,
+            })
+          }
+        >
+          ✏️ Ajustar
+        </button>
+      </div>
+    )
+  }
+  return (
+    <input
+      className={inputClass}
+      type="number"
+      min={0}
+      step={1}
+      placeholder="0"
+      value={draft.stockInicial ?? ''}
+      onChange={(ev) => onStock(index, ev.target.value)}
+    />
+  )
 }
 
 export const ProductoVariantesEditor = forwardRef<
@@ -49,8 +103,6 @@ export const ProductoVariantesEditor = forwardRef<
   const [drafts, setDrafts] = useState<VarianteDraft[]>([])
   const [existentes, setExistentes] = useState<VarianteFila[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [ok, setOk] = useState<string | null>(null)
-  const [guardando, setGuardando] = useState(false)
   const [continuarMuchas, setContinuarMuchas] = useState(false)
   const [hidratar, setHidratar] = useState(false)
   const [modoCarga, setModoCarga] = useState<'automatico' | 'manual'>('automatico')
@@ -61,6 +113,12 @@ export const ProductoVariantesEditor = forwardRef<
   const [altaPrecio, setAltaPrecio] = useState('')
   const [altaCosto, setAltaCosto] = useState('')
   const [altaStock, setAltaStock] = useState('0')
+  const [stockMap, setStockMap] = useState<Map<string, number>>(new Map())
+  const [ajuste, setAjuste] = useState<{
+    varianteId: string
+    nombre: string
+    stock: number
+  } | null>(null)
 
   useEffect(() => {
     void listarAtributos(requireSupabase()).then((res) => {
@@ -70,24 +128,35 @@ export const ProductoVariantesEditor = forwardRef<
 
   useEffect(() => {
     if (!productoId) return
-    void listarVariantesProducto(requireSupabase(), productoId).then((res) => {
+    void (async () => {
+      const res = await listarVariantesProducto(requireSupabase(), productoId)
       if (res.error || res.filas.length === 0) return
+      const stocks = await stockPorVariante(
+        requireSupabase(),
+        res.filas.map((v) => v.id),
+      )
+      setStockMap(stocks)
       setExistentes(res.filas)
       const keys = [...new Set(res.filas.flatMap((v) => Object.keys(v.atributos)))]
       setHidratar(true)
       setElegidos(keys)
       setDrafts(
-        res.filas.map((v) => ({
-          id: v.id,
-          sku: v.sku,
-          atributos: v.atributos,
-          precio: v.precioVenta == null ? '' : String(v.precioVenta),
-          costo: v.costo == null ? '' : String(v.costo),
-          activo: v.activo,
-          skuManual: Boolean(v.sku),
-        })),
+        res.filas.map((v) => {
+          const actual = stocks.get(v.id) ?? 0
+          return {
+            id: v.id,
+            sku: v.sku,
+            atributos: v.atributos,
+            precio: v.precioVenta == null ? '' : String(v.precioVenta),
+            costo: v.costo == null ? '' : String(v.costo),
+            activo: v.activo,
+            skuManual: Boolean(v.sku),
+            stockActual: actual,
+            stockInicial: actual > 0 ? '' : '0',
+          }
+        }),
       )
-    })
+    })()
   }, [productoId])
 
   const attrsActivos = useMemo(
@@ -132,6 +201,7 @@ export const ProductoVariantesEditor = forwardRef<
         if (prevMatch) return { ...prevMatch, atributos: atributosCombo }
         const ex = existentes.find((e) => mismaCombinacion(e.atributos, atributosCombo))
         const sku = skuAutomatico(nombreProducto, atributosCombo)
+        const actual = ex?.id ? (stockMap.get(ex.id) ?? 0) : 0
         return {
           id: ex?.id,
           sku: ex?.sku || sku,
@@ -140,11 +210,12 @@ export const ProductoVariantesEditor = forwardRef<
           costo: ex?.costo != null ? String(ex.costo) : '',
           activo: ex?.activo ?? true,
           skuManual: Boolean(ex?.sku),
-          stockInicial: ex?.id ? '' : '0',
+          stockActual: actual,
+          stockInicial: actual > 0 ? '' : '0',
         }
       }),
     )
-  }, [attrsActivos, nombreProducto, existentes, cantidadPrevista, continuarMuchas, modoCarga])
+  }, [attrsActivos, nombreProducto, existentes, cantidadPrevista, continuarMuchas, modoCarga, stockMap])
 
   useEffect(() => {
     setDrafts((prev) =>
@@ -158,7 +229,8 @@ export const ProductoVariantesEditor = forwardRef<
     if (drafts.length === 0) return null
     const client = requireSupabase()
     const pendientes = drafts.filter((d) => {
-      if (d.id) return false
+      const actual = d.id ? (stockMap.get(d.id) ?? d.stockActual ?? 0) : 0
+      if (actual > 0) return false
       const n = Number.parseInt(d.stockInicial ?? '', 10)
       return Number.isFinite(n) && n > 0
     })
@@ -183,9 +255,11 @@ export const ProductoVariantesEditor = forwardRef<
     if (fallo) return fallo
     const rec = await listarVariantesProducto(client, pid)
     if (rec.error) return rec.error
+    const stocks = await stockPorVariante(client, rec.filas.map((v) => v.id))
     for (const d of pendientes) {
       const fila = rec.filas.find((v) => mismaCombinacion(v.atributos, d.atributos))
       if (!fila) continue
+      if ((stocks.get(fila.id) ?? 0) > 0) continue
       const n = Number.parseInt(d.stockInicial ?? '', 10)
       const stockErr = await registrarStockInicialVariante(client, {
         productoId: pid,
@@ -195,18 +269,24 @@ export const ProductoVariantesEditor = forwardRef<
       })
       if (stockErr) return stockErr
     }
+    const stocksFinal = await stockPorVariante(client, rec.filas.map((v) => v.id))
+    setStockMap(stocksFinal)
     setExistentes(rec.filas)
     setDrafts(
-      rec.filas.map((v) => ({
-        id: v.id,
-        sku: v.sku,
-        atributos: v.atributos,
-        precio: v.precioVenta == null ? '' : String(v.precioVenta),
-        costo: v.costo == null ? '' : String(v.costo),
-        activo: v.activo,
-        skuManual: Boolean(v.sku),
-        stockInicial: '',
-      })),
+      rec.filas.map((v) => {
+        const actual = stocksFinal.get(v.id) ?? 0
+        return {
+          id: v.id,
+          sku: v.sku,
+          atributos: v.atributos,
+          precio: v.precioVenta == null ? '' : String(v.precioVenta),
+          costo: v.costo == null ? '' : String(v.costo),
+          activo: v.activo,
+          skuManual: Boolean(v.sku),
+          stockActual: actual,
+          stockInicial: actual > 0 ? '' : '0',
+        }
+      }),
     )
     return null
   }
@@ -216,25 +296,8 @@ export const ProductoVariantesEditor = forwardRef<
     () => ({
       persistir: (pid: string) => persistirDrafts(pid),
     }),
-    [drafts, empresaId, precioBase, costoBase],
+    [drafts, empresaId, precioBase, costoBase, stockMap],
   )
-
-  async function guardar() {
-    if (!productoId) {
-      setError('Guardá el producto primero y después las variantes')
-      return
-    }
-    setError(null)
-    setOk(null)
-    setGuardando(true)
-    const fallo = await persistirDrafts(productoId)
-    setGuardando(false)
-    if (fallo) {
-      setError(fallo)
-      return
-    }
-    setOk('Variantes guardadas')
-  }
 
   function agregarManual() {
     if (attrsActivos.length === 0) {
@@ -260,6 +323,7 @@ export const ProductoVariantesEditor = forwardRef<
         activo: true,
         skuManual: altaSkuManual || Boolean(altaSku.trim()),
         stockInicial: altaStock.trim() === '' ? '0' : altaStock,
+        stockActual: 0,
       },
     ])
     setAltaSel({})
@@ -278,7 +342,7 @@ export const ProductoVariantesEditor = forwardRef<
   return (
     <div className="mt-6 rounded-lg border border-[#E2E8F0] p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-bold text-[#1A2F4A]">Variantes</h2>
+        <h2 className="text-sm font-bold text-[#1A2F4A]">Variantes de este producto</h2>
         {modoCarga === 'automatico' && cantidadUi > 100 ? (
           <span className="rounded-full bg-[#7F1D1D] px-2.5 py-0.5 text-[11px] font-semibold text-[#FECACA]">
             🔴 Demasiadas variantes — reducí los atributos
@@ -294,7 +358,13 @@ export const ProductoVariantesEditor = forwardRef<
           </span>
         ) : null}
       </div>
-      <p className="mt-1 text-xs text-[#4A5568]">Este producto tiene:</p>
+      <p className="mt-1 text-xs text-[#4A5568]">
+        Configurá las versiones que vendés (por color, material, etc.) y su stock
+      </p>
+      <p className="mt-2 text-xs text-[#4A5568]">
+        💡 Cada variante tiene su propio stock. Ingresá cuántas unidades tenés de cada una.
+      </p>
+      <p className="mt-3 text-xs text-[#4A5568]">Este producto tiene:</p>
       <div className="mt-2 flex flex-wrap gap-3">
         {atributos.map((a) => (
           <label key={a.id} className="flex items-center gap-2 text-sm text-[#1A2F4A]">
@@ -391,10 +461,9 @@ export const ProductoVariantesEditor = forwardRef<
                     {c}
                   </th>
                 ))}
-                <th className="py-2 pr-2 font-semibold">SKU</th>
                 <th className="py-2 pr-2 font-semibold">Precio</th>
                 <th className="py-2 pr-2 font-semibold">Costo</th>
-                <th className="py-2 pr-2 font-semibold">Stock inicial</th>
+                <th className="py-2 pr-2 font-semibold">Stock actual</th>
                 <th className="py-2 font-semibold">Activo</th>
               </tr>
             </thead>
@@ -406,18 +475,6 @@ export const ProductoVariantesEditor = forwardRef<
                       {d.atributos[c]}
                     </td>
                   ))}
-                  <td className="py-2 pr-2">
-                    <input
-                      className={inputClass}
-                      value={d.sku}
-                      onChange={(ev) => {
-                        const sku = ev.target.value
-                        setDrafts((prev) =>
-                          prev.map((x, j) => (j === i ? { ...x, sku, skuManual: true } : x)),
-                        )
-                      }}
-                    />
-                  </td>
                   <td className="py-2 pr-2">
                     <input
                       className={inputClass}
@@ -443,21 +500,19 @@ export const ProductoVariantesEditor = forwardRef<
                     />
                   </td>
                   <td className="py-2 pr-2">
-                    {d.id ? (
-                      <span className="text-[#94A3B8]">—</span>
-                    ) : (
-                      <input
-                        className={inputClass}
-                        inputMode="numeric"
-                        value={d.stockInicial ?? '0'}
-                        onChange={(ev) => {
-                          const stockInicial = ev.target.value
-                          setDrafts((prev) =>
-                            prev.map((x, j) => (j === i ? { ...x, stockInicial } : x)),
-                          )
-                        }}
-                      />
-                    )}
+                    <CeldaStockActual
+                      draft={d}
+                      index={i}
+                      productoId={productoId}
+                      nombreProducto={nombreProducto}
+                      stockMap={stockMap}
+                      onStock={(index, value) =>
+                        setDrafts((prev) =>
+                          prev.map((x, j) => (j === index ? { ...x, stockInicial: value } : x)),
+                        )
+                      }
+                      onAjustar={setAjuste}
+                    />
                   </td>
                   <td className="py-2">
                     <button
@@ -563,7 +618,10 @@ export const ProductoVariantesEditor = forwardRef<
                 Stock inicial
                 <input
                   className={`${inputClass} mt-1`}
-                  inputMode="numeric"
+                  type="number"
+                  min={0}
+                  step={1}
+                  placeholder="0"
                   value={altaStock}
                   onChange={(ev) => setAltaStock(ev.target.value)}
                 />
@@ -597,10 +655,9 @@ export const ProductoVariantesEditor = forwardRef<
                         {c}
                       </th>
                     ))}
-                    <th className="py-2 pr-2 font-semibold">SKU</th>
                     <th className="py-2 pr-2 font-semibold">Precio</th>
                     <th className="py-2 pr-2 font-semibold">Costo</th>
-                    <th className="py-2 pr-2 font-semibold">Stock inicial</th>
+                    <th className="py-2 pr-2 font-semibold">Stock actual</th>
                     <th className="py-2 pr-2 font-semibold">Activo</th>
                     <th className="py-2 font-semibold" />
                   </tr>
@@ -613,18 +670,6 @@ export const ProductoVariantesEditor = forwardRef<
                           {d.atributos[c]}
                         </td>
                       ))}
-                      <td className="py-2 pr-2">
-                        <input
-                          className={inputClass}
-                          value={d.sku}
-                          onChange={(ev) => {
-                            const sku = ev.target.value
-                            setDrafts((prev) =>
-                              prev.map((x, j) => (j === i ? { ...x, sku, skuManual: true } : x)),
-                            )
-                          }}
-                        />
-                      </td>
                       <td className="py-2 pr-2">
                         <input
                           className={inputClass}
@@ -650,21 +695,19 @@ export const ProductoVariantesEditor = forwardRef<
                         />
                       </td>
                       <td className="py-2 pr-2">
-                        {d.id ? (
-                          <span className="text-[#94A3B8]">—</span>
-                        ) : (
-                          <input
-                            className={inputClass}
-                            inputMode="numeric"
-                            value={d.stockInicial ?? '0'}
-                            onChange={(ev) => {
-                              const stockInicial = ev.target.value
-                              setDrafts((prev) =>
-                                prev.map((x, j) => (j === i ? { ...x, stockInicial } : x)),
-                              )
-                            }}
-                          />
-                        )}
+                        <CeldaStockActual
+                      draft={d}
+                      index={i}
+                      productoId={productoId}
+                      nombreProducto={nombreProducto}
+                      stockMap={stockMap}
+                      onStock={(index, value) =>
+                        setDrafts((prev) =>
+                          prev.map((x, j) => (j === index ? { ...x, stockInicial: value } : x)),
+                        )
+                      }
+                      onAjustar={setAjuste}
+                    />
                       </td>
                       <td className="py-2">
                         <button
@@ -707,15 +750,34 @@ export const ProductoVariantesEditor = forwardRef<
         </div>
       ) : null}
       {error ? <p className="mt-3 text-sm text-[#DC2626]">{error}</p> : null}
-      {ok ? <p className="mt-3 text-sm text-[#16A34A]">{ok}</p> : null}
-      <button
-        className="mt-4 h-11 w-full rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
-        type="button"
-        disabled={guardando || drafts.length === 0}
-        onClick={() => void guardar()}
-      >
-        {guardando ? 'GUARDANDO…' : 'Guardar variantes'}
-      </button>
+      {ajuste && productoId ? (
+        <AjustarStockModal
+          producto={{ id: productoId, nombre: ajuste.nombre, stock: ajuste.stock }}
+          varianteId={ajuste.varianteId}
+          empresaId={empresaId}
+          onCerrar={() => setAjuste(null)}
+          onOk={() => {
+            setAjuste(null)
+            void (async () => {
+              const rec = await listarVariantesProducto(requireSupabase(), productoId)
+              if (rec.error) return
+              const stocks = await stockPorVariante(
+                requireSupabase(),
+                rec.filas.map((v) => v.id),
+              )
+              setStockMap(stocks)
+              setExistentes(rec.filas)
+              setDrafts((prev) =>
+                prev.map((d) => {
+                  if (!d.id) return d
+                  const actual = stocks.get(d.id) ?? 0
+                  return { ...d, stockActual: actual, stockInicial: actual > 0 ? '' : '0' }
+                }),
+              )
+            })()
+          }}
+        />
+      ) : null}
     </div>
   )
 })

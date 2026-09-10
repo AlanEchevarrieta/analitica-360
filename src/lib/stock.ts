@@ -68,8 +68,28 @@ export async function ajustarStock(
     tipo: TipoAjusteStock | 'ajuste_negativo'
     cantidad: number
     motivo: string
+    varianteId?: string | null
+    empresaId?: string
   },
 ): Promise<string | null> {
+  if (input.varianteId && input.empresaId) {
+    const { data: auth } = await client.auth.getUser()
+    const uid = auth.user?.id
+    if (!uid) return 'NO_AUTENTICADO'
+    const signo = input.tipo === 'ajuste_positivo' ? 1 : -1
+    const { error } = await client.from('movimientos_inventario').insert({
+      empresa_id: input.empresaId,
+      producto_id: input.productoId,
+      usuario_id: uid,
+      tipo: input.tipo,
+      cantidad: input.cantidad,
+      signo,
+      motivo: input.motivo.trim(),
+      variante_id: input.varianteId,
+    })
+    if (!error) return null
+    return `No se pudo ajustar el stock: ${error.message}`
+  }
   const { error } = await client.rpc('ajustar_stock', {
     p_producto_id: input.productoId,
     p_tipo: input.tipo,

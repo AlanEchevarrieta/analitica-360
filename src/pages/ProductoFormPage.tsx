@@ -92,7 +92,6 @@ export function ProductoFormPage() {
       setLargoCm(dim.largoCm)
       setAnchoCm(dim.anchoCm)
       setPesoGr(dim.pesoGr)
-      if (dim.altoCm || dim.largoCm || dim.anchoCm || dim.pesoGr) setDimOpen(true)
       const mov = await listarMovimientosProducto(requireSupabase(), id)
       if (!mov.error) setMovimientos(mov.filas)
       setCargando(false)
@@ -116,7 +115,7 @@ export function ProductoFormPage() {
       return
     }
     const stock = Number.parseInt(stockInicial, 10)
-    if (esNuevo && (!Number.isFinite(stock) || stock < 0)) {
+    if (esNuevo && !usaVariantes && (!Number.isFinite(stock) || stock < 0)) {
       setError('El stock inicial tiene que ser un número entero')
       return
     }
@@ -146,7 +145,7 @@ export function ProductoFormPage() {
         categoria: categoria.trim(),
         precioVenta: precio,
         costo: costoNum,
-        stockInicial: Number.isFinite(stock) ? stock : 0,
+        stockInicial: usaVariantes ? 0 : Number.isFinite(stock) ? stock : 0,
         activo,
       })
       if (creado.error || !creado.id) {
@@ -274,7 +273,7 @@ export function ProductoFormPage() {
                 />
               </label>
               <label className="mt-4 text-sm font-medium text-[#4A5568]">
-                Precio de venta (ARS)
+                {usaVariantes ? 'Precio base (ARS)' : 'Precio de venta (ARS)'}
                 <input
                   className={inputClass}
                   inputMode="decimal"
@@ -283,7 +282,7 @@ export function ProductoFormPage() {
                 />
               </label>
               <label className="mt-4 text-sm font-medium text-[#4A5568]">
-                Costo (ARS)
+                {usaVariantes ? 'Costo base (ARS)' : 'Costo (ARS)'}
                 <input
                   className={inputClass}
                   inputMode="decimal"
@@ -291,7 +290,7 @@ export function ProductoFormPage() {
                   onChange={(ev) => setCosto(ev.target.value)}
                 />
               </label>
-              {esNuevo ? (
+              {usaVariantes ? null : esNuevo ? (
                 <label className="mt-4 text-sm font-medium text-[#4A5568]">
                   Stock inicial
                   <input
@@ -316,6 +315,16 @@ export function ProductoFormPage() {
                 />
                 Activo
               </label>
+              {usaVariantes && perfil ? (
+                <ProductoVariantesEditor
+                  ref={variantesRef}
+                  productoId={esNuevo ? null : id ?? null}
+                  empresaId={perfil.empresa.id}
+                  nombreProducto={nombre}
+                  precioBase={Number(precioVenta.replace(',', '.')) || 0}
+                  costoBase={costo.trim() === '' ? null : Number(costo.replace(',', '.')) || null}
+                />
+              ) : null}
               <button
                 className="mt-6 flex w-full items-center justify-between text-left text-sm font-bold text-[#1A2F4A]"
                 type="button"
@@ -346,16 +355,6 @@ export function ProductoFormPage() {
                     </label>
                   </div>
                 </div>
-              ) : null}
-              {usaVariantes && perfil ? (
-                <ProductoVariantesEditor
-                  ref={variantesRef}
-                  productoId={esNuevo ? null : id ?? null}
-                  empresaId={perfil.empresa.id}
-                  nombreProducto={nombre}
-                  precioBase={Number(precioVenta.replace(',', '.')) || 0}
-                  costoBase={costo.trim() === '' ? null : Number(costo.replace(',', '.')) || null}
-                />
               ) : null}
 
               {duplicado ? (
