@@ -514,10 +514,13 @@ export function VentaNuevaPage() {
                             />
                           </label>
                         </div>
+                        <p className="mt-2 text-xs text-[#4A5568]">
+                          Stock disponible: {linea.stockLinea}{' '}
+                          {linea.stockLinea === 1 ? 'unidad' : 'unidades'}
+                        </p>
                         {linea.cantidad > linea.stockLinea ? (
-                          <p className="mt-2 text-xs text-[#EA580C]">
-                            ⚠️ Stock insuficiente — tenés {linea.stockLinea} unidades
-                            disponibles
+                          <p className="mt-1 text-xs text-[#EA580C]">
+                            ⚠️ Superás el stock disponible ({linea.stockLinea}). Podés confirmar igual.
                           </p>
                         ) : null}
                         <p className="mt-2 text-right text-sm text-[#1A2F4A]">

@@ -38,9 +38,16 @@ import {
   type ProductoFila,
 } from '../lib/productos'
 import { obtenerConfiguracion } from '../lib/configuracion'
+import { leerUmbralStock } from '../lib/inventario'
 import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
-import { contarVariantesActivasPorProducto } from '../lib/variantes'
+import {
+  contarVariantesActivasPorProducto,
+  emojiStock,
+  etiquetaCombo,
+  listarVariantesDeProductos,
+  stockPorVariante,
+} from '../lib/variantes'
 import { theme } from '../theme'
 
 function margenPct(precio: number, costo: number) {
@@ -78,6 +85,11 @@ export function ProductosPage() {
   const [historial, setHistorial] = useState<{ id: string; nombre: string; stock: number } | null>(null)
   const [usaVariantes, setUsaVariantes] = useState(false)
   const [variantesActivas, setVariantesActivas] = useState<Map<string, number>>(new Map())
+  const [desgloseStock, setDesgloseStock] = useState<
+    Map<string, { etiqueta: string; stock: number }[]>
+  >(new Map())
+  const [umbralStock, setUmbralStock] = useState(5)
+  const [stockAbierto, setStockAbierto] = useState<string | null>(null)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -113,13 +125,32 @@ export function ProductosPage() {
       const usa = Boolean(config.usaVariantes)
       setUsaVariantes(usa)
       if (usa && data.length > 0) {
-        const conteo = await contarVariantesActivasPorProducto(
-          requireSupabase(),
-          data.map((p) => p.id),
-        )
+        const ids = data.map((p) => p.id)
+        const [conteo, umb, vars] = await Promise.all([
+          contarVariantesActivasPorProducto(requireSupabase(), ids),
+          leerUmbralStock(requireSupabase(), perfil.empresa.id),
+          listarVariantesDeProductos(requireSupabase(), ids),
+        ])
         setVariantesActivas(conteo)
+        setUmbralStock(umb)
+        if (!vars.error && vars.filas.length > 0) {
+          const stocks = await stockPorVariante(
+            requireSupabase(),
+            vars.filas.map((v) => v.id),
+          )
+          const map = new Map<string, { etiqueta: string; stock: number }[]>()
+          for (const v of vars.filas.filter((x) => x.activo)) {
+            const arr = map.get(v.productoId) ?? []
+            arr.push({ etiqueta: etiquetaCombo(v.atributos), stock: stocks.get(v.id) ?? 0 })
+            map.set(v.productoId, arr)
+          }
+          setDesgloseStock(map)
+        } else {
+          setDesgloseStock(new Map())
+        }
       } else {
         setVariantesActivas(new Map())
+        setDesgloseStock(new Map())
       }
     }
   }, [pagina, busqueda, categoria, estado, stockFiltro, margenFiltro, perfil])
@@ -431,9 +462,15 @@ export function ProductosPage() {
                     </td>
                   ) : null}
                   <td className="px-3 py-3">
-                    <StockCelda
-                      stock={fila.stock_actual}
-                      onClick={() =>
+                    <StockProductoCelda
+                      total={fila.stock_actual}
+                      items={usaVariantes ? (desgloseStock.get(fila.id) ?? []) : []}
+                      umbral={umbralStock}
+                      abierto={stockAbierto === fila.id}
+                      onToggle={() =>
+                        setStockAbierto((id) => (id === fila.id ? null : fila.id))
+                      }
+                      onHistorial={() =>
                         setHistorial({
                           id: fila.id,
                           nombre: fila.nombre,
@@ -487,11 +524,16 @@ export function ProductosPage() {
                     </p>
                   ) : null}
                   <p className="mt-1 text-sm">{formatoARS(fila.precio_venta)}</p>
-                  <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                    Stock:{' '}
-                    <StockCelda
-                      stock={fila.stock_actual}
-                      onClick={() =>
+                  <div className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    <StockProductoCelda
+                      total={fila.stock_actual}
+                      items={usaVariantes ? (desgloseStock.get(fila.id) ?? []) : []}
+                      umbral={umbralStock}
+                      abierto={stockAbierto === fila.id}
+                      onToggle={() =>
+                        setStockAbierto((id) => (id === fila.id ? null : fila.id))
+                      }
+                      onHistorial={() =>
                         setHistorial({
                           id: fila.id,
                           nombre: fila.nombre,
@@ -499,7 +541,7 @@ export function ProductosPage() {
                         })
                       }
                     />
-                  </p>
+                  </div>
                   {puedeEditar ? (
                     <Link className="mt-2 inline-block text-xs font-semibold text-[#6366F1]" to={`/productos/${fila.id}`}>
                       Editar
@@ -561,6 +603,46 @@ export function ProductosPage() {
         ) : null}
         {puedeEditar ? <FabLink to="/productos/nuevo" label="Nuevo producto" /> : null}
       </div>
+    </div>
+  )
+}
+
+function StockProductoCelda({
+  total,
+  items,
+  umbral,
+  abierto,
+  onToggle,
+  onHistorial,
+}: {
+  total: number
+  items: { etiqueta: string; stock: number }[]
+  umbral: number
+  abierto: boolean
+  onToggle: () => void
+  onHistorial: () => void
+}) {
+  if (items.length === 0) {
+    return <StockCelda stock={total} onClick={onHistorial} />
+  }
+  return (
+    <div>
+      <button
+        type="button"
+        className="font-medium text-[#A5B4FC] hover:underline"
+        onClick={onToggle}
+      >
+        {total} u total
+      </button>
+      {abierto ? (
+        <ul className="mt-1 space-y-0.5 text-xs font-normal text-[#94A3B8]">
+          {items.map((item) => (
+            <li key={item.etiqueta}>
+              · {item.etiqueta}: {item.stock} u {emojiStock(item.stock, umbral)}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   )
 }

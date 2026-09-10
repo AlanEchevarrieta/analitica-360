@@ -140,6 +140,7 @@ export const ProductoVariantesEditor = forwardRef<
           costo: ex?.costo != null ? String(ex.costo) : '',
           activo: ex?.activo ?? true,
           skuManual: Boolean(ex?.sku),
+          stockInicial: ex?.id ? '' : '0',
         }
       }),
     )
@@ -157,6 +158,7 @@ export const ProductoVariantesEditor = forwardRef<
     if (drafts.length === 0) return null
     const client = requireSupabase()
     const pendientes = drafts.filter((d) => {
+      if (d.id) return false
       const n = Number.parseInt(d.stockInicial ?? '', 10)
       return Number.isFinite(n) && n > 0
     })
@@ -392,6 +394,7 @@ export const ProductoVariantesEditor = forwardRef<
                 <th className="py-2 pr-2 font-semibold">SKU</th>
                 <th className="py-2 pr-2 font-semibold">Precio</th>
                 <th className="py-2 pr-2 font-semibold">Costo</th>
+                <th className="py-2 pr-2 font-semibold">Stock inicial</th>
                 <th className="py-2 font-semibold">Activo</th>
               </tr>
             </thead>
@@ -438,6 +441,23 @@ export const ProductoVariantesEditor = forwardRef<
                         setDrafts((prev) => prev.map((x, j) => (j === i ? { ...x, costo } : x)))
                       }}
                     />
+                  </td>
+                  <td className="py-2 pr-2">
+                    {d.id ? (
+                      <span className="text-[#94A3B8]">—</span>
+                    ) : (
+                      <input
+                        className={inputClass}
+                        inputMode="numeric"
+                        value={d.stockInicial ?? '0'}
+                        onChange={(ev) => {
+                          const stockInicial = ev.target.value
+                          setDrafts((prev) =>
+                            prev.map((x, j) => (j === i ? { ...x, stockInicial } : x)),
+                          )
+                        }}
+                      />
+                    )}
                   </td>
                   <td className="py-2">
                     <button
@@ -580,6 +600,7 @@ export const ProductoVariantesEditor = forwardRef<
                     <th className="py-2 pr-2 font-semibold">SKU</th>
                     <th className="py-2 pr-2 font-semibold">Precio</th>
                     <th className="py-2 pr-2 font-semibold">Costo</th>
+                    <th className="py-2 pr-2 font-semibold">Stock inicial</th>
                     <th className="py-2 pr-2 font-semibold">Activo</th>
                     <th className="py-2 font-semibold" />
                   </tr>
@@ -627,6 +648,23 @@ export const ProductoVariantesEditor = forwardRef<
                             setDrafts((prev) => prev.map((x, j) => (j === i ? { ...x, costo } : x)))
                           }}
                         />
+                      </td>
+                      <td className="py-2 pr-2">
+                        {d.id ? (
+                          <span className="text-[#94A3B8]">—</span>
+                        ) : (
+                          <input
+                            className={inputClass}
+                            inputMode="numeric"
+                            value={d.stockInicial ?? '0'}
+                            onChange={(ev) => {
+                              const stockInicial = ev.target.value
+                              setDrafts((prev) =>
+                                prev.map((x, j) => (j === i ? { ...x, stockInicial } : x)),
+                              )
+                            }}
+                          />
+                        )}
                       </td>
                       <td className="py-2">
                         <button

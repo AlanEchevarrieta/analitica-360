@@ -24,6 +24,12 @@ export const ATRIBUTOS_DEFAULT: { nombre: string; valores: string[] }[] = [
   { nombre: 'Tamaño', valores: ['Chico', 'Mediano', 'Grande'] },
 ]
 
+export function emojiStock(stock: number, umbral = 5) {
+  if (stock <= 0) return '🔴'
+  if (stock <= umbral) return '🟡'
+  return '🟢'
+}
+
 export function etiquetaCombo(atributos: Record<string, string>) {
   return Object.keys(atributos)
     .sort((a, b) => a.localeCompare(b, 'es'))

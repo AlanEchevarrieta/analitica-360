@@ -56,6 +56,7 @@ export function InventarioPage() {
   const [desglose, setDesglose] = useState<Map<string, { etiqueta: string; stock: number }[]>>(
     new Map(),
   )
+  const [abiertos, setAbiertos] = useState<Record<string, boolean>>({})
 
   const cargar = useCallback(async () => {
     if (!perfil) return
@@ -88,7 +89,7 @@ export function InventarioPage() {
           vars.filas.map((v) => v.id),
         )
         const map = new Map<string, { etiqueta: string; stock: number }[]>()
-        for (const v of vars.filas) {
+        for (const v of vars.filas.filter((x) => x.activo)) {
           const arr = map.get(v.productoId) ?? []
           arr.push({ etiqueta: etiquetaCombo(v.atributos), stock: stocks.get(v.id) ?? 0 })
           map.set(v.productoId, arr)
@@ -218,11 +219,29 @@ export function InventarioPage() {
                     return (
                       <Tr key={fila.id} index={index}>
                         <td className="px-3 py-3 font-medium">
-                          {fila.nombre}
                           {desglose.get(fila.id)?.length ? (
-                            <span className="mt-1 block text-xs font-normal" style={{ color: 'var(--text-muted)' }}>
-                              {desglose.get(fila.id)!.map((d) => `${d.etiqueta}: ${d.stock}u`).join(' · ')}
-                            </span>
+                            <button
+                              type="button"
+                              className="text-left font-medium hover:underline"
+                              onClick={() =>
+                                setAbiertos((prev) => ({ ...prev, [fila.id]: !prev[fila.id] }))
+                              }
+                            >
+                              {fila.nombre}
+                              <span className="ml-1 text-xs font-normal" style={{ color: 'var(--text-muted)' }}>
+                                {abiertos[fila.id] ? '▾' : '▸'}
+                              </span>
+                            </button>
+                          ) : (
+                            fila.nombre
+                          )}
+                          {abiertos[fila.id] && desglose.get(fila.id)?.length ? (
+                            <p className="mt-1 text-xs font-normal" style={{ color: 'var(--text-muted)' }}>
+                              {desglose
+                                .get(fila.id)!
+                                .map((d) => `${d.etiqueta}: ${d.stock}u`)
+                                .join(' | ')}
+                            </p>
                           ) : null}
                         </td>
                         <td className="px-3 py-3" style={{ color: 'var(--text-muted)' }}>
@@ -259,12 +278,29 @@ export function InventarioPage() {
                 return (
                   <ListCard key={fila.id}>
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold">{fila.nombre}</p>
+                    <div>
                       {desglose.get(fila.id)?.length ? (
+                        <button
+                          type="button"
+                          className="text-left text-sm font-semibold"
+                          onClick={() =>
+                            setAbiertos((prev) => ({ ...prev, [fila.id]: !prev[fila.id] }))
+                          }
+                        >
+                          {fila.nombre} {abiertos[fila.id] ? '▾' : '▸'}
+                        </button>
+                      ) : (
+                        <p className="text-sm font-semibold">{fila.nombre}</p>
+                      )}
+                      {abiertos[fila.id] && desglose.get(fila.id)?.length ? (
                         <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                          {desglose.get(fila.id)!.map((d) => `${d.etiqueta}: ${d.stock}u`).join(' · ')}
+                          {desglose
+                            .get(fila.id)!
+                            .map((d) => `${d.etiqueta}: ${d.stock}u`)
+                            .join(' | ')}
                         </p>
                       ) : null}
+                    </div>
                       <span className="text-xs">
                         {est.icono} {est.texto}
                       </span>

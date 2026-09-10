@@ -119,20 +119,22 @@ export function VarianteChipsPicker({
                   type="button"
                   disabled={!posible}
                   className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                    on
-                      ? 'bg-[#6366F1] text-white'
-                      : !posible
-                        ? 'cursor-not-allowed bg-[#E2E8F0] text-[#94A3B8]'
-                        : sinStock
-                          ? 'border border-[#E2E8F0] bg-[#EEF2F6] text-[#64748B]'
-                          : 'border border-[#E2E8F0] bg-white text-[#1A2F4A]'
+                    on && sinStock
+                      ? 'bg-[#DC2626] text-white'
+                      : on
+                        ? 'bg-[#6366F1] text-white'
+                        : !posible
+                          ? 'cursor-not-allowed bg-[#E2E8F0] text-[#94A3B8]'
+                          : sinStock
+                            ? 'border border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]'
+                            : 'border border-[#E2E8F0] bg-white text-[#1A2F4A]'
                   }`}
                   onClick={() => {
                     if (!posible) return
                     setSel((prev) => ({ ...prev, [nombre]: val }))
                   }}
                 >
-                  {on ? `${val} ✓` : val}
+                  {sinStock ? `⚠️ ${on ? `${val} ✓` : val}` : on ? `${val} ✓` : val}
                 </button>
               )
             })}
@@ -150,7 +152,7 @@ export function VarianteChipsPicker({
       ) : (
         <div className="mt-3 text-sm text-[#1A2F4A]">
           <p>
-            Stock actual: {stock}
+            Stock disponible: {stock ?? 0} {(stock ?? 0) === 1 ? 'unidad' : 'unidades'}
             {stock != null && stock <= 0 ? ' ⚠️' : ''}
           </p>
           {exigirStock ? <p>Precio: {formatoARS(precio)}</p> : <p>Costo: {formatoARS(costo)}</p>}
