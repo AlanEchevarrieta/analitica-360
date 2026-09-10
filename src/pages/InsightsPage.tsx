@@ -21,11 +21,14 @@ import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { PlanesModal } from '../components/PlanesModal'
 import { ChartTooltipBox } from '../components/CustomTooltip'
-import { formatoEjeCompacto } from '../lib/analytics'
+import { formatoEjeCompacto, fechaHoyAR } from '../lib/analytics'
 import { obtenerConfiguracion } from '../lib/configuracion'
 import {
+  armarForecast,
   cargarInsights,
   type FilaElasticidad,
+  type GranularidadForecast,
+  type InsightForecast,
   type InsightsPayload,
 } from '../lib/insights'
 import { planTieneInsights } from '../lib/planes'
@@ -109,11 +112,242 @@ function tickRadar(props: {
   )
 }
 
+function IconMaximize() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"
+      />
+    </svg>
+  )
+}
+
+function MarcoGrafico({
+  titulo,
+  toolbar,
+  compactoClass,
+  children,
+}: {
+  titulo: string
+  toolbar?: ReactNode
+  compactoClass: string
+  children: (ampliado: boolean) => ReactNode
+}) {
+  const [ampliado, setAmpliado] = useState(false)
+
+  useEffect(() => {
+    if (!ampliado) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') setAmpliado(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [ampliado])
+
+  return (
+    <>
+      <div className="relative">
+        <div className="mb-2 flex items-center justify-end gap-2">
+          {toolbar}
+          <button
+            type="button"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[rgba(99,102,241,0.45)] text-[#A5B4FC] hover:bg-white/5"
+            aria-label="Maximizar gráfico"
+            onClick={() => setAmpliado(true)}
+          >
+            <IconMaximize />
+          </button>
+        </div>
+        <div className={compactoClass}>{children(false)}</div>
+      </div>
+      {ampliado ? (
+        <div
+          className="fixed inset-0 z-50 flex flex-col"
+          style={{ background: 'rgba(8,12,20,0.92)' }}
+          onClick={() => setAmpliado(false)}
+        >
+          <div className="flex h-full flex-col px-4 py-4" onClick={(ev) => ev.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h3 style={{ fontFamily: theme.fontDisplay, fontSize: 22, color: '#F1F5F9', fontWeight: 600 }}>
+                {titulo}
+              </h3>
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-xl text-[#F1F5F9] hover:bg-white/10"
+                aria-label="Cerrar"
+                onClick={() => setAmpliado(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mx-auto" style={{ width: '90vw', height: '80vh' }}>
+              {children(true)}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  )
+}
+
+function GraficoForecast({ data }: { data: InsightForecast }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={data.puntos} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
+        <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
+        <XAxis dataKey="label" tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} />
+        <YAxis
+          tick={{ fill: '#94A3B8', fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+          width={56}
+          tickFormatter={formatoEjeCompacto}
+        />
+        <RechartsTooltip
+          content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null
+            return (
+              <ChartTooltipBox>
+                <p className="text-sm font-semibold text-[#F1F5F9]">{String(label)}</p>
+                {payload.map((p) =>
+                  p.value == null ? null : (
+                    <p key={String(p.dataKey)} className="mt-1 text-xs text-[#94A3B8]">
+                      {p.dataKey === 'historico' ? 'Histórico' : 'Proyección'}: {formatoARS(Number(p.value))}
+                    </p>
+                  ),
+                )}
+              </ChartTooltipBox>
+            )
+          }}
+        />
+        <Area
+          type="monotone"
+          dataKey="proyeccion"
+          stroke="none"
+          fill="rgba(74,222,128,0.1)"
+          connectNulls
+          isAnimationActive
+          animationDuration={450}
+        />
+        <Line
+          type="monotone"
+          dataKey="historico"
+          stroke="#6366F1"
+          strokeWidth={2}
+          dot={false}
+          connectNulls
+          isAnimationActive
+          animationDuration={450}
+        />
+        <Line
+          type="monotone"
+          dataKey="proyeccion"
+          stroke="#4ADE80"
+          strokeWidth={2}
+          strokeDasharray="5 5"
+          dot={false}
+          connectNulls
+          isAnimationActive
+          animationDuration={450}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  )
+}
+
+function GraficoRadar({ ejes }: { ejes: { eje: string; valor: number; fullMark: number }[] }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <RadarChart data={ejes} cx="50%" cy="50%" outerRadius="72%">
+        <PolarGrid stroke="rgba(255,255,255,0.1)" />
+        <PolarAngleAxis
+          dataKey="eje"
+          tick={(props) =>
+            tickRadar({
+              x: Number(props.x),
+              y: Number(props.y),
+              textAnchor:
+                props.textAnchor === 'start' || props.textAnchor === 'end' || props.textAnchor === 'inherit'
+                  ? props.textAnchor
+                  : 'middle',
+              payload: { value: String(props.payload?.value ?? '') },
+              ejes,
+            })
+          }
+        />
+        <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+        <Radar
+          dataKey="valor"
+          stroke="#6366F1"
+          fill="rgba(99,102,241,0.25)"
+          fillOpacity={1}
+          dot={{ r: 4, fill: '#6366F1', stroke: '#6366F1' }}
+          isAnimationActive
+          animationDuration={450}
+        />
+      </RadarChart>
+    </ResponsiveContainer>
+  )
+}
+
+function GraficoBarrasAtributo({
+  valores,
+}: {
+  valores: { name: string; pct: number; unidades: number }[]
+}) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart layout="vertical" data={valores} margin={{ top: 4, right: 36, left: 8, bottom: 0 }}>
+        <XAxis type="number" hide domain={[0, 100]} />
+        <YAxis
+          type="category"
+          dataKey="name"
+          width={90}
+          tick={{ fill: '#F1F5F9', fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <RechartsTooltip
+          content={({ active, payload }) => {
+            if (!active || !payload?.length) return null
+            const p = payload[0].payload as { name: string; pct: number; unidades: number }
+            return (
+              <ChartTooltipBox>
+                <p className="text-sm font-semibold text-[#F1F5F9]">{p.name}</p>
+                <p className="mt-1 text-xs text-[#94A3B8]">
+                  {p.pct.toFixed(1)}% · {p.unidades} u
+                </p>
+              </ChartTooltipBox>
+            )
+          }}
+        />
+        <Bar dataKey="pct" fill="#6366F1" radius={[0, 4, 4, 0]} maxBarSize={16} isAnimationActive animationDuration={450} />
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
+const GRANULARIDADES: { id: GranularidadForecast; label: string }[] = [
+  { id: 'dia', label: 'Día' },
+  { id: 'semana', label: 'Semana' },
+  { id: 'mes', label: 'Mes' },
+]
+
 export function InsightsPage() {
   const { perfil } = useAuth()
   const [modalPlanes, setModalPlanes] = useState(false)
   const [cargando, setCargando] = useState(true)
   const [data, setData] = useState<InsightsPayload | null>(null)
+  const [granularidad, setGranularidad] = useState<GranularidadForecast>('semana')
+  const [forecast, setForecast] = useState<InsightForecast | null>(null)
+  const [cargandoForecast, setCargandoForecast] = useState(false)
 
   const premium = Boolean(perfil && planTieneInsights(perfil.empresa.plan_actual))
 
@@ -134,6 +368,7 @@ export function InsightsPage() {
           salud: null,
           elasticidades: [],
           forecast: null,
+          serieDiaria: [],
           diasHistorial: 0,
           variantes: null,
           precios: [],
@@ -150,6 +385,28 @@ export function InsightsPage() {
       }
     })()
   }, [perfil])
+
+  useEffect(() => {
+    if (!data || data.diasHistorial < 30 || data.serieDiaria.length < 2) {
+      setForecast(data?.forecast ?? null)
+      return
+    }
+    let cancel = false
+    setCargandoForecast(true)
+    void armarForecast(data.serieDiaria, granularidad, fechaHoyAR(), data.diasHistorial)
+      .then((fila) => {
+        if (!cancel) setForecast(fila)
+      })
+      .catch(() => {
+        if (!cancel) setForecast(null)
+      })
+      .finally(() => {
+        if (!cancel) setCargandoForecast(false)
+      })
+    return () => {
+      cancel = true
+    }
+  }, [data, granularidad])
 
   if (!perfil) return null
 
@@ -204,38 +461,9 @@ export function InsightsPage() {
                 </div>
               ) : data.salud ? (
                 <>
-                  <div className="mx-auto mt-4 h-[320px] max-w-lg">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart data={data.salud.ejes} cx="50%" cy="50%" outerRadius="72%">
-                        <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                        <PolarAngleAxis
-                          dataKey="eje"
-                          tick={(props) =>
-                            tickRadar({
-                              x: Number(props.x),
-                              y: Number(props.y),
-                              textAnchor:
-                                props.textAnchor === 'start' ||
-                                props.textAnchor === 'end' ||
-                                props.textAnchor === 'inherit'
-                                  ? props.textAnchor
-                                  : 'middle',
-                              payload: { value: String(props.payload?.value ?? '') },
-                              ejes: data.salud?.ejes,
-                            })
-                          }
-                        />
-                        <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-                        <Radar
-                          dataKey="valor"
-                          stroke="#6366F1"
-                          fill="rgba(99,102,241,0.25)"
-                          fillOpacity={1}
-                          dot={{ r: 4, fill: '#6366F1', stroke: '#6366F1' }}
-                        />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <MarcoGrafico titulo="🎯 Radar de salud del negocio" compactoClass="mx-auto mt-2 h-[320px] max-w-lg">
+                    {() => <GraficoRadar ejes={data.salud!.ejes} />}
+                  </MarcoGrafico>
                   <p className="mt-2 text-center text-5xl font-bold" style={{ color: data.salud.color }}>
                     {data.salud.score}
                   </p>
@@ -316,7 +544,10 @@ export function InsightsPage() {
 
             <section className="rounded-lg p-5" style={CARD}>
               <TituloSeccion>🔮 Proyección de ventas</TituloSeccion>
-              <Sub>Regresión lineal sobre semanas de los últimos 90 días, 4 semanas hacia adelante.</Sub>
+              <Sub>
+                Día: 30 días + 14 de proyección. Semana: 90 días (todas las semanas del rango) + 4 adelante. Mes:
+                6 meses + 3 adelante. Siempre se usa ventas.fecha, ordenado ASC.
+              </Sub>
               {data.errores.forecast ? (
                 <div className="mt-4">
                   <ErrorSeccion mensaje={data.errores.forecast} />
@@ -326,74 +557,45 @@ export function InsightsPage() {
                   Necesitás al menos 30 días de historial. Tenés {data.diasHistorial}{' '}
                   {data.diasHistorial === 1 ? 'día' : 'días'}.
                 </p>
-              ) : data.forecast ? (
+              ) : forecast ? (
                 <>
-                  <div className="mt-4 h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={data.forecast.puntos} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-                        <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                        <XAxis dataKey="semana" tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <YAxis
-                          tick={{ fill: '#94A3B8', fontSize: 11 }}
-                          axisLine={false}
-                          tickLine={false}
-                          width={56}
-                          tickFormatter={formatoEjeCompacto}
-                        />
-                        <RechartsTooltip
-                          content={({ active, payload, label }) => {
-                            if (!active || !payload?.length) return null
-                            return (
-                              <ChartTooltipBox>
-                                <p className="text-sm font-semibold text-[#F1F5F9]">{String(label)}</p>
-                                {payload.map((p) =>
-                                  p.value == null ? null : (
-                                    <p key={String(p.dataKey)} className="mt-1 text-xs text-[#94A3B8]">
-                                      {p.dataKey === 'historico' ? 'Histórico' : 'Proyección'}:{' '}
-                                      {formatoARS(Number(p.value))}
-                                    </p>
-                                  ),
-                                )}
-                              </ChartTooltipBox>
-                            )
-                          }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="proyeccion"
-                          stroke="none"
-                          fill="rgba(74,222,128,0.1)"
-                          connectNulls
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="historico"
-                          stroke="#6366F1"
-                          strokeWidth={2}
-                          dot={false}
-                          connectNulls
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="proyeccion"
-                          stroke="#4ADE80"
-                          strokeWidth={2}
-                          strokeDasharray="5 5"
-                          dot={false}
-                          connectNulls
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <MarcoGrafico
+                    titulo="🔮 Proyección de ventas"
+                    compactoClass="mt-2 h-64"
+                    toolbar={
+                      <div className="flex rounded-md border border-[rgba(99,102,241,0.45)] p-0.5">
+                        {GRANULARIDADES.map((g) => (
+                          <button
+                            key={g.id}
+                            type="button"
+                            className="h-8 rounded px-3 text-xs font-semibold"
+                            style={
+                              granularidad === g.id
+                                ? { background: '#6366F1', color: '#fff' }
+                                : { background: 'transparent', color: '#A5B4FC' }
+                            }
+                            onClick={() => setGranularidad(g.id)}
+                          >
+                            {g.label}
+                          </button>
+                        ))}
+                      </div>
+                    }
+                  >
+                    {() => <GraficoForecast data={forecast} />}
+                  </MarcoGrafico>
+                  {cargandoForecast ? (
+                    <p className="mt-2 text-xs text-[#94A3B8]">Actualizando proyección…</p>
+                  ) : null}
                   <div className="mt-4 flex flex-wrap items-center gap-3">
                     <p className="text-sm text-[#F1F5F9]">
-                      Proyección próximas 4 semanas: {formatoARS(data.forecast.totalProyeccion)}
+                      {forecast.etiquetaProyeccion}: {formatoARS(forecast.totalProyeccion)}
                     </p>
-                    {data.forecast.tendencia === 'positiva' ? (
+                    {forecast.tendencia === 'positiva' ? (
                       <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-[#4ADE80]">
                         ↑ Positiva
                       </span>
-                    ) : data.forecast.tendencia === 'negativa' ? (
+                    ) : forecast.tendencia === 'negativa' ? (
                       <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-[#F87171]">
                         ↓ Negativa
                       </span>
@@ -405,7 +607,7 @@ export function InsightsPage() {
                   </div>
                 </>
               ) : (
-                <p className="mt-4 text-sm text-[#94A3B8]">Hace falta al menos dos semanas con ventas para proyectar.</p>
+                <p className="mt-4 text-sm text-[#94A3B8]">Hace falta al menos dos períodos con ventas para proyectar.</p>
               )}
             </section>
 
@@ -425,22 +627,12 @@ export function InsightsPage() {
                         {data.variantes.porAtributo.map((grupo) => (
                           <div key={grupo.atributo}>
                             <p className="mb-2 text-sm font-semibold text-[#F1F5F9]">{grupo.atributo}</p>
-                            <div className="h-48">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <BarChart layout="vertical" data={grupo.valores} margin={{ top: 4, right: 36, left: 8, bottom: 0 }}>
-                                  <XAxis type="number" hide domain={[0, 100]} />
-                                  <YAxis
-                                    type="category"
-                                    dataKey="name"
-                                    width={90}
-                                    tick={{ fill: '#F1F5F9', fontSize: 11 }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                  />
-                                  <Bar dataKey="pct" fill="#6366F1" radius={[0, 4, 4, 0]} maxBarSize={16} />
-                                </BarChart>
-                              </ResponsiveContainer>
-                            </div>
+                            <MarcoGrafico
+                              titulo={`🎨 ${grupo.atributo}`}
+                              compactoClass="h-48"
+                            >
+                              {() => <GraficoBarrasAtributo valores={grupo.valores} />}
+                            </MarcoGrafico>
                           </div>
                         ))}
                       </div>

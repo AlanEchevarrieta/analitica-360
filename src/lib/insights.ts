@@ -28,8 +28,10 @@ export type FilaElasticidad = {
   recomendacion: string
 }
 
+export type GranularidadForecast = 'dia' | 'semana' | 'mes'
+
 export type PuntoForecast = {
-  semana: string
+  label: string
   historico: number | null
   proyeccion: number | null
 }
@@ -39,6 +41,8 @@ export type InsightForecast = {
   puntos: PuntoForecast[]
   totalProyeccion: number
   tendencia: 'positiva' | 'negativa' | 'neutra'
+  granularidad: GranularidadForecast
+  etiquetaProyeccion: string
 }
 
 export type DistAtributo = { atributo: string; valores: { name: string; pct: number; unidades: number }[] }
@@ -96,9 +100,31 @@ function lunesDe(iso: string) {
   return dt.toISOString().slice(0, 10)
 }
 
-function etiquetaSemana(isoLunes: string) {
-  const [y, m, d] = isoLunes.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+/** Fecha de negocio: columna `fecha`, nunca `created_at`. */
+function fechaCalendario(raw: unknown): string {
+  const s = String(raw ?? '').trim()
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (m && (s.length === 10 || (!s.includes('T') && !s.includes(' ')))) return m[1]
+  if (s.includes('T') || /[zZ]|[+-]\d{2}:?\d{2}/.test(s)) return isoAR(s)
+  if (m) return m[1]
+  return s.slice(0, 10)
+}
+
+function inicioMesHace(iso: string, mesesAtras: number) {
+  const [y, m] = iso.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1 - mesesAtras, 1))
+  return dt.toISOString().slice(0, 10)
+}
+
+function etiquetaDia(iso: string) {
+  const [y, mo, d] = iso.split('-').map(Number)
+  return new Date(y, mo - 1, d).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+}
+
+function etiquetaMes(iso: string) {
+  const [y, mo] = iso.split('-').map(Number)
+  const t = new Date(y, mo - 1, 1).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' })
+  return t.replace('.', '')
 }
 
 function tsDesde(iso: string) {
@@ -140,7 +166,7 @@ async function cargarVentasRango(client: SupabaseClient, desde: string, hasta: s
       .from('ventas')
       .select('id, fecha, cliente_id, total_con_interes, total_sin_interes')
       .is('deleted_at', null)
-      .gte('fecha', tsDesde(desde))
+      .gte('fecha', tsDesde(sumarDiasIso(desde, -1)))
       .lte('fecha', tsHasta(hasta))
       .order('fecha', { ascending: true })
       .range(from, to)
@@ -148,7 +174,7 @@ async function cargarVentasRango(client: SupabaseClient, desde: string, hasta: s
   })
   return rows.map((row) => ({
     id: String(row.id),
-    fechaIso: isoAR(String(row.fecha ?? '')),
+    fechaIso: fechaCalendario(row.fecha),
     clienteId: row.cliente_id == null || row.cliente_id === '' ? null : String(row.cliente_id),
     total: totalVenta(row),
   }))
@@ -192,7 +218,7 @@ async function diasDesdePrimeraVenta(client: SupabaseClient, hoy: string): Promi
   if (error) throw new Error(error.message)
   const fecha = data?.[0] && typeof data[0] === 'object' ? String((data[0] as { fecha?: string }).fecha ?? '') : ''
   if (!fecha) return 0
-  const first = isoAR(fecha)
+  const first = fechaCalendario(fecha)
   const [y1, m1, d1] = first.split('-').map(Number)
   const [y2, m2, d2] = hoy.split('-').map(Number)
   const a = Date.UTC(y1, m1 - 1, d1)
@@ -363,34 +389,116 @@ export function calcularElasticidades(
   return out.sort((a, b) => a.producto.localeCompare(b.producto, 'es'))
 }
 
-export async function proyectarVentas(
-  semanal: { lunes: string; total: number }[],
+export type PuntoSerieDia = { fecha: string; total: number }
+
+function serieDiariaDe(ventas: VentaMini[], desde: string, hasta: string): PuntoSerieDia[] {
+  const map = new Map<string, number>()
+  for (const v of ventas) {
+    if (v.fechaIso < desde || v.fechaIso > hasta) continue
+    map.set(v.fechaIso, (map.get(v.fechaIso) ?? 0) + v.total)
+  }
+  const out: PuntoSerieDia[] = []
+  for (let d = desde; d <= hasta; d = sumarDiasIso(d, 1)) {
+    out.push({ fecha: d, total: map.get(d) ?? 0 })
+  }
+  return out
+}
+
+function agregarPorClave(serie: PuntoSerieDia[], claveDe: (fecha: string) => string): { clave: string; total: number }[] {
+  const map = new Map<string, number>()
+  for (const p of serie) {
+    const k = claveDe(p.fecha)
+    map.set(k, (map.get(k) ?? 0) + p.total)
+  }
+  return [...map.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([clave, total]) => ({ clave, total }))
+}
+
+export async function armarForecast(
+  serieDiaria: PuntoSerieDia[],
+  granularidad: GranularidadForecast,
+  hoy: string,
+  diasHistorial: number,
 ): Promise<InsightForecast | null> {
-  if (semanal.length < 2) return null
+  let puntosReg: { clave: string; total: number }[]
+  if (granularidad === 'dia') {
+    puntosReg = serieDiaria
+      .filter((p) => p.fecha >= sumarDiasIso(hoy, -29) && p.fecha <= hoy)
+      .map((p) => ({ clave: p.fecha, total: p.total }))
+  } else if (granularidad === 'semana') {
+    puntosReg = agregarPorClave(
+      serieDiaria.filter((p) => p.fecha >= sumarDiasIso(hoy, -89) && p.fecha <= hoy),
+      lunesDe,
+    )
+  } else {
+    puntosReg = agregarPorClave(
+      serieDiaria.filter((p) => p.fecha >= inicioMesHace(hoy, 5) && p.fecha <= hoy),
+      inicioMes,
+    )
+  }
+
+  puntosReg.sort((a, b) => a.clave.localeCompare(b.clave))
+  if (puntosReg.length < 2) return null
+
   const ss = await import('simple-statistics')
-  const puntos: [number, number][] = semanal.map((s, i) => [i, s.total])
-  const reg = ss.linearRegression(puntos)
+  const pares: [number, number][] = puntosReg.map((p, i) => [i, p.total])
+  const reg = ss.linearRegression(pares)
   const linea = ss.linearRegressionLine(reg)
-  const last8 = semanal.slice(-8)
-  const chart: PuntoForecast[] = last8.map((s, i) => ({
-    semana: etiquetaSemana(s.lunes),
-    historico: s.total,
-    proyeccion: i === last8.length - 1 ? s.total : null,
+
+  const visible = puntosReg
+  const offset = 0
+  const labelDe =
+    granularidad === 'dia' ? etiquetaDia : granularidad === 'semana' ? etiquetaDia : etiquetaMes
+
+  const puntos: PuntoForecast[] = visible.map((p, i) => ({
+    label: labelDe(p.clave),
+    historico: p.total,
+    proyeccion: i === visible.length - 1 ? p.total : null,
   }))
+
+  const pasos = granularidad === 'dia' ? 14 : granularidad === 'semana' ? 4 : 3
+  const stepIso = (clave: string, k: number) => {
+    if (granularidad === 'dia') return sumarDiasIso(clave, k)
+    if (granularidad === 'semana') return sumarDiasIso(clave, 7 * k)
+    const [y, m] = clave.split('-').map(Number)
+    const dt = new Date(Date.UTC(y, m - 1 + k, 1))
+    return dt.toISOString().slice(0, 10)
+  }
+
   let totalProyeccion = 0
-  const lastLunes = semanal[semanal.length - 1].lunes
-  for (let k = 1; k <= 4; k++) {
-    const x = semanal.length - 1 + k
+  const lastClave = puntosReg[puntosReg.length - 1].clave
+  for (let k = 1; k <= pasos; k++) {
+    const x = puntosReg.length - 1 + k
     const y = Math.max(0, linea(x))
     totalProyeccion += y
-    chart.push({
-      semana: etiquetaSemana(sumarDiasIso(lastLunes, 7 * k)),
+    puntos.push({
+      label: labelDe(stepIso(lastClave, k)),
       historico: null,
       proyeccion: y,
     })
   }
+
+  const etiquetaProyeccion =
+    granularidad === 'dia'
+      ? 'Proyección próximos 14 días'
+      : granularidad === 'semana'
+        ? 'Proyección próximas 4 semanas'
+        : 'Proyección próximos 3 meses'
+
+  console.log('[insights forecast]', {
+    granularidad,
+    desde: puntosReg[0]?.clave,
+    hasta: lastClave,
+    puntosRegresion: puntosReg.length,
+    offsetVisible: offset,
+    primerTotal: puntosReg[0]?.total,
+    ultimoTotal: puntosReg[puntosReg.length - 1]?.total,
+    columna: 'fecha',
+  })
+
   const tendencia: InsightForecast['tendencia'] = reg.m > 1 ? 'positiva' : reg.m < -1 ? 'negativa' : 'neutra'
-  return { diasHistorial: 0, puntos: chart, totalProyeccion, tendencia }
+  return { diasHistorial, puntos, totalProyeccion, tendencia, granularidad, etiquetaProyeccion }
 }
 
 export function preciosOptimos(
@@ -523,6 +631,7 @@ export type InsightsPayload = {
   salud: InsightSalud | null
   elasticidades: FilaElasticidad[]
   forecast: InsightForecast | null
+  serieDiaria: PuntoSerieDia[]
   diasHistorial: number
   variantes: InsightVariantes | null
   precios: FilaPrecioOptimo[]
@@ -538,6 +647,7 @@ export async function cargarInsights(
     salud: null,
     elasticidades: [],
     forecast: null,
+    serieDiaria: [],
     diasHistorial: 0,
     variantes: null,
     precios: [],
@@ -548,8 +658,7 @@ export async function cargarInsights(
   const mesIni = inicioMes(hoy)
   const mesAntIni = mesAnteriorDe(mesIni)
   const mesAntFin = sumarDiasIso(mesIni, -1)
-  const desde90 = sumarDiasIso(hoy, -89)
-  const desde = mesAntIni < desde90 ? mesAntIni : desde90
+  const desdeFetch = inicioMesHace(hoy, 5)
 
   let productos: ProductoFila[] = []
   let ventas: VentaMini[] = []
@@ -560,7 +669,7 @@ export async function cargarInsights(
   try {
     const [productosRes, ventasRes, historialRows, dias] = await Promise.all([
       listarProductos(client),
-      cargarVentasRango(client, desde, hoy),
+      cargarVentasRango(client, desdeFetch, hoy),
       paginar<Record<string, unknown>>(async (from, to) => {
         const res = await client
           .from('precios_historial')
@@ -573,7 +682,8 @@ export async function cargarInsights(
     ])
     if (productosRes.error) throw new Error(productosRes.error)
     productos = productosRes.filas
-    ventas = ventasRes
+    ventas = ventasRes.filter((v) => v.fechaIso >= desdeFetch && v.fechaIso <= hoy)
+    ventas.sort((a, b) => a.fechaIso.localeCompare(b.fechaIso) || a.id.localeCompare(b.id))
     diasHistorial = dias
     historial = historialRows.map((r) => ({
       productoId: String(r.producto_id),
@@ -617,20 +727,12 @@ export async function cargarInsights(
     errores.radar = e instanceof Error ? e.message : 'No se pudo armar el radar'
   }
 
+  const serieDiaria = serieDiariaDe(ventas, desdeFetch, hoy)
+
   let forecast: InsightForecast | null = null
   try {
     if (diasHistorial >= 30) {
-      const porSemana = new Map<string, number>()
-      for (const v of ventas) {
-        if (v.fechaIso < desde90) continue
-        const lun = lunesDe(v.fechaIso)
-        porSemana.set(lun, (porSemana.get(lun) ?? 0) + v.total)
-      }
-      const semanal = [...porSemana.entries()]
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([lunes, total]) => ({ lunes, total }))
-      forecast = await proyectarVentas(semanal)
-      if (forecast) forecast = { ...forecast, diasHistorial }
+      forecast = await armarForecast(serieDiaria, 'semana', hoy, diasHistorial)
     }
   } catch (e) {
     errores.forecast = e instanceof Error ? e.message : 'No se pudo calcular la proyección'
@@ -664,5 +766,5 @@ export async function cargarInsights(
     errores.precio = e instanceof Error ? e.message : 'No se pudo estimar el precio óptimo'
   }
 
-  return { salud, elasticidades, forecast, diasHistorial, variantes, precios, errores }
+  return { salud, elasticidades, forecast, serieDiaria, diasHistorial, variantes, precios, errores }
 }
