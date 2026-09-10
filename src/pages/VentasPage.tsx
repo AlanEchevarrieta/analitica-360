@@ -150,7 +150,7 @@ export function VentasPage() {
   async function onExportar(tipo: 'xlsx' | 'pdf') {
     setError(null)
     setMenuExportar(false)
-    if (total > 5000) {
+    if (total > 50000) {
       setError(
         `Hay ${total} ventas en este período.\nAplicá un filtro de fecha más acotado para exportar.`,
       )

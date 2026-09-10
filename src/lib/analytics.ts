@@ -188,7 +188,7 @@ export function colorFormaPago(nombre: string) {
   return COLOR_FORMA_PAGO[nombre] ?? '#94A3B8'
 }
 
-export const LIMITE_ANALYTICS_VENTAS = 50_000
+export const LIMITE_ANALYTICS_VENTAS = 50000
 
 export async function contarVentasPeriodo(
   client: SupabaseClient,
