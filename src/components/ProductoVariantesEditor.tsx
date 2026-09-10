@@ -6,6 +6,7 @@ import {
   listarAtributos,
   listarVariantesProducto,
   mismaCombinacion,
+  registrarStockInicialVariante,
   skuAutomatico,
   type AtributoFila,
   type VarianteFila,
@@ -23,6 +24,7 @@ export type VarianteDraft = {
   costo: string
   activo: boolean
   skuManual: boolean
+  stockInicial?: string
 }
 
 export type ProductoVariantesHandle = {
@@ -51,6 +53,14 @@ export const ProductoVariantesEditor = forwardRef<
   const [guardando, setGuardando] = useState(false)
   const [continuarMuchas, setContinuarMuchas] = useState(false)
   const [hidratar, setHidratar] = useState(false)
+  const [modoCarga, setModoCarga] = useState<'automatico' | 'manual'>('automatico')
+  const [mostrarAlta, setMostrarAlta] = useState(false)
+  const [altaSel, setAltaSel] = useState<Record<string, string>>({})
+  const [altaSku, setAltaSku] = useState('')
+  const [altaSkuManual, setAltaSkuManual] = useState(false)
+  const [altaPrecio, setAltaPrecio] = useState('')
+  const [altaCosto, setAltaCosto] = useState('')
+  const [altaStock, setAltaStock] = useState('0')
 
   useEffect(() => {
     void listarAtributos(requireSupabase()).then((res) => {
@@ -86,9 +96,28 @@ export const ProductoVariantesEditor = forwardRef<
   )
 
   const cantidadPrevista = useMemo(() => combinacionesDe(attrsActivos).length, [attrsActivos])
-  const esperaConfirmacion = cantidadPrevista > 50 && !continuarMuchas && !hidratar
+  const esperaConfirmacion =
+    modoCarga === 'automatico' && cantidadPrevista > 50 && !continuarMuchas && !hidratar
+
+  const altaCombo = useMemo(() => {
+    const combo: Record<string, string> = {}
+    for (const a of attrsActivos) {
+      if (altaSel[a.nombre]) combo[a.nombre] = altaSel[a.nombre]
+    }
+    return combo
+  }, [attrsActivos, altaSel])
 
   useEffect(() => {
+    if (modoCarga !== 'manual' || altaSkuManual) return
+    if (attrsActivos.some((a) => !altaSel[a.nombre])) {
+      setAltaSku('')
+      return
+    }
+    setAltaSku(skuAutomatico(nombreProducto, altaCombo))
+  }, [modoCarga, altaSkuManual, attrsActivos, altaSel, altaCombo, nombreProducto])
+
+  useEffect(() => {
+    if (modoCarga === 'manual') return
     if (attrsActivos.length === 0) {
       if (existentes.length === 0) setDrafts([])
       return
@@ -114,7 +143,7 @@ export const ProductoVariantesEditor = forwardRef<
         }
       }),
     )
-  }, [attrsActivos, nombreProducto, existentes, cantidadPrevista, continuarMuchas])
+  }, [attrsActivos, nombreProducto, existentes, cantidadPrevista, continuarMuchas, modoCarga])
 
   useEffect(() => {
     setDrafts((prev) =>
@@ -124,24 +153,60 @@ export const ProductoVariantesEditor = forwardRef<
     )
   }, [nombreProducto])
 
+  async function persistirDrafts(pid: string): Promise<string | null> {
+    if (drafts.length === 0) return null
+    const client = requireSupabase()
+    const pendientes = drafts.filter((d) => {
+      const n = Number.parseInt(d.stockInicial ?? '', 10)
+      return Number.isFinite(n) && n > 0
+    })
+    const fallo = await guardarVariantesProducto(client, {
+      productoId: pid,
+      empresaId,
+      variantes: drafts.map((d) => ({
+        id: d.id,
+        sku: d.sku,
+        atributos: d.atributos,
+        precioVenta: d.precio.trim() === '' ? precioBase : Number(d.precio.replace(',', '.')) || precioBase,
+        costo: d.costo.trim() === '' ? costoBase : Number(d.costo.replace(',', '.')) || costoBase,
+        activo: d.activo,
+      })),
+    })
+    if (fallo) return fallo
+    const rec = await listarVariantesProducto(client, pid)
+    if (rec.error) return rec.error
+    for (const d of pendientes) {
+      const fila = rec.filas.find((v) => mismaCombinacion(v.atributos, d.atributos))
+      if (!fila) continue
+      const n = Number.parseInt(d.stockInicial ?? '', 10)
+      const stockErr = await registrarStockInicialVariante(client, {
+        productoId: pid,
+        empresaId,
+        varianteId: fila.id,
+        cantidad: n,
+      })
+      if (stockErr) return stockErr
+    }
+    setExistentes(rec.filas)
+    setDrafts(
+      rec.filas.map((v) => ({
+        id: v.id,
+        sku: v.sku,
+        atributos: v.atributos,
+        precio: v.precioVenta == null ? '' : String(v.precioVenta),
+        costo: v.costo == null ? '' : String(v.costo),
+        activo: v.activo,
+        skuManual: Boolean(v.sku),
+        stockInicial: '',
+      })),
+    )
+    return null
+  }
+
   useImperativeHandle(
     ref,
     () => ({
-      persistir: (pid: string) =>
-        drafts.length === 0
-          ? Promise.resolve(null)
-          : guardarVariantesProducto(requireSupabase(), {
-              productoId: pid,
-              empresaId,
-              variantes: drafts.map((d) => ({
-                id: d.id,
-                sku: d.sku,
-                atributos: d.atributos,
-                precioVenta: d.precio.trim() === '' ? precioBase : Number(d.precio.replace(',', '.')) || precioBase,
-                costo: d.costo.trim() === '' ? costoBase : Number(d.costo.replace(',', '.')) || costoBase,
-                activo: d.activo,
-              })),
-            }),
+      persistir: (pid: string) => persistirDrafts(pid),
     }),
     [drafts, empresaId, precioBase, costoBase],
   )
@@ -154,26 +219,49 @@ export const ProductoVariantesEditor = forwardRef<
     setError(null)
     setOk(null)
     setGuardando(true)
-    const fallo = await guardarVariantesProducto(requireSupabase(), {
-      productoId,
-      empresaId,
-      variantes: drafts.map((d) => ({
-        id: d.id,
-        sku: d.sku,
-        atributos: d.atributos,
-        precioVenta: d.precio.trim() === '' ? precioBase : Number(d.precio.replace(',', '.')) || precioBase,
-        costo: d.costo.trim() === '' ? costoBase : Number(d.costo.replace(',', '.')) || costoBase,
-        activo: d.activo,
-      })),
-    })
+    const fallo = await persistirDrafts(productoId)
     setGuardando(false)
     if (fallo) {
       setError(fallo)
       return
     }
     setOk('Variantes guardadas')
-    const rec = await listarVariantesProducto(requireSupabase(), productoId)
-    if (!rec.error) setExistentes(rec.filas)
+  }
+
+  function agregarManual() {
+    if (attrsActivos.length === 0) {
+      setError('Tildá al menos un atributo')
+      return
+    }
+    if (attrsActivos.some((a) => !altaSel[a.nombre])) {
+      setError('Completá todos los atributos de la variante')
+      return
+    }
+    if (drafts.some((d) => mismaCombinacion(d.atributos, altaCombo))) {
+      setError('Esa combinación ya está en la lista')
+      return
+    }
+    const sku = altaSku.trim() || skuAutomatico(nombreProducto, altaCombo)
+    setDrafts((prev) => [
+      ...prev,
+      {
+        sku,
+        atributos: { ...altaCombo },
+        precio: altaPrecio,
+        costo: altaCosto,
+        activo: true,
+        skuManual: altaSkuManual || Boolean(altaSku.trim()),
+        stockInicial: altaStock.trim() === '' ? '0' : altaStock,
+      },
+    ])
+    setAltaSel({})
+    setAltaSku('')
+    setAltaSkuManual(false)
+    setAltaPrecio('')
+    setAltaCosto('')
+    setAltaStock('0')
+    setMostrarAlta(false)
+    setError(null)
   }
 
   const cols = attrsActivos.map((a) => a.nombre)
@@ -183,17 +271,19 @@ export const ProductoVariantesEditor = forwardRef<
     <div className="mt-6 rounded-lg border border-[#E2E8F0] p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-bold text-[#1A2F4A]">Variantes</h2>
-        {cantidadUi > 100 ? (
+        {modoCarga === 'automatico' && cantidadUi > 100 ? (
           <span className="rounded-full bg-[#7F1D1D] px-2.5 py-0.5 text-[11px] font-semibold text-[#FECACA]">
             🔴 Demasiadas variantes — reducí los atributos
           </span>
-        ) : cantidadUi > 30 ? (
+        ) : modoCarga === 'automatico' && cantidadUi > 30 ? (
           <span className="rounded-full bg-[#78350F] px-2.5 py-0.5 text-[11px] font-semibold text-[#FCD34D]">
             ⚠️ Muchas variantes
           </span>
         ) : null}
         {cantidadUi > 0 ? (
-          <span className="text-xs text-[#4A5568]">{cantidadUi} variantes a crear</span>
+          <span className="text-xs text-[#4A5568]">
+            {modoCarga === 'manual' ? `${cantidadUi} variantes cargadas` : `${cantidadUi} variantes a crear`}
+          </span>
         ) : null}
       </div>
       <p className="mt-1 text-xs text-[#4A5568]">Este producto tiene:</p>
@@ -220,7 +310,38 @@ export const ProductoVariantesEditor = forwardRef<
           Configurá atributos globales en Configuración → Variantes.
         </p>
       ) : null}
-      {esperaConfirmacion ? (
+
+      <p className="mt-4 text-sm font-medium text-[#1A2F4A]">Modo de carga</p>
+      <label className="mt-2 flex items-start gap-2 text-sm text-[#1A2F4A]">
+        <input
+          type="radio"
+          className="mt-1 accent-[#6366F1]"
+          name="modo-carga-variantes"
+          checked={modoCarga === 'automatico'}
+          onChange={() => setModoCarga('automatico')}
+        />
+        <span>
+          Automático (genera todas las combinaciones)
+          <span className="mt-0.5 block text-xs text-[#4A5568]">
+            Recomendado para menos de 30 combinaciones. Para catálogos grandes usá el modo manual.
+          </span>
+        </span>
+      </label>
+      <label className="mt-2 flex items-start gap-2 text-sm text-[#1A2F4A]">
+        <input
+          type="radio"
+          className="mt-1 accent-[#6366F1]"
+          name="modo-carga-variantes"
+          checked={modoCarga === 'manual'}
+          onChange={() => {
+            setModoCarga('manual')
+            setMostrarAlta(false)
+          }}
+        />
+        Manual (agregás solo las que existen)
+      </label>
+
+      {modoCarga === 'automatico' && esperaConfirmacion ? (
         <div className="mt-4 rounded-md border border-[#F59E0B] bg-[#FFFBEB] px-3 py-3 text-sm text-[#1A2F4A]">
           <p>
             Vas a generar {cantidadPrevista} variantes. ¿Querés continuar o reducir los atributos?
@@ -249,7 +370,7 @@ export const ProductoVariantesEditor = forwardRef<
           </div>
         </div>
       ) : null}
-      {drafts.length > 0 && !esperaConfirmacion ? (
+      {modoCarga === 'automatico' && drafts.length > 0 && !esperaConfirmacion ? (
         <div className="mt-4 overflow-x-auto">
           <p className="mb-2 text-xs text-[#4A5568]">
             Desactivá las combinaciones que no vendés antes de guardar.
@@ -337,6 +458,208 @@ export const ProductoVariantesEditor = forwardRef<
               ))}
             </tbody>
           </table>
+        </div>
+      ) : null}
+
+      {modoCarga === 'manual' ? (
+        <div className="mt-4">
+          {!mostrarAlta ? (
+            <button
+              className="h-10 w-full rounded-md border border-[#E2E8F0] text-sm font-semibold text-[#6366F1]"
+              type="button"
+              onClick={() => {
+                setMostrarAlta(true)
+                setAltaSkuManual(false)
+                setError(null)
+              }}
+            >
+              ➕ Agregar variante
+            </button>
+          ) : (
+            <div className="rounded-md border border-[#E2E8F0] p-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {attrsActivos.map((a) => (
+                  <label key={a.id} className="text-xs font-medium text-[#4A5568]">
+                    {a.nombre}
+                    <select
+                      className={`${inputClass} mt-1`}
+                      value={altaSel[a.nombre] ?? ''}
+                      onChange={(ev) => {
+                        const val = ev.target.value
+                        setAltaSel((prev) => ({ ...prev, [a.nombre]: val }))
+                        setAltaSkuManual(false)
+                      }}
+                    >
+                      <option value="">Elegí</option>
+                      {a.valores.map((v) => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+              <label className="mt-2 block text-xs font-medium text-[#4A5568]">
+                SKU
+                <input
+                  className={`${inputClass} mt-1`}
+                  value={altaSku}
+                  onChange={(ev) => {
+                    setAltaSku(ev.target.value)
+                    setAltaSkuManual(true)
+                  }}
+                />
+              </label>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="text-xs font-medium text-[#4A5568]">
+                  Precio
+                  <input
+                    className={`${inputClass} mt-1`}
+                    inputMode="decimal"
+                    placeholder={String(precioBase)}
+                    value={altaPrecio}
+                    onChange={(ev) => setAltaPrecio(ev.target.value)}
+                  />
+                </label>
+                <label className="text-xs font-medium text-[#4A5568]">
+                  Costo
+                  <input
+                    className={`${inputClass} mt-1`}
+                    inputMode="decimal"
+                    placeholder={costoBase == null ? '' : String(costoBase)}
+                    value={altaCosto}
+                    onChange={(ev) => setAltaCosto(ev.target.value)}
+                  />
+                </label>
+              </div>
+              <label className="mt-2 block text-xs font-medium text-[#4A5568]">
+                Stock inicial
+                <input
+                  className={`${inputClass} mt-1`}
+                  inputMode="numeric"
+                  value={altaStock}
+                  onChange={(ev) => setAltaStock(ev.target.value)}
+                />
+              </label>
+              <div className="mt-3 flex flex-col gap-2">
+                <button
+                  className="h-10 w-full rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"
+                  type="button"
+                  onClick={agregarManual}
+                >
+                  Agregar
+                </button>
+                <button
+                  className="text-xs text-[#4A5568]"
+                  type="button"
+                  onClick={() => setMostrarAlta(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+          {drafts.length > 0 ? (
+            <div className="mt-4 overflow-x-auto">
+              <p className="mb-2 text-xs text-[#4A5568]">Solo se guardan las variantes que cargaste.</p>
+              <table className="w-full min-w-[560px] text-left text-xs">
+                <thead>
+                  <tr className="text-[#4A5568]">
+                    {cols.map((c) => (
+                      <th key={c} className="py-2 pr-2 font-semibold">
+                        {c}
+                      </th>
+                    ))}
+                    <th className="py-2 pr-2 font-semibold">SKU</th>
+                    <th className="py-2 pr-2 font-semibold">Precio</th>
+                    <th className="py-2 pr-2 font-semibold">Costo</th>
+                    <th className="py-2 pr-2 font-semibold">Activo</th>
+                    <th className="py-2 font-semibold" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {drafts.map((d, i) => (
+                    <tr key={etiquetaCombo(d.atributos)} className="border-t border-[#E2E8F0]">
+                      {cols.map((c) => (
+                        <td key={c} className="py-2 pr-2 text-[#1A2F4A]">
+                          {d.atributos[c]}
+                        </td>
+                      ))}
+                      <td className="py-2 pr-2">
+                        <input
+                          className={inputClass}
+                          value={d.sku}
+                          onChange={(ev) => {
+                            const sku = ev.target.value
+                            setDrafts((prev) =>
+                              prev.map((x, j) => (j === i ? { ...x, sku, skuManual: true } : x)),
+                            )
+                          }}
+                        />
+                      </td>
+                      <td className="py-2 pr-2">
+                        <input
+                          className={inputClass}
+                          inputMode="decimal"
+                          placeholder={String(precioBase)}
+                          value={d.precio}
+                          onChange={(ev) => {
+                            const precio = ev.target.value
+                            setDrafts((prev) => prev.map((x, j) => (j === i ? { ...x, precio } : x)))
+                          }}
+                        />
+                      </td>
+                      <td className="py-2 pr-2">
+                        <input
+                          className={inputClass}
+                          inputMode="decimal"
+                          placeholder={costoBase == null ? '' : String(costoBase)}
+                          value={d.costo}
+                          onChange={(ev) => {
+                            const costo = ev.target.value
+                            setDrafts((prev) => prev.map((x, j) => (j === i ? { ...x, costo } : x)))
+                          }}
+                        />
+                      </td>
+                      <td className="py-2">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={d.activo}
+                          className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${
+                            d.activo ? 'bg-[#6366F1]' : 'bg-[#CBD5E1]'
+                          }`}
+                          onClick={() => {
+                            setDrafts((prev) =>
+                              prev.map((x, j) => (j === i ? { ...x, activo: !x.activo } : x)),
+                            )
+                          }}
+                        >
+                          <span
+                            className={`mt-0.5 inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                              d.activo ? 'translate-x-5' : 'translate-x-0.5'
+                            }`}
+                          />
+                        </button>
+                      </td>
+                      <td className="py-2">
+                        <button
+                          className="text-xs text-[#DC2626]"
+                          type="button"
+                          onClick={() =>
+                            setDrafts((prev) => prev.filter((_, j) => j !== i))
+                          }
+                        >
+                          Quitar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
         </div>
       ) : null}
       {error ? <p className="mt-3 text-sm text-[#DC2626]">{error}</p> : null}

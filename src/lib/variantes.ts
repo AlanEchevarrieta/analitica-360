@@ -318,6 +318,27 @@ export async function asegurarVariante(
   return { fila: mapVariante(data as Record<string, unknown>), error: null }
 }
 
+export async function registrarStockInicialVariante(
+  client: SupabaseClient,
+  input: { productoId: string; empresaId: string; varianteId: string; cantidad: number },
+): Promise<string | null> {
+  if (!Number.isFinite(input.cantidad) || input.cantidad <= 0) return null
+  const { data: auth } = await client.auth.getUser()
+  const uid = auth.user?.id
+  if (!uid) return 'NO_AUTENTICADO'
+  const { error } = await client.from('movimientos_inventario').insert({
+    empresa_id: input.empresaId,
+    producto_id: input.productoId,
+    usuario_id: uid,
+    tipo: 'ajuste_positivo',
+    cantidad: input.cantidad,
+    signo: 1,
+    motivo: 'Stock inicial de variante',
+    variante_id: input.varianteId,
+  })
+  return error ? msgSqlFaltante(error.message) : null
+}
+
 export async function stockPorVariante(
   client: SupabaseClient,
   varianteIds: string[],
