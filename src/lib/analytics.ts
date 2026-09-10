@@ -194,17 +194,141 @@ export async function contarVentasPeriodo(
   client: SupabaseClient,
   desde: string,
   hasta: string,
-): Promise<number> {
-  const rpc = await client.rpc('analytics_contar_ventas', { p_desde: desde, p_hasta: hasta })
-  if (!rpc.error && rpc.data != null) return Number(rpc.data)
-  const { count, error } = await client
+): Promise<{ total: number; error: string | null }> {
+  const fechaInicio = desde
+  const fechaFin = hasta
+  const { data, error } = await client.rpc('analytics_contar_ventas', {
+    p_desde: fechaInicio,
+    p_hasta: fechaFin,
+  })
+  console.log('[analytics debug]', { rpc: 'analytics_contar_ventas', data, error, fechaInicio, fechaFin })
+  if (!error && data != null) return { total: Number(data), error: null }
+  const fallback = await client
     .from('ventas')
     .select('id', { count: 'exact', head: true })
     .is('deleted_at', null)
     .gte('fecha', `${desde}T00:00:00-03:00`)
     .lt('fecha', `${sumarDiasIso(hasta, 1)}T00:00:00-03:00`)
-  if (error || count == null) return 0
-  return count
+  console.log('[analytics debug]', {
+    rpc: 'ventas.count fallback',
+    count: fallback.count,
+    error: fallback.error,
+    fechaInicio,
+    fechaFin,
+  })
+  if (fallback.error || fallback.count == null) {
+    return { total: 0, error: error?.message ?? fallback.error?.message ?? 'No se pudo contar ventas' }
+  }
+  return { total: fallback.count, error: error?.message ?? null }
+}
+
+export async function cargarAnalyticsEvolucion(
+  client: SupabaseClient,
+  desde: string,
+  hasta: string,
+  granularidad: GranularidadEje,
+): Promise<AnalyticsPunto[] | null> {
+  const fechaInicio = desde
+  const fechaFin = hasta
+  const { data, error } = await client.rpc('analytics_evolucion', {
+    p_desde: fechaInicio,
+    p_hasta: fechaFin,
+    p_granularidad: granularidad,
+  })
+  console.log('[analytics debug]', { data, error, fechaInicio, fechaFin, granularidad })
+  if (error || data == null) return null
+  return parseEvolucion(data, granularidad)
+}
+
+export async function cargarAnalyticsPeriodo(
+  client: SupabaseClient,
+  desde: string,
+  hasta: string,
+  granularidad: GranularidadEje = 'dia',
+): Promise<{ data: AnalyticsPeriodo; error: string | null }> {
+  const fechaInicio = desde
+  const fechaFin = hasta
+  const [periodoRes, evoRes, pagosRes, topRes] = await Promise.all([
+    client.rpc('analytics_periodo', { p_desde: fechaInicio, p_hasta: fechaFin }),
+    client.rpc('analytics_evolucion', {
+      p_desde: fechaInicio,
+      p_hasta: fechaFin,
+      p_granularidad: granularidad,
+    }),
+    client.rpc('analytics_formas_pago', { p_desde: fechaInicio, p_hasta: fechaFin }),
+    client.rpc('analytics_top_productos', { p_desde: fechaInicio, p_hasta: fechaFin }),
+  ])
+  console.log('[analytics debug]', {
+    rpc: 'analytics_periodo',
+    data: periodoRes.data,
+    error: periodoRes.error,
+    fechaInicio,
+    fechaFin,
+  })
+  console.log('[analytics debug]', {
+    data: evoRes.data,
+    error: evoRes.error,
+    fechaInicio,
+    fechaFin,
+    granularidad,
+  })
+  console.log('[analytics debug]', {
+    rpc: 'analytics_formas_pago',
+    data: pagosRes.data,
+    error: pagosRes.error,
+    fechaInicio,
+    fechaFin,
+  })
+  console.log('[analytics debug]', {
+    rpc: 'analytics_top_productos',
+    data: topRes.data,
+    error: topRes.error,
+    fechaInicio,
+    fechaFin,
+  })
+
+  const errores = [periodoRes, evoRes, pagosRes, topRes]
+    .map((r) => r.error?.message)
+    .filter((m): m is string => Boolean(m))
+  const errorTexto = errores.length > 0 ? [...new Set(errores)].join(' · ') : null
+
+  if (periodoRes.error || periodoRes.data == null) return { data: VACIO, error: errorTexto }
+  const row = periodoRes.data as Record<string, unknown>
+  const productos = Array.isArray(row.productos) ? row.productos : []
+  const evolucionDiaria = parseEvolucion(row.evolucion, 'dia')
+  return {
+    data: {
+      total: num(row.total),
+      cantidad: num(row.cantidad),
+      costo: num(row.costo),
+      totalAnt: num(row.total_ant),
+      cantidadAnt: num(row.cantidad_ant),
+      costoAnt: num(row.costo_ant),
+      evolucion:
+        evoRes.error || evoRes.data == null
+          ? agruparEvolucion(evolucionDiaria, granularidad)
+          : parseEvolucion(evoRes.data, granularidad),
+      evolucionDiaria,
+      formasPago:
+        pagosRes.error || pagosRes.data == null
+          ? parseFormasPago(row.formas_pago)
+          : parseFormasPago(pagosRes.data),
+      top10: topRes.error || topRes.data == null ? parseTop10(row.top_10) : parseTop10(topRes.data),
+      productos: productos.map((item) => {
+        const p = item as Record<string, unknown>
+        return {
+          producto: String(p.producto ?? ''),
+          unidades: num(p.unidades),
+          total: num(p.total),
+          costo: num(p.costo),
+          margen: num(p.margen),
+          margen_pct: num(p.margen_pct),
+        }
+      }),
+      clientes: parseClientes(row.clientes),
+    },
+    error: errorTexto,
+  }
 }
 
 function parseEvolucion(raw: unknown, granularidad: GranularidadEje = 'dia'): AnalyticsPunto[] {
@@ -235,73 +359,6 @@ function parseTop10(raw: unknown): AnalyticsTop[] {
     const p = item as Record<string, unknown>
     return { nombre: String(p.nombre ?? ''), unidades: num(p.unidades) }
   })
-}
-
-export async function cargarAnalyticsEvolucion(
-  client: SupabaseClient,
-  desde: string,
-  hasta: string,
-  granularidad: GranularidadEje,
-): Promise<AnalyticsPunto[] | null> {
-  const { data, error } = await client.rpc('analytics_evolucion', {
-    p_desde: desde,
-    p_hasta: hasta,
-    p_granularidad: granularidad,
-  })
-  if (error || data == null) return null
-  return parseEvolucion(data, granularidad)
-}
-
-export async function cargarAnalyticsPeriodo(
-  client: SupabaseClient,
-  desde: string,
-  hasta: string,
-  granularidad: GranularidadEje = 'dia',
-): Promise<AnalyticsPeriodo> {
-  const [periodoRes, evoRes, pagosRes, topRes] = await Promise.all([
-    client.rpc('analytics_periodo', { p_desde: desde, p_hasta: hasta }),
-    client.rpc('analytics_evolucion', {
-      p_desde: desde,
-      p_hasta: hasta,
-      p_granularidad: granularidad,
-    }),
-    client.rpc('analytics_formas_pago', { p_desde: desde, p_hasta: hasta }),
-    client.rpc('analytics_top_productos', { p_desde: desde, p_hasta: hasta }),
-  ])
-  if (periodoRes.error || periodoRes.data == null) return VACIO
-  const row = periodoRes.data as Record<string, unknown>
-  const productos = Array.isArray(row.productos) ? row.productos : []
-  const evolucionDiaria = parseEvolucion(row.evolucion, 'dia')
-  return {
-    total: num(row.total),
-    cantidad: num(row.cantidad),
-    costo: num(row.costo),
-    totalAnt: num(row.total_ant),
-    cantidadAnt: num(row.cantidad_ant),
-    costoAnt: num(row.costo_ant),
-    evolucion:
-      evoRes.error || evoRes.data == null
-        ? agruparEvolucion(evolucionDiaria, granularidad)
-        : parseEvolucion(evoRes.data, granularidad),
-    evolucionDiaria,
-    formasPago:
-      pagosRes.error || pagosRes.data == null
-        ? parseFormasPago(row.formas_pago)
-        : parseFormasPago(pagosRes.data),
-    top10: topRes.error || topRes.data == null ? parseTop10(row.top_10) : parseTop10(topRes.data),
-    productos: productos.map((item) => {
-      const p = item as Record<string, unknown>
-      return {
-        producto: String(p.producto ?? ''),
-        unidades: num(p.unidades),
-        total: num(p.total),
-        costo: num(p.costo),
-        margen: num(p.margen),
-        margen_pct: num(p.margen_pct),
-      }
-    }),
-    clientes: parseClientes(row.clientes),
-  }
 }
 
 function parseClientes(raw: unknown): AnalyticsClientes {

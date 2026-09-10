@@ -249,6 +249,7 @@ export function AnalyticsPage() {
     new Map(),
   )
   const [avisoLimite, setAvisoLimite] = useState<number | null>(null)
+  const [errorDebug, setErrorDebug] = useState<string | null>(null)
   const [granularidadEvo, setGranularidadEvo] = useState<GranularidadEje>('dia')
   const top10Hover = useIndiceBarraActiva()
   const diasHover = useIndiceBarraActiva()
@@ -259,9 +260,12 @@ export function AnalyticsPage() {
       return
     }
     setCargando(true)
+    setErrorDebug(null)
     void (async () => {
       try {
-        const totalVentas = await contarVentasPeriodo(requireSupabase(), desde, hasta)
+        const conteo = await contarVentasPeriodo(requireSupabase(), desde, hasta)
+        if (conteo.error) setErrorDebug(conteo.error)
+        const totalVentas = conteo.total
         if (totalVentas > LIMITE_ANALYTICS_VENTAS) {
           setAvisoLimite(totalVentas)
           setData(VACIO)
@@ -270,11 +274,12 @@ export function AnalyticsPage() {
           return
         }
         setAvisoLimite(null)
-        const [fila, cfg] = await Promise.all([
+        const [res, cfg] = await Promise.all([
           cargarAnalyticsPeriodo(requireSupabase(), desde, hasta, granularidadEvo),
           obtenerConfiguracion(requireSupabase(), perfil.empresa.id),
         ])
-        setData(fila)
+        setData(res.data)
+        if (res.error) setErrorDebug((prev) => (prev ? `${prev} · ${res.error}` : res.error))
         const usa = Boolean(cfg.config.usaVariantes)
         setUsaVariantes(usa)
         if (usa) {
@@ -304,6 +309,10 @@ export function AnalyticsPage() {
           setDataVar(null)
           setRangosMargen(new Map())
         }
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error)
+        setErrorDebug((prev) => (prev ? `${prev} · ${msg}` : msg))
+        setData(VACIO)
       } finally {
         setCargando(false)
       }
@@ -562,6 +571,12 @@ export function AnalyticsPage() {
                 Aplicar filtro
               </button>
             </div>
+
+            {errorDebug ? (
+              <pre className="mt-4 overflow-auto rounded-lg bg-red-950/80 px-3 py-3 text-left text-xs whitespace-pre-wrap text-red-100">
+                {errorDebug}
+              </pre>
+            ) : null}
 
             {avisoLimite != null ? (
               <p className="mt-4 rounded-lg bg-amber-100 px-3 py-3 text-sm text-amber-950">
