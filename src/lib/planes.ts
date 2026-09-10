@@ -3,6 +3,11 @@ export function planTieneAnalytics(plan: string | null | undefined) {
   return p === 'pro' || p === 'premium' || p === 'business'
 }
 
+export function planTieneInsights(plan: string | null | undefined) {
+  const p = (plan ?? '').trim().toLowerCase()
+  return p === 'premium' || p === 'business'
+}
+
 export type CatalogoPlanId = 'starter' | 'basico' | 'pro' | 'premium'
 
 export type CatalogoPlan = {
@@ -42,7 +47,13 @@ export const CATALOGO_PLANES: CatalogoPlan[] = [
     titulo: 'Premium',
     precio: '$70.000 ARS/mes',
     pago: true,
-    items: ['Usuarios ilimitados', 'Todo lo del Pro', 'Soporte prioritario ✓', 'Reportes personalizados ✓'],
+    items: [
+      'Usuarios ilimitados',
+      'Todo lo del Pro',
+      'Insights (elasticidad, forecast, radar) ✓',
+      'Soporte prioritario ✓',
+      'Reportes personalizados ✓',
+    ],
   },
 ]
 

@@ -56,7 +56,8 @@ export default defineConfig({
           (dep) =>
             !dep.includes('vendor-recharts') &&
             !dep.includes('vendor-tremor') &&
-            !dep.includes('vendor-xlsx'),
+            !dep.includes('vendor-xlsx') &&
+            !dep.includes('vendor-ss'),
         ),
     },
     rolldownOptions: {
@@ -68,6 +69,7 @@ export default defineConfig({
             { name: 'vendor-tremor', test: /node_modules[\\/]@tremor[\\/]react\b/ },
             { name: 'vendor-supabase', test: /node_modules[\\/]@supabase[\\/]supabase-js\b/ },
             { name: 'vendor-xlsx', test: /node_modules[\\/]xlsx\b/ },
+            { name: 'vendor-ss', test: /node_modules[\\/]simple-statistics\b/ },
           ],
         },
       },

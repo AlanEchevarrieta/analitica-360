@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { ThemeToggle } from '../lib/tema'
-import { planTieneAnalytics } from '../lib/planes'
+import { planTieneAnalytics, planTieneInsights } from '../lib/planes'
 import { theme } from '../theme'
 
 function linkClass({ isActive }: { isActive: boolean }) {
@@ -17,7 +17,7 @@ function sheetClass({ isActive }: { isActive: boolean }) {
   return `app-sheet-link${isActive ? ' active' : ''}`
 }
 
-function CandadoAnalytics({ mostrar }: { mostrar: boolean }) {
+function Candado({ mostrar }: { mostrar: boolean }) {
   if (!mostrar) return null
   return (
     <svg className="h-3.5 w-3.5 opacity-80" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
@@ -36,7 +36,8 @@ export function AppNav() {
   const location = useLocation()
   const [mas, setMas] = useState(false)
   const sinAnalytics = Boolean(perfil && !planTieneAnalytics(perfil.empresa.plan_actual))
-  const masActivo = ['/compras', '/proveedores', '/analytics', '/configuracion', '/inventario'].some((p) =>
+  const sinInsights = Boolean(perfil && !planTieneInsights(perfil.empresa.plan_actual))
+  const masActivo = ['/compras', '/proveedores', '/analytics', '/insights', '/configuracion', '/inventario'].some((p) =>
     location.pathname.startsWith(p),
   )
 
@@ -61,7 +62,14 @@ export function AppNav() {
   const analyticsLabel = (
     <span className="inline-flex items-center gap-1">
       Analytics
-      <CandadoAnalytics mostrar={sinAnalytics} />
+      <Candado mostrar={sinAnalytics} />
+    </span>
+  )
+
+  const insightsLabel = (
+    <span className="inline-flex items-center gap-1">
+      Insights
+      <Candado mostrar={sinInsights} />
     </span>
   )
 
@@ -92,6 +100,9 @@ export function AppNav() {
         </NavLink>
         <NavLink className={linkClass} to="/analytics">
           {analyticsLabel}
+        </NavLink>
+        <NavLink className={linkClass} to="/insights">
+          {insightsLabel}
         </NavLink>
         {esDueno ? (
           <NavLink className={linkClass} to="/configuracion">
@@ -133,6 +144,9 @@ export function AppNav() {
           </NavLink>
           <NavLink className={sideClass} to="/analytics">
             📊 {analyticsLabel}
+          </NavLink>
+          <NavLink className={sideClass} to="/insights">
+            ✨ {insightsLabel}
           </NavLink>
           {esDueno ? (
             <NavLink className={sideClass} to="/configuracion">
@@ -192,6 +206,9 @@ export function AppNav() {
             </NavLink>
             <NavLink className={sheetClass} to="/analytics" onClick={() => setMas(false)}>
               📊 {analyticsLabel}
+            </NavLink>
+            <NavLink className={sheetClass} to="/insights" onClick={() => setMas(false)}>
+              ✨ {insightsLabel}
             </NavLink>
             {esDueno ? (
               <NavLink className={sheetClass} to="/configuracion" onClick={() => setMas(false)}>

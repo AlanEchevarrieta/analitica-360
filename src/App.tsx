@@ -67,6 +67,9 @@ const ConfiguracionPage = lazy(() =>
 const AnalyticsPage = lazy(() =>
   import('./pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })),
 )
+const InsightsPage = lazy(() =>
+  import('./pages/InsightsPage').then((m) => ({ default: m.InsightsPage })),
+)
 
 function PageFallback() {
   return (
@@ -211,6 +214,7 @@ function AppRoutes() {
         <Route path="/clientes/nuevo" element={<ClienteFormPage />} />
         <Route path="/clientes/:id" element={<ClienteFichaPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/insights" element={<InsightsPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route element={<RequireDueno />}>
           <Route path="/configuracion" element={<ConfiguracionPage />} />
