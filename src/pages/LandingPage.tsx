@@ -20,9 +20,11 @@ function FondoParticulasLanding() {
   }, [])
   if (!mostrar) return null
   return (
-    <Suspense fallback={null}>
-      <ParticleNetwork enableMobile desktopCount={100} mobileCount={60} />
-    </Suspense>
+    <div className="pointer-events-none absolute top-0 left-0 z-0 h-[100vh] w-full">
+      <Suspense fallback={null}>
+        <ParticleNetwork contained enableMobile pauseOffscreen desktopCount={100} mobileCount={60} />
+      </Suspense>
+    </div>
   )
 }
 
@@ -198,7 +200,7 @@ export function LandingPage() {
   }, [])
 
   return (
-    <div className="landing">
+    <div className="landing relative">
       <FondoParticulasLanding />
       <div className="relative z-10">
         <header className="landing-nav sticky top-0 z-30 flex items-center justify-between gap-3 px-4 py-3 md:px-8">

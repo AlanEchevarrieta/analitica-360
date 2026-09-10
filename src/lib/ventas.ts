@@ -266,9 +266,12 @@ export async function confirmarVenta(
   })
   if (!error) return null
   const msg = error.message
+  if (msg.includes('Producto no pertenece a esta empresa')) {
+    return 'Producto no pertenece a esta empresa'
+  }
   const t = msg.toLowerCase()
   if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
-    return 'Falta actualizar confirmar_venta en Supabase. Pegá TODO supabase/035_variantes.sql (rol postgres), dale Run y recargá.'
+    return 'Falta actualizar confirmar_venta en Supabase. Pegá TODO supabase/038_perf_seguridad_productos_ventas.sql (rol postgres), dale Run y recargá.'
   }
   return msg
 }

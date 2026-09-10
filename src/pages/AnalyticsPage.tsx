@@ -29,8 +29,11 @@ import {
   COLOR_CUADRANTE,
   cargarAnalyticsPeriodo,
   colorFormaPago,
+  contarVentasPeriodo,
   cuadranteProducto,
+  fechaCorteUltimasVentas,
   formatoEjeCompacto,
+  LIMITE_ANALYTICS_VENTAS,
   margenPct,
   rangoPreset,
   ticketPromedio,
@@ -243,6 +246,7 @@ export function AnalyticsPage() {
   const [rangosMargen, setRangosMargen] = useState<Map<string, { min: number; max: number }>>(
     new Map(),
   )
+  const [avisoLimite, setAvisoLimite] = useState<number | null>(null)
   const top10Hover = useIndiceBarraActiva()
   const diasHover = useIndiceBarraActiva()
 
@@ -252,42 +256,60 @@ export function AnalyticsPage() {
       return
     }
     setCargando(true)
-    void Promise.all([
-      cargarAnalyticsPeriodo(requireSupabase(), desde, hasta),
-      obtenerConfiguracion(requireSupabase(), perfil.empresa.id),
-    ]).then(async ([fila, cfg]) => {
-      setData(fila)
-      const usa = Boolean(cfg.config.usaVariantes)
-      setUsaVariantes(usa)
-      if (usa) {
-        setDataVar(await cargarAnalyticsVariantes(requireSupabase(), desde, hasta))
-        const prods = await listarProductos(requireSupabase())
-        if (!prods.error && prods.filas.length > 0) {
-          const vars = await listarVariantesDeProductos(
+    void (async () => {
+      try {
+        const totalVentas = await contarVentasPeriodo(requireSupabase(), desde, hasta)
+        let desdeEfectivo = desde
+        if (totalVentas > LIMITE_ANALYTICS_VENTAS) {
+          const corte = await fechaCorteUltimasVentas(
             requireSupabase(),
-            prods.filas.map((p) => p.id),
+            desde,
+            hasta,
+            LIMITE_ANALYTICS_VENTAS,
           )
-          const porProducto = new Map<string, typeof vars.filas>()
-          for (const v of vars.filas) {
-            const arr = porProducto.get(v.productoId) ?? []
-            arr.push(v)
-            porProducto.set(v.productoId, arr)
-          }
-          const rangos = new Map<string, { min: number; max: number }>()
-          for (const p of prods.filas) {
-            const rango = rangoMargenVariantes(porProducto.get(p.id) ?? [])
-            if (rango) rangos.set(p.nombre, rango)
-          }
-          setRangosMargen(rangos)
+          if (corte) desdeEfectivo = corte
+          setAvisoLimite(totalVentas)
         } else {
+          setAvisoLimite(null)
+        }
+        const [fila, cfg] = await Promise.all([
+          cargarAnalyticsPeriodo(requireSupabase(), desdeEfectivo, hasta),
+          obtenerConfiguracion(requireSupabase(), perfil.empresa.id),
+        ])
+        setData(fila)
+        const usa = Boolean(cfg.config.usaVariantes)
+        setUsaVariantes(usa)
+        if (usa) {
+          setDataVar(await cargarAnalyticsVariantes(requireSupabase(), desdeEfectivo, hasta))
+          const prods = await listarProductos(requireSupabase())
+          if (!prods.error && prods.filas.length > 0) {
+            const vars = await listarVariantesDeProductos(
+              requireSupabase(),
+              prods.filas.map((p) => p.id),
+            )
+            const porProducto = new Map<string, typeof vars.filas>()
+            for (const v of vars.filas) {
+              const arr = porProducto.get(v.productoId) ?? []
+              arr.push(v)
+              porProducto.set(v.productoId, arr)
+            }
+            const rangos = new Map<string, { min: number; max: number }>()
+            for (const p of prods.filas) {
+              const rango = rangoMargenVariantes(porProducto.get(p.id) ?? [])
+              if (rango) rangos.set(p.nombre, rango)
+            }
+            setRangosMargen(rangos)
+          } else {
+            setRangosMargen(new Map())
+          }
+        } else {
+          setDataVar(null)
           setRangosMargen(new Map())
         }
-      } else {
-        setDataVar(null)
-        setRangosMargen(new Map())
+      } finally {
+        setCargando(false)
       }
-      setCargando(false)
-    })
+    })()
   }, [perfil, desde, hasta])
 
   const diasPeriodo = diasIncluidosPeriodo(desde, hasta)
@@ -541,6 +563,13 @@ export function AnalyticsPage() {
                 Aplicar filtro
               </button>
             </div>
+
+            {avisoLimite != null ? (
+              <p className="mt-4 rounded-lg bg-amber-100 px-3 py-3 text-sm text-amber-950">
+                Este período tiene {avisoLimite} ventas. Mostrando las últimas 5.000. Aplicá un filtro
+                más acotado para ver todo.
+              </p>
+            ) : null}
 
             {cargando ? (
               <p className="mt-8 text-sm text-[#94A3B8]">Cargando…</p>

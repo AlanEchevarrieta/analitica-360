@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { truncarEtiqueta } from './analytics'
 import type { CumpleProximo } from './clientes'
 
 export type DashboardDia = {
@@ -79,6 +80,14 @@ function etiquetaDia(valor: string) {
   const d = new Date(`${valor}T12:00:00`)
   if (Number.isNaN(d.getTime())) return valor
   return ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'][d.getDay()] ?? valor
+}
+
+export function procesarDatosGrafico(dias: DashboardInicio['ultimos7'] | undefined) {
+  return dias ?? []
+}
+
+export function procesarTopProductos(top: DashboardInicio['top5'] | undefined) {
+  return (top ?? []).map((p) => ({ ...p, etiqueta: truncarEtiqueta(p.nombre) }))
 }
 
 export async function cargarDashboardInicio(client: SupabaseClient): Promise<DashboardInicio> {

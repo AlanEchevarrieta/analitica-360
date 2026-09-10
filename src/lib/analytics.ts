@@ -146,6 +146,41 @@ export function colorFormaPago(nombre: string) {
   return COLOR_FORMA_PAGO[nombre] ?? '#94A3B8'
 }
 
+export const LIMITE_ANALYTICS_VENTAS = 5000
+
+export async function contarVentasPeriodo(
+  client: SupabaseClient,
+  desde: string,
+  hasta: string,
+): Promise<number> {
+  const { count, error } = await client
+    .from('ventas')
+    .select('id', { count: 'exact', head: true })
+    .is('deleted_at', null)
+    .gte('fecha', `${desde}T00:00:00.000-03:00`)
+    .lte('fecha', `${hasta}T23:59:59.999-03:00`)
+  if (error || count == null) return 0
+  return count
+}
+
+export async function fechaCorteUltimasVentas(
+  client: SupabaseClient,
+  desde: string,
+  hasta: string,
+  limite: number,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from('ventas')
+    .select('fecha')
+    .is('deleted_at', null)
+    .gte('fecha', `${desde}T00:00:00.000-03:00`)
+    .lte('fecha', `${hasta}T23:59:59.999-03:00`)
+    .order('fecha', { ascending: false })
+    .range(limite - 1, limite - 1)
+  if (error || !data?.[0]?.fecha) return null
+  return String(data[0].fecha).slice(0, 10)
+}
+
 export async function cargarAnalyticsPeriodo(
   client: SupabaseClient,
   desde: string,

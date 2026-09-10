@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { memo, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Bar,
@@ -15,7 +15,7 @@ import {
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
-import { cargarDashboardInicio, type DashboardInicio } from '../lib/dashboard'
+import { cargarDashboardInicio, procesarDatosGrafico, procesarTopProductos, type DashboardInicio } from '../lib/dashboard'
 import { textoCumpleProximo } from '../lib/clientes'
 import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
@@ -93,7 +93,7 @@ const DASH_VACIO: DashboardInicio = {
   alertasStock: [],
 }
 
-function Grafico7Dias({ data }: { data: DashboardInicio['ultimos7'] }) {
+const Grafico7Dias = memo(function Grafico7Dias({ data }: { data: DashboardInicio['ultimos7'] }) {
   const { tema } = useTema()
   const g = coloresGrafico(tema)
   const { activo, onMouseMove, onMouseLeave } = useIndiceBarraActiva()
@@ -133,7 +133,104 @@ function Grafico7Dias({ data }: { data: DashboardInicio['ultimos7'] }) {
       </BarChart>
     </ResponsiveContainer>
   )
-}
+})
+
+const GraficoTop5 = memo(function GraficoTop5({
+  data,
+}: {
+  data: { nombre: string; unidades: number; etiqueta: string }[]
+}) {
+  const { tema } = useTema()
+  const g = coloresGrafico(tema)
+  const { activo, onMouseMove, onMouseLeave } = useIndiceBarraActiva()
+  if (data.length === 0) {
+    return (
+      <p className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
+        Todavía no hay ventas
+      </p>
+    )
+  }
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart
+        layout="vertical"
+        data={data}
+        margin={{ top: 8, right: 40, left: 120, bottom: 0 }}
+        barCategoryGap="30%"
+        onMouseMove={onMouseMove as never}
+        onMouseLeave={onMouseLeave}
+      >
+        <CartesianGrid stroke={g.grilla} horizontal={false} />
+        <XAxis type="number" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+        <YAxis type="category" dataKey="etiqueta" width={120} tick={{ fill: g.eje, fontSize: 12 }} axisLine={false} tickLine={false} />
+        <Tooltip cursor={<Rectangle fill={CHART_CURSOR_FILL} />} content={asRechartsTooltip(TooltipTopProductos)} />
+        <Bar dataKey="unidades" radius={[0, 4, 4, 0]} maxBarSize={18} background={{ fill: CHART_BAR_BG }} activeBar={<Rectangle fill={CHART_ACTIVE_BAR} />}>
+          {data.map((fila, i) => (
+            <Cell key={`${fila.nombre}-${i}`} fill="#4ADE80" fillOpacity={activo == null || activo === i ? 1 : 0.5} />
+          ))}
+          <LabelList dataKey="unidades" position="right" fill="#4ADE80" fontSize={11} />
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  )
+})
+
+const GraficoStock = memo(function GraficoStock({
+  data,
+  gestionaStock,
+}: {
+  data: DashboardInicio['stock']
+  gestionaStock: boolean
+}) {
+  const { tema } = useTema()
+  const g = coloresGrafico(tema)
+  const { activo, onMouseMove, onMouseLeave } = useIndiceBarraActiva()
+  if (!gestionaStock) {
+    return (
+      <p className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
+        Este negocio no gestiona stock por unidades
+      </p>
+    )
+  }
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart
+        layout="vertical"
+        data={data}
+        margin={{ top: 8, right: 36, left: 8, bottom: 0 }}
+        onMouseMove={onMouseMove as never}
+        onMouseLeave={onMouseLeave}
+      >
+        <CartesianGrid stroke={g.grilla} horizontal={false} />
+        <XAxis type="number" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+        <YAxis type="category" dataKey="nombre" reversed width={110} tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
+        <Tooltip
+          cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
+          content={({ active, payload }) => {
+            if (!active || !payload?.length) return null
+            const p = payload[0].payload as { nombre?: string; stock?: number }
+            return (
+              <ChartTooltipBox>
+                <p style={{ color: '#F1F5F9', fontSize: 13, fontWeight: 600 }}>{p.nombre}</p>
+                <p style={{ color: '#94A3B8', fontSize: 12, marginTop: 6 }}>Stock: {Number(p.stock ?? 0)} u</p>
+              </ChartTooltipBox>
+            )
+          }}
+        />
+        <Bar dataKey="stock" radius={[0, 4, 4, 0]} maxBarSize={18} background={{ fill: CHART_BAR_BG }} activeBar={<Rectangle fill={CHART_ACTIVE_BAR} />}>
+          {data.map((fila, i) => (
+            <Cell
+              key={`${fila.nombre}-${i}`}
+              fill={fila.stock <= 0 ? '#F87171' : fila.stock <= 5 ? '#FCD34D' : '#4ADE80'}
+              fillOpacity={activo == null || activo === i ? 1 : 0.5}
+            />
+          ))}
+          <LabelList dataKey="stock" position="right" fill={g.eje} fontSize={11} />
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  )
+})
 
 function KpiCardSkeleton() {
   return (
@@ -269,11 +366,6 @@ function KpiCard({
   )
 }
 
-function truncarEtiqueta(nombre: string) {
-  if (nombre.length <= 15) return nombre
-  return `${nombre.slice(0, 15)}...`
-}
-
 function formatoKPI(valor: number) {
   const abs = Math.abs(valor)
   const signo = valor < 0 ? '-' : ''
@@ -298,13 +390,10 @@ function formatoKPI(valor: number) {
 export function HomePage() {
   const { perfil, session, error } = useAuth()
   const { tema } = useTema()
-  const g = coloresGrafico(tema)
   const cumpleFg = tema === 'light' ? '#92400E' : '#FCD34D'
   const [suscripcion, setSuscripcion] = useState<SuscripcionActiva | null>(null)
   const [dash, setDash] = useState<DashboardInicio>(DASH_VACIO)
   const [cargandoDash, setCargandoDash] = useState(true)
-  const top5Hover = useIndiceBarraActiva()
-  const stockHover = useIndiceBarraActiva()
 
   useEffect(() => {
     if (!perfil) return
@@ -328,6 +417,9 @@ export function HomePage() {
     })()
   }, [perfil])
 
+  const datosGrafico7Dias = useMemo(() => procesarDatosGrafico(dash.ultimos7), [dash.ultimos7])
+  const datosTopProductos = useMemo(() => procesarTopProductos(dash.top5), [dash.top5])
+
   if (!perfil) return null
 
   const rolLabel =
@@ -342,12 +434,6 @@ export function HomePage() {
   const verReportes = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'ver_reportes')
   const gestionaStock = dash.stock.some((p) => p.stock !== 0)
   const alturaStock = Math.min(560, Math.max(220, dash.stock.length * 36))
-
-  function colorStock(stock: number) {
-    if (stock <= 0) return '#F87171'
-    if (stock <= 5) return '#FCD34D'
-    return '#4ADE80'
-  }
 
   return (
     <div
@@ -503,7 +589,7 @@ export function HomePage() {
                   Ventas últimos 7 días
                 </p>
                 <div className="mt-3 h-56">
-                  <Grafico7Dias data={dash.ultimos7} />
+                  <Grafico7Dias data={datosGrafico7Dias} />
                 </div>
               </div>
 
@@ -518,59 +604,7 @@ export function HomePage() {
                   Top 5 productos más vendidos
                 </p>
                 <div className="mt-3" style={{ height: 320 }}>
-                  {dash.top5.length === 0 ? (
-                    <p className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
-                      Todavía no hay ventas
-                    </p>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        layout="vertical"
-                        data={dash.top5.map((p) => ({ ...p, etiqueta: truncarEtiqueta(p.nombre) }))}
-                        margin={{ top: 8, right: 40, left: 120, bottom: 0 }}
-                        barCategoryGap="30%"
-                        onMouseMove={top5Hover.onMouseMove as never}
-                        onMouseLeave={top5Hover.onMouseLeave}
-                      >
-                        <CartesianGrid stroke={g.grilla} horizontal={false} />
-                        <XAxis
-                          type="number"
-                          tick={{ fill: g.eje, fontSize: 11 }}
-                          axisLine={false}
-                          tickLine={false}
-                          allowDecimals={false}
-                        />
-                        <YAxis
-                          type="category"
-                          dataKey="etiqueta"
-                          width={120}
-                          tick={{ fill: g.eje, fontSize: 12 }}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <Tooltip
-                          cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
-                          content={asRechartsTooltip(TooltipTopProductos)}
-                        />
-                        <Bar
-                          dataKey="unidades"
-                          radius={[0, 4, 4, 0]}
-                          maxBarSize={18}
-                          background={{ fill: CHART_BAR_BG }}
-                          activeBar={<Rectangle fill={CHART_ACTIVE_BAR} />}
-                        >
-                          {dash.top5.map((fila, i) => (
-                            <Cell
-                              key={`${fila.nombre}-${i}`}
-                              fill="#4ADE80"
-                              fillOpacity={top5Hover.activo == null || top5Hover.activo === i ? 1 : 0.5}
-                            />
-                          ))}
-                          <LabelList dataKey="unidades" position="right" fill="#4ADE80" fontSize={11} />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )}
+                  <GraficoTop5 data={datosTopProductos} />
                 </div>
               </div>
             </div>
@@ -586,75 +620,7 @@ export function HomePage() {
                 Estado de stock — productos activos
               </p>
               <div className="mt-3" style={{ height: gestionaStock ? alturaStock : 160 }}>
-                {!gestionaStock ? (
-                  <p className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
-                    Este negocio no gestiona stock por unidades
-                  </p>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      layout="vertical"
-                      data={dash.stock}
-                      margin={{ top: 8, right: 36, left: 8, bottom: 0 }}
-                      onMouseMove={stockHover.onMouseMove as never}
-                      onMouseLeave={stockHover.onMouseLeave}
-                    >
-                      <CartesianGrid stroke={g.grilla} horizontal={false} />
-                      <XAxis
-                        type="number"
-                        tick={{ fill: g.eje, fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                        allowDecimals={false}
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="nombre"
-                        reversed
-                        width={110}
-                        tick={{ fill: g.eje, fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
-                        content={({ active, payload }) => {
-                          if (!active || !payload?.length) return null
-                          const p = payload[0].payload as { nombre?: string; stock?: number }
-                          return (
-                            <ChartTooltipBox>
-                              <p style={{ color: '#F1F5F9', fontSize: 13, fontWeight: 600 }}>{p.nombre}</p>
-                              <p style={{ color: '#94A3B8', fontSize: 12, marginTop: 6 }}>
-                                Stock: {Number(p.stock ?? 0)} u
-                              </p>
-                            </ChartTooltipBox>
-                          )
-                        }}
-                      />
-                      <Bar
-                        dataKey="stock"
-                        radius={[0, 4, 4, 0]}
-                        maxBarSize={18}
-                        background={{ fill: CHART_BAR_BG }}
-                        activeBar={<Rectangle fill={CHART_ACTIVE_BAR} />}
-                      >
-                        {dash.stock.map((fila, i) => (
-                          <Cell
-                            key={`${fila.nombre}-${i}`}
-                            fill={colorStock(fila.stock)}
-                            fillOpacity={stockHover.activo == null || stockHover.activo === i ? 1 : 0.5}
-                          />
-                        ))}
-                        <LabelList
-                          dataKey="stock"
-                          position="right"
-                          fill={g.eje}
-                          fontSize={11}
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
+                <GraficoStock data={dash.stock} gestionaStock={gestionaStock} />
               </div>
             </div>
           </section>

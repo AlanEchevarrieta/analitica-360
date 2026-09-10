@@ -282,6 +282,76 @@ export async function leerDimensionesProducto(
   }
 }
 
+export type VarianteStockResumen = {
+  varianteId: string
+  atributos: Record<string, string>
+  precio: number | null
+  costo: number | null
+  activo: boolean
+  stock: number
+}
+
+export type ProductoConStock = ProductoFila & {
+  stockBase: number
+  variantesStock: VarianteStockResumen[]
+}
+
+function mapVarianteStock(raw: unknown): VarianteStockResumen | null {
+  if (!raw || typeof raw !== 'object') return null
+  const v = raw as Record<string, unknown>
+  const id = v.variante_id == null ? '' : String(v.variante_id)
+  if (!id) return null
+  const attrs = v.atributos
+  const atributos: Record<string, string> = {}
+  if (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) {
+    for (const [k, val] of Object.entries(attrs as Record<string, unknown>)) {
+      atributos[k] = String(val ?? '')
+    }
+  }
+  const precio = v.precio == null ? null : Number(v.precio)
+  const costo = v.costo == null ? null : Number(v.costo)
+  return {
+    varianteId: id,
+    atributos,
+    precio: precio != null && Number.isFinite(precio) ? precio : null,
+    costo: costo != null && Number.isFinite(costo) ? costo : null,
+    activo: v.activo !== false,
+    stock: Number(v.stock ?? 0),
+  }
+}
+
+export async function listarProductosConStock(
+  client: SupabaseClient,
+): Promise<{ filas: ProductoConStock[]; error: string | null }> {
+  const { data, error } = await client.rpc('listar_productos_con_stock')
+  if (error) {
+    const t = error.message.toLowerCase()
+    if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
+      return {
+        filas: [],
+        error:
+          'Falta listar_productos_con_stock. Pegá TODO supabase/038_perf_seguridad_productos_ventas.sql (rol postgres), dale Run y recargá.',
+      }
+    }
+    return { filas: [], error: error.message }
+  }
+  const arr = Array.isArray(data) ? data : []
+  const filas = arr.map((item) => {
+    const row = (item ?? {}) as Record<string, unknown>
+    const varsRaw = Array.isArray(row.variantes_stock) ? row.variantes_stock : []
+    const variantesStock = varsRaw.map(mapVarianteStock).filter((v): v is VarianteStockResumen => v != null)
+    const stockBase = Number(row.stock_base ?? 0)
+    const stockVars = variantesStock.filter((v) => v.activo).reduce((acc, v) => acc + v.stock, 0)
+    return {
+      ...filaProducto(row),
+      stock_actual: variantesStock.some((v) => v.activo) ? stockVars : stockBase,
+      stockBase,
+      variantesStock,
+    }
+  })
+  return { filas, error: null }
+}
+
 export function formatoARS(valor: number) {
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',

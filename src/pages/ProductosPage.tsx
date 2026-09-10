@@ -34,6 +34,7 @@ import {
   actualizarProducto,
   formatoARS,
   listarProductos,
+  listarProductosConStock,
   listarProductosPaginado,
   type ProductoFila,
 } from '../lib/productos'
@@ -43,8 +44,8 @@ import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
 import {
   contarVariantesActivasPorProducto,
-  emojiStock,
   etiquetaCombo,
+  emojiStock,
   listarVariantesDeProductos,
   stockPorVariante,
   sumaStockItems,
@@ -125,29 +126,49 @@ export function ProductosPage() {
       const { config } = await obtenerConfiguracion(requireSupabase(), perfil.empresa.id)
       const usa = Boolean(config.usaVariantes)
       setUsaVariantes(usa)
+      const umb = await leerUmbralStock(requireSupabase(), perfil.empresa.id)
+      setUmbralStock(umb)
       if (usa && data.length > 0) {
-        const ids = data.map((p) => p.id)
-        const [conteo, umb, vars] = await Promise.all([
-          contarVariantesActivasPorProducto(requireSupabase(), ids),
-          leerUmbralStock(requireSupabase(), perfil.empresa.id),
-          listarVariantesDeProductos(requireSupabase(), ids),
-        ])
-        setVariantesActivas(conteo)
-        setUmbralStock(umb)
-        if (!vars.error && vars.filas.length > 0) {
-          const stocks = await stockPorVariante(
-            requireSupabase(),
-            vars.filas.map((v) => v.id),
-          )
+        const packed = await listarProductosConStock(requireSupabase())
+        if (!packed.error) {
+          const porId = new Map(packed.filas.map((p) => [p.id, p]))
+          const conteo = new Map<string, number>()
           const map = new Map<string, { etiqueta: string; stock: number }[]>()
-          for (const v of vars.filas.filter((x) => x.activo)) {
-            const arr = map.get(v.productoId) ?? []
-            arr.push({ etiqueta: etiquetaCombo(v.atributos), stock: stocks.get(v.id) ?? 0 })
-            map.set(v.productoId, arr)
+          for (const fila of data) {
+            const extra = porId.get(fila.id)
+            if (!extra) continue
+            const activas = extra.variantesStock.filter((v) => v.activo)
+            if (activas.length === 0) continue
+            conteo.set(fila.id, activas.length)
+            map.set(
+              fila.id,
+              activas.map((v) => ({ etiqueta: etiquetaCombo(v.atributos), stock: v.stock })),
+            )
           }
+          setVariantesActivas(conteo)
           setDesgloseStock(map)
         } else {
-          setDesgloseStock(new Map())
+          const ids = data.map((p) => p.id)
+          const [conteo, vars] = await Promise.all([
+            contarVariantesActivasPorProducto(requireSupabase(), ids),
+            listarVariantesDeProductos(requireSupabase(), ids),
+          ])
+          setVariantesActivas(conteo)
+          if (!vars.error && vars.filas.length > 0) {
+            const stocks = await stockPorVariante(
+              requireSupabase(),
+              vars.filas.map((v) => v.id),
+            )
+            const map = new Map<string, { etiqueta: string; stock: number }[]>()
+            for (const v of vars.filas.filter((x) => x.activo)) {
+              const arr = map.get(v.productoId) ?? []
+              arr.push({ etiqueta: etiquetaCombo(v.atributos), stock: stocks.get(v.id) ?? 0 })
+              map.set(v.productoId, arr)
+            }
+            setDesgloseStock(map)
+          } else {
+            setDesgloseStock(new Map())
+          }
         }
       } else {
         setVariantesActivas(new Map())

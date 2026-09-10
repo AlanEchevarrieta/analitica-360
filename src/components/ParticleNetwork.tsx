@@ -57,14 +57,17 @@ export function ParticleNetwork({
   mobileCount = 80,
   desktopCount = COUNT,
   startWhenIdle = false,
+  pauseOffscreen = false,
 }: {
   contained?: boolean
   enableMobile?: boolean
   mobileCount?: number
   desktopCount?: number
   startWhenIdle?: boolean
+  pauseOffscreen?: boolean
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const animationRef = useRef(true)
 
   useEffect(() => {
     const surface = canvasRef.current
@@ -172,6 +175,7 @@ export function ParticleNetwork({
     }
 
     function start() {
+      if (!animationRef.current) return
       if (running || !shouldAnimate(enableMobile)) return
       running = true
       resize()
@@ -216,11 +220,30 @@ export function ParticleNetwork({
     window.addEventListener('mouseleave', onLeave)
     document.addEventListener('visibilitychange', onVisibility)
 
-    if (startWhenIdle) {
-      const arrancar = () => {
+    let observer: IntersectionObserver | null = null
+    function bindObserver() {
+      if (!pauseOffscreen || typeof IntersectionObserver === 'undefined') {
         if (shouldAnimate(enableMobile)) start()
+        return
       }
-      let cancelIdle: () => void
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            animationRef.current = true
+            start()
+          } else {
+            animationRef.current = false
+            stop()
+          }
+        },
+        { threshold: 0.1 },
+      )
+      observer.observe(board)
+    }
+
+    let cancelIdle: (() => void) | undefined
+    if (startWhenIdle) {
+      const arrancar = () => bindObserver()
       if (typeof window.requestIdleCallback === 'function') {
         const idleId = window.requestIdleCallback(arrancar, { timeout: 500 })
         cancelIdle = () => window.cancelIdleCallback(idleId)
@@ -228,20 +251,13 @@ export function ParticleNetwork({
         const t = window.setTimeout(arrancar, 500)
         cancelIdle = () => window.clearTimeout(t)
       }
-      return () => {
-        cancelIdle()
-        stop()
-        motion.removeEventListener('change', onResize)
-        window.removeEventListener('resize', onResize)
-        window.removeEventListener('mousemove', onMove)
-        window.removeEventListener('mouseleave', onLeave)
-        document.removeEventListener('visibilitychange', onVisibility)
-      }
+    } else {
+      bindObserver()
     }
 
-    if (shouldAnimate(enableMobile)) start()
-
     return () => {
+      cancelIdle?.()
+      observer?.disconnect()
       stop()
       motion.removeEventListener('change', onResize)
       window.removeEventListener('resize', onResize)
@@ -249,7 +265,7 @@ export function ParticleNetwork({
       window.removeEventListener('mouseleave', onLeave)
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [contained, enableMobile, mobileCount, desktopCount, startWhenIdle])
+  }, [contained, enableMobile, mobileCount, desktopCount, startWhenIdle, pauseOffscreen])
 
   const vis = enableMobile ? 'block' : 'hidden md:block'
   return (
