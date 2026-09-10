@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { AnularCompraModal } from '../components/AnularCompraModal'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import {
@@ -15,6 +16,8 @@ import {
   Tr,
   btnPrimaryDesk,
   FabLink,
+  FilterCollapse,
+  IconBtn,
   ListCard,
   MobileCards,
   theadClass,
@@ -37,6 +40,8 @@ export function ComprasPage() {
   const [busqueda, setBusqueda] = useState('')
   const [importar, setImportar] = useState(false)
   const [productos, setProductos] = useState<{ id: string; nombre: string }[]>([])
+  const [mostrarAnuladas, setMostrarAnuladas] = useState(false)
+  const [anular, setAnular] = useState<CompraFila | null>(null)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -44,6 +49,7 @@ export function ComprasPage() {
       pagina,
       pageSize: PAGE_COMPRAS,
       proveedor: busqueda,
+      mostrarAnuladas,
     })
     setCargando(false)
     if (listError) {
@@ -54,7 +60,7 @@ export function ComprasPage() {
     setError(null)
     setFilas(data)
     setTotal(n)
-  }, [pagina, busqueda])
+  }, [pagina, busqueda, mostrarAnuladas])
 
   useEffect(() => {
     void cargar()
@@ -93,6 +99,20 @@ export function ComprasPage() {
             }}
             placeholder="Buscar por proveedor"
           />
+          <FilterCollapse activo={mostrarAnuladas}>
+            <label className="filter-field flex cursor-pointer items-end gap-2 pb-2 text-sm text-[#A5B4FC]">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[#6366F1]"
+                checked={mostrarAnuladas}
+                onChange={(ev) => {
+                  setPagina(1)
+                  setMostrarAnuladas(ev.target.checked)
+                }}
+              />
+              Mostrar anuladas
+            </label>
+          </FilterCollapse>
           <div className="hidden flex-wrap gap-2 md:flex">
             {perfil.usuario.rol !== 'visor' ? (
               <button
@@ -123,13 +143,23 @@ export function ComprasPage() {
                 <Th>Productos</Th>
                 <Th>Total</Th>
                 <Th>Notas</Th>
+                {perfil.usuario.rol === 'dueno' ? <Th /> : null}
               </tr>
             </thead>
             {!cargando && error !== MSG_ERROR_RED ? (
             <tbody>
               {filas.map((fila, index) => (
                 <Tr key={fila.id} index={index}>
-                  <td className="px-3 py-3 whitespace-nowrap text-[#E2E8F0]">{formatoFechaCompra(fila.fecha)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-[#E2E8F0]">
+                    <span className="inline-flex flex-wrap items-center gap-2">
+                      {formatoFechaCompra(fila.fecha)}
+                      {fila.anulada ? (
+                        <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[11px] font-semibold text-[#F87171]">
+                          Anulada
+                        </span>
+                      ) : null}
+                    </span>
+                  </td>
                   <td className="px-3 py-3">
                     {fila.proveedor ? (
                       <span>🏭 {fila.proveedor}</span>
@@ -140,6 +170,15 @@ export function ComprasPage() {
                   <td className="px-3 py-3">{fila.productos || '—'}</td>
                   <td className="px-3 py-3 font-bold text-[#6366F1]">{formatoARS(fila.total)}</td>
                   <td className="px-3 py-3 text-[#94A3B8]">{fila.notas ?? '—'}</td>
+                  {perfil.usuario.rol === 'dueno' ? (
+                    <td className="px-3 py-3">
+                      {!fila.anulada ? (
+                        <IconBtn label="Anular compra" hoverOnly onClick={() => setAnular(fila)}>
+                          🗑️
+                        </IconBtn>
+                      ) : null}
+                    </td>
+                  ) : null}
                 </Tr>
               ))}
             </tbody>
@@ -152,9 +191,19 @@ export function ComprasPage() {
                 <ListCard key={fila.id}>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     {formatoFechaCompra(fila.fecha)}
+                    {fila.anulada ? ' · Anulada' : ''}
                   </p>
                   <p className="mt-1 text-sm font-medium">{fila.proveedor || 'Sin proveedor'}</p>
                   <p className="mt-1 font-bold text-[#6366F1]">{formatoARS(fila.total)}</p>
+                  {perfil.usuario.rol === 'dueno' && !fila.anulada ? (
+                    <button
+                      className="mt-2 text-xs text-[#F87171]"
+                      type="button"
+                      onClick={() => setAnular(fila)}
+                    >
+                      Anular
+                    </button>
+                  ) : null}
                 </ListCard>
               ))}
             </MobileCards>
@@ -184,6 +233,16 @@ export function ComprasPage() {
             productos={productos}
             onCerrar={() => setImportar(false)}
             onListo={cargar}
+          />
+        ) : null}
+        {anular ? (
+          <AnularCompraModal
+            compra={anular}
+            onCerrar={() => setAnular(null)}
+            onOk={() => {
+              setAnular(null)
+              void cargar()
+            }}
           />
         ) : null}
       </div>

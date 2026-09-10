@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type VentaFila = {
   id: string
+  numeroVenta: string | null
   fecha: string
   productos: string
   total: number
@@ -20,6 +21,7 @@ export type FiltrosVentas = {
   forma: string
   cliente: string
   productoId: string
+  numeroVenta: string
   mostrarAnuladas: boolean
 }
 
@@ -60,7 +62,7 @@ async function hidratarVentas(
 
   const ventasRes = await client
     .from('ventas')
-    .select('id, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_sin_interes, total_con_interes, notas, deleted_at')
+    .select('id, numero_venta, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_sin_interes, total_con_interes, notas, deleted_at')
     .in('id', ids)
   if (ventasRes.error) return { filas: [], error: ventasRes.error.message }
 
@@ -94,6 +96,7 @@ async function hidratarVentas(
     const totalCalc = (items?.total ?? 0) - descuento
     return {
       id,
+      numeroVenta: row.numero_venta == null || row.numero_venta === '' ? null : String(row.numero_venta),
       fecha: String(row.fecha ?? ''),
       productos: items?.nombres.join(', ') ?? '',
       total: totalCon > 0 ? totalCon : totalSin > 0 ? totalSin : totalCalc,
@@ -121,6 +124,8 @@ export async function listarVentasPaginado(
     hasta: `${input.hasta}T23:59:59.999-03:00`,
   }
   const clienteQ = input.cliente.trim()
+  const numeroQ = input.numeroVenta.trim()
+  const porNumero = numeroQ.length > 0
 
   const idsRes = input.productoId
     ? await (() => {
@@ -128,12 +133,14 @@ export async function listarVentasPaginado(
           .from('ventas')
           .select('id, ventas_items!inner(producto_id)', { count: 'exact' })
           .order('fecha', { ascending: false })
-          .gte('fecha', filtrosFecha.desde)
-          .lte('fecha', filtrosFecha.hasta)
           .eq('ventas_items.producto_id', input.productoId)
+        if (!porNumero) {
+          q = q.gte('fecha', filtrosFecha.desde).lte('fecha', filtrosFecha.hasta)
+        }
         q = aplicarDeleted(q, input.mostrarAnuladas)
         if (input.forma) q = q.eq('forma_pago', input.forma)
         if (clienteQ) q = q.ilike('cliente_nombre', `%${clienteQ}%`)
+        if (porNumero) q = q.ilike('numero_venta', `%${numeroQ}%`)
         return q.range(from, to)
       })()
     : await (() => {
@@ -141,15 +148,28 @@ export async function listarVentasPaginado(
           .from('ventas')
           .select('id', { count: 'exact' })
           .order('fecha', { ascending: false })
-          .gte('fecha', filtrosFecha.desde)
-          .lte('fecha', filtrosFecha.hasta)
+        if (!porNumero) {
+          q = q.gte('fecha', filtrosFecha.desde).lte('fecha', filtrosFecha.hasta)
+        }
         q = aplicarDeleted(q, input.mostrarAnuladas)
         if (input.forma) q = q.eq('forma_pago', input.forma)
         if (clienteQ) q = q.ilike('cliente_nombre', `%${clienteQ}%`)
+        if (porNumero) q = q.ilike('numero_venta', `%${numeroQ}%`)
         return q.range(from, to)
       })()
 
-  if (idsRes.error) return { filas: [], total: 0, error: idsRes.error.message }
+  if (idsRes.error) {
+    const t = idsRes.error.message.toLowerCase()
+    if (t.includes('numero_venta') || t.includes('schema cache') || t.includes('does not exist')) {
+      return {
+        filas: [],
+        total: 0,
+        error:
+          'Falta el N° de venta. Pegá TODO supabase/037_numero_venta_anular_compras_categorias.sql (rol postgres), dale Run y recargá.',
+      }
+    }
+    return { filas: [], total: 0, error: idsRes.error.message }
+  }
 
   const total = idsRes.count ?? 0
   const ids = [...new Set((idsRes.data ?? []).map((row) => String(row.id)))]

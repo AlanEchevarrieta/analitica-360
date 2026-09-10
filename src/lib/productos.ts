@@ -4,6 +4,7 @@ export type ProductoFila = {
   id: string
   nombre: string
   categoria: string | null
+  categoria_id: string | null
   activo: boolean
   precio_venta: number
   costo: number
@@ -15,6 +16,7 @@ function filaProducto(row: Record<string, unknown>): ProductoFila {
     id: String(row.id),
     nombre: String(row.nombre),
     categoria: row.categoria == null ? null : String(row.categoria),
+    categoria_id: row.categoria_id == null || row.categoria_id === '' ? null : String(row.categoria_id),
     activo: Boolean(row.activo),
     precio_venta: Number(row.precio_venta ?? 0),
     costo: Number(row.costo ?? 0),
@@ -187,6 +189,20 @@ export async function crearProducto(
   })
   if (error) return { id: null, error: error.message }
   return { id: data ? String(data) : null, error: null }
+}
+
+export async function asignarCategoriaProducto(
+  client: SupabaseClient,
+  productoId: string,
+  categoriaId: string | null,
+): Promise<string | null> {
+  const { error } = await client.from('productos').update({ categoria_id: categoriaId }).eq('id', productoId)
+  if (!error) return null
+  const t = error.message.toLowerCase()
+  if (t.includes('categoria_id') || t.includes('schema cache') || t.includes('does not exist')) {
+    return 'Falta categoria_id. Pegá TODO supabase/037_numero_venta_anular_compras_categorias.sql (rol postgres), dale Run y recargá.'
+  }
+  return error.message
 }
 
 export async function actualizarProducto(

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
@@ -39,15 +39,23 @@ import {
   sembrarAtributosDefault,
   type AtributoFila,
 } from '../lib/variantes'
+import {
+  eliminarCategoria,
+  guardarCategoria,
+  listarCategorias,
+  sembrarCategoriasDefault,
+  type CategoriaFila,
+} from '../lib/categorias'
 import { btnPrimary, cardShell } from '../components/listado'
 
 const inputClass =
   'h-10 w-full rounded-lg border border-[rgba(99,102,241,0.3)] bg-white/5 px-3 text-sm text-[#F1F5F9] outline-none focus:border-[#6366F1]'
 
-type TabId = 'medios' | 'cuotas' | 'usuarios' | 'flujo' | 'inventario' | 'variantes' | 'plan'
+type TabId = 'medios' | 'categorias' | 'cuotas' | 'usuarios' | 'flujo' | 'inventario' | 'variantes' | 'plan'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'medios', label: 'Medios de pago' },
+  { id: 'categorias', label: 'Categorías' },
   { id: 'cuotas', label: 'Cuotas y tasas' },
   { id: 'usuarios', label: 'Usuarios' },
   { id: 'flujo', label: 'Flujo de ventas' },
@@ -94,7 +102,11 @@ function Toggle({
 
 export function ConfiguracionPage() {
   const { perfil } = useAuth()
-  const [tab, setTab] = useState<TabId>('medios')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const [tab, setTab] = useState<TabId>(
+    TABS.some((t) => t.id === tabParam) ? (tabParam as TabId) : 'medios',
+  )
   const [medios, setMedios] = useState<MedioPagoId[]>([])
   const [tasas, setTasas] = useState<TasaCuota[]>([])
   const [flujo, setFlujo] = useState<FlujoVentas>({ ...FLUJO_VENTAS_DEFAULT })
@@ -121,6 +133,28 @@ export function ConfiguracionPage() {
   const [enviandoInv, setEnviandoInv] = useState(false)
   const [suscripcion, setSuscripcion] = useState<SuscripcionActiva | null>(null)
   const [modalPlanes, setModalPlanes] = useState(false)
+  const [categorias, setCategorias] = useState<CategoriaFila[]>([])
+  const [altaCat, setAltaCat] = useState(false)
+  const [editCat, setEditCat] = useState<CategoriaFila | null>(null)
+  const [nombreCat, setNombreCat] = useState('')
+  const [descCat, setDescCat] = useState('')
+  const [activoCat, setActivoCat] = useState(true)
+
+  async function recargarCategorias() {
+    const seed = await sembrarCategoriasDefault(requireSupabase())
+    if (seed) setError(seed)
+    const res = await listarCategorias(requireSupabase())
+    if (res.error) setError(res.error)
+    else setCategorias(res.filas)
+  }
+
+  function resetFormCategoria() {
+    setAltaCat(false)
+    setEditCat(null)
+    setNombreCat('')
+    setDescCat('')
+    setActivoCat(true)
+  }
 
   async function cargarUsuarios() {
     const { filas, error: listError } = await listarUsuariosEmpresa(requireSupabase())
@@ -151,6 +185,11 @@ export function ConfiguracionPage() {
       setCargando(false)
     })()
   }, [perfil])
+
+  useEffect(() => {
+    if (!perfil || tab !== 'categorias') return
+    void recargarCategorias()
+  }, [perfil, tab])
 
   if (!perfil) return null
   if (perfil.usuario.rol !== 'dueno') return <Navigate to="/inicio" replace />
@@ -347,6 +386,7 @@ export function ConfiguracionPage() {
                 }`}
                 onClick={() => {
                   setTab(item.id)
+                  setSearchParams(item.id === 'medios' ? {} : { tab: item.id }, { replace: true })
                   setError(null)
                   setOk(null)
                 }}
@@ -380,6 +420,125 @@ export function ConfiguracionPage() {
                     )
                   })}
                 </ul>
+              ) : null}
+
+              {tab === 'categorias' ? (
+                <div className="mt-6 space-y-4">
+                  <p className="text-sm font-medium text-[#F1F5F9]">Categorías de productos</p>
+                  <ul className="mt-3 space-y-2">
+                    {categorias.map((c) => (
+                      <li key={c.id} className="rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium text-[#F1F5F9]">{c.nombre}</p>
+                            {c.descripcion ? (
+                              <p className="mt-1 text-xs text-[#94A3B8]">{c.descripcion}</p>
+                            ) : null}
+                            <p className="mt-1 text-[11px] text-[#94A3B8]">
+                              {c.activo ? 'Activa' : 'Inactiva'}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-[#A5B4FC]"
+                              onClick={() => {
+                                setEditCat(c)
+                                setAltaCat(true)
+                                setNombreCat(c.nombre)
+                                setDescCat(c.descripcion)
+                                setActivoCat(c.activo)
+                                setOk(null)
+                              }}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-[#DC2626]"
+                              onClick={() => {
+                                void (async () => {
+                                  if (!window.confirm(`¿Eliminar “${c.nombre}”?`)) return
+                                  const fallo = await eliminarCategoria(requireSupabase(), c.id)
+                                  if (fallo) setError(fallo)
+                                  else void recargarCategorias()
+                                })()
+                              }}
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    className="mt-3 h-10 w-full rounded-lg border border-[rgba(99,102,241,0.3)] text-sm font-semibold text-[#A5B4FC]"
+                    type="button"
+                    onClick={() => {
+                      resetFormCategoria()
+                      setAltaCat(true)
+                    }}
+                  >
+                    Nueva categoría
+                  </button>
+                  {altaCat ? (
+                    <div className="mt-3 space-y-3 rounded-xl border border-[rgba(99,102,241,0.15)] p-3">
+                      <label className="block text-sm font-medium text-[#94A3B8]">
+                        Nombre
+                        <input
+                          className={`${inputClass} mt-1`}
+                          value={nombreCat}
+                          onChange={(ev) => setNombreCat(ev.target.value)}
+                        />
+                      </label>
+                      <label className="block text-sm font-medium text-[#94A3B8]">
+                        Descripción
+                        <input
+                          className={`${inputClass} mt-1`}
+                          value={descCat}
+                          onChange={(ev) => setDescCat(ev.target.value)}
+                        />
+                      </label>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-[#94A3B8]">Activo</p>
+                        <Toggle on={activoCat} onChange={() => setActivoCat((v) => !v)} />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          className={`${btnPrimary} flex-1`}
+                          type="button"
+                          onClick={() => {
+                            void (async () => {
+                              const fallo = await guardarCategoria(requireSupabase(), {
+                                id: editCat?.id,
+                                empresaId: perfil.empresa.id,
+                                nombre: nombreCat,
+                                descripcion: descCat,
+                                activo: activoCat,
+                              })
+                              if (fallo) setError(fallo)
+                              else {
+                                resetFormCategoria()
+                                setOk('Categoría guardada')
+                                void recargarCategorias()
+                              }
+                            })()
+                          }}
+                        >
+                          Guardar
+                        </button>
+                        <button
+                          className="h-10 flex-1 rounded-lg border border-[rgba(99,102,241,0.3)] text-sm font-semibold text-[#94A3B8]"
+                          type="button"
+                          onClick={() => resetFormCategoria()}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
 
               {tab === 'cuotas' ? (

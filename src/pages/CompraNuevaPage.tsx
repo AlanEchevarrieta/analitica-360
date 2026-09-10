@@ -267,6 +267,7 @@ export function CompraNuevaPage() {
       id,
       nombre,
       categoria: nuevoCategoria.trim() || null,
+      categoria_id: null,
       activo: true,
       precio_venta: precio,
       costo: 0,

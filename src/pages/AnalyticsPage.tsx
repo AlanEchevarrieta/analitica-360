@@ -10,7 +10,6 @@ import {
   LabelList,
   Legend,
   Line,
-  LineChart,
   Pie,
   PieChart,
   Rectangle,
@@ -864,48 +863,6 @@ export function AnalyticsPage() {
                       </ul>
                     </>
                   )}
-                </Card>
-
-                <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
-                  <Text className="!text-[#94A3B8]">Tendencia de ventas</Text>
-                  <div className="mt-4" style={{ height: 280 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={data.evolucion} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-                        <CartesianGrid stroke={g.grilla} vertical={false} />
-                        <XAxis dataKey="fecha" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <YAxis
-                          tick={{ fill: g.eje, fontSize: 11 }}
-                          axisLine={false}
-                          tickLine={false}
-                          tickFormatter={formatoEjeCompacto}
-                          width={56}
-                        />
-                        <RechartsTooltip
-                          cursor={{ fill: CHART_CURSOR_FILL }}
-                          content={asRechartsTooltip(TooltipEvolucion)}
-                        />
-                        <Legend wrapperStyle={{ color: g.eje, fontSize: 12 }} />
-                        <Line
-                          type="monotone"
-                          dataKey="Ventas"
-                          name="Período actual"
-                          stroke="#6366F1"
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="Anterior"
-                          name="Período anterior"
-                          stroke="#94A3B8"
-                          strokeWidth={2}
-                          strokeDasharray="6 4"
-                          dot={false}
-                          connectNulls
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
                 </Card>
 
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>

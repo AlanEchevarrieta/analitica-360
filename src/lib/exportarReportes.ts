@@ -32,6 +32,7 @@ export function nombreArchivoAnalytics(empresa: string) {
 
 function filasExcel(ventas: VentaFila[]) {
   return ventas.map((v) => ({
+    'N° Venta': v.numeroVenta ?? '',
     Fecha: formatoFechaVenta(v.fecha),
     Productos: v.productos,
     Total: v.total,
@@ -76,8 +77,9 @@ export async function exportarVentasPdf(input: {
 
   autoTable(doc, {
     startY: 84,
-    head: [['Fecha', 'Productos', 'Total', 'Forma de pago', 'Cuotas', 'Cliente', 'Descuento', 'Notas']],
+    head: [['N° Venta', 'Fecha', 'Productos', 'Total', 'Forma de pago', 'Cuotas', 'Cliente', 'Descuento', 'Notas']],
     body: input.ventas.map((v) => [
+      v.numeroVenta ?? '—',
       formatoFechaVenta(v.fecha),
       v.productos,
       formatoARS(v.total),

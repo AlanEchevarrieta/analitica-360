@@ -7,6 +7,7 @@ export type CompraFila = {
   productos: string
   total: number
   notas: string | null
+  anulada: boolean
 }
 
 function mensajeErrorCompras(msg: string) {
@@ -17,14 +18,14 @@ function mensajeErrorCompras(msg: string) {
     t.includes('pgrst202') ||
     t.includes('does not exist')
   ) {
-    return 'Falta crear el módulo en Supabase. Pegá TODO supabase/016_compras.sql en el SQL Editor, dale Run y recargá esta página.'
+    return 'Falta crear el módulo en Supabase. Pegá TODO supabase/016_compras.sql y supabase/037_numero_venta_anular_compras_categorias.sql en el SQL Editor, dale Run y recargá esta página.'
   }
   return `No se pudieron cargar las compras: ${msg}`
 }
 
 export async function listarComprasPaginado(
   client: SupabaseClient,
-  input: { pagina: number; pageSize: number; proveedor: string },
+  input: { pagina: number; pageSize: number; proveedor: string; mostrarAnuladas: boolean },
 ): Promise<{ filas: CompraFila[]; total: number; error: string | null }> {
   const from = (input.pagina - 1) * input.pageSize
   const to = from + input.pageSize - 1
@@ -32,9 +33,10 @@ export async function listarComprasPaginado(
 
   let q = client
     .from('compras')
-    .select('id, fecha, proveedor, total, notas, compras_items(producto_nombre, cantidad)', { count: 'exact' })
-    .is('deleted_at', null)
+    .select('id, fecha, proveedor, total, notas, deleted_at, compras_items(producto_nombre, cantidad)', { count: 'exact' })
     .order('fecha', { ascending: false })
+
+  q = input.mostrarAnuladas ? q.not('deleted_at', 'is', null) : q.is('deleted_at', null)
 
   if (qProveedor) q = q.ilike('proveedor', `%${qProveedor}%`)
 
@@ -59,6 +61,7 @@ export async function listarComprasPaginado(
       productos,
       total: Number(row.total ?? 0),
       notas: row.notas == null || row.notas === '' ? null : String(row.notas),
+      anulada: row.deleted_at != null,
     }
   })
 
@@ -96,6 +99,24 @@ export async function confirmarCompra(
   if (msg.includes('PROVEEDOR_INVALIDO')) return 'Ese proveedor ya no está disponible'
   if (msg.includes('VARIANTE_INVALIDA')) return 'La variante elegida no es válida'
   return 'No se pudo confirmar la compra. Corré supabase/016_compras.sql, supabase/022_proveedores.sql y supabase/036_variantes_compras_dimensiones.sql en el SQL Editor.'
+}
+
+export async function anularCompra(
+  client: SupabaseClient,
+  id: string,
+  motivo: string,
+): Promise<string | null> {
+  const { error } = await client.rpc('anular_compra', { p_id: id, p_motivo: motivo })
+  if (!error) return null
+  const msg = error.message
+  if (msg.includes('NO_AUTORIZADO')) return 'Solo el dueño puede anular compras'
+  if (msg.includes('MOTIVO_OBLIGATORIO')) return 'El motivo de anulación es obligatorio'
+  if (msg.includes('COMPRA_INVALIDA')) return 'Esa compra ya no se puede anular'
+  const t = msg.toLowerCase()
+  if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
+    return 'Falta actualizar la anulación de compras. Pegá TODO supabase/037_numero_venta_anular_compras_categorias.sql (rol postgres), dale Run y recargá.'
+  }
+  return `No se pudo anular la compra: ${msg}`
 }
 
 export async function crearProductoParaCompra(

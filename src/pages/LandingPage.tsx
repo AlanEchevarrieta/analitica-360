@@ -26,6 +26,57 @@ function FondoParticulasLanding() {
   )
 }
 
+function InstallPwaBlock() {
+  const [promptEvent, setPromptEvent] = useState<{ prompt: () => Promise<void> } | null>(null)
+  const [ios, setIos] = useState(false)
+
+  useEffect(() => {
+    const ua = navigator.userAgent
+    const isIos = /iphone|ipad|ipod/i.test(ua)
+    const isSafari = /safari/i.test(ua) && !/crios|fxios|edgios/i.test(ua)
+    setIos(isIos && isSafari)
+    function onPrompt(ev: Event) {
+      ev.preventDefault()
+      setPromptEvent(ev as Event & { prompt: () => Promise<void> })
+    }
+    window.addEventListener('beforeinstallprompt', onPrompt)
+    return () => window.removeEventListener('beforeinstallprompt', onPrompt)
+  }, [])
+
+  async function instalar() {
+    if (!promptEvent) return
+    await promptEvent.prompt()
+    setPromptEvent(null)
+  }
+
+  return (
+    <section className="landing-section px-5 py-12">
+      <div className="mx-auto max-w-xl rounded-lg bg-white/95 p-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+        <h2 className="text-2xl font-semibold text-[#1A2F4A]">📱 Instalá Analítica 360 en tu celular</h2>
+        <p className="mt-2 text-sm text-[#4A5568]">
+          Accedé más rápido desde el inicio, como una app.
+        </p>
+        {promptEvent ? (
+          <button
+            className="mt-6 inline-flex h-12 items-center justify-center rounded-md bg-[#6366F1] px-8 text-base font-semibold text-white hover:bg-[#4F46E5]"
+            type="button"
+            onClick={() => void instalar()}
+          >
+            Agregar a mi pantalla de inicio
+          </button>
+        ) : (
+          <p className="mt-6 text-sm font-semibold text-[#1A2F4A]">Agregar a mi pantalla de inicio</p>
+        )}
+        {ios || !promptEvent ? (
+          <p className="mt-4 text-sm text-[#4A5568]">
+            En iPhone: tocá el ícono compartir → Agregar a pantalla de inicio
+          </p>
+        ) : null}
+      </div>
+    </section>
+  )
+}
+
 const FEATURES = [
   {
     icon: '💸',
@@ -279,6 +330,8 @@ export function LandingPage() {
             Crear mi cuenta gratis
           </Link>
         </section>
+
+        <InstallPwaBlock />
 
         <footer className="landing-footer px-5 py-4">
           <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 text-center text-sm lg:flex-row lg:justify-between lg:text-left">

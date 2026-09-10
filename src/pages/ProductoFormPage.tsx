@@ -4,7 +4,8 @@ import { useAuth } from '../auth'
 import { tienePermiso } from '../lib/permisos'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { AppNav } from '../components/AppNav'
-import { actualizarProducto, crearProducto, guardarDimensionesProducto, leerDimensionesProducto, listarProductos, type ProductoFila } from '../lib/productos'
+import { actualizarProducto, asignarCategoriaProducto, crearProducto, guardarDimensionesProducto, leerDimensionesProducto, listarProductos, type ProductoFila } from '../lib/productos'
+import { listarCategorias, type CategoriaFila } from '../lib/categorias'
 import { ProductoVariantesEditor, type ProductoVariantesHandle } from '../components/ProductoVariantesEditor'
 import { obtenerConfiguracion } from '../lib/configuracion'
 import { estiloTipoMovimiento } from '../lib/inventario'
@@ -22,6 +23,8 @@ export function ProductoFormPage() {
   const { perfil } = useAuth()
   const [nombre, setNombre] = useState('')
   const [categoria, setCategoria] = useState('')
+  const [categoriaId, setCategoriaId] = useState('')
+  const [categorias, setCategorias] = useState<CategoriaFila[]>([])
   const [precioVenta, setPrecioVenta] = useState('')
   const [costo, setCosto] = useState('')
   const [stockInicial, setStockInicial] = useState('0')
@@ -46,6 +49,12 @@ export function ProductoFormPage() {
 
   const titulo = useMemo(() => (esNuevo ? 'Nuevo producto' : 'Editar producto'), [esNuevo])
 
+  useEffect(() => {
+    if (categoriaId || !categoria) return
+    const hit = categorias.find((c) => c.nombre.trim().toLowerCase() === categoria.trim().toLowerCase())
+    if (hit) setCategoriaId(hit.id)
+  }, [categorias, categoria, categoriaId])
+
   function numOpcional(s: string): number | null {
     const t = s.trim()
     if (!t) return null
@@ -68,6 +77,9 @@ export function ProductoFormPage() {
     void obtenerConfiguracion(requireSupabase(), perfil.empresa.id).then(({ config }) => {
       setUsaVariantes(Boolean(config.usaVariantes))
     })
+    void listarCategorias(requireSupabase(), true).then((res) => {
+      if (!res.error) setCategorias(res.filas)
+    })
   }, [perfil])
 
   useEffect(() => {
@@ -87,10 +99,15 @@ export function ProductoFormPage() {
       }
       setNombre(actual.nombre)
       setCategoria(actual.categoria ?? '')
+      setCategoriaId(actual.categoria_id ?? '')
       setPrecioVenta(String(actual.precio_venta))
       setCosto(String(actual.costo))
       setStockActual(actual.stock_actual)
       setActivo(actual.activo)
+      const extraCat = await requireSupabase().from('productos').select('categoria_id').eq('id', id).maybeSingle()
+      if (!extraCat.error && extraCat.data && (extraCat.data as { categoria_id?: string | null }).categoria_id) {
+        setCategoriaId(String((extraCat.data as { categoria_id: string }).categoria_id))
+      }
       const dim = await leerDimensionesProducto(requireSupabase(), id)
       setAltoCm(dim.altoCm)
       setLargoCm(dim.largoCm)
@@ -129,6 +146,9 @@ export function ProductoFormPage() {
       return
     }
 
+    const catElegida = categorias.find((c) => c.id === categoriaId)
+    const categoriaNombre = catElegida?.nombre ?? categoria.trim()
+    const categoriaIdGuardar = catElegida?.id ?? null
     const client = requireSupabase()
 
     if (esNuevo && !forzarCrear) {
@@ -151,7 +171,7 @@ export function ProductoFormPage() {
     if (esNuevo) {
       const creado = await crearProducto(client, {
         nombre: nombre.trim(),
-        categoria: categoria.trim(),
+        categoria: categoriaNombre,
         precioVenta: precio,
         costo: costoNum,
         stockInicial: usaVariantes ? 0 : Number.isFinite(stock) ? stock : 0,
@@ -162,6 +182,7 @@ export function ProductoFormPage() {
         setError(creado.error || 'No se pudo crear el producto')
         return
       }
+      await asignarCategoriaProducto(client, creado.id, categoriaIdGuardar)
       const varError = await variantesRef.current?.persistir(creado.id)
       const dimError = await persistirDimensiones(creado.id)
       setEnviando(false)
@@ -176,7 +197,7 @@ export function ProductoFormPage() {
     const fallo = await actualizarProducto(client, {
       id: id!,
       nombre: nombre.trim(),
-      categoria: categoria.trim(),
+      categoria: categoriaNombre,
       precioVenta: precio,
       costo: costoNum,
       activo,
@@ -186,6 +207,7 @@ export function ProductoFormPage() {
       setError(fallo)
       return
     }
+    await asignarCategoriaProducto(client, id!, categoriaIdGuardar)
     const varError = await variantesRef.current?.persistir(id!)
     const dimError = await persistirDimensiones(id!)
     setEnviando(false)
@@ -273,14 +295,34 @@ export function ProductoFormPage() {
                   setDuplicado(null)
                 }} />
               </label>
-              <label className="mt-4 text-sm font-medium text-[#4A5568]">
-                Categoría
-                <input
-                  className={inputClass}
-                  value={categoria}
-                  onChange={(ev) => setCategoria(ev.target.value)}
-                />
-              </label>
+              {categorias.length === 0 ? (
+                <p className="mt-4 text-sm text-[#4A5568]">
+                  Categoría
+                  <Link className="mt-1.5 block font-semibold text-[#6366F1]" to="/configuracion?tab=categorias">
+                    Configurá tus categorías primero
+                  </Link>
+                </p>
+              ) : (
+                <label className="mt-4 text-sm font-medium text-[#4A5568]">
+                  Categoría
+                  <select
+                    className={inputClass}
+                    value={categoriaId}
+                    onChange={(ev) => {
+                      const next = ev.target.value
+                      setCategoriaId(next)
+                      setCategoria(categorias.find((c) => c.id === next)?.nombre ?? '')
+                    }}
+                  >
+                    <option value="">Sin categoría</option>
+                    {categorias.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <label className="mt-4 text-sm font-medium text-[#4A5568]">
                 {usaVariantes ? 'Precio base (referencial)' : 'Precio de venta (ARS)'}
                 <input

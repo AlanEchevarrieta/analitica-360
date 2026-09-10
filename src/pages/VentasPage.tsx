@@ -10,6 +10,7 @@ import {
   PAGE_VENTAS,
   PageTitle,
   PaginacionBar,
+  SearchField,
   TableCard,
   TableErrorRed,
   TableSkeleton,
@@ -61,6 +62,7 @@ export function VentasPage() {
   const [productoId, setProductoId] = useState('')
   const [forma, setForma] = useState('')
   const [cliente, setCliente] = useState('')
+  const [numeroVenta, setNumeroVenta] = useState('')
   const [menu, setMenu] = useState<'pago' | 'cliente' | null>(null)
   const [importar, setImportar] = useState(false)
   const [mostrarAnuladas, setMostrarAnuladas] = useState(false)
@@ -82,6 +84,7 @@ export function VentasPage() {
         forma,
         cliente,
         productoId,
+        numeroVenta,
         mostrarAnuladas,
       }),
       resumenVentasHoy(client),
@@ -102,7 +105,7 @@ export function VentasPage() {
     setError(null)
     setFilas(data)
     setTotal(n)
-  }, [pagina, desde, hasta, forma, cliente, productoId, mostrarAnuladas])
+  }, [pagina, desde, hasta, forma, cliente, productoId, numeroVenta, mostrarAnuladas])
 
   useEffect(() => {
     void cargar()
@@ -138,6 +141,7 @@ export function VentasPage() {
     forma,
     cliente,
     productoId,
+    numeroVenta,
     mostrarAnuladas,
   }
 
@@ -188,7 +192,15 @@ export function VentasPage() {
         <PageTitle titulo="Ventas" subtitulo={subtitulo} />
 
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <FilterCollapse activo={Boolean(productoId) || mostrarAnuladas}>
+          <SearchField
+            value={numeroVenta}
+            onChange={(v) => {
+              setPagina(1)
+              setNumeroVenta(v)
+            }}
+            placeholder="Buscar por N° venta"
+          />
+          <FilterCollapse activo={Boolean(productoId) || Boolean(numeroVenta.trim()) || mostrarAnuladas}>
             <div className="filter-field">
               <label htmlFor="venta-desde">Desde</label>
               <input
@@ -304,6 +316,7 @@ export function VentasPage() {
           <table className="w-full min-w-[860px] text-left">
             <thead className={theadClass} style={theadStyle}>
               <tr>
+                <Th>N° Venta</Th>
                 <Th>Fecha</Th>
                 <Th>Productos</Th>
                 <Th>Total</Th>
@@ -367,6 +380,9 @@ export function VentasPage() {
             <tbody>
               {filas.map((fila, index) => (
                 <Tr key={fila.id} index={index}>
+                  <td className="px-3 py-3 whitespace-nowrap font-semibold text-[#A5B4FC]">
+                    {fila.numeroVenta ?? '—'}
+                  </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <span className="inline-flex flex-wrap items-center gap-2">
                       {formatoFechaVenta(fila.fecha)}
@@ -411,6 +427,7 @@ export function VentasPage() {
                 <ListCard key={fila.id}>
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {fila.numeroVenta ? `${fila.numeroVenta} · ` : ''}
                       {formatoFechaVenta(fila.fecha)}
                       {fila.anulada ? ' · Anulada' : ''}
                     </p>

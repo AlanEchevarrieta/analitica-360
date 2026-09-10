@@ -70,6 +70,9 @@ export function estiloTipoMovimiento(tipo: string, signo: number) {
   if (t === 'devolucion_cliente' || t === 'devolucion') {
     return { icono: '↩️', texto: 'Devolución cliente', clase: 'text-[#93C5FD]', fondo: '#1E3A5F', color: '#93C5FD' }
   }
+  if (t === 'devolucion_proveedor') {
+    return { icono: '🏭', texto: 'Devolución proveedor', clase: 'text-[#F87171]', ...BADGE_SALIDA }
+  }
   if (t === 'ajuste_positivo') {
     return { icono: '📦', texto: 'Ajuste +', clase: 'text-[#4ADE80]', ...BADGE_ENTRADA }
   }
@@ -216,7 +219,7 @@ export async function listarResumenInventario(
       if (['compra', 'ajuste_positivo', 'devolucion_cliente', 'devolucion'].includes(tipo)) {
         if (!ultimaEntrada || fecha > ultimaEntrada) ultimaEntrada = fecha
       }
-      if (['venta', 'merma', 'rotura', 'perdida', 'ajuste_negativo', 'consumo_interno'].includes(tipo)) {
+      if (['venta', 'merma', 'rotura', 'perdida', 'ajuste_negativo', 'consumo_interno', 'devolucion_proveedor'].includes(tipo)) {
         if (!ultimaSalida || fecha > ultimaSalida) ultimaSalida = fecha
       }
       if (tipo === 'venta' && new Date(fecha).getTime() >= corte) rotacion += cant
