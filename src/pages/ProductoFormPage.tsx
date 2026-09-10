@@ -4,6 +4,7 @@ import { useAuth } from '../auth'
 import { tienePermiso } from '../lib/permisos'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { AppNav } from '../components/AppNav'
+import { Breadcrumb, PageSkeleton } from '../components/listado'
 import { actualizarProducto, asignarCategoriaProducto, crearProducto, guardarDimensionesProducto, leerDimensionesProducto, listarProductos, type ProductoFila } from '../lib/productos'
 import { listarCategorias, type CategoriaFila } from '../lib/categorias'
 import { ProductoVariantesEditor, type ProductoVariantesHandle } from '../components/ProductoVariantesEditor'
@@ -282,10 +283,18 @@ export function ProductoFormPage() {
       <ParticleNetwork />
       <div className={`relative z-10 mx-auto px-4 py-8 ${usaVariantes ? 'max-w-3xl' : 'max-w-[440px]'}`}>
         <AppNav />
+        <Breadcrumb
+          items={[
+            { label: 'Productos', to: '/productos' },
+            { label: esNuevo ? 'Nuevo producto' : nombre.trim() || 'Editar producto' },
+          ]}
+        />
         <div className="rounded-lg bg-white/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
           <h1 className="text-xl font-bold text-[#1A2F4A]">{titulo}</h1>
           {cargando ? (
-            <p className="mt-6 text-sm text-[#4A5568]">Cargando…</p>
+            <div className="mt-6">
+              <PageSkeleton />
+            </div>
           ) : (
             <form className="mt-6 flex flex-col" onSubmit={onSubmit}>
               <label className="text-sm font-medium text-[#4A5568]">

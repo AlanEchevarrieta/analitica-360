@@ -172,6 +172,9 @@ body {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--nav-idle);
+  border: 1px solid transparent;
+  box-sizing: border-box;
+  overflow: visible;
 }
 
 .app-nav-link:hover {
@@ -181,7 +184,8 @@ body {
 .app-nav-link.active {
   background: var(--nav-active-bg);
   color: var(--nav-active-fg);
-  font-weight: 700;
+  font-weight: 600;
+  border-color: transparent;
 }
 
 .theme-toggle {
@@ -216,6 +220,27 @@ body {
   align-items: end;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
+}
+
+.filter-anuladas {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  padding-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: #a5b4fc;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .filter-anuladas {
+    width: 100%;
+    justify-content: flex-end;
+    margin-left: 0;
+    padding-bottom: 0;
+  }
 }
 
 .filter-field {
@@ -326,9 +351,33 @@ select,
   border-color: var(--input-border);
 }
 
+.dark select,
+select {
+  background-color: #0f1729 !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+select:focus {
+  border-color: #6366f1 !important;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+}
+
 select option {
-  background-color: var(--select-bg);
-  color: var(--select-fg);
+  background-color: #0f1729 !important;
+  color: #f1f5f9 !important;
+}
+
+:root[data-theme='light'] select {
+  background-color: #ffffff !important;
+  color: #1a2f4a !important;
+  border: 1px solid #e2e8f0;
+}
+
+:root[data-theme='light'] select option {
+  background-color: #ffffff !important;
+  color: #1a2f4a !important;
 }
 
 select option:hover,
@@ -712,7 +761,32 @@ select option:checked:hover {
   background: #e0deff;
 }
 
+.nav-label-con-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav-notif-badge {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.75rem;
+  z-index: 1;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #f87171;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.05rem;
+  text-align: center;
+  pointer-events: none;
+}
+
 .app-nav-bottom-item {
+  position: relative;
   display: flex;
   min-width: 0;
   flex: 1;
@@ -727,6 +801,11 @@ select option:checked:hover {
   font-weight: 600;
   line-height: 1.2;
   text-decoration: none;
+}
+
+.app-nav-bottom-item .nav-notif-badge {
+  top: -2px;
+  right: -8px;
 }
 
 .app-nav-bottom-item.active {

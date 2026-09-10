@@ -5,6 +5,7 @@ import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import {
   BadgeEstado,
+  Breadcrumb,
   TableCard,
   Th,
   Tr,
@@ -76,9 +77,9 @@ export function ProveedorFichaPage() {
       <ParticleNetwork />
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-8 text-white">
         <AppNav />
-        <Link className="mb-4 inline-block text-sm font-medium text-[#A5B4FC]" to="/proveedores">
-          ← Volver a proveedores
-        </Link>
+        <Breadcrumb
+          items={[{ label: 'Proveedores', to: '/proveedores' }, { label: titulo || 'Proveedor' }]}
+        />
 
         {cargando ? <p className="text-sm text-[#94A3B8]">Cargando…</p> : null}
         {error ? <p className="mb-4 rounded-xl bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p> : null}

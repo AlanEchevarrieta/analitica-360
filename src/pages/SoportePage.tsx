@@ -9,11 +9,13 @@ import {
   ListCard,
   MobileCards,
   PageTitle,
+  PageSkeleton,
   TableCard,
   TableErrorRed,
-  TableSkeleton,
+  EmptyState,
   Th,
   Tr,
+  btnPrimary,
   btnPrimaryDesk,
   theadClass,
   theadStyle,
@@ -23,6 +25,7 @@ import {
   etiquetaCategoria,
   formatoFechaTicket,
   listarTicketsEmpresa,
+  marcarTicketsSoporteVistos,
   type TicketFila,
 } from '../lib/tickets'
 import { requireSupabase } from '../lib/supabase'
@@ -47,6 +50,12 @@ export function SoportePage() {
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useEffect(() => {
+    void (async () => {
+      await marcarTicketsSoporteVistos(requireSupabase())
+    })()
+  }, [])
 
   if (!perfil) return null
 
@@ -81,6 +90,7 @@ export function SoportePage() {
           <p className="mb-6 rounded-xl bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p>
         ) : null}
 
+        {cargando ? <PageSkeleton /> : (
         <TableCard>
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[820px] text-left">
@@ -143,12 +153,21 @@ export function SoportePage() {
               ))}
             </MobileCards>
           ) : null}
-          {cargando ? <TableSkeleton /> : null}
-          {!cargando && error === MSG_ERROR_RED ? <TableErrorRed onReintentar={() => void cargar()} /> : null}
-          {!cargando && filas.length === 0 && !error ? (
-            <p className="px-3 py-6 text-center text-sm text-[#94A3B8]">Todavía no hay tickets.</p>
+          {error === MSG_ERROR_RED ? <TableErrorRed onReintentar={() => void cargar()} /> : null}
+          {filas.length === 0 && !error ? (
+            <EmptyState
+              icono="🎫"
+              titulo="Todo en orden"
+              subtitulo="No tenés tickets de soporte pendientes. Si necesitás ayuda, creá uno acá."
+              accion={
+                <Link className={btnPrimary} to="/soporte/nuevo">
+                  Nuevo ticket
+                </Link>
+              }
+            />
           ) : null}
         </TableCard>
+        )}
         <FabLink to="/soporte/nuevo" label="Nuevo ticket" />
       </div>
     </div>

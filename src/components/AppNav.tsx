@@ -3,6 +3,8 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { ThemeToggle } from '../lib/tema'
 import { planTieneAnalytics, planTieneInsights } from '../lib/planes'
+import { requireSupabase, supabase } from '../lib/supabase'
+import { contarTicketsNoLeidos, EVENTO_SOPORTE_NOTIF } from '../lib/tickets'
 import { theme } from '../theme'
 
 function linkClass({ isActive }: { isActive: boolean }) {
@@ -30,11 +32,30 @@ function Candado({ mostrar }: { mostrar: boolean }) {
   )
 }
 
+function BadgeNotif({ n }: { n: number }) {
+  if (n <= 0) return null
+  return (
+    <span className="nav-notif-badge" aria-label={`${n} respuestas nuevas`}>
+      {n > 9 ? '9+' : n}
+    </span>
+  )
+}
+
+function LabelSoporte({ n, emoji }: { n: number; emoji?: boolean }) {
+  return (
+    <span className="nav-label-con-badge">
+      {emoji ? '🎫 Soporte' : 'Soporte'}
+      <BadgeNotif n={n} />
+    </span>
+  )
+}
+
 export function AppNav() {
   const { perfil, cerrarSesion } = useAuth()
   const esDueno = perfil?.usuario.rol === 'dueno'
   const location = useLocation()
   const [mas, setMas] = useState(false)
+  const [soporteNuevos, setSoporteNuevos] = useState(0)
   const sinAnalytics = Boolean(perfil && !planTieneAnalytics(perfil.empresa.plan_actual))
   const sinInsights = Boolean(perfil && !planTieneInsights(perfil.empresa.plan_actual))
   const masActivo = [
@@ -64,6 +85,24 @@ export function AppNav() {
       document.body.style.overflow = prev
     }
   }, [mas])
+
+  useEffect(() => {
+    if (!perfil || !supabase) return
+    let vivo = true
+    async function cargar() {
+      const n = await contarTicketsNoLeidos(requireSupabase())
+      if (vivo) setSoporteNuevos(n)
+    }
+    void cargar()
+    const t = window.setInterval(() => void cargar(), 30_000)
+    const onEvt = () => void cargar()
+    window.addEventListener(EVENTO_SOPORTE_NOTIF, onEvt)
+    return () => {
+      vivo = false
+      window.clearInterval(t)
+      window.removeEventListener(EVENTO_SOPORTE_NOTIF, onEvt)
+    }
+  }, [perfil])
 
   const analyticsLabel = (
     <span className="inline-flex items-center gap-1">
@@ -105,7 +144,7 @@ export function AppNav() {
           Inventario
         </NavLink>
         <NavLink className={linkClass} to="/soporte">
-          Soporte
+          <LabelSoporte n={soporteNuevos} />
         </NavLink>
         <NavLink className={linkClass} to="/analytics">
           {analyticsLabel}
@@ -152,7 +191,7 @@ export function AppNav() {
             📋 Inventario
           </NavLink>
           <NavLink className={sideClass} to="/soporte">
-            🎫 Soporte
+            <LabelSoporte n={soporteNuevos} emoji />
           </NavLink>
           <NavLink className={sideClass} to="/analytics">
             📊 {analyticsLabel}
@@ -197,7 +236,10 @@ export function AppNav() {
           type="button"
           onClick={() => setMas(true)}
         >
-          <span aria-hidden>☰</span>
+          <span className="relative inline-block" aria-hidden>
+            ☰
+            <BadgeNotif n={soporteNuevos} />
+          </span>
           Más
         </button>
       </nav>
@@ -217,7 +259,7 @@ export function AppNav() {
               📋 Inventario
             </NavLink>
             <NavLink className={sheetClass} to="/soporte" onClick={() => setMas(false)}>
-              🎫 Soporte
+              <LabelSoporte n={soporteNuevos} emoji />
             </NavLink>
             <NavLink className={sheetClass} to="/analytics" onClick={() => setMas(false)}>
               📊 {analyticsLabel}

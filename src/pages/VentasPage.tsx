@@ -17,11 +17,13 @@ import {
   Th,
   ThFilter,
   Tr,
+  btnPrimary,
   btnPrimaryDesk,
   FabLink,
   FilterCollapse,
   ListCard,
   MobileCards,
+  EmptyState,
   theadClass,
   theadStyle,
 } from '../components/listado'
@@ -246,7 +248,7 @@ export function VentasPage() {
                 ))}
               </select>
             </div>
-            <label className="filter-field flex cursor-pointer items-end gap-2 pb-2 text-sm text-[#A5B4FC]">
+            <label className="filter-anuladas">
               <input
                 type="checkbox"
                 className="h-4 w-4 accent-[#6366F1]"
@@ -453,9 +455,24 @@ export function VentasPage() {
             <TableErrorRed onReintentar={() => void cargar()} />
           ) : null}
           {!cargando && filas.length === 0 && !error ? (
-            <p className="px-3 py-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-              {total === 0 ? 'Todavía no hay ventas.' : 'Ninguna venta coincide con los filtros.'}
-            </p>
+            total === 0 ? (
+              <EmptyState
+                icono="💸"
+                titulo="Todavía no hay ventas"
+                subtitulo="Registrá tu primera venta para empezar a ver tus métricas"
+                accion={
+                  perfil.usuario.rol !== 'visor' ? (
+                    <Link className={btnPrimary} to="/ventas/nueva">
+                      Nueva venta
+                    </Link>
+                  ) : null
+                }
+              />
+            ) : (
+              <p className="px-3 py-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+                Ninguna venta coincide con los filtros.
+              </p>
+            )
           ) : null}
         </TableCard>
         {!cargando && error !== MSG_ERROR_RED ? (

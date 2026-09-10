@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { BadgeEstadoTicket, BadgePrioridadTicket } from '../components/TicketBadges'
 import { TicketHilo } from '../components/TicketHilo'
-import { PageTitle, btnPrimary, cardShell } from '../components/listado'
+import { Breadcrumb, PageTitle, PageSkeleton, btnPrimary, cardShell } from '../components/listado'
 import {
   ESTADOS_TICKET,
   avisarRespuestaCliente,
@@ -71,7 +71,7 @@ export function SoporteFichaPage() {
   async function onEnviar(texto: string) {
     if (!ficha) return
     setEnviando(true)
-    const fallo = await enviarRespuestaTicket(requireSupabase(), ficha.id, texto)
+    const fallo = await enviarRespuestaTicket(requireSupabase(), ficha.id, texto, { esAdmin: admin })
     setEnviando(false)
     if (fallo) {
       setError(fallo)
@@ -110,17 +110,18 @@ export function SoporteFichaPage() {
       <ParticleNetwork />
       <div className="relative z-10 mx-auto max-w-3xl px-4 py-8">
         <AppNav />
+        <Breadcrumb
+          items={[
+            { label: 'Soporte', to: admin ? '/admin?tab=soporte' : '/soporte' },
+            { label: ficha?.numero_ticket || 'Ticket' },
+          ]}
+        />
         <PageTitle
           titulo={ficha ? ficha.numero_ticket : 'Ticket'}
           subtitulo={ficha?.asunto}
-          accion={
-            <Link className="text-sm text-[#A5B4FC] hover:underline" to={admin ? '/admin?tab=soporte' : '/soporte'}>
-              {admin ? 'Volver al admin' : 'Volver'}
-            </Link>
-          }
         />
         {error ? <p className="mb-4 rounded-xl bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p> : null}
-        {!ficha && !error ? <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Cargando…</p> : null}
+        {!ficha && !error ? <PageSkeleton /> : null}
         {ficha ? (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2 p-4" style={cardShell}>

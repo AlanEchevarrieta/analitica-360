@@ -12,6 +12,7 @@ import {
   Th,
   Tr,
   btnPrimaryDesk,
+  EmptyState,
   FabLink,
   ListCard,
   MobileCards,
@@ -182,9 +183,17 @@ export function ClientesPage() {
             <TableErrorRed onReintentar={() => void cargar()} />
           ) : null}
           {!cargando && visibles.length === 0 && !error ? (
-            <p className="px-3 py-6 text-center text-sm text-[#94A3B8]">
-              {filas.length === 0 ? 'Todavía no hay clientes.' : 'Ningún cliente coincide con la búsqueda.'}
-            </p>
+            filas.length === 0 ? (
+              <EmptyState
+                icono="👥"
+                titulo="Aún no tenés clientes registrados"
+                subtitulo="Los clientes se agregan automáticamente cuando registrás una venta con nombre de cliente"
+              />
+            ) : (
+              <p className="px-3 py-6 text-center text-sm text-[#94A3B8]">
+                Ningún cliente coincide con la búsqueda.
+              </p>
+            )
           ) : null}
         </TableCard>
         {perfil.usuario.rol !== 'visor' ? <FabLink to="/clientes/nuevo" label="Nuevo cliente" /> : null}

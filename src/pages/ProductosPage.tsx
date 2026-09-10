@@ -18,11 +18,13 @@ import {
   Th,
   ThFilter,
   Tr,
+  btnPrimary,
   btnPrimaryDesk,
   FabLink,
   FilterCollapse,
   ListCard,
   MobileCards,
+  EmptyState,
   theadClass,
   theadStyle,
 } from '../components/listado'
@@ -586,11 +588,24 @@ export function ProductosPage() {
             <TableErrorRed onReintentar={() => void cargar()} />
           ) : null}
           {!cargando && filas.length === 0 && !error ? (
-            <p className="px-3 py-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-              {total === 0
-                ? 'Todavía no hay productos.'
-                : 'Ningún producto coincide con la búsqueda o los filtros.'}
-            </p>
+            total === 0 ? (
+              <EmptyState
+                icono="📦"
+                titulo="Tu catálogo está vacío"
+                subtitulo="Agregá tus productos para poder registrar ventas"
+                accion={
+                  puedeEditar ? (
+                    <Link className={btnPrimary} to="/productos/nuevo">
+                      Agregar producto
+                    </Link>
+                  ) : null
+                }
+              />
+            ) : (
+              <p className="px-3 py-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+                Ningún producto coincide con la búsqueda o los filtros.
+              </p>
+            )
           ) : null}
         </TableCard>
         {!cargando && error !== MSG_ERROR_RED ? (

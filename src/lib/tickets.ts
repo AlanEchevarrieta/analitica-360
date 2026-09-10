@@ -252,6 +252,7 @@ export async function enviarRespuestaTicket(
   client: SupabaseClient,
   ticketId: string,
   contenido: string,
+  opts?: { esAdmin?: boolean },
 ): Promise<string | null> {
   const texto = contenido.trim()
   if (!texto) return 'Escribí una respuesta.'
@@ -260,6 +261,9 @@ export async function enviarRespuestaTicket(
     contenido: texto,
   })
   if (error) return esFaltaSql(error) ? MSG_SQL : error.message
+  if (opts?.esAdmin) {
+    await client.from('tickets').update({ visto_cliente_at: null }).eq('id', ticketId)
+  }
   return null
 }
 
@@ -275,6 +279,52 @@ export async function cambiarEstadoTicket(
 
 export async function marcarTicketVisto(client: SupabaseClient, ticketId: string): Promise<void> {
   await client.from('tickets').update({ visto_cliente_at: new Date().toISOString() }).eq('id', ticketId)
+  avisarSoporteNotif()
+}
+
+export const EVENTO_SOPORTE_NOTIF = 'analitica-soporte-notif'
+
+export function avisarSoporteNotif() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(EVENTO_SOPORTE_NOTIF))
+}
+
+function ticketConRespuestaAdminNoLeida(row: Record<string, unknown>) {
+  const reps = Array.isArray(row.tickets_respuestas) ? row.tickets_respuestas : []
+  const admin = reps
+    .map((item) => {
+      const x = item as Record<string, unknown>
+      return { es_admin: Boolean(x.es_admin), created_at: String(x.created_at ?? '') }
+    })
+    .filter((r) => r.es_admin)
+  if (admin.length === 0) return false
+  const visto = row.visto_cliente_at ? String(row.visto_cliente_at) : null
+  if (!visto) return true
+  const ultima = admin.reduce((a, b) => (a.created_at > b.created_at ? a : b))
+  return ultima.created_at > visto
+}
+
+export async function contarTicketsNoLeidos(client: SupabaseClient): Promise<number> {
+  const { data, error } = await client
+    .from('tickets')
+    .select('id, visto_cliente_at, tickets_respuestas(es_admin, created_at)')
+    .limit(200)
+  if (error || !data) return 0
+  return data.filter((row) => ticketConRespuestaAdminNoLeida(row as Record<string, unknown>)).length
+}
+
+export async function marcarTicketsSoporteVistos(client: SupabaseClient): Promise<void> {
+  const { data } = await client
+    .from('tickets')
+    .select('id, visto_cliente_at, tickets_respuestas(es_admin, created_at)')
+    .limit(200)
+  const ids = (data ?? [])
+    .filter((row) => ticketConRespuestaAdminNoLeida(row as Record<string, unknown>))
+    .map((row) => String((row as { id: string }).id))
+  if (ids.length === 0) return
+  const ahora = new Date().toISOString()
+  await client.from('tickets').update({ visto_cliente_at: ahora }).in('id', ids)
+  avisarSoporteNotif()
 }
 
 export async function bannerTicketsHome(client: SupabaseClient): Promise<BannerTicketHome | null> {

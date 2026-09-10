@@ -44,6 +44,52 @@ export function PageTitle({
   )
 }
 
+export function Breadcrumb({ items }: { items: { label: string; to?: string }[] }) {
+  return (
+    <nav className="mb-3 text-[13px]" aria-label="Ruta">
+      {items.map((item, i) => (
+        <span key={`${item.label}-${i}`}>
+          {i > 0 ? <span className="px-1.5" style={{ color: '#4B5563' }}>&gt;</span> : null}
+          {item.to ? (
+            <Link className="hover:underline" style={{ color: '#94A3B8' }} to={item.to}>
+              {item.label}
+            </Link>
+          ) : (
+            <span style={{ color: '#94A3B8' }}>{item.label}</span>
+          )}
+        </span>
+      ))}
+    </nav>
+  )
+}
+
+export function EmptyState({
+  icono,
+  titulo,
+  subtitulo,
+  accion,
+}: {
+  icono: string
+  titulo: string
+  subtitulo: string
+  accion?: ReactNode
+}) {
+  return (
+    <div className="flex flex-col items-center px-4 py-12 text-center">
+      <span className="leading-none" style={{ fontSize: 48 }} aria-hidden>
+        {icono}
+      </span>
+      <p className="mt-4 text-base font-semibold" style={{ color: 'var(--text)' }}>
+        {titulo}
+      </p>
+      <p className="mt-2 max-w-sm text-sm" style={{ color: 'var(--text-muted)' }}>
+        {subtitulo}
+      </p>
+      {accion ? <div className="mt-5">{accion}</div> : null}
+    </div>
+  )
+}
+
 export function TableCard({ children }: { children: ReactNode }) {
   return (
     <div className="text-sm" style={{ ...cardShell, color: 'var(--text)' }}>
@@ -446,6 +492,21 @@ export function TableSkeleton({ filas = 5 }: { filas?: number }) {
       {Array.from({ length: filas }, (_, i) => (
         <div key={i} className="tabla-skeleton-fila" />
       ))}
+    </div>
+  )
+}
+
+export function PageSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Cargando">
+      <div className="kpi-skeleton-bar mb-3" style={{ width: 200, height: 28 }} />
+      <div className="kpi-skeleton-bar mb-6" style={{ width: 280, height: 14 }} />
+      <div
+        className="rounded-xl p-3"
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+      >
+        <TableSkeleton filas={6} />
+      </div>
     </div>
   )
 }

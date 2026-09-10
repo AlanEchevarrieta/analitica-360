@@ -72,6 +72,14 @@ function ErrorSeccion({ mensaje }: { mensaje: string }) {
 function SkeletonInsights() {
   return (
     <div className="space-y-6" aria-busy="true" aria-label="Cargando insights">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((k) => (
+          <div key={k} className="rounded-lg p-4" style={CARD}>
+            <div className="kpi-skeleton-bar" style={{ width: '50%', height: 14 }} />
+            <div className="kpi-skeleton-bar mt-3" style={{ width: '70%', height: 28 }} />
+          </div>
+        ))}
+      </div>
       {[1, 2, 3].map((k) => (
         <div key={k} className="rounded-lg p-5" style={CARD}>
           <div className="kpi-skeleton-bar" style={{ width: '40%', height: 22 }} />

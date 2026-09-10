@@ -9,9 +9,9 @@ import {
   PageTitle,
   PaginacionBar,
   SearchField,
+  PageSkeleton,
   TableCard,
   TableErrorRed,
-  TableSkeleton,
   Th,
   Tr,
   btnPrimary,
@@ -95,6 +95,9 @@ export function ProveedoresPage() {
           <p className="mb-6 rounded-xl bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p>
         ) : null}
 
+        {cargando ? (
+          <PageSkeleton />
+        ) : (
         <TableCard>
           <table className="w-full min-w-[860px] text-left">
             <thead className={theadClass} style={theadStyle}>
@@ -149,7 +152,6 @@ export function ProveedoresPage() {
               </tbody>
             ) : null}
           </table>
-          {cargando ? <TableSkeleton /> : null}
           {!cargando && error === MSG_ERROR_RED ? (
             <TableErrorRed onReintentar={() => void cargar()} />
           ) : null}
@@ -159,6 +161,7 @@ export function ProveedoresPage() {
             </p>
           ) : null}
         </TableCard>
+        )}
         <PaginacionBar
           pagina={pagina}
           total={total}

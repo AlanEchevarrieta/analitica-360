@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
-import { BadgePago, TableCard, Th, Tr, btnPrimary, cardShell, theadClass, theadStyle } from '../components/listado'
+import { BadgePago, Breadcrumb, TableCard, Th, Tr, btnPrimary, cardShell, theadClass, theadStyle } from '../components/listado'
 import {
   COLOR_ETIQUETA,
   ETIQUETAS_CLIENTE,
@@ -247,9 +247,7 @@ export function ClienteFichaPage() {
       <ParticleNetwork />
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-8 text-white">
         <AppNav />
-        <Link className="mb-4 inline-block text-sm font-medium text-[#A5B4FC]" to="/clientes">
-          ← Volver a clientes
-        </Link>
+        <Breadcrumb items={[{ label: 'Clientes', to: '/clientes' }, { label: ficha?.nombre || 'Cliente' }]} />
 
         {cargando ? <p className="text-sm text-[#94A3B8]">Cargando…</p> : null}
         {error ? <p className="mb-4 rounded-xl bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p> : null}

@@ -9,9 +9,9 @@ import {
   ListCard,
   MobileCards,
   PageTitle,
+  PageSkeleton,
   TableCard,
   TableErrorRed,
-  TableSkeleton,
   Th,
   Tr,
   theadClass,
@@ -205,6 +205,9 @@ export function InventarioPage() {
           </section>
         ) : null}
 
+        {cargando ? (
+          <PageSkeleton />
+        ) : (
         <TableCard>
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[920px] text-left">
@@ -334,7 +337,6 @@ export function InventarioPage() {
               })}
             </MobileCards>
           ) : null}
-          {cargando ? <TableSkeleton /> : null}
           {!cargando && error === MSG_ERROR_RED ? (
             <TableErrorRed onReintentar={() => void cargar()} />
           ) : null}
@@ -344,6 +346,7 @@ export function InventarioPage() {
             </p>
           ) : null}
         </TableCard>
+        )}
       </div>
 
       {historial ? (

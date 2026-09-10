@@ -100,7 +100,7 @@ export function ComprasPage() {
             placeholder="Buscar por proveedor"
           />
           <FilterCollapse activo={mostrarAnuladas}>
-            <label className="filter-field flex cursor-pointer items-end gap-2 pb-2 text-sm text-[#A5B4FC]">
+            <label className="filter-anuladas">
               <input
                 type="checkbox"
                 className="h-4 w-4 accent-[#6366F1]"
