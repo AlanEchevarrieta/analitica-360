@@ -22,6 +22,7 @@ import {
   etiquetaCombo,
   listarAtributos,
   listarVariantesActivas,
+  precioVarianteOBase,
   stockPorVariante,
   type AtributoFila,
   type VarianteFila,
@@ -103,7 +104,9 @@ export function VentaNuevaPage() {
         requireSupabase(),
         activos.map((p) => p.id),
       )
-      if (!vars.error) {
+      if (vars.error) {
+        console.log('[variantes] venta: no se pudieron cargar variantes', vars.error)
+      } else {
         setVariantesCatalogo(vars.filas)
         setStockVar(await stockPorVariante(requireSupabase(), vars.filas.map((v) => v.id)))
       }
@@ -197,8 +200,15 @@ export function VentaNuevaPage() {
   function agregarLinea(producto: ProductoFila, variante: VarianteFila | null) {
     const varianteId = variante?.id ?? null
     const etiqueta = variante ? ` — ${etiquetaCombo(variante.atributos)}` : ''
-    const precio =
-      variante && variante.precioVenta != null ? variante.precioVenta : producto.precio_venta
+    const precio = precioVarianteOBase(variante?.precioVenta, producto.precio_venta)
+    console.log('[variantes] precio al agregar a la venta', {
+      productoId: producto.id,
+      productoPrecioBase: producto.precio_venta,
+      varianteId,
+      varianteAtributos: variante?.atributos ?? null,
+      variantePrecio: variante?.precioVenta ?? null,
+      precioUsado: precio,
+    })
     const stock = variante ? (stockVar.get(variante.id) ?? 0) : producto.stock_actual
     const clave = claveLinea(producto.id, varianteId)
     setLineas((prev) => {
@@ -225,8 +235,31 @@ export function VentaNuevaPage() {
     setPicker(null)
   }
 
-  function agregarProducto(producto: ProductoFila) {
-    const vars = variantesCatalogo.filter((v) => v.productoId === producto.id)
+  async function agregarProducto(producto: ProductoFila) {
+    let vars = variantesCatalogo.filter((v) => v.productoId === producto.id)
+    if (config?.usaVariantes && vars.length === 0) {
+      const rec = await listarVariantesActivas(requireSupabase(), [producto.id])
+      if (!rec.error && rec.filas.length > 0) {
+        vars = rec.filas
+        setVariantesCatalogo((prev) => [
+          ...prev.filter((v) => v.productoId !== producto.id),
+          ...rec.filas,
+        ])
+        const stock = await stockPorVariante(
+          requireSupabase(),
+          rec.filas.map((v) => v.id),
+        )
+        setStockVar((prev) => {
+          const next = new Map(prev)
+          for (const [id, n] of stock) next.set(id, n)
+          return next
+        })
+      }
+    }
+    console.log('[variantes] producto seleccionado en venta', {
+      productoId: producto.id,
+      variantes: vars,
+    })
     if (config?.usaVariantes && vars.length > 0) {
       setPicker(producto)
       setError(null)
@@ -386,7 +419,7 @@ export function VentaNuevaPage() {
                           <button
                             className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-[#1A2F4A] hover:bg-[#EEF2F6]"
                             type="button"
-                            onClick={() => agregarProducto(p)}
+                            onClick={() => void agregarProducto(p)}
                           >
                             <span>{p.nombre}</span>
                             <span className="text-[#4A5568]">{formatoARS(p.precio_venta)}</span>
@@ -408,6 +441,7 @@ export function VentaNuevaPage() {
                       etiquetaAccion="Agregar a la venta"
                       onElegir={(variante) => {
                         if (variante) agregarLinea(picker, variante)
+                        else setError('Seleccioná una variante válida')
                       }}
                       onCancelar={() => setPicker(null)}
                     />

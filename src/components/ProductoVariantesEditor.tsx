@@ -167,8 +167,14 @@ export const ProductoVariantesEditor = forwardRef<
         id: d.id,
         sku: d.sku,
         atributos: d.atributos,
-        precioVenta: d.precio.trim() === '' ? precioBase : Number(d.precio.replace(',', '.')) || precioBase,
-        costo: d.costo.trim() === '' ? costoBase : Number(d.costo.replace(',', '.')) || costoBase,
+        precioVenta: (() => {
+          const n = Number(d.precio.replace(',', '.'))
+          return d.precio.trim() === '' || !Number.isFinite(n) ? precioBase : n
+        })(),
+        costo: (() => {
+          const n = Number(d.costo.replace(',', '.'))
+          return d.costo.trim() === '' || !Number.isFinite(n) ? costoBase : n
+        })(),
         activo: d.activo,
       })),
     })

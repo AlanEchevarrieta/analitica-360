@@ -67,6 +67,32 @@ export function mismaCombinacion(a: Record<string, string>, b: Record<string, st
   return ka.every((k, i) => k === kb[i] && a[k] === b[k])
 }
 
+export function normalizarAtributos(attrs: Record<string, unknown> | null | undefined): Record<string, string> {
+  const atributos: Record<string, string> = {}
+  if (!attrs || typeof attrs !== 'object' || Array.isArray(attrs)) return atributos
+  for (const [k, v] of Object.entries(attrs)) {
+    const key = k.trim()
+    if (!key) continue
+    atributos[key] = String(v ?? '').trim()
+  }
+  return atributos
+}
+
+export function precioVarianteOBase(precioVariante: number | null | undefined, precioBase: number) {
+  if (precioVariante == null || !Number.isFinite(precioVariante)) return precioBase
+  return precioVariante
+}
+
+export function variantePorSeleccion(
+  variantes: VarianteFila[],
+  sel: Record<string, string>,
+): VarianteFila | null {
+  const keys = Object.keys(sel).filter((k) => Boolean(sel[k]))
+  if (keys.length === 0) return null
+  const hits = variantes.filter((v) => keys.every((k) => v.atributos[k] === sel[k]))
+  return hits.find((v) => v.activo) ?? hits[0] ?? null
+}
+
 function msgSqlFaltante(error: string) {
   const t = error.toLowerCase()
   if (t.includes('schema cache') || t.includes('does not exist') || t.includes('atributos') || t.includes('usa_variantes')) {
@@ -82,18 +108,18 @@ function mapAtributo(row: Record<string, unknown>): AtributoFila {
 }
 
 function mapVariante(row: Record<string, unknown>): VarianteFila {
-  const attrs = row.atributos && typeof row.atributos === 'object' && !Array.isArray(row.atributos)
-    ? (row.atributos as Record<string, unknown>)
-    : {}
-  const atributos: Record<string, string> = {}
-  for (const [k, v] of Object.entries(attrs)) atributos[k] = String(v)
+  const raw = row.atributos
+  const attrs =
+    raw && typeof raw === 'object' && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {}
   return {
     id: String(row.id),
     productoId: String(row.producto_id),
     sku: row.sku == null ? '' : String(row.sku),
-    atributos,
-    precioVenta: row.precio_venta == null ? null : Number(row.precio_venta),
-    costo: row.costo == null ? null : Number(row.costo),
+    atributos: normalizarAtributos(attrs),
+    precioVenta: row.precio_venta == null || row.precio_venta === '' ? null : Number(row.precio_venta),
+    costo: row.costo == null || row.costo === '' ? null : Number(row.costo),
     activo: row.activo !== false,
   }
 }
@@ -228,8 +254,45 @@ export async function listarVariantesActivas(
     .in('producto_id', productoIds)
     .is('deleted_at', null)
     .eq('activo', true)
-  if (error) return { filas: [], error: msgSqlFaltante(error.message) }
-  return { filas: ((data ?? []) as Record<string, unknown>[]).map(mapVariante), error: null }
+  if (error) {
+    console.log('[variantes] listarVariantesActivas error', error.message, productoIds)
+    return { filas: [], error: msgSqlFaltante(error.message) }
+  }
+  const filas = ((data ?? []) as Record<string, unknown>[]).map(mapVariante)
+  console.log('[variantes] listarVariantesActivas', {
+    productoIds,
+    cantidad: filas.length,
+    filas: filas.map((f) => ({
+      id: f.id,
+      productoId: f.productoId,
+      atributos: f.atributos,
+      precioVenta: f.precioVenta,
+    })),
+  })
+  return { filas, error: null }
+}
+
+export async function contarVariantesActivasPorProducto(
+  client: SupabaseClient,
+  productoIds: string[],
+): Promise<Map<string, number>> {
+  const map = new Map<string, number>()
+  if (productoIds.length === 0) return map
+  const { data, error } = await client
+    .from('producto_variantes')
+    .select('producto_id')
+    .in('producto_id', productoIds)
+    .is('deleted_at', null)
+    .eq('activo', true)
+  if (error || !data) {
+    console.log('[variantes] contarVariantesActivasPorProducto error', error?.message)
+    return map
+  }
+  for (const row of data as Record<string, unknown>[]) {
+    const id = String(row.producto_id)
+    map.set(id, (map.get(id) ?? 0) + 1)
+  }
+  return map
 }
 
 export async function guardarVariantesProducto(
@@ -256,20 +319,41 @@ export async function guardarVariantesProducto(
       producto_id: input.productoId,
       empresa_id: input.empresaId,
       sku: v.sku.trim() || null,
-      atributos: v.atributos,
+      atributos: normalizarAtributos(v.atributos),
       precio_venta: v.precioVenta,
       costo: v.costo,
       activo: v.activo,
       deleted_at: null,
     }
+    console.log('[variantes] guardar payload', payload)
     if (v.id) {
       const { error } = await client.from('producto_variantes').update(payload).eq('id', v.id)
-      if (error) return msgSqlFaltante(error.message)
+      if (error) {
+        console.log('[variantes] update error', error.message)
+        return msgSqlFaltante(error.message)
+      }
       idsKeep.add(v.id)
     } else {
-      const { data, error } = await client.from('producto_variantes').insert(payload).select('id').maybeSingle()
-      if (error) return msgSqlFaltante(error.message)
-      if (data?.id) idsKeep.add(String(data.id))
+      const { data, error } = await client
+        .from('producto_variantes')
+        .insert(payload)
+        .select('id, empresa_id, producto_id')
+        .maybeSingle()
+      if (error) {
+        console.log('[variantes] insert error', error.message, payload)
+        return msgSqlFaltante(error.message)
+      }
+      let id = data?.id ? String(data.id) : ''
+      if (!id) {
+        const rec = await listarVariantesProducto(client, input.productoId)
+        const hit = rec.filas.find((f) => mismaCombinacion(f.atributos, payload.atributos))
+        id = hit?.id ?? ''
+      }
+      if (!id) {
+        return 'No se pudo guardar la variante. Revisá que empresa_id coincida con la empresa y que el SQL 035 esté corrido.'
+      }
+      console.log('[variantes] insert ok', { id, empresa_id: data?.empresa_id, producto_id: data?.producto_id })
+      idsKeep.add(id)
     }
   }
 

@@ -37,8 +37,10 @@ import {
   listarProductosPaginado,
   type ProductoFila,
 } from '../lib/productos'
+import { obtenerConfiguracion } from '../lib/configuracion'
 import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
+import { contarVariantesActivasPorProducto } from '../lib/variantes'
 import { theme } from '../theme'
 
 function margenPct(precio: number, costo: number) {
@@ -74,6 +76,8 @@ export function ProductosPage() {
   const [categorias, setCategorias] = useState<string[]>([])
   const [ajuste, setAjuste] = useState<{ id: string; nombre: string; stock: number } | null>(null)
   const [historial, setHistorial] = useState<{ id: string; nombre: string; stock: number } | null>(null)
+  const [usaVariantes, setUsaVariantes] = useState(false)
+  const [variantesActivas, setVariantesActivas] = useState<Map<string, number>>(new Map())
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -104,7 +108,21 @@ export function ProductosPage() {
     setTotal(n)
     setActivos(nActivos)
     setCategorias(cats)
-  }, [pagina, busqueda, categoria, estado, stockFiltro, margenFiltro])
+    if (perfil) {
+      const { config } = await obtenerConfiguracion(requireSupabase(), perfil.empresa.id)
+      const usa = Boolean(config.usaVariantes)
+      setUsaVariantes(usa)
+      if (usa && data.length > 0) {
+        const conteo = await contarVariantesActivasPorProducto(
+          requireSupabase(),
+          data.map((p) => p.id),
+        )
+        setVariantesActivas(conteo)
+      } else {
+        setVariantesActivas(new Map())
+      }
+    }
+  }, [pagina, busqueda, categoria, estado, stockFiltro, margenFiltro, perfil])
 
   useEffect(() => {
     void cargar()
@@ -393,7 +411,17 @@ export function ProductosPage() {
             <tbody>
               {filas.map((fila, index) => (
                 <Tr key={fila.id} index={index}>
-                  <td className="px-3 py-3 font-medium">{fila.nombre}</td>
+                  <td className="px-3 py-3 font-medium">
+                    <p>{fila.nombre}</p>
+                    {usaVariantes && (variantesActivas.get(fila.id) ?? 0) > 0 ? (
+                      <p className="mt-0.5 text-xs font-normal text-[#94A3B8]">
+                        {variantesActivas.get(fila.id)}{' '}
+                        {(variantesActivas.get(fila.id) ?? 0) === 1
+                          ? 'variante activa'
+                          : 'variantes activas'}
+                      </p>
+                    ) : null}
+                  </td>
                   <td className="px-3 py-3 text-[#94A3B8]">{fila.categoria ?? '—'}</td>
                   <td className="px-3 py-3">{formatoARS(fila.precio_venta)}</td>
                   {puedeVerCostos ? <td className="px-3 py-3">{formatoARS(fila.costo)}</td> : null}
@@ -450,6 +478,14 @@ export function ProductosPage() {
                     <p className="text-sm font-semibold">{fila.nombre}</p>
                     <BadgeEstado activo={fila.activo} />
                   </div>
+                  {usaVariantes && (variantesActivas.get(fila.id) ?? 0) > 0 ? (
+                    <p className="mt-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {variantesActivas.get(fila.id)}{' '}
+                      {(variantesActivas.get(fila.id) ?? 0) === 1
+                        ? 'variante activa'
+                        : 'variantes activas'}
+                    </p>
+                  ) : null}
                   <p className="mt-1 text-sm">{formatoARS(fila.precio_venta)}</p>
                   <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
                     Stock:{' '}

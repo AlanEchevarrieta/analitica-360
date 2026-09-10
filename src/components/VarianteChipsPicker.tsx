@@ -1,6 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { formatoARS } from '../lib/productos'
-import { etiquetaCombo, type AtributoFila, type VarianteFila } from '../lib/variantes'
+import {
+  etiquetaCombo,
+  precioVarianteOBase,
+  variantePorSeleccion,
+  type AtributoFila,
+  type VarianteFila,
+} from '../lib/variantes'
 import type { ProductoFila } from '../lib/productos'
 
 export function VarianteChipsPicker({
@@ -38,6 +44,15 @@ export function VarianteChipsPicker({
           map.set(k, arr)
         }
       }
+      if (map.size === 0) {
+        for (const v of variantes) {
+          for (const [k, val] of Object.entries(v.atributos)) {
+            const arr = map.get(k) ?? []
+            if (!arr.includes(val)) arr.push(val)
+            map.set(k, arr)
+          }
+        }
+      }
       return [...map.entries()]
     }
     const attrs = (atributosCatalogo ?? []).filter(
@@ -48,27 +63,44 @@ export function VarianteChipsPicker({
 
   const keys = grupos.map(([k]) => k)
   const completa = keys.length > 0 && keys.every((k) => Boolean(sel[k]))
-  const matches = completa
-    ? variantes.filter((v) => keys.every((k) => v.atributos[k] === sel[k]))
-    : []
-  const match =
-    matches.find((v) => (stockPorId.get(v.id) ?? 0) > 0) ?? matches[0] ?? null
-  const stock = match ? (stockPorId.get(match.id) ?? 0) : completa && !match ? 0 : null
-  const precio =
-    match && match.precioVenta != null ? match.precioVenta : producto.precio_venta
-  const costo = match && match.costo != null ? match.costo : producto.costo
+  const match = completa ? variantePorSeleccion(variantes, sel) : null
+  const stock = match ? (stockPorId.get(match.id) ?? 0) : completa && variantes.length > 0 ? 0 : null
+  const precio = precioVarianteOBase(match?.precioVenta, producto.precio_venta)
+  const costo = match && match.costo != null && Number.isFinite(match.costo) ? match.costo : producto.costo
 
-  function chipTieneStock(nombre: string, val: string) {
+  useEffect(() => {
+    console.log('[variantes] selección de atributos', {
+      productoId: producto.id,
+      sel,
+      completa,
+      match: match
+        ? { id: match.id, atributos: match.atributos, precioVenta: match.precioVenta }
+        : null,
+      precioQueSeUsaria: precio,
+      variantes: variantes.map((v) => ({
+        id: v.id,
+        atributos: v.atributos,
+        precioVenta: v.precioVenta,
+      })),
+    })
+  }, [sel, completa, match, precio, producto.id, variantes])
+
+  function chipPosible(nombre: string, val: string) {
     if (variantes.length === 0) return true
     const trial = { ...sel, [nombre]: val }
-    return variantes.some((v) => {
+    return variantes.some((v) => Object.entries(trial).every(([k, x]) => v.atributos[k] === x))
+  }
+
+  function chipSinStock(nombre: string, val: string) {
+    if (!exigirStock || variantes.length === 0) return false
+    const trial = { ...sel, [nombre]: val }
+    return !variantes.some((v) => {
       const ok = Object.entries(trial).every(([k, x]) => v.atributos[k] === x)
       return ok && (stockPorId.get(v.id) ?? 0) > 0
     })
   }
 
-  const puedeConfirmar = completa && (!exigirStock || (match != null && (stock ?? 0) > 0 && match.activo))
-  const bloqueadoVenta = exigirStock && completa && (match == null || (stock ?? 0) <= 0)
+  const puedeConfirmar = completa && (variantes.length === 0 || match != null)
 
   return (
     <div className="mt-3 rounded-md border border-[#E2E8F0] p-3">
@@ -79,21 +111,24 @@ export function VarianteChipsPicker({
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {valores.map((val) => {
               const on = sel[nombre] === val
-              const sinStock = exigirStock && !chipTieneStock(nombre, val)
+              const posible = chipPosible(nombre, val)
+              const sinStock = chipSinStock(nombre, val)
               return (
                 <button
                   key={val}
                   type="button"
-                  disabled={sinStock}
+                  disabled={!posible}
                   className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
                     on
                       ? 'bg-[#6366F1] text-white'
-                      : sinStock
+                      : !posible
                         ? 'cursor-not-allowed bg-[#E2E8F0] text-[#94A3B8]'
-                        : 'border border-[#E2E8F0] bg-white text-[#1A2F4A]'
+                        : sinStock
+                          ? 'border border-[#E2E8F0] bg-[#EEF2F6] text-[#64748B]'
+                          : 'border border-[#E2E8F0] bg-white text-[#1A2F4A]'
                   }`}
                   onClick={() => {
-                    if (sinStock) return
+                    if (!posible) return
                     setSel((prev) => ({ ...prev, [nombre]: val }))
                   }}
                 >
@@ -105,7 +140,11 @@ export function VarianteChipsPicker({
         </div>
       ))}
       {keys.length === 0 ? (
-        <p className="mt-3 text-xs text-[#4A5568]">No hay atributos activos en ventas para este producto.</p>
+        <p className="mt-3 text-xs text-[#4A5568]">
+          {variantes.length === 0
+            ? 'Este producto no tiene variantes guardadas.'
+            : 'No hay atributos activos en ventas para este producto.'}
+        </p>
       ) : !completa ? (
         <p className="mt-3 text-xs text-[#4A5568]">Seleccioná todos los atributos para continuar.</p>
       ) : (
@@ -116,14 +155,21 @@ export function VarianteChipsPicker({
           </p>
           {exigirStock ? <p>Precio: {formatoARS(precio)}</p> : <p>Costo: {formatoARS(costo)}</p>}
           {match ? <p className="text-xs text-[#4A5568]">{etiquetaCombo(match.atributos)}</p> : null}
-          {bloqueadoVenta ? (
-            <p className="mt-2 text-xs text-[#EA580C]">Esa combinación no tiene stock.</p>
+          {!match && variantes.length > 0 ? (
+            <p className="mt-2 text-xs text-[#EA580C]">Esa combinación no se vende.</p>
           ) : (
             <button
               className="mt-2 h-10 w-full rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
               type="button"
-              disabled={!puedeConfirmar && exigirStock}
-              onClick={() => onElegir(match, sel)}
+              disabled={!puedeConfirmar}
+              onClick={() => {
+                console.log('[variantes] confirmar picker', {
+                  match,
+                  sel,
+                  precio,
+                })
+                onElegir(match, sel)
+              }}
             >
               {etiquetaAccion}
             </button>
