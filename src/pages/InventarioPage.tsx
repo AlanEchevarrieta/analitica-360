@@ -30,6 +30,8 @@ import {
   type UbicacionFila,
 } from '../lib/inventario'
 import { listarProductosNombres } from '../lib/productos'
+import { obtenerConfiguracion } from '../lib/configuracion'
+import { etiquetaCombo, listarVariantesDeProductos, stockPorVariante } from '../lib/variantes'
 import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
@@ -51,6 +53,9 @@ export function InventarioPage() {
   const [historial, setHistorial] = useState<ResumenInventario | null>(null)
   const [traslado, setTraslado] = useState(false)
   const [productos, setProductos] = useState<{ id: string; nombre: string }[]>([])
+  const [desglose, setDesglose] = useState<Map<string, { etiqueta: string; stock: number }[]>>(
+    new Map(),
+  )
 
   const cargar = useCallback(async () => {
     if (!perfil) return
@@ -71,6 +76,30 @@ export function InventarioPage() {
     }
     setError(null)
     setFilas(res.filas)
+    const { config } = await obtenerConfiguracion(client, perfil.empresa.id)
+    if (config.usaVariantes && res.filas.length > 0) {
+      const vars = await listarVariantesDeProductos(
+        client,
+        res.filas.map((f) => f.id),
+      )
+      if (!vars.error && vars.filas.length > 0) {
+        const stocks = await stockPorVariante(
+          client,
+          vars.filas.map((v) => v.id),
+        )
+        const map = new Map<string, { etiqueta: string; stock: number }[]>()
+        for (const v of vars.filas) {
+          const arr = map.get(v.productoId) ?? []
+          arr.push({ etiqueta: etiquetaCombo(v.atributos), stock: stocks.get(v.id) ?? 0 })
+          map.set(v.productoId, arr)
+        }
+        setDesglose(map)
+      } else {
+        setDesglose(new Map())
+      }
+    } else {
+      setDesglose(new Map())
+    }
   }, [perfil])
 
   useEffect(() => {
@@ -188,7 +217,14 @@ export function InventarioPage() {
                     const est = etiquetaEstadoStock(estadoStock(fila.stock_actual, umbral))
                     return (
                       <Tr key={fila.id} index={index}>
-                        <td className="px-3 py-3 font-medium">{fila.nombre}</td>
+                        <td className="px-3 py-3 font-medium">
+                          {fila.nombre}
+                          {desglose.get(fila.id)?.length ? (
+                            <span className="mt-1 block text-xs font-normal" style={{ color: 'var(--text-muted)' }}>
+                              {desglose.get(fila.id)!.map((d) => `${d.etiqueta}: ${d.stock}u`).join(' · ')}
+                            </span>
+                          ) : null}
+                        </td>
                         <td className="px-3 py-3" style={{ color: 'var(--text-muted)' }}>
                           {fila.categoria ?? '—'}
                         </td>
@@ -224,6 +260,11 @@ export function InventarioPage() {
                   <ListCard key={fila.id}>
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-sm font-semibold">{fila.nombre}</p>
+                      {desglose.get(fila.id)?.length ? (
+                        <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                          {desglose.get(fila.id)!.map((d) => `${d.etiqueta}: ${d.stock}u`).join(' · ')}
+                        </p>
+                      ) : null}
                       <span className="text-xs">
                         {est.icono} {est.texto}
                       </span>

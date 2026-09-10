@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { etiquetaCombo } from './variantes'
 
 export type UbicacionFila = {
   id: string
@@ -46,6 +47,7 @@ export type MovimientoKardex = {
   ubicacionDestino: string | null
   ventaFecha: string | null
   precioUnitario: number | null
+  varianteEtiqueta: string | null
 }
 
 const BADGE_ENTRADA = { fondo: '#14532D', color: '#4ADE80' }
@@ -253,9 +255,9 @@ export async function listarKardexProducto(
   const from = (input.pagina - 1) * input.pageSize
   const to = from + input.pageSize - 1
   const colsConUbic =
-    'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino, precio_unitario, costo_unitario'
+    'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino, precio_unitario, costo_unitario, variante_id'
   const colsSinUbic =
-    'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, precio_unitario, costo_unitario'
+    'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, precio_unitario, costo_unitario, variante_id'
 
   const pedirPagina = (cols: string) =>
     client
@@ -278,6 +280,11 @@ export async function listarKardexProducto(
     if (pagina.error && /ubicacion/i.test(pagina.error.message)) {
       pagina = await pedirPagina('id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id')
     }
+  }
+  if (pagina.error && /variante_id/i.test(pagina.error.message)) {
+    pagina = await pedirPagina(
+      'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino, precio_unitario, costo_unitario',
+    )
   }
   if (pagina.error) return { filas: [], total: 0, error: pagina.error.message }
 
@@ -323,6 +330,16 @@ export async function listarKardexProducto(
     }
   }
 
+  const varianteIds = [...new Set(raw.map((r) => (r.variante_id == null ? '' : String(r.variante_id))).filter(Boolean))]
+  const etiquetasVar = new Map<string, string>()
+  if (varianteIds.length > 0) {
+    const vr = await client.from('producto_variantes').select('id, atributos').in('id', varianteIds)
+    for (const row of (vr.data ?? []) as Record<string, unknown>[]) {
+      const attrs = (row.atributos ?? {}) as Record<string, string>
+      etiquetasVar.set(String(row.id), etiquetaCombo(attrs))
+    }
+  }
+
   let saldo = Number(input.stockActual) - netNewer
   const filas: MovimientoKardex[] = raw.map((row) => {
     const tipo = String(row.tipo ?? '')
@@ -349,6 +366,7 @@ export async function listarKardexProducto(
         if (costo > 0) return costo
         return null
       })(),
+      varianteEtiqueta: row.variante_id ? etiquetasVar.get(String(row.variante_id)) ?? null : null,
     }
     saldo -= deltaStockKardex(tipo, cant, signo)
     return item

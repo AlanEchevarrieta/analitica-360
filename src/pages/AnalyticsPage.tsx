@@ -48,6 +48,8 @@ import { planTieneAnalytics } from '../lib/planes'
 import { formatoARS } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
+import { obtenerConfiguracion } from '../lib/configuracion'
+import { cargarAnalyticsVariantes, type AnalyticsVariantes } from '../lib/variantes'
 import { coloresGrafico, useTema } from '../lib/tema'
 import {
   CHART_ACTIVE_BAR,
@@ -58,6 +60,7 @@ import {
   TooltipEvolucion,
   TooltipFormaPago,
   TooltipMontoSimple,
+  TooltipUnidades,
   TooltipTopProductos,
   asRechartsTooltip,
   useIndiceBarraActiva,
@@ -230,6 +233,8 @@ export function AnalyticsPage() {
     dir: 'desc',
   })
   const [modalPlanes, setModalPlanes] = useState(false)
+  const [usaVariantes, setUsaVariantes] = useState(false)
+  const [dataVar, setDataVar] = useState<AnalyticsVariantes | null>(null)
   const top10Hover = useIndiceBarraActiva()
   const diasHover = useIndiceBarraActiva()
 
@@ -239,8 +244,18 @@ export function AnalyticsPage() {
       return
     }
     setCargando(true)
-    void cargarAnalyticsPeriodo(requireSupabase(), desde, hasta).then((fila) => {
+    void Promise.all([
+      cargarAnalyticsPeriodo(requireSupabase(), desde, hasta),
+      obtenerConfiguracion(requireSupabase(), perfil.empresa.id),
+    ]).then(async ([fila, cfg]) => {
       setData(fila)
+      const usa = Boolean(cfg.config.usaVariantes)
+      setUsaVariantes(usa)
+      if (usa) {
+        setDataVar(await cargarAnalyticsVariantes(requireSupabase(), desde, hasta))
+      } else {
+        setDataVar(null)
+      }
       setCargando(false)
     })
   }, [perfil, desde, hasta])
@@ -905,6 +920,67 @@ export function AnalyticsPage() {
                     </ResponsiveContainer>
                   </div>
                 </Card>
+
+                {usaVariantes && dataVar ? (
+                  <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
+                    <Text className="!text-[#94A3B8]">Análisis de variantes</Text>
+                    {dataVar.insightCombo ? (
+                      <p className="mt-3 text-sm text-[#F1F5F9]">
+                        Tu combinación más vendida es {dataVar.insightCombo} ({dataVar.insightPct}%)
+                      </p>
+                    ) : (
+                      <p className="mt-3 text-sm text-[#94A3B8]">Todavía no hay ventas con variantes en el período.</p>
+                    )}
+                    <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                      <div style={{ height: 240 }}>
+                        <p className="mb-2 text-xs text-[#94A3B8]">Ventas por color</p>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={dataVar.porColor} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                            <CartesianGrid stroke={g.grilla} vertical={false} />
+                            <XAxis dataKey="name" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                            <RechartsTooltip cursor={<Rectangle fill={CHART_CURSOR_FILL} />} content={asRechartsTooltip(TooltipUnidades)} />
+                            <Bar dataKey="unidades" fill="#6366F1" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div style={{ height: 240 }}>
+                        <p className="mb-2 text-xs text-[#94A3B8]">Ventas por talle</p>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={dataVar.porTalle} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                            <CartesianGrid stroke={g.grilla} vertical={false} />
+                            <XAxis dataKey="name" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                            <RechartsTooltip cursor={<Rectangle fill={CHART_CURSOR_FILL} />} content={asRechartsTooltip(TooltipUnidades)} />
+                            <Bar dataKey="unidades" fill="#8B5CF6" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                    {dataVar.combinaciones.length > 0 ? (
+                      <div className="mt-6 overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                          <thead className="text-xs text-[#94A3B8]">
+                            <tr>
+                              <th className="px-3 py-2">Producto</th>
+                              <th className="px-3 py-2">Combinación</th>
+                              <th className="px-3 py-2">Unidades</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dataVar.combinaciones.slice(0, 20).map((c) => (
+                              <tr key={`${c.producto}-${c.combo}`} className="border-t border-white/10">
+                                <td className="px-3 py-2">{c.producto}</td>
+                                <td className="px-3 py-2">{c.combo}</td>
+                                <td className="px-3 py-2">{c.unidades}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
+                  </Card>
+                ) : null}
 
                 {data.clientes.hay ? (
                   <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

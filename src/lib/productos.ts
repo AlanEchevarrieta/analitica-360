@@ -176,8 +176,8 @@ export async function crearProducto(
     stockInicial: number
     activo: boolean
   },
-): Promise<string | null> {
-  const { error } = await client.rpc('crear_producto', {
+): Promise<{ id: string | null; error: string | null }> {
+  const { data, error } = await client.rpc('crear_producto', {
     p_nombre: input.nombre,
     p_categoria: input.categoria,
     p_precio_venta: input.precioVenta,
@@ -185,7 +185,8 @@ export async function crearProducto(
     p_stock_inicial: input.stockInicial,
     p_activo: input.activo,
   })
-  return error ? error.message : null
+  if (error) return { id: null, error: error.message }
+  return { id: data ? String(data) : null, error: null }
 }
 
 export async function actualizarProducto(

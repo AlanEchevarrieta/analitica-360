@@ -129,7 +129,7 @@ export async function importarProductos(
       saltados.push(fila.nombre)
       continue
     }
-    const fallo = await crearProducto(client, {
+    const { error: fallo } = await crearProducto(client, {
       nombre: fila.nombre,
       categoria: fila.categoria,
       precioVenta: fila.precioVenta,

@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { tienePermiso } from '../lib/permisos'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { AppNav } from '../components/AppNav'
 import { actualizarProducto, crearProducto, listarProductos, type ProductoFila } from '../lib/productos'
+import { ProductoVariantesEditor, type ProductoVariantesHandle } from '../components/ProductoVariantesEditor'
+import { obtenerConfiguracion } from '../lib/configuracion'
 import { estiloTipoMovimiento } from '../lib/inventario'
 import { listarMovimientosProducto, type MovimientoFila } from '../lib/stock'
 import { requireSupabase } from '../lib/supabase'
@@ -30,8 +32,17 @@ export function ProductoFormPage() {
   const [cargando, setCargando] = useState(!esNuevo)
   const [duplicado, setDuplicado] = useState<ProductoFila | null>(null)
   const [movimientos, setMovimientos] = useState<MovimientoFila[]>([])
+  const [usaVariantes, setUsaVariantes] = useState(false)
+  const variantesRef = useRef<ProductoVariantesHandle>(null)
 
   const titulo = useMemo(() => (esNuevo ? 'Nuevo producto' : 'Editar producto'), [esNuevo])
+
+  useEffect(() => {
+    if (!perfil) return
+    void obtenerConfiguracion(requireSupabase(), perfil.empresa.id).then(({ config }) => {
+      setUsaVariantes(Boolean(config.usaVariantes))
+    })
+  }, [perfil])
 
   useEffect(() => {
     if (esNuevo || !id) return
@@ -101,23 +112,38 @@ export function ProductoFormPage() {
     }
 
     setEnviando(true)
-    const fallo = esNuevo
-      ? await crearProducto(client, {
-          nombre: nombre.trim(),
-          categoria: categoria.trim(),
-          precioVenta: precio,
-          costo: costoNum,
-          stockInicial: Number.isFinite(stock) ? stock : 0,
-          activo,
-        })
-      : await actualizarProducto(client, {
-          id: id!,
-          nombre: nombre.trim(),
-          categoria: categoria.trim(),
-          precioVenta: precio,
-          costo: costoNum,
-          activo,
-        })
+    if (esNuevo) {
+      const creado = await crearProducto(client, {
+        nombre: nombre.trim(),
+        categoria: categoria.trim(),
+        precioVenta: precio,
+        costo: costoNum,
+        stockInicial: Number.isFinite(stock) ? stock : 0,
+        activo,
+      })
+      if (creado.error || !creado.id) {
+        setEnviando(false)
+        setError(creado.error || 'No se pudo crear el producto')
+        return
+      }
+      const varError = await variantesRef.current?.persistir(creado.id)
+      setEnviando(false)
+      if (varError) {
+        setError(varError)
+        navigate(`/productos/${creado.id}`, { replace: true })
+        return
+      }
+      navigate('/productos', { replace: true })
+      return
+    }
+    const fallo = await actualizarProducto(client, {
+      id: id!,
+      nombre: nombre.trim(),
+      categoria: categoria.trim(),
+      precioVenta: precio,
+      costo: costoNum,
+      activo,
+    })
     setEnviando(false)
     if (fallo) {
       setError(fallo)
@@ -188,7 +214,7 @@ export function ProductoFormPage() {
       }}
     >
       <ParticleNetwork />
-      <div className="relative z-10 mx-auto max-w-[440px] px-4 py-8">
+      <div className={`relative z-10 mx-auto px-4 py-8 ${usaVariantes ? 'max-w-3xl' : 'max-w-[440px]'}`}>
         <AppNav />
         <div className="rounded-lg bg-white/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
           <h1 className="text-xl font-bold text-[#1A2F4A]">{titulo}</h1>
@@ -254,6 +280,16 @@ export function ProductoFormPage() {
                 />
                 Activo
               </label>
+              {usaVariantes && perfil ? (
+                <ProductoVariantesEditor
+                  ref={variantesRef}
+                  productoId={esNuevo ? null : id ?? null}
+                  empresaId={perfil.empresa.id}
+                  nombreProducto={nombre}
+                  precioBase={Number(precioVenta.replace(',', '.')) || 0}
+                  costoBase={costo.trim() === '' ? null : Number(costo.replace(',', '.')) || null}
+                />
+              ) : null}
 
               {duplicado ? (
                 <div className="mt-4 rounded-md border border-[#6366F1] bg-[#EEF2FF] px-3 py-3 text-sm text-[#1A2F4A]">

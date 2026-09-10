@@ -31,12 +31,19 @@ import {
 import { etiquetaEstadoSuscripcion, etiquetaPlan } from '../lib/planes'
 import { diasRestantes, leerSuscripcionActiva, type SuscripcionActiva } from '../lib/suscripcion'
 import { theme } from '../theme'
+import {
+  eliminarAtributo,
+  guardarAtributo,
+  listarAtributos,
+  sembrarAtributosDefault,
+  type AtributoFila,
+} from '../lib/variantes'
 import { btnPrimary, cardShell } from '../components/listado'
 
 const inputClass =
   'h-10 w-full rounded-lg border border-[rgba(99,102,241,0.3)] bg-white/5 px-3 text-sm text-[#F1F5F9] outline-none focus:border-[#6366F1]'
 
-type TabId = 'medios' | 'cuotas' | 'usuarios' | 'flujo' | 'inventario' | 'plan'
+type TabId = 'medios' | 'cuotas' | 'usuarios' | 'flujo' | 'inventario' | 'variantes' | 'plan'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'medios', label: 'Medios de pago' },
@@ -44,6 +51,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'usuarios', label: 'Usuarios' },
   { id: 'flujo', label: 'Flujo de ventas' },
   { id: 'inventario', label: 'Inventario' },
+  { id: 'variantes', label: 'Variantes' },
   { id: 'plan', label: 'Mi Plan' },
 ]
 
@@ -90,6 +98,13 @@ export function ConfiguracionPage() {
   const [tasas, setTasas] = useState<TasaCuota[]>([])
   const [flujo, setFlujo] = useState<FlujoVentas>({ ...FLUJO_VENTAS_DEFAULT })
   const [umbralStock, setUmbralStock] = useState('5')
+  const [usaVariantes, setUsaVariantes] = useState(false)
+  const [atributos, setAtributos] = useState<AtributoFila[]>([])
+  const [altaAtributo, setAltaAtributo] = useState(false)
+  const [editAtributo, setEditAtributo] = useState<AtributoFila | null>(null)
+  const [nombreAtr, setNombreAtr] = useState('')
+  const [valoresAtr, setValoresAtr] = useState<string[]>([])
+  const [chipAtr, setChipAtr] = useState('')
   const [usuarios, setUsuarios] = useState<UsuarioEmpresa[]>([])
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
@@ -122,6 +137,11 @@ export function ConfiguracionPage() {
       setTasas(config.tasasCuotas)
       setFlujo(config.flujoVentas)
       setUmbralStock(String(config.umbralStockBajo ?? 5))
+      setUsaVariantes(Boolean(config.usaVariantes))
+      if (config.usaVariantes) {
+        const atr = await listarAtributos(requireSupabase())
+        if (!atr.error) setAtributos(atr.filas)
+      }
       if (loadError) setError(loadError)
       await cargarUsuarios()
       const sub = await leerSuscripcionActiva(requireSupabase(), perfil.empresa.id)
@@ -176,6 +196,7 @@ export function ConfiguracionPage() {
       tasasCuotas: tasasValidas,
       flujoVentas: flujo,
       umbralStockBajo: Number.parseInt(umbralStock, 10),
+      usaVariantes,
     })
     setGuardando(false)
     if (fallo) {
@@ -188,6 +209,57 @@ export function ConfiguracionPage() {
     }
     setTasas(tasasValidas)
     setOk('Configuración guardada')
+  }
+
+  async function recargarAtributos() {
+    const atr = await listarAtributos(requireSupabase())
+    if (atr.error) setError(atr.error)
+    else setAtributos(atr.filas)
+  }
+
+  async function toggleUsaVariantes() {
+    if (!perfil) return
+    setOk(null)
+    setError(null)
+    const next = !usaVariantes
+    if (next) {
+      const seed = await sembrarAtributosDefault(requireSupabase(), perfil.empresa.id)
+      if (seed) {
+        setError(seed)
+        return
+      }
+      await recargarAtributos()
+    }
+    setUsaVariantes(next)
+  }
+
+  function resetFormAtributo() {
+    setAltaAtributo(false)
+    setEditAtributo(null)
+    setNombreAtr('')
+    setValoresAtr([])
+    setChipAtr('')
+  }
+
+  async function onGuardarAtributo() {
+    if (!perfil) return
+    setError(null)
+    setOk(null)
+    const extra = chipAtr.trim()
+    const valores = extra ? [...valoresAtr, extra] : valoresAtr
+    const fallo = await guardarAtributo(requireSupabase(), {
+      id: editAtributo?.id,
+      empresaId: perfil.empresa.id,
+      nombre: nombreAtr,
+      valores,
+    })
+    if (fallo) {
+      setError(fallo)
+      return
+    }
+    resetFormAtributo()
+    setOk('Atributo guardado')
+    await recargarAtributos()
   }
 
   async function onDesactivar(id: string) {
@@ -600,6 +672,123 @@ export function ConfiguracionPage() {
                 </div>
               ) : null}
 
+              {tab === 'variantes' ? (
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-start justify-between gap-3 rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-[#F1F5F9]">Usar variantes</p>
+                      <p className="mt-0.5 text-xs text-[#94A3B8]">
+                        Activá esto si tus productos tienen variantes como color, talle o material
+                      </p>
+                    </div>
+                    <Toggle on={usaVariantes} onChange={() => void toggleUsaVariantes()} />
+                  </div>
+                  {usaVariantes ? (
+                    <div>
+                      <p className="text-sm font-medium text-[#F1F5F9]">Atributos globales</p>
+                      <ul className="mt-3 space-y-2">
+                        {atributos.map((a) => (
+                          <li key={a.id} className="rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="text-sm font-medium text-[#F1F5F9]">{a.nombre}</p>
+                                <p className="mt-1 text-xs text-[#94A3B8]">{a.valores.join(', ')}</p>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  className="text-xs font-semibold text-[#A5B4FC]"
+                                  onClick={() => {
+                                    setEditAtributo(a)
+                                    setAltaAtributo(true)
+                                    setNombreAtr(a.nombre)
+                                    setValoresAtr(a.valores)
+                                    setChipAtr('')
+                                    setOk(null)
+                                  }}
+                                >
+                                  Editar
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-xs font-semibold text-[#DC2626]"
+                                  onClick={() => {
+                                    void eliminarAtributo(requireSupabase(), a.id).then((fallo) => {
+                                      if (fallo) setError(fallo)
+                                      else void recargarAtributos()
+                                    })
+                                  }}
+                                >
+                                  Eliminar
+                                </button>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                      <button
+                        className="mt-3 h-10 w-full rounded-lg border border-[rgba(99,102,241,0.3)] text-sm font-semibold text-[#A5B4FC]"
+                        type="button"
+                        onClick={() => {
+                          resetFormAtributo()
+                          setAltaAtributo(true)
+                        }}
+                      >
+                        Agregar atributo
+                      </button>
+                      {altaAtributo ? (
+                        <div className="mt-3 space-y-3 rounded-xl border border-[rgba(99,102,241,0.15)] p-3">
+                          <label className="block text-sm font-medium text-[#94A3B8]">
+                            Nombre
+                            <input
+                              className={`${inputClass} mt-1`}
+                              value={nombreAtr}
+                              onChange={(ev) => setNombreAtr(ev.target.value)}
+                            />
+                          </label>
+                          <div>
+                            <p className="text-sm font-medium text-[#94A3B8]">Valores</p>
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {valoresAtr.map((v) => (
+                                <button
+                                  key={v}
+                                  type="button"
+                                  className="rounded-full bg-[#6366F1] px-2.5 py-1 text-xs font-semibold text-white"
+                                  onClick={() => setValoresAtr((prev) => prev.filter((x) => x !== v))}
+                                >
+                                  {v} ×
+                                </button>
+                              ))}
+                            </div>
+                            <input
+                              className={`${inputClass} mt-2`}
+                              value={chipAtr}
+                              placeholder="Escribí un valor y Enter"
+                              onChange={(ev) => setChipAtr(ev.target.value)}
+                              onKeyDown={(ev) => {
+                                if (ev.key !== 'Enter') return
+                                ev.preventDefault()
+                                const v = chipAtr.trim()
+                                if (!v) return
+                                setValoresAtr((prev) => (prev.includes(v) ? prev : [...prev, v]))
+                                setChipAtr('')
+                              }}
+                            />
+                          </div>
+                          <button
+                            className="h-10 w-full rounded-lg bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"
+                            type="button"
+                            onClick={() => void onGuardarAtributo()}
+                          >
+                            Guardar atributo
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               {tab === 'plan' ? (
                 <div className="mt-6 space-y-3 text-sm">
                   <div className="rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-3">
@@ -645,7 +834,7 @@ export function ConfiguracionPage() {
                 <p className="mt-6 rounded-xl bg-green-950/50 px-3 py-2 text-sm text-green-200">{ok}</p>
               ) : null}
 
-              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' || tab === 'inventario' ? (
+              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' || tab === 'inventario' || tab === 'variantes' ? (
                 <button
                   className={`${btnPrimary} mt-6 w-full`}
                   type="button"

@@ -23,6 +23,7 @@ export type ConfiguracionEmpresa = {
   tasasCuotas: TasaCuota[]
   flujoVentas: FlujoVentas
   umbralStockBajo: number
+  usaVariantes: boolean
 }
 
 export const MEDIOS_PAGO = [
@@ -117,6 +118,7 @@ export const CONFIG_DEFAULT: Omit<ConfiguracionEmpresa, 'empresaId'> = {
   tasasCuotas: TASAS_CUOTAS_DEFAULT.map((t) => ({ ...t })),
   flujoVentas: { ...FLUJO_VENTAS_DEFAULT },
   umbralStockBajo: 5,
+  usaVariantes: false,
 }
 
 function normalizarFlujo(raw: unknown): FlujoVentas {
@@ -152,34 +154,47 @@ export async function obtenerConfiguracion(
 ): Promise<{ config: ConfiguracionEmpresa; error: string | null }> {
   const conFlujo = await client
     .from('configuracion_empresa')
-    .select('empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario')
+    .select('empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes')
     .eq('empresa_id', empresaId)
     .maybeSingle()
 
   const { data, error } = conFlujo.error
     ? await client
         .from('configuracion_empresa')
-        .select('empresa_id, medios_pago, tasas_cuotas')
+        .select('empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario')
         .eq('empresa_id', empresaId)
         .maybeSingle()
     : conFlujo
 
-  if (error) {
-    return { config: { empresaId, ...CONFIG_DEFAULT }, error: error.message }
+  const fallback =
+    error
+      ? await client
+          .from('configuracion_empresa')
+          .select('empresa_id, medios_pago, tasas_cuotas')
+          .eq('empresa_id', empresaId)
+          .maybeSingle()
+      : { data, error }
+
+  const fila = fallback.data
+  const err = fallback.error
+
+  if (err) {
+    return { config: { empresaId, ...CONFIG_DEFAULT }, error: err.message }
   }
-  if (!data) {
+  if (!fila) {
     return { config: { empresaId, ...CONFIG_DEFAULT }, error: null }
   }
-  const inv = (data as { inventario?: unknown }).inventario as Record<string, unknown> | null
+  const inv = (fila as { inventario?: unknown }).inventario as Record<string, unknown> | null
   const umbralRaw = inv?.umbral_stock_bajo
   const umbral = Number(umbralRaw)
   return {
     config: {
-      empresaId: String(data.empresa_id ?? empresaId),
-      mediosPago: normalizarMedios(data.medios_pago),
-      tasasCuotas: normalizarTasas(data.tasas_cuotas),
-      flujoVentas: normalizarFlujo((data as { flujo_ventas?: unknown }).flujo_ventas),
+      empresaId: String(fila.empresa_id ?? empresaId),
+      mediosPago: normalizarMedios(fila.medios_pago),
+      tasasCuotas: normalizarTasas(fila.tasas_cuotas),
+      flujoVentas: normalizarFlujo((fila as { flujo_ventas?: unknown }).flujo_ventas),
       umbralStockBajo: Number.isFinite(umbral) && umbral >= 0 ? umbral : 5,
+      usaVariantes: Boolean((fila as { usa_variantes?: unknown }).usa_variantes),
     },
     error: null,
   }
@@ -216,13 +231,34 @@ export async function guardarConfiguracion(
         flujo.mostrarCliente === FLUJO_VENTAS_DEFAULT.mostrarCliente &&
         flujo.crearDesdeVenta === FLUJO_VENTAS_DEFAULT.crearDesdeVenta
       ) {
-        return await guardarInventario(client, input)
+        const inv = await guardarInventario(client, input)
+        if (inv) return inv
+        return await guardarUsaVariantes(client, input)
       }
       return 'Falta la columna de flujo de ventas. Pegá supabase/018_flujo_ventas.sql (rol postgres) y recargá.'
     }
     return flujoError.message
   }
-  return guardarInventario(client, input)
+  const inv = await guardarInventario(client, input)
+  if (inv) return inv
+  return guardarUsaVariantes(client, input)
+}
+
+async function guardarUsaVariantes(client: SupabaseClient, input: ConfiguracionEmpresa) {
+  const { error } = await client
+    .from('configuracion_empresa')
+    .update({
+      usa_variantes: Boolean(input.usaVariantes),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('empresa_id', input.empresaId)
+  if (!error) return null
+  const t = error.message.toLowerCase()
+  if (t.includes('usa_variantes') || t.includes('schema cache') || t.includes('does not exist')) {
+    if (!input.usaVariantes) return null
+    return 'Falta el módulo de variantes. Pegá TODO supabase/035_variantes.sql (rol postgres), dale Run y recargá.'
+  }
+  return error.message
 }
 
 async function guardarInventario(client: SupabaseClient, input: ConfiguracionEmpresa) {

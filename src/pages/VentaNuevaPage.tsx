@@ -18,13 +18,25 @@ import { crearCliente, listarClientes, type ClienteFila } from '../lib/clientes'
 import { formatoARS, listarProductos, type ProductoFila } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
 import { calcularTotalesCredito, confirmarVenta } from '../lib/ventas'
+import {
+  etiquetaCombo,
+  listarVariantesActivas,
+  stockPorVariante,
+  type VarianteFila,
+} from '../lib/variantes'
 import { theme } from '../theme'
 
 type Linea = {
   productoId: string
+  varianteId: string | null
   nombre: string
   cantidad: number
   precioUnitario: number
+  stockLinea: number
+}
+
+function claveLinea(productoId: string, varianteId: string | null) {
+  return varianteId ? `${productoId}:${varianteId}` : productoId
 }
 
 const inputClass =
@@ -57,6 +69,11 @@ export function VentaNuevaPage() {
   const [coeficiente, setCoeficiente] = useState('0')
   const comboRef = useRef<HTMLDivElement | null>(null)
   const resaltadoTimer = useRef<number | null>(null)
+  const [variantesCatalogo, setVariantesCatalogo] = useState<VarianteFila[]>([])
+  const [stockVar, setStockVar] = useState<Map<string, number>>(new Map())
+  const [picker, setPicker] = useState<{ producto: ProductoFila; sel: Record<string, string> } | null>(
+    null,
+  )
 
   useEffect(() => {
     void listarProductos(requireSupabase()).then(({ filas }) => {
@@ -69,8 +86,22 @@ export function VentaNuevaPage() {
 
   useEffect(() => {
     if (!perfil) return
-    void obtenerConfiguracion(requireSupabase(), perfil.empresa.id).then(({ config: cfg }) => {
+    void obtenerConfiguracion(requireSupabase(), perfil.empresa.id).then(async ({ config: cfg }) => {
       setConfig(cfg)
+      if (!cfg.usaVariantes) {
+        setVariantesCatalogo([])
+        return
+      }
+      const { filas } = await listarProductos(requireSupabase())
+      const activos = filas.filter((p) => p.activo)
+      const vars = await listarVariantesActivas(
+        requireSupabase(),
+        activos.map((p) => p.id),
+      )
+      if (!vars.error) {
+        setVariantesCatalogo(vars.filas)
+        setStockVar(await stockPorVariante(requireSupabase(), vars.filas.map((v) => v.id)))
+      }
     })
   }, [perfil])
 
@@ -152,40 +183,59 @@ export function VentaNuevaPage() {
     }
   }, [])
 
-  function resaltarLinea(productoId: string) {
-    setLineaResaltada(productoId)
+  function resaltarLinea(clave: string) {
+    setLineaResaltada(clave)
     if (resaltadoTimer.current != null) window.clearTimeout(resaltadoTimer.current)
     resaltadoTimer.current = window.setTimeout(() => setLineaResaltada(null), 1600)
   }
 
-  function agregarProducto(producto: ProductoFila) {
+  function agregarLinea(producto: ProductoFila, variante: VarianteFila | null) {
+    const varianteId = variante?.id ?? null
+    const etiqueta = variante ? ` — ${etiquetaCombo(variante.atributos)}` : ''
+    const precio =
+      variante && variante.precioVenta != null ? variante.precioVenta : producto.precio_venta
+    const stock = variante ? (stockVar.get(variante.id) ?? 0) : producto.stock_actual
+    const clave = claveLinea(producto.id, varianteId)
     setLineas((prev) => {
-      const existente = prev.find((l) => l.productoId === producto.id)
+      const existente = prev.find((l) => claveLinea(l.productoId, l.varianteId) === clave)
       if (existente) {
         const actualizada = { ...existente, cantidad: existente.cantidad + 1 }
-        return [actualizada, ...prev.filter((l) => l.productoId !== producto.id)]
+        return [actualizada, ...prev.filter((l) => claveLinea(l.productoId, l.varianteId) !== clave)]
       }
       return [
         {
           productoId: producto.id,
-          nombre: producto.nombre,
+          varianteId,
+          nombre: `${producto.nombre}${etiqueta}`,
           cantidad: 1,
-          precioUnitario: producto.precio_venta,
+          precioUnitario: precio,
+          stockLinea: stock,
         },
         ...prev,
       ]
     })
-    if (lineas.some((l) => l.productoId === producto.id)) {
-      resaltarLinea(producto.id)
-    }
+    resaltarLinea(clave)
     setBusqueda('')
     setError(null)
+    setPicker(null)
   }
 
-  function cambiarCantidad(productoId: string, delta: number) {
+  function agregarProducto(producto: ProductoFila) {
+    const vars = variantesCatalogo.filter((v) => v.productoId === producto.id)
+    if (config?.usaVariantes && vars.length > 0) {
+      setPicker({ producto, sel: {} })
+      setError(null)
+      return
+    }
+    agregarLinea(producto, null)
+  }
+
+  function cambiarCantidad(clave: string, delta: number) {
     setLineas((prev) =>
       prev.map((l) =>
-        l.productoId === productoId ? { ...l, cantidad: Math.max(1, l.cantidad + delta) } : l,
+        claveLinea(l.productoId, l.varianteId) === clave
+          ? { ...l, cantidad: Math.max(1, l.cantidad + delta) }
+          : l,
       ),
     )
   }
@@ -266,6 +316,7 @@ export function VentaNuevaPage() {
         producto_id: l.productoId,
         cantidad: l.cantidad,
         precio_unitario: l.precioUnitario,
+        variante_id: l.varianteId,
       })),
       formaPago,
       descuento: desc,
@@ -338,12 +389,105 @@ export function VentaNuevaPage() {
                     <p className="mt-2 text-xs text-[#4A5568]">No hay productos activos para mostrar.</p>
                   )}
 
+                  {picker ? (
+                    <div className="mt-3 rounded-md border border-[#E2E8F0] p-3">
+                      <p className="text-sm font-semibold text-[#1A2F4A]">{picker.producto.nombre}</p>
+                      {(() => {
+                        const vars = variantesCatalogo.filter((v) => v.productoId === picker.producto.id)
+                        const grupos = new Map<string, string[]>()
+                        for (const v of vars) {
+                          for (const [k, val] of Object.entries(v.atributos)) {
+                            const arr = grupos.get(k) ?? []
+                            if (!arr.includes(val)) arr.push(val)
+                            grupos.set(k, arr)
+                          }
+                        }
+                        const keys = [...grupos.keys()]
+                        const completa = keys.every((k) => picker.sel[k])
+                        const match = completa
+                          ? vars.find((v) => keys.every((k) => v.atributos[k] === picker.sel[k]))
+                          : undefined
+                        const stock = match ? (stockVar.get(match.id) ?? 0) : null
+                        const precio =
+                          match && match.precioVenta != null
+                            ? match.precioVenta
+                            : picker.producto.precio_venta
+                        return (
+                          <>
+                            {[...grupos.entries()].map(([nombre, valores]) => (
+                              <div key={nombre} className="mt-3">
+                                <p className="text-xs font-medium text-[#4A5568]">{nombre}</p>
+                                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                  {valores.map((val) => {
+                                    const on = picker.sel[nombre] === val
+                                    return (
+                                      <button
+                                        key={val}
+                                        type="button"
+                                        className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                                          on
+                                            ? 'bg-[#6366F1] text-white'
+                                            : 'border border-[#E2E8F0] bg-white text-[#1A2F4A]'
+                                        }`}
+                                        onClick={() =>
+                                          setPicker((prev) =>
+                                            prev
+                                              ? { ...prev, sel: { ...prev.sel, [nombre]: val } }
+                                              : prev,
+                                          )
+                                        }
+                                      >
+                                        {val}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                            {completa ? (
+                              <div className="mt-3 text-sm text-[#1A2F4A]">
+                                {match ? (
+                                  <>
+                                    <p>
+                                      Stock: {stock}{' '}
+                                      {stock != null && stock <= 0 ? <span>⚠️</span> : null}
+                                    </p>
+                                    <p>Precio: {formatoARS(precio)}</p>
+                                    <button
+                                      className="mt-2 h-10 w-full rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
+                                      type="button"
+                                      disabled={!match.activo}
+                                      onClick={() => agregarLinea(picker.producto, match)}
+                                    >
+                                      Agregar a la venta
+                                    </button>
+                                  </>
+                                ) : (
+                                  <p className="text-xs text-[#EA580C]">Esa combinación no se vende.</p>
+                                )}
+                              </div>
+                            ) : null}
+                            <button
+                              className="mt-2 text-xs text-[#4A5568]"
+                              type="button"
+                              onClick={() => setPicker(null)}
+                            >
+                              Cancelar
+                            </button>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  ) : null}
+
                   <div className="mt-4 space-y-3">
-                    {lineas.map((linea) => (
+                    {lineas.map((linea) => {
+                      const clave = claveLinea(linea.productoId, linea.varianteId)
+                      return (
                       <div
-                        key={linea.productoId}
+                        key={clave}
                         className={`rounded-md border px-3 py-2 transition-colors duration-300 ${
-                          lineaResaltada === linea.productoId
+                          lineaResaltada === clave
                             ? 'border-[#6366F1] bg-[#EEF2FF]'
                             : 'border-[#E2E8F0] bg-white'
                         }`}
@@ -354,7 +498,9 @@ export function VentaNuevaPage() {
                             className="text-xs text-[#DC2626]"
                             type="button"
                             onClick={() =>
-                              setLineas((prev) => prev.filter((l) => l.productoId !== linea.productoId))
+                              setLineas((prev) =>
+                                prev.filter((l) => claveLinea(l.productoId, l.varianteId) !== clave),
+                              )
                             }
                           >
                             Quitar
@@ -366,7 +512,7 @@ export function VentaNuevaPage() {
                               className="flex h-11 w-11 items-center justify-center rounded-md border border-[#E2E8F0] text-lg font-bold text-[#1A2F4A]"
                               type="button"
                               aria-label="Quitar uno"
-                              onClick={() => cambiarCantidad(linea.productoId, -1)}
+                              onClick={() => cambiarCantidad(clave, -1)}
                             >
                               −
                             </button>
@@ -377,7 +523,7 @@ export function VentaNuevaPage() {
                               className="flex h-11 w-11 items-center justify-center rounded-md border border-[#E2E8F0] text-lg font-bold text-[#1A2F4A]"
                               type="button"
                               aria-label="Agregar uno"
-                              onClick={() => cambiarCantidad(linea.productoId, 1)}
+                              onClick={() => cambiarCantidad(clave, 1)}
                             >
                               +
                             </button>
@@ -392,7 +538,7 @@ export function VentaNuevaPage() {
                                 const n = Number(ev.target.value.replace(',', '.'))
                                 setLineas((prev) =>
                                   prev.map((l) =>
-                                    l.productoId === linea.productoId
+                                    claveLinea(l.productoId, l.varianteId) === clave
                                       ? { ...l, precioUnitario: Number.isFinite(n) ? n : 0 }
                                       : l,
                                   ),
@@ -401,11 +547,9 @@ export function VentaNuevaPage() {
                             />
                           </label>
                         </div>
-                        {linea.cantidad >
-                        (catalogo.find((p) => p.id === linea.productoId)?.stock_actual ?? 0) ? (
+                        {linea.cantidad > linea.stockLinea ? (
                           <p className="mt-2 text-xs text-[#EA580C]">
-                            ⚠️ Stock insuficiente — tenés{' '}
-                            {catalogo.find((p) => p.id === linea.productoId)?.stock_actual ?? 0} unidades
+                            ⚠️ Stock insuficiente — tenés {linea.stockLinea} unidades
                             disponibles
                           </p>
                         ) : null}
@@ -413,7 +557,8 @@ export function VentaNuevaPage() {
                           Subtotal {formatoARS(linea.cantidad * linea.precioUnitario)}
                         </p>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
 
                   <label className="mt-4 block text-sm font-medium text-[#4A5568]">

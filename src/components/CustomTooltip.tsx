@@ -202,6 +202,18 @@ export function TooltipFormaPago({ active, payload }: TipProps) {
   )
 }
 
+export function TooltipUnidades({ active, payload, label }: TipProps) {
+  if (!active || !payload?.length) return null
+  return (
+    <ChartTooltipBox>
+      <p style={{ color: '#94A3B8', fontSize: 11 }}>{String(label ?? '')}</p>
+      <p style={{ color: '#F1F5F9', fontSize: 16, fontWeight: 700, marginTop: 4 }}>
+        {Number(payload[0].value ?? 0)} u
+      </p>
+    </ChartTooltipBox>
+  )
+}
+
 export function TooltipMontoSimple({ active, payload, label }: TipProps) {
   if (!active || !payload?.length) return null
   const total = Number(payload[0].value ?? 0)

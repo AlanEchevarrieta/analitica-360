@@ -113,6 +113,9 @@ export function HistorialMovimientosPanel({
                   <th className="py-2 pr-2 font-semibold">Tipo</th>
                   <th className="py-2 pr-2 font-semibold">Cant.</th>
                   <th className="py-2 pr-2 font-semibold">Precio unitario</th>
+                  {filas.some((m) => m.varianteEtiqueta) ? (
+                    <th className="py-2 pr-2 font-semibold">Variante</th>
+                  ) : null}
                   <th className="py-2 pr-2 font-semibold">Referencia</th>
                   <th className="py-2 pr-2 font-semibold">Usuario</th>
                   <th className="py-2 font-semibold">Saldo</th>
@@ -153,6 +156,11 @@ export function HistorialMovimientosPanel({
                       <td className="py-2.5 pr-2 tabular-nums" style={{ color: TXT }}>
                         {m.precioUnitario != null ? formatoARS(m.precioUnitario) : '—'}
                       </td>
+                      {filas.some((x) => x.varianteEtiqueta) ? (
+                        <td className="py-2.5 pr-2" style={{ color: TXT_SEC }}>
+                          {m.varianteEtiqueta ?? '—'}
+                        </td>
+                      ) : null}
                       <td className="py-2.5 pr-2" style={{ color: TXT_SEC }}>
                         {ref.to ? (
                           <Link className="text-[#A5B4FC] underline" to={ref.to}>
