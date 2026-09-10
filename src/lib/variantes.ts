@@ -89,6 +89,44 @@ export function precioVarianteOBase(precioVariante: number | null | undefined, p
   return precioVariante
 }
 
+export function costoPromedioPonderado(
+  items: { costo: number; stock: number }[],
+): number | null {
+  const vivos = items.filter((i) => Number.isFinite(i.costo) && i.costo > 0)
+  if (vivos.length === 0) return null
+  const peso = vivos.reduce((acc, i) => acc + Math.max(0, i.stock), 0)
+  const bruto =
+    peso > 0
+      ? vivos.reduce((acc, i) => acc + i.costo * Math.max(0, i.stock), 0) / peso
+      : vivos.reduce((acc, i) => acc + i.costo, 0) / vivos.length
+  return Math.round(bruto * 100) / 100
+}
+
+export function sumaStockItems(items: { stock: number }[]) {
+  return items.reduce((acc, i) => acc + i.stock, 0)
+}
+
+export function rangoMargenVariantes(variantes: VarianteFila[]): { min: number; max: number } | null {
+  const pcts: number[] = []
+  for (const v of variantes) {
+    if (!v.activo) continue
+    const precio = v.precioVenta
+    const costo = v.costo
+    if (precio == null || !Number.isFinite(precio) || precio <= 0) continue
+    if (costo == null || !Number.isFinite(costo) || costo < 0) continue
+    pcts.push(((precio - costo) / precio) * 100)
+  }
+  if (pcts.length === 0) return null
+  return { min: Math.min(...pcts), max: Math.max(...pcts) }
+}
+
+export function formatoRangoMargen(rango: { min: number; max: number }) {
+  const a = Math.round(rango.min)
+  const b = Math.round(rango.max)
+  if (a === b) return `${a}%`
+  return `${a}% - ${b}%`
+}
+
 export function variantePorSeleccion(
   variantes: VarianteFila[],
   sel: Record<string, string>,

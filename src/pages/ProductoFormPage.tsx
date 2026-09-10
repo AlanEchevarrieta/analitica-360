@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { tienePermiso } from '../lib/permisos'
@@ -38,7 +38,11 @@ export function ProductoFormPage() {
   const [largoCm, setLargoCm] = useState('')
   const [anchoCm, setAnchoCm] = useState('')
   const [pesoGr, setPesoGr] = useState('')
+  const [costoDesdeVariantes, setCostoDesdeVariantes] = useState<number | null>(null)
   const variantesRef = useRef<ProductoVariantesHandle>(null)
+  const onCostoCalculado = useCallback((valor: number | null) => {
+    setCostoDesdeVariantes(valor)
+  }, [])
 
   const titulo = useMemo(() => (esNuevo ? 'Nuevo producto' : 'Editar producto'), [esNuevo])
 
@@ -109,7 +113,12 @@ export function ProductoFormPage() {
       setError('El precio de venta es obligatorio')
       return
     }
-    const costoNum = costo.trim() === '' ? null : Number(costo.replace(',', '.'))
+    const costoNum =
+      usaVariantes && costoDesdeVariantes != null
+        ? costoDesdeVariantes
+        : costo.trim() === ''
+          ? null
+          : Number(costo.replace(',', '.'))
     if (costoNum != null && (!Number.isFinite(costoNum) || costoNum < 0)) {
       setError('El costo no es válido')
       return
@@ -273,7 +282,7 @@ export function ProductoFormPage() {
                 />
               </label>
               <label className="mt-4 text-sm font-medium text-[#4A5568]">
-                {usaVariantes ? 'Precio base (ARS)' : 'Precio de venta (ARS)'}
+                {usaVariantes ? 'Precio base (referencial)' : 'Precio de venta (ARS)'}
                 <input
                   className={inputClass}
                   inputMode="decimal"
@@ -281,15 +290,35 @@ export function ProductoFormPage() {
                   onChange={(ev) => setPrecioVenta(ev.target.value)}
                 />
               </label>
+              {usaVariantes ? (
+                <p className="mt-1.5 text-xs text-[#4A5568]">
+                  Con variantes activas, cada variante tiene su propio precio. El precio base se usa
+                  como fallback si la variante no tiene precio propio.
+                </p>
+              ) : null}
               <label className="mt-4 text-sm font-medium text-[#4A5568]">
-                {usaVariantes ? 'Costo base (ARS)' : 'Costo (ARS)'}
+                {usaVariantes && costoDesdeVariantes != null
+                  ? 'Calculado desde variantes'
+                  : usaVariantes
+                    ? 'Costo base (ARS)'
+                    : 'Costo (ARS)'}
                 <input
-                  className={inputClass}
+                  className={`${inputClass} ${usaVariantes && costoDesdeVariantes != null ? 'bg-[#E2E8F0] text-[#4A5568]' : ''}`}
                   inputMode="decimal"
-                  value={costo}
+                  readOnly={usaVariantes && costoDesdeVariantes != null}
+                  value={
+                    usaVariantes && costoDesdeVariantes != null
+                      ? String(costoDesdeVariantes)
+                      : costo
+                  }
                   onChange={(ev) => setCosto(ev.target.value)}
                 />
               </label>
+              {usaVariantes && costoDesdeVariantes != null ? (
+                <p className="mt-1.5 text-xs text-[#4A5568]">
+                  Promedio ponderado de los costos de las variantes activas.
+                </p>
+              ) : null}
               {usaVariantes ? null : esNuevo ? (
                 <label className="mt-4 text-sm font-medium text-[#4A5568]">
                   Stock inicial
@@ -322,7 +351,14 @@ export function ProductoFormPage() {
                   empresaId={perfil.empresa.id}
                   nombreProducto={nombre}
                   precioBase={Number(precioVenta.replace(',', '.')) || 0}
-                  costoBase={costo.trim() === '' ? null : Number(costo.replace(',', '.')) || null}
+                  costoBase={
+                    costoDesdeVariantes != null
+                      ? costoDesdeVariantes
+                      : costo.trim() === ''
+                        ? null
+                        : Number(costo.replace(',', '.')) || null
+                  }
+                  onCostoCalculado={onCostoCalculado}
                 />
               ) : null}
               <button

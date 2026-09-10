@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
+import { AjustarStockModal } from '../components/AjustarStockModal'
 import { HistorialMovimientosPanel } from '../components/HistorialMovimientosPanel'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import {
@@ -31,7 +32,7 @@ import {
 } from '../lib/inventario'
 import { listarProductosNombres } from '../lib/productos'
 import { obtenerConfiguracion } from '../lib/configuracion'
-import { etiquetaCombo, listarVariantesDeProductos, stockPorVariante } from '../lib/variantes'
+import { etiquetaCombo, listarVariantesDeProductos, stockPorVariante, sumaStockItems } from '../lib/variantes'
 import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
@@ -51,6 +52,7 @@ export function InventarioPage() {
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | EstadoStock>('todos')
   const [categoria, setCategoria] = useState('')
   const [historial, setHistorial] = useState<ResumenInventario | null>(null)
+  const [ajuste, setAjuste] = useState<ResumenInventario | null>(null)
   const [traslado, setTraslado] = useState(false)
   const [productos, setProductos] = useState<{ id: string; nombre: string }[]>([])
   const [desglose, setDesglose] = useState<Map<string, { etiqueta: string; stock: number }[]>>(
@@ -95,6 +97,13 @@ export function InventarioPage() {
           map.set(v.productoId, arr)
         }
         setDesglose(map)
+        setFilas(
+          res.filas.map((f) => {
+            const items = map.get(f.id)
+            if (!items?.length) return f
+            return { ...f, stock_actual: sumaStockItems(items) }
+          }),
+        )
       } else {
         setDesglose(new Map())
       }
@@ -341,8 +350,24 @@ export function InventarioPage() {
         <HistorialMovimientosPanel
           key={historial.id}
           producto={{ id: historial.id, nombre: historial.nombre, stock: historial.stock_actual }}
-          puedeAjustar={false}
+          puedeAjustar={puedeMover}
           onCerrar={() => setHistorial(null)}
+          onAjustar={() => {
+            setAjuste(historial)
+            setHistorial(null)
+          }}
+        />
+      ) : null}
+
+      {ajuste ? (
+        <AjustarStockModal
+          producto={{ id: ajuste.id, nombre: ajuste.nombre, stock: ajuste.stock_actual }}
+          empresaId={perfil.empresa.id}
+          onCerrar={() => setAjuste(null)}
+          onOk={() => {
+            setAjuste(null)
+            void cargar()
+          }}
         />
       ) : null}
 

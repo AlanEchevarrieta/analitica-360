@@ -2,6 +2,7 @@ import { useEffect, useImperativeHandle, useMemo, useState, forwardRef } from 'r
 import { AjustarStockModal } from './AjustarStockModal'
 import {
   combinacionesDe,
+  costoPromedioPonderado,
   etiquetaCombo,
   guardarVariantesProducto,
   listarAtributos,
@@ -93,9 +94,10 @@ export const ProductoVariantesEditor = forwardRef<
     nombreProducto: string
     precioBase: number
     costoBase: number | null
+    onCostoCalculado?: (valor: number | null) => void
   }
 >(function ProductoVariantesEditor(
-  { productoId, empresaId, nombreProducto, precioBase, costoBase },
+  { productoId, empresaId, nombreProducto, precioBase, costoBase, onCostoCalculado },
   ref,
 ) {
   const [atributos, setAtributos] = useState<AtributoFila[]>([])
@@ -224,6 +226,20 @@ export const ProductoVariantesEditor = forwardRef<
       ),
     )
   }, [nombreProducto])
+
+  useEffect(() => {
+    if (!onCostoCalculado) return
+    const items = drafts
+      .filter((d) => d.activo)
+      .map((d) => {
+        const n = Number(d.costo.replace(',', '.'))
+        const stock = d.id
+          ? (stockMap.get(d.id) ?? d.stockActual ?? 0)
+          : Number.parseInt(d.stockInicial ?? '', 10) || 0
+        return { costo: n, stock }
+      })
+    onCostoCalculado(costoPromedioPonderado(items))
+  }, [drafts, stockMap, onCostoCalculado])
 
   async function persistirDrafts(pid: string): Promise<string | null> {
     if (drafts.length === 0) return null

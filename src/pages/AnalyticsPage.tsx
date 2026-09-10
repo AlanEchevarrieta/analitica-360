@@ -45,11 +45,17 @@ import {
 } from '../lib/analytics'
 import { exportarAnalyticsPdf } from '../lib/exportarReportes'
 import { planTieneAnalytics } from '../lib/planes'
-import { formatoARS } from '../lib/productos'
+import { formatoARS, listarProductos } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
 import { obtenerConfiguracion } from '../lib/configuracion'
-import { cargarAnalyticsVariantes, type AnalyticsVariantes } from '../lib/variantes'
+import {
+  cargarAnalyticsVariantes,
+  formatoRangoMargen,
+  listarVariantesDeProductos,
+  rangoMargenVariantes,
+  type AnalyticsVariantes,
+} from '../lib/variantes'
 import { coloresGrafico, useTema } from '../lib/tema'
 import {
   CHART_ACTIVE_BAR,
@@ -204,12 +210,12 @@ function Kpi({
   )
 }
 
-function BarraMargen({ pct }: { pct: number }) {
+function BarraMargen({ pct, etiqueta }: { pct: number; etiqueta?: string }) {
   const color = pct > 30 ? '#4ADE80' : pct >= 15 ? '#F59E0B' : '#F87171'
   const width = Math.max(0, Math.min(100, pct))
   return (
     <div className="min-w-[132px]">
-      <p className="text-xs">{pct.toFixed(1)}%</p>
+      <p className="text-xs">{etiqueta ?? `${pct.toFixed(1)}%`}</p>
       <div className="mt-1 h-1.5 w-full rounded-full bg-white/10">
         <div className="h-1.5 rounded-full" style={{ width: `${width}%`, background: color }} />
       </div>
@@ -235,6 +241,9 @@ export function AnalyticsPage() {
   const [modalPlanes, setModalPlanes] = useState(false)
   const [usaVariantes, setUsaVariantes] = useState(false)
   const [dataVar, setDataVar] = useState<AnalyticsVariantes | null>(null)
+  const [rangosMargen, setRangosMargen] = useState<Map<string, { min: number; max: number }>>(
+    new Map(),
+  )
   const top10Hover = useIndiceBarraActiva()
   const diasHover = useIndiceBarraActiva()
 
@@ -253,8 +262,30 @@ export function AnalyticsPage() {
       setUsaVariantes(usa)
       if (usa) {
         setDataVar(await cargarAnalyticsVariantes(requireSupabase(), desde, hasta))
+        const prods = await listarProductos(requireSupabase())
+        if (!prods.error && prods.filas.length > 0) {
+          const vars = await listarVariantesDeProductos(
+            requireSupabase(),
+            prods.filas.map((p) => p.id),
+          )
+          const porProducto = new Map<string, typeof vars.filas>()
+          for (const v of vars.filas) {
+            const arr = porProducto.get(v.productoId) ?? []
+            arr.push(v)
+            porProducto.set(v.productoId, arr)
+          }
+          const rangos = new Map<string, { min: number; max: number }>()
+          for (const p of prods.filas) {
+            const rango = rangoMargenVariantes(porProducto.get(p.id) ?? [])
+            if (rango) rangos.set(p.nombre, rango)
+          }
+          setRangosMargen(rangos)
+        } else {
+          setRangosMargen(new Map())
+        }
       } else {
         setDataVar(null)
+        setRangosMargen(new Map())
       }
       setCargando(false)
     })
@@ -723,7 +754,10 @@ export function AnalyticsPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {tabla.map((fila: AnalyticsProducto) => (
+                          {tabla.map((fila: AnalyticsProducto) => {
+                            const rango = rangosMargen.get(fila.producto)
+                            const pctBarra = rango ? (rango.min + rango.max) / 2 : fila.margen_pct
+                            return (
                             <tr key={fila.producto} className="border-t border-white/10">
                               <td className="px-3 py-3 font-medium">{fila.producto}</td>
                               <td className="px-3 py-3">{fila.unidades}</td>
@@ -734,10 +768,14 @@ export function AnalyticsPage() {
                               <td className="px-3 py-3">{formatoARS(fila.costo)}</td>
                               <td className="px-3 py-3">{formatoARS(fila.margen)}</td>
                               <td className="px-3 py-3">
-                                <BarraMargen pct={fila.margen_pct} />
+                                <BarraMargen
+                                  pct={pctBarra}
+                                  etiqueta={rango ? formatoRangoMargen(rango) : undefined}
+                                />
                               </td>
                             </tr>
-                          ))}
+                            )
+                          })}
                         </tbody>
                       </table>
                     </div>

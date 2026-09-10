@@ -47,6 +47,7 @@ import {
   etiquetaCombo,
   listarVariantesDeProductos,
   stockPorVariante,
+  sumaStockItems,
 } from '../lib/variantes'
 import { theme } from '../theme'
 
@@ -440,7 +441,10 @@ export function ProductosPage() {
             </thead>
             {!cargando && error !== MSG_ERROR_RED ? (
             <tbody>
-              {filas.map((fila, index) => (
+              {filas.map((fila, index) => {
+                const itemsVar = usaVariantes ? (desgloseStock.get(fila.id) ?? []) : []
+                const stockMostrar = itemsVar.length > 0 ? sumaStockItems(itemsVar) : fila.stock_actual
+                return (
                 <Tr key={fila.id} index={index}>
                   <td className="px-3 py-3 font-medium">
                     <p>{fila.nombre}</p>
@@ -463,8 +467,8 @@ export function ProductosPage() {
                   ) : null}
                   <td className="px-3 py-3">
                     <StockProductoCelda
-                      total={fila.stock_actual}
-                      items={usaVariantes ? (desgloseStock.get(fila.id) ?? []) : []}
+                      total={stockMostrar}
+                      items={itemsVar}
                       umbral={umbralStock}
                       abierto={stockAbierto === fila.id}
                       onToggle={() =>
@@ -474,7 +478,7 @@ export function ProductosPage() {
                         setHistorial({
                           id: fila.id,
                           nombre: fila.nombre,
-                          stock: fila.stock_actual,
+                          stock: stockMostrar,
                         })
                       }
                     />
@@ -502,14 +506,18 @@ export function ProductosPage() {
                     </td>
                   ) : null}
                 </Tr>
-              ))}
+              )
+              })}
             </tbody>
             ) : null}
           </table>
           </div>
           {!cargando && error !== MSG_ERROR_RED ? (
             <MobileCards>
-              {filas.map((fila) => (
+              {filas.map((fila) => {
+                const itemsVar = usaVariantes ? (desgloseStock.get(fila.id) ?? []) : []
+                const stockMostrar = itemsVar.length > 0 ? sumaStockItems(itemsVar) : fila.stock_actual
+                return (
                 <ListCard key={fila.id}>
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-semibold">{fila.nombre}</p>
@@ -526,8 +534,8 @@ export function ProductosPage() {
                   <p className="mt-1 text-sm">{formatoARS(fila.precio_venta)}</p>
                   <div className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
                     <StockProductoCelda
-                      total={fila.stock_actual}
-                      items={usaVariantes ? (desgloseStock.get(fila.id) ?? []) : []}
+                      total={stockMostrar}
+                      items={itemsVar}
                       umbral={umbralStock}
                       abierto={stockAbierto === fila.id}
                       onToggle={() =>
@@ -537,7 +545,7 @@ export function ProductosPage() {
                         setHistorial({
                           id: fila.id,
                           nombre: fila.nombre,
-                          stock: fila.stock_actual,
+                          stock: stockMostrar,
                         })
                       }
                     />
@@ -548,7 +556,8 @@ export function ProductosPage() {
                     </Link>
                   ) : null}
                 </ListCard>
-              ))}
+              )
+              })}
             </MobileCards>
           ) : null}
           {cargando ? <TableSkeleton /> : null}
@@ -594,6 +603,7 @@ export function ProductosPage() {
         {ajuste ? (
           <AjustarStockModal
             producto={ajuste}
+            empresaId={perfil.empresa.id}
             onCerrar={() => setAjuste(null)}
             onOk={() => {
               setAjuste(null)
