@@ -6,7 +6,9 @@ type Props = {
   onClose: () => void
 }
 
-type Fase = 'https' | 'pedir' | 'denegado' | 'sin_camara' | 'escanear'
+type Fase = 'esperando' | 'https' | 'denegado' | 'sin_camara' | 'escanear'
+
+let pedidoDesdeClick: Promise<true | 'denegado' | 'no_encontrada' | 'https'> | null = null
 
 function conexionSegura() {
   const host = window.location.hostname
@@ -14,7 +16,12 @@ function conexionSegura() {
   return window.location.protocol === 'https:'
 }
 
-async function pedirPermisoCamera(): Promise<true | 'denegado' | 'no_encontrada' | 'error'> {
+function esIphone() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+async function pedirPermisoCamera(): Promise<true | 'denegado' | 'no_encontrada' | 'https'> {
+  if (!conexionSegura()) return 'https'
   if (!navigator.mediaDevices?.getUserMedia) return 'no_encontrada'
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -32,20 +39,24 @@ async function pedirPermisoCamera(): Promise<true | 'denegado' | 'no_encontrada'
       } catch (retry) {
         const retryName = retry instanceof DOMException ? retry.name : ''
         if (retryName === 'NotAllowedError' || retryName === 'PermissionDeniedError') return 'denegado'
-        if (retryName === 'NotFoundError' || retryName === 'DevicesNotFoundError') return 'no_encontrada'
-        return 'error'
+        return 'no_encontrada'
       }
     }
     if (name === 'NotAllowedError' || name === 'PermissionDeniedError') return 'denegado'
     if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'no_encontrada'
-    return 'error'
+    return 'denegado'
   }
+}
+
+/** Llamar desde el clic del botón 📷 para que el navegador muestre el popup de permiso. */
+export function dispararPedidoCamara() {
+  pedidoDesdeClick = pedirPermisoCamera()
 }
 
 export function EscanerCodigoBarras({ activo, onDetected, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [fase, setFase] = useState<Fase>('pedir')
-  const [esperando, setEsperando] = useState(false)
+  const [fase, setFase] = useState<Fase>('esperando')
+  const [reintento, setReintento] = useState(0)
   const cerrado = useRef(false)
   const onDetectedRef = useRef(onDetected)
   const onCloseRef = useRef(onClose)
@@ -54,11 +65,26 @@ export function EscanerCodigoBarras({ activo, onDetected, onClose }: Props) {
 
   useEffect(() => {
     if (!activo) {
-      setEsperando(false)
+      pedidoDesdeClick = null
+      setFase('esperando')
+      setReintento(0)
       return
     }
-    setFase(conexionSegura() ? 'pedir' : 'https')
-  }, [activo])
+    let vivo = true
+    void (async () => {
+      const pedido = pedidoDesdeClick ?? pedirPermisoCamera()
+      pedidoDesdeClick = null
+      const resultado = await pedido
+      if (!vivo) return
+      if (resultado === true) setFase('escanear')
+      else if (resultado === 'https') setFase('https')
+      else if (resultado === 'no_encontrada') setFase('sin_camara')
+      else setFase('denegado')
+    })()
+    return () => {
+      vivo = false
+    }
+  }, [activo, reintento])
 
   useEffect(() => {
     if (!activo || fase !== 'escanear') return
@@ -112,18 +138,10 @@ export function EscanerCodigoBarras({ activo, onDetected, onClose }: Props) {
     }
   }, [activo, fase])
 
-  async function activarCamara() {
-    if (!conexionSegura()) {
-      setFase('https')
-      return
-    }
-    setEsperando(true)
-    const resultado = await pedirPermisoCamera()
-    setEsperando(false)
-    if (resultado === true) setFase('escanear')
-    else if (resultado === 'denegado') setFase('denegado')
-    else if (resultado === 'no_encontrada') setFase('sin_camara')
-    else setFase('denegado')
+  async function reintentar() {
+    setFase('esperando')
+    pedidoDesdeClick = pedirPermisoCamera()
+    setReintento((n) => n + 1)
   }
 
   if (!activo) return null
@@ -134,18 +152,22 @@ export function EscanerCodigoBarras({ activo, onDetected, onClose }: Props) {
         ✕
       </button>
 
-      {fase === 'pedir' ? (
+      {fase === 'denegado' ? (
         <div className="escaner-card">
           <p className="escaner-card-icon" aria-hidden>
             📷
           </p>
-          <h2>Necesitamos acceso a tu cámara</h2>
-          <p>
-            Para escanear códigos de barras, permití el acceso a la cámara cuando el navegador te lo
-            solicite
-          </p>
-          <button className="escaner-card-btn" type="button" disabled={esperando} onClick={() => void activarCamara()}>
-            {esperando ? 'Esperando permiso…' : 'Activar cámara'}
+          <h2>Habilitá la cámara</h2>
+          {esIphone() ? (
+            <p>Configuración → Safari → Cámara → Permitir</p>
+          ) : (
+            <p>
+              Tocá el ícono 🔒 en la barra de arriba
+              <br />→ Permisos → Cámara → Permitir
+            </p>
+          )}
+          <button className="escaner-card-btn" type="button" onClick={() => void reintentar()}>
+            Ya lo hice, intentar de nuevo
           </button>
         </div>
       ) : null}
@@ -155,33 +177,8 @@ export function EscanerCodigoBarras({ activo, onDetected, onClose }: Props) {
           <p className="escaner-card-icon" aria-hidden>
             📷
           </p>
-          <h2>Conexión no segura</h2>
-          <p>
-            El escáner solo funciona con conexión segura (HTTPS). Tu app en analitica360.app lo
-            soporta.
-          </p>
-          <button className="escaner-card-btn" type="button" onClick={onClose}>
-            Cerrar
-          </button>
-        </div>
-      ) : null}
-
-      {fase === 'denegado' ? (
-        <div className="escaner-card">
-          <p className="escaner-card-icon" aria-hidden>
-            ⚠️
-          </p>
-          <h2>Cámara bloqueada</h2>
-          <p>Para usar el escáner necesitás habilitar la cámara manualmente:</p>
-          <ul className="escaner-pasos">
-            <li>
-              <strong>Android Chrome:</strong> Tocá el ícono 🔒 en la barra de dirección → Permisos →
-              Cámara → Permitir
-            </li>
-            <li>
-              <strong>iPhone Safari:</strong> Configuración → Safari → Cámara → Permitir
-            </li>
-          </ul>
+          <h2>Habilitá la cámara</h2>
+          <p>Abrí la app desde analitica360.app para usar la cámara.</p>
           <button className="escaner-card-btn" type="button" onClick={onClose}>
             Entendido
           </button>
@@ -190,13 +187,13 @@ export function EscanerCodigoBarras({ activo, onDetected, onClose }: Props) {
 
       {fase === 'sin_camara' ? (
         <div className="escaner-card">
-          <p className="escaner-card-icon escaner-card-icon-off" aria-hidden>
+          <p className="escaner-card-icon" aria-hidden>
             📷
           </p>
-          <h2>Sin cámara disponible</h2>
-          <p>Este dispositivo no tiene cámara. Ingresá el código manualmente en el buscador.</p>
+          <h2>No hay cámara</h2>
+          <p>Escribí el código a mano en el buscador.</p>
           <button className="escaner-card-btn" type="button" onClick={onClose}>
-            Cerrar
+            Entendido
           </button>
         </div>
       ) : null}

@@ -15,7 +15,7 @@ import {
   type TasaCuota,
 } from '../lib/configuracion'
 import { crearCliente, listarClientes, type ClienteFila } from '../lib/clientes'
-import { EscanerCodigoBarras } from '../components/EscanerCodigoBarras'
+import { EscanerCodigoBarras, dispararPedidoCamara } from '../components/EscanerCodigoBarras'
 import { formatoARS, esBusquedaCodigoBarras, listarProductos, type ProductoFila } from '../lib/productos'
 import { mostrarToast } from '../lib/consulta'
 import { requireSupabase } from '../lib/supabase'
@@ -445,7 +445,10 @@ export function VentaNuevaPage() {
                         className="btn-camara"
                         type="button"
                         aria-label="Escanear código de barras"
-                        onClick={() => setEscaner(true)}
+                        onClick={() => {
+                          dispararPedidoCamara()
+                          setEscaner(true)
+                        }}
                       >
                         📷
                       </button>

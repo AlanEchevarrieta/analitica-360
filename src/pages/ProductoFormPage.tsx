@@ -8,7 +8,7 @@ import { Breadcrumb, PageSkeleton } from '../components/listado'
 import { actualizarProducto, asignarCategoriaProducto, crearProducto, guardarCodigoBarra, guardarDimensionesProducto, leerDimensionesProducto, listarProductos, type ProductoFila } from '../lib/productos'
 import { listarCategorias, type CategoriaFila } from '../lib/categorias'
 import { ProductoVariantesEditor, type ProductoVariantesHandle } from '../components/ProductoVariantesEditor'
-import { EscanerCodigoBarras } from '../components/EscanerCodigoBarras'
+import { EscanerCodigoBarras, dispararPedidoCamara } from '../components/EscanerCodigoBarras'
 import { obtenerConfiguracion } from '../lib/configuracion'
 import { estiloTipoMovimiento } from '../lib/inventario'
 import { listarMovimientosProducto, type MovimientoFila } from '../lib/stock'
@@ -333,7 +333,10 @@ export function ProductoFormPage() {
                     className="btn-camara"
                     type="button"
                     aria-label="Escanear código de barras"
-                    onClick={() => setEscaner(true)}
+                    onClick={() => {
+                      dispararPedidoCamara()
+                      setEscaner(true)
+                    }}
                   >
                     📷
                   </button>
