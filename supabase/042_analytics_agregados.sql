@@ -64,6 +64,11 @@ DECLARE
   v_empresa uuid;
   v_cant bigint;
 BEGIN
+  IF p_empresa_id IS NOT NULL
+     AND public.get_empresa_id() IS NOT NULL
+     AND p_empresa_id != public.get_empresa_id() THEN
+    RAISE EXCEPTION 'NO_AUTORIZADO';
+  END IF;
   v_empresa := public.analytics_resolver_empresa(p_empresa_id);
   IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
     RAISE EXCEPTION 'PERIODO_INVALIDO';
@@ -101,6 +106,11 @@ DECLARE
   v_ant_hasta date;
   v_out jsonb;
 BEGIN
+  IF p_empresa_id IS NOT NULL
+     AND public.get_empresa_id() IS NOT NULL
+     AND p_empresa_id != public.get_empresa_id() THEN
+    RAISE EXCEPTION 'NO_AUTORIZADO';
+  END IF;
   v_empresa := public.analytics_resolver_empresa(p_empresa_id);
   IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
     RAISE EXCEPTION 'PERIODO_INVALIDO';
@@ -172,6 +182,11 @@ DECLARE
   v_empresa uuid;
   v_out jsonb;
 BEGIN
+  IF p_empresa_id IS NOT NULL
+     AND public.get_empresa_id() IS NOT NULL
+     AND p_empresa_id != public.get_empresa_id() THEN
+    RAISE EXCEPTION 'NO_AUTORIZADO';
+  END IF;
   v_empresa := public.analytics_resolver_empresa(p_empresa_id);
   IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
     RAISE EXCEPTION 'PERIODO_INVALIDO';
@@ -223,6 +238,11 @@ DECLARE
   v_empresa uuid;
   v_out jsonb;
 BEGIN
+  IF p_empresa_id IS NOT NULL
+     AND public.get_empresa_id() IS NOT NULL
+     AND p_empresa_id != public.get_empresa_id() THEN
+    RAISE EXCEPTION 'NO_AUTORIZADO';
+  END IF;
   v_empresa := public.analytics_resolver_empresa(p_empresa_id);
   IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
     RAISE EXCEPTION 'PERIODO_INVALIDO';
@@ -290,6 +310,11 @@ DECLARE
   v_nuevos int;
   v_rec int;
 BEGIN
+  IF p_empresa_id IS NOT NULL
+     AND public.get_empresa_id() IS NOT NULL
+     AND p_empresa_id != public.get_empresa_id() THEN
+    RAISE EXCEPTION 'NO_AUTORIZADO';
+  END IF;
   v_empresa := public.analytics_resolver_empresa(p_empresa_id);
   IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
     RAISE EXCEPTION 'PERIODO_INVALIDO';
@@ -524,6 +549,11 @@ DECLARE
   v_top_u numeric;
   v_total numeric;
 BEGIN
+  IF p_empresa_id IS NOT NULL
+     AND public.get_empresa_id() IS NOT NULL
+     AND p_empresa_id != public.get_empresa_id() THEN
+    RAISE EXCEPTION 'NO_AUTORIZADO';
+  END IF;
   v_empresa := public.analytics_resolver_empresa(p_empresa_id);
   IF p_desde IS NULL OR p_hasta IS NULL OR p_hasta < p_desde THEN
     RAISE EXCEPTION 'PERIODO_INVALIDO';
