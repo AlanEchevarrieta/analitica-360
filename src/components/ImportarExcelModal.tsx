@@ -29,6 +29,7 @@ export function ImportarExcelModal({
   const [error, setError] = useState<string | null>(null)
   const [advertencias, setAdvertencias] = useState<string[]>([])
   const [importando, setImportando] = useState(false)
+  const [progreso, setProgreso] = useState({ hechos: 0, total: 0 })
   const [arrastrando, setArrastrando] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [oculto, setOculto] = useState(false)
@@ -69,8 +70,14 @@ export function ImportarExcelModal({
       return
     }
     setImportando(true)
+    setProgreso({ hechos: 0, total: filas.length })
     setError(null)
-    const { importados, saltados } = await importarProductos(requireSupabase(), filas, existentes)
+    const { importados, saltados } = await importarProductos(
+      requireSupabase(),
+      filas,
+      existentes,
+      (hechos, total) => setProgreso({ hechos, total }),
+    )
     setImportando(false)
     setAdvertencias(saltados)
     await onListo()
@@ -278,7 +285,9 @@ export function ImportarExcelModal({
             onClick={() => void confirmar()}
           >
             <span aria-hidden>✓</span>
-            {importando ? 'IMPORTANDO…' : 'Confirmar importación'}
+            {importando
+              ? `IMPORTANDO… ${progreso.hechos} / ${progreso.total || filas.length}`
+              : 'Confirmar importación'}
           </button>
         </div>
       </div>

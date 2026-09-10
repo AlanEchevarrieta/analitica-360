@@ -37,8 +37,13 @@ export function ImportarComprasModal({
         setFilas(data)
         return { ok: true }
       }}
-      onConfirmar={async () => {
-        const { importados, errores } = await importarCompras(requireSupabase(), filas, productos)
+      onConfirmar={async (onProgreso) => {
+        const { importados, errores } = await importarCompras(
+          requireSupabase(),
+          filas,
+          productos,
+          onProgreso,
+        )
         await onListo()
         return {
           toast: `✅ ${importados} compras importadas, ${errores.length} filas con errores`,

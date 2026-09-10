@@ -25,7 +25,7 @@ export function ImportarOperacionModal({
   onCerrar: () => void
   onPlantilla: () => Promise<void>
   onArchivo: (file: File) => Promise<{ ok: boolean; error?: string }>
-  onConfirmar: () => Promise<{ toast: string; errores: string[] }>
+  onConfirmar: (onProgreso: (hechos: number, total: number) => void) => Promise<{ toast: string; errores: string[] }>
   preview: ReactNode
   listos: number
 }) {
@@ -35,6 +35,7 @@ export function ImportarOperacionModal({
   const [error, setError] = useState<string | null>(null)
   const [advertencias, setAdvertencias] = useState<string[]>([])
   const [importando, setImportando] = useState(false)
+  const [progreso, setProgreso] = useState({ hechos: 0, total: 0 })
   const [arrastrando, setArrastrando] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [oculto, setOculto] = useState(false)
@@ -73,9 +74,10 @@ export function ImportarOperacionModal({
       return
     }
     setImportando(true)
+    setProgreso({ hechos: 0, total: listos })
     setError(null)
     try {
-      const res = await onConfirmar()
+      const res = await onConfirmar((hechos, total) => setProgreso({ hechos, total }))
       setAdvertencias(res.errores)
       setToast(res.toast)
       if (res.errores.length === 0) {
@@ -247,7 +249,9 @@ export function ImportarOperacionModal({
             onClick={() => void confirmar()}
           >
             <span aria-hidden>✓</span>
-            {importando ? 'IMPORTANDO…' : 'Confirmar importación'}
+            {importando
+              ? `IMPORTANDO… ${progreso.hechos} / ${progreso.total || listos}`
+              : 'Confirmar importación'}
           </button>
         </div>
       </div>

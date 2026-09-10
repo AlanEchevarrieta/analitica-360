@@ -1,6 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { confirmarCompra } from './compras'
 import {
+  ejecutarLoteConRetry,
+  esFuncionImportacionFaltante,
+  partirEnLotes,
+  type ProgresoImportacion,
+} from './lotesImportacion'
+import {
   claveNombre,
   descargarPlantilla,
   enteroCelda,
@@ -133,52 +139,142 @@ async function asegurarProducto(
   return creado
 }
 
+async function resolverItemsCompra(
+  client: SupabaseClient,
+  mapa: Map<string, { id: string; nombre: string }>,
+  fila: FilaImportCompra,
+) {
+  const items: { producto_id: string; producto_nombre: string; cantidad: number; costo_unitario: number }[] = []
+  for (const item of fila.items) {
+    const prod = await asegurarProducto(client, mapa, item.nombre, item.costo)
+    if ('error' in prod) return { error: prod.error }
+    items.push({
+      producto_id: prod.id,
+      producto_nombre: prod.nombre,
+      cantidad: item.cantidad,
+      costo_unitario: item.costo,
+    })
+  }
+  return { items }
+}
+
 export async function importarCompras(
   client: SupabaseClient,
   filas: FilaImportCompra[],
   productos: { id: string; nombre: string }[],
+  onProgreso?: ProgresoImportacion,
 ): Promise<{ importados: number; errores: ErrorFila[] }> {
   const mapa = new Map(productos.map((p) => [claveNombre(p.nombre), p]))
-  let importados = 0
+  const total = filas.length
   const errores: ErrorFila[] = []
+
+  const nuevos: { nombre: string; costo: number }[] = []
+  const vistosNuevos = new Set<string>()
+  for (const fila of filas) {
+    if (fila.error) continue
+    for (const item of fila.items) {
+      const clave = claveNombre(item.nombre)
+      if (mapa.has(clave) || vistosNuevos.has(clave)) continue
+      vistosNuevos.add(clave)
+      nuevos.push({ nombre: item.nombre, costo: item.costo })
+    }
+  }
+  for (const lote of partirEnLotes(nuevos)) {
+    await ejecutarLoteConRetry(() =>
+      Promise.all(
+        lote.map(async (p) => {
+          const creado = await asegurarProducto(client, mapa, p.nombre, p.costo)
+          return creado
+        }),
+      ),
+    )
+  }
+  const pendientes: {
+    fila: FilaImportCompra
+    items: { producto_id: string; producto_nombre: string; cantidad: number; costo_unitario: number }[]
+  }[] = []
 
   for (const fila of filas) {
     if (fila.error) {
       errores.push({ fila: fila.filaExcel, motivo: fila.error })
       continue
     }
+    const res = await resolverItemsCompra(client, mapa, fila)
+    if ('error' in res) {
+      errores.push({ fila: fila.filaExcel, motivo: res.error ?? 'No se pudo resolver el producto' })
+      continue
+    }
+    pendientes.push({ fila, items: res.items })
+  }
 
-    const items: { producto_id: string; producto_nombre: string; cantidad: number; costo_unitario: number }[] = []
-    let falloItem: string | null = null
-    for (const item of fila.items) {
-      const prod = await asegurarProducto(client, mapa, item.nombre, item.costo)
-      if ('error' in prod) {
-        falloItem = prod.error
-        break
+  onProgreso?.(errores.length, total)
+
+  let importados = 0
+  let hechos = errores.length
+  let usarLoteRpc = true
+
+  for (const lote of partirEnLotes(pendientes)) {
+    if (usarLoteRpc) {
+      try {
+        const data = await ejecutarLoteConRetry(async () => {
+          const res = await client.rpc('importar_compras_lote', {
+            p_compras: lote.map((v) => ({
+              fila: v.fila.filaExcel,
+              items: v.items,
+              proveedor: v.fila.proveedor,
+              fecha: v.fila.fecha,
+              notas: v.fila.notas,
+              proveedor_id: null,
+            })),
+          })
+          if (res.error) throw res.error
+          return res.data
+        })
+        const row = (data ?? {}) as { importados?: number; errores?: { fila?: number; motivo?: string }[] }
+        importados += Number(row.importados ?? 0)
+        for (const err of row.errores ?? []) {
+          errores.push({ fila: Number(err.fila ?? 0), motivo: String(err.motivo ?? 'Error') })
+        }
+      } catch (error) {
+        if (!esFuncionImportacionFaltante(error)) {
+          const motivo = error instanceof Error ? error.message : String(error)
+          for (const v of lote) errores.push({ fila: v.fila.filaExcel, motivo })
+        } else {
+          usarLoteRpc = false
+        }
       }
-      items.push({
-        producto_id: prod.id,
-        producto_nombre: prod.nombre,
-        cantidad: item.cantidad,
-        costo_unitario: item.costo,
+    }
+    if (!usarLoteRpc) {
+      const resultados = await ejecutarLoteConRetry(() =>
+        Promise.allSettled(
+          lote.map((v) =>
+            confirmarCompra(client, {
+              items: v.items,
+              proveedor: v.fila.proveedor,
+              fecha: v.fila.fecha,
+              notas: v.fila.notas,
+            }),
+          ),
+        ),
+      )
+      resultados.forEach((r, i) => {
+        const item = lote[i]
+        if (!item) return
+        if (r.status === 'fulfilled' && !r.value) {
+          importados += 1
+          return
+        }
+        const motivo =
+          r.status === 'fulfilled'
+            ? r.value ?? 'Error'
+            : r.reason instanceof Error
+              ? r.reason.message
+              : String(r.reason)
+        errores.push({ fila: item.fila.filaExcel, motivo })
       })
     }
-    if (falloItem) {
-      errores.push({ fila: fila.filaExcel, motivo: falloItem })
-      continue
-    }
-
-    const fallo = await confirmarCompra(client, {
-      items,
-      proveedor: fila.proveedor,
-      fecha: fila.fecha,
-      notas: fila.notas,
-    })
-    if (fallo) {
-      errores.push({ fila: fila.filaExcel, motivo: fallo })
-      continue
-    }
-    importados += 1
+    hechos += lote.length
+    onProgreso?.(hechos, total)
   }
 
   return { importados, errores }

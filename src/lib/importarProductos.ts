@@ -1,6 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Papa from 'papaparse'
 import { crearProducto, type ProductoFila } from './productos'
+import {
+  ejecutarLoteConRetry,
+  esFuncionImportacionFaltante,
+  partirEnLotes,
+  type ProgresoImportacion,
+} from './lotesImportacion'
 
 export const COLUMNAS_PLANTILLA = [
   'Nombre',
@@ -119,30 +125,89 @@ export async function importarProductos(
   client: SupabaseClient,
   filas: FilaImportacion[],
   existentes: ProductoFila[],
+  onProgreso?: ProgresoImportacion,
 ): Promise<{ importados: number; saltados: string[] }> {
   const vistos = new Set(existentes.map((p) => claveNombre(p.nombre)))
   const saltados: string[] = []
-  let importados = 0
+  const pendientes: FilaImportacion[] = []
   for (const fila of filas) {
     const clave = claveNombre(fila.nombre)
     if (vistos.has(clave)) {
       saltados.push(fila.nombre)
       continue
     }
-    const { error: fallo } = await crearProducto(client, {
-      nombre: fila.nombre,
-      categoria: fila.categoria,
-      precioVenta: fila.precioVenta,
-      costo: fila.costo,
-      stockInicial: fila.stockInicial,
-      activo: true,
-    })
-    if (fallo) {
-      saltados.push(`${fila.nombre} (${fallo})`)
-      continue
-    }
     vistos.add(clave)
-    importados += 1
+    pendientes.push(fila)
   }
+
+  const total = filas.length
+  let importados = 0
+  let hechos = saltados.length
+  onProgreso?.(hechos, total)
+  let usarLoteRpc = true
+
+  for (const lote of partirEnLotes(pendientes)) {
+    if (usarLoteRpc) {
+      try {
+        const data = await ejecutarLoteConRetry(async () => {
+          const res = await client.rpc('crear_productos_lote', {
+            p_productos: lote.map((fila) => ({
+              nombre: fila.nombre,
+              categoria: fila.categoria,
+              precio_venta: fila.precioVenta,
+              costo: fila.costo,
+              stock_inicial: fila.stockInicial,
+              activo: true,
+            })),
+          })
+          if (res.error) throw res.error
+          return res.data
+        })
+        const row = (data ?? {}) as { importados?: number; saltados?: string[] }
+        importados += Number(row.importados ?? 0)
+        saltados.push(...(row.saltados ?? []))
+      } catch (error) {
+        if (!esFuncionImportacionFaltante(error)) {
+          for (const fila of lote) saltados.push(`${fila.nombre} (${error instanceof Error ? error.message : 'Error'})`)
+        } else {
+          usarLoteRpc = false
+        }
+      }
+    }
+    if (!usarLoteRpc) {
+      const resultados = await ejecutarLoteConRetry(() =>
+        Promise.allSettled(
+          lote.map((fila) =>
+            crearProducto(client, {
+              nombre: fila.nombre,
+              categoria: fila.categoria,
+              precioVenta: fila.precioVenta,
+              costo: fila.costo,
+              stockInicial: fila.stockInicial,
+              activo: true,
+            }),
+          ),
+        ),
+      )
+      resultados.forEach((r, i) => {
+        const fila = lote[i]
+        if (!fila) return
+        if (r.status === 'fulfilled' && !r.value.error) {
+          importados += 1
+          return
+        }
+        const motivo =
+          r.status === 'fulfilled'
+            ? r.value.error ?? 'Error'
+            : r.reason instanceof Error
+              ? r.reason.message
+              : String(r.reason)
+        saltados.push(`${fila.nombre} (${motivo})`)
+      })
+    }
+    hechos += lote.length
+    onProgreso?.(hechos, total)
+  }
+
   return { importados, saltados }
 }
