@@ -9,6 +9,8 @@ import { actualizarProducto, asignarCategoriaProducto, crearProducto, guardarCod
 import { listarCategorias, type CategoriaFila } from '../lib/categorias'
 import { ProductoVariantesEditor, type ProductoVariantesHandle } from '../components/ProductoVariantesEditor'
 import { EscanerCodigoBarras, dispararPedidoCamara } from '../components/EscanerCodigoBarras'
+import { CodigoBarrasPreview } from '../components/CodigoBarrasPreview'
+import { ean13DesdeEntidad } from '../lib/codigoBarras'
 import { obtenerConfiguracion } from '../lib/configuracion'
 import { estiloTipoMovimiento } from '../lib/inventario'
 import { listarMovimientosProducto, type MovimientoFila } from '../lib/stock'
@@ -45,6 +47,7 @@ export function ProductoFormPage() {
   const [pesoGr, setPesoGr] = useState('')
   const [codigoBarra, setCodigoBarra] = useState('')
   const [escaner, setEscaner] = useState(false)
+  const uuidGenerado = useRef<string | null>(null)
   const [costoDesdeVariantes, setCostoDesdeVariantes] = useState<number | null>(null)
   const variantesRef = useRef<ProductoVariantesHandle>(null)
   const onCostoCalculado = useCallback((valor: number | null) => {
@@ -322,13 +325,26 @@ export function ProductoFormPage() {
               </label>
               <label className="mt-4 text-sm font-medium text-[#4A5568]">
                 Código de barras
-                <span className="mt-1.5 flex gap-2">
+                <span className="mt-1.5 flex flex-wrap gap-2">
                   <input
                     className="h-11 min-w-0 flex-1 rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A] outline-none focus:border-[#6366F1] focus:bg-white focus:shadow-[0_0_0_3px_rgba(99,102,241,0.18)]"
                     value={codigoBarra}
                     placeholder="Opcional"
                     onChange={(ev) => setCodigoBarra(ev.target.value)}
                   />
+                  <button
+                    className="h-11 shrink-0 rounded-md bg-[#6366F1] px-3 text-xs font-semibold text-white hover:bg-[#4F46E5]"
+                    type="button"
+                    onClick={() => {
+                      const seed =
+                        !esNuevo && id
+                          ? id
+                          : (uuidGenerado.current ??= crypto.randomUUID())
+                      setCodigoBarra(ean13DesdeEntidad(seed))
+                    }}
+                  >
+                    Generar código
+                  </button>
                   <button
                     className="btn-camara"
                     type="button"
@@ -342,6 +358,7 @@ export function ProductoFormPage() {
                   </button>
                 </span>
               </label>
+              <CodigoBarrasPreview valor={codigoBarra} />
               {categorias.length === 0 ? (
                 <p className="mt-4 text-sm text-[#4A5568]">
                   Categoría

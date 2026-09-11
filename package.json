@@ -19,6 +19,7 @@
     "@tremor/react": "^3.18.7",
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.23.0",
+    "jsbarcode": "^3.12.3",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.44.0",

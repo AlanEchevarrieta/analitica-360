@@ -52,6 +52,7 @@ import {
   stockPorVariante,
   sumaStockItems,
 } from '../lib/variantes'
+import { etiquetasDeProductos, imprimirEtiquetas } from '../lib/codigoBarras'
 import { theme } from '../theme'
 
 function margenPct(precio: number, costo: number) {
@@ -94,6 +95,8 @@ export function ProductosPage() {
   >(new Map())
   const [umbralStock, setUmbralStock] = useState(5)
   const [stockAbierto, setStockAbierto] = useState<string | null>(null)
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
+  const [imprimiendo, setImprimiendo] = useState(false)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -124,6 +127,10 @@ export function ProductosPage() {
     setTotal(n)
     setActivos(nActivos)
     setCategorias(cats)
+    setSeleccion((prev) => {
+      const ids = new Set(data.map((p) => p.id))
+      return new Set([...prev].filter((id) => ids.has(id)))
+    })
     if (perfil) {
       const { config } = await obtenerConfiguracion(requireSupabase(), perfil.empresa.id)
       const usa = Boolean(config.usaVariantes)
@@ -196,6 +203,9 @@ export function ProductosPage() {
   const puedeEditar = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'editar_productos')
   const puedeVerCostos = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'ver_costos')
   const puedeAjustar = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'ajustar_stock')
+  const idsPagina = filas.map((f) => f.id)
+  const todosSel = idsPagina.length > 0 && idsPagina.every((id) => seleccion.has(id))
+  const seleccionados = filas.filter((f) => seleccion.has(f.id))
 
   async function onDesactivar(fila: ProductoFila) {
     if (!window.confirm(`¿Desactivar “${fila.nombre}”?`)) return
@@ -213,6 +223,47 @@ export function ProductosPage() {
       return
     }
     await cargar()
+  }
+
+  async function imprimirProductos(productos: ProductoFila[]) {
+    const win = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700')
+    if (!win) {
+      setError('Permití ventanas emergentes para imprimir las etiquetas')
+      return
+    }
+    win.document.open()
+    win.document.write('<p style="font-family:Inter,sans-serif;padding:16px;color:#1A2F4A">Preparando etiquetas…</p>')
+    win.document.close()
+    setImprimiendo(true)
+    setError(null)
+    try {
+      const vars = await listarVariantesDeProductos(
+        requireSupabase(),
+        productos.map((p) => p.id),
+      )
+      if (vars.error) {
+        win.close()
+        setError(vars.error)
+        return
+      }
+      const etiquetas = etiquetasDeProductos(productos, vars.filas)
+      const fallo = await imprimirEtiquetas(etiquetas, win)
+      if (fallo) {
+        win.close()
+        setError(fallo)
+      }
+    } finally {
+      setImprimiendo(false)
+    }
+  }
+
+  function toggleSeleccion(id: string) {
+    setSeleccion((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
   return (
@@ -240,31 +291,41 @@ export function ProductosPage() {
             }}
             placeholder="Buscar producto..."
           />
-          {puedeEditar ? (
-            <div className="hidden flex-wrap gap-2 md:flex">
-              <button
-                className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
-                type="button"
-                onClick={() => {
-                  void listarProductos(requireSupabase()).then(({ filas: data, error: listError }) => {
-                    if (listError) {
-                      setError(
-                        'No se pudieron cargar los productos. Corré supabase/006_productos.sql en el SQL Editor.',
-                      )
-                      return
-                    }
-                    setExistentesImport(data)
-                    setImportar(true)
-                  })
-                }}
-              >
-                Importar Excel
-              </button>
-              <Link className={btnPrimaryDesk} to="/productos/nuevo">
-                <span aria-hidden>➕</span> Nuevo producto
-              </Link>
-            </div>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 disabled:opacity-50"
+              type="button"
+              disabled={imprimiendo || seleccionados.length === 0}
+              onClick={() => void imprimirProductos(seleccionados)}
+            >
+              Imprimir etiquetas seleccionadas
+            </button>
+            {puedeEditar ? (
+              <>
+                <button
+                  className="hidden h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 md:inline-flex"
+                  type="button"
+                  onClick={() => {
+                    void listarProductos(requireSupabase()).then(({ filas: data, error: listError }) => {
+                      if (listError) {
+                        setError(
+                          'No se pudieron cargar los productos. Corré supabase/006_productos.sql en el SQL Editor.',
+                        )
+                        return
+                      }
+                      setExistentesImport(data)
+                      setImportar(true)
+                    })
+                  }}
+                >
+                  Importar Excel
+                </button>
+                <Link className={btnPrimaryDesk} to="/productos/nuevo">
+                  <span aria-hidden>➕</span> Nuevo producto
+                </Link>
+              </>
+            ) : null}
+          </div>
         </div>
         <div className="mb-4">
           <FilterCollapse
@@ -335,6 +396,16 @@ export function ProductosPage() {
           <table className="w-full min-w-[800px] text-left">
             <thead className={theadClass} style={theadStyle}>
               <tr>
+                <Th>
+                  <input
+                    type="checkbox"
+                    aria-label="Seleccionar todos"
+                    checked={todosSel}
+                    onChange={() => {
+                      setSeleccion(todosSel ? new Set() : new Set(idsPagina))
+                    }}
+                  />
+                </Th>
                 <Th>Nombre</Th>
                 <ThFilter
                   label="Categoría"
@@ -459,7 +530,7 @@ export function ProductosPage() {
                     </button>
                   ))}
                 </ThFilter>
-                {puedeEditar ? <Th /> : null}
+                <Th />
               </tr>
             </thead>
             {!cargando && error !== MSG_ERROR_RED ? (
@@ -469,6 +540,14 @@ export function ProductosPage() {
                 const stockMostrar = itemsVar.length > 0 ? sumaStockItems(itemsVar) : fila.stock_actual
                 return (
                 <Tr key={fila.id} index={index}>
+                  <td className="px-3 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label={`Seleccionar ${fila.nombre}`}
+                      checked={seleccion.has(fila.id)}
+                      onChange={() => toggleSeleccion(fila.id)}
+                    />
+                  </td>
                   <td className="px-3 py-3 font-medium">
                     <p className="flex items-center gap-1.5">
                       {fila.nombre}
@@ -516,25 +595,35 @@ export function ProductosPage() {
                   <td className="px-3 py-3">
                     <BadgeEstado activo={fila.activo} />
                   </td>
-                  {puedeEditar ? (
-                    <td className="px-3 py-3">
-                      <div className="flex items-center gap-1">
-                        <Link
-                          className="rounded-lg p-1.5 text-[#94A3B8] hover:bg-white/10 hover:text-white"
-                          to={`/productos/${fila.id}`}
-                          title="Editar"
-                          aria-label="Editar"
+                  <td className="px-3 py-3">
+                    <div className="flex items-center gap-1">
+                      {fila.codigo_barra ? (
+                        <IconBtn
+                          label="Imprimir etiqueta"
+                          onClick={() => void imprimirProductos([fila])}
                         >
-                          ✏️
-                        </Link>
-                        {fila.activo ? (
-                          <IconBtn label="Desactivar" onClick={() => void onDesactivar(fila)}>
-                            🗑️
-                          </IconBtn>
-                        ) : null}
-                      </div>
-                    </td>
-                  ) : null}
+                          🏷️
+                        </IconBtn>
+                      ) : null}
+                      {puedeEditar ? (
+                        <>
+                          <Link
+                            className="rounded-lg p-1.5 text-[#94A3B8] hover:bg-white/10 hover:text-white"
+                            to={`/productos/${fila.id}`}
+                            title="Editar"
+                            aria-label="Editar"
+                          >
+                            ✏️
+                          </Link>
+                          {fila.activo ? (
+                            <IconBtn label="Desactivar" onClick={() => void onDesactivar(fila)}>
+                              🗑️
+                            </IconBtn>
+                          ) : null}
+                        </>
+                      ) : null}
+                    </div>
+                  </td>
                 </Tr>
               )
               })}
@@ -550,14 +639,23 @@ export function ProductosPage() {
                 return (
                 <ListCard key={fila.id}>
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold">
-                      {fila.nombre}
-                      {fila.codigo_barra ? (
-                        <span className="ml-1.5" title="Tiene código de barras" aria-label="Tiene código de barras">
-                          📷
-                        </span>
-                      ) : null}
-                    </p>
+                    <label className="flex items-start gap-2">
+                      <input
+                        className="mt-1"
+                        type="checkbox"
+                        aria-label={`Seleccionar ${fila.nombre}`}
+                        checked={seleccion.has(fila.id)}
+                        onChange={() => toggleSeleccion(fila.id)}
+                      />
+                      <p className="text-sm font-semibold">
+                        {fila.nombre}
+                        {fila.codigo_barra ? (
+                          <span className="ml-1.5" title="Tiene código de barras" aria-label="Tiene código de barras">
+                            📷
+                          </span>
+                        ) : null}
+                      </p>
+                    </label>
                     <BadgeEstado activo={fila.activo} />
                   </div>
                   {usaVariantes && (variantesActivas.get(fila.id) ?? 0) > 0 ? (
@@ -587,6 +685,16 @@ export function ProductosPage() {
                       }
                     />
                   </div>
+                  {fila.codigo_barra ? (
+                    <button
+                      className="mt-2 mr-3 inline-block text-xs font-semibold text-[#6366F1]"
+                      type="button"
+                      disabled={imprimiendo}
+                      onClick={() => void imprimirProductos([fila])}
+                    >
+                      🏷️ Imprimir etiqueta
+                    </button>
+                  ) : null}
                   {puedeEditar ? (
                     <Link className="mt-2 inline-block text-xs font-semibold text-[#6366F1]" to={`/productos/${fila.id}`}>
                       Editar
