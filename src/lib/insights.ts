@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { fechaHoyAR, sumarDiasIso } from './analytics'
-import { listarProductos, type ProductoFila } from './productos'
+import { listarProductos, listarProductosConStock, type ProductoFila } from './productos'
 import { etiquetaCombo, listarVariantesDeProductos, stockPorVariante, type VarianteFila } from './variantes'
 
 const TZ = 'America/Argentina/Buenos_Aires'
@@ -29,6 +29,8 @@ export type FilaElasticidad = {
 }
 
 export type GranularidadForecast = 'dia' | 'semana' | 'mes'
+
+export type PuntoSerieDia = { fecha: string; total: number }
 
 export type PuntoForecast = {
   label: string
@@ -119,7 +121,11 @@ function inicioMesHace(iso: string, mesesAtras: number) {
 
 function etiquetaDia(iso: string) {
   const [y, mo, d] = iso.split('-').map(Number)
-  return new Date(y, mo - 1, d).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+  return new Date(y, mo - 1, d).toLocaleDateString('es-AR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 function etiquetaMes(iso: string) {
@@ -144,6 +150,7 @@ function totalVenta(row: Record<string, unknown>) {
 
 async function paginar<T>(
   pull: (from: number, to: number) => Promise<{ data: T[] | null; error: { message: string } | null }>,
+  max = 12_000,
 ): Promise<T[]> {
   const out: T[] = []
   let from = 0
@@ -154,12 +161,34 @@ async function paginar<T>(
     out.push(...chunk)
     if (chunk.length < PAGE) break
     from += PAGE
-    if (out.length >= 12_000) break
+    if (out.length >= max) break
   }
   return out
 }
 
 type VentaMini = { id: string; fechaIso: string; clienteId: string | null; total: number }
+
+/** Totales diarios de todo el historial (columna `fecha`, no `created_at`). */
+async function cargarSerieVentasHistorial(client: SupabaseClient): Promise<PuntoSerieDia[]> {
+  const rows = await paginar<Record<string, unknown>>(async (from, to) => {
+    const res = await client
+      .from('ventas')
+      .select('fecha, total_con_interes')
+      .is('deleted_at', null)
+      .order('fecha', { ascending: true })
+      .range(from, to)
+    return { data: (res.data ?? []) as Record<string, unknown>[], error: res.error }
+  }, 50_000)
+  const map = new Map<string, number>()
+  for (const row of rows) {
+    const fecha = fechaCalendario(row.fecha)
+    if (!fecha) continue
+    map.set(fecha, (map.get(fecha) ?? 0) + num(row.total_con_interes))
+  }
+  return [...map.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([fecha, total]) => ({ fecha, total }))
+}
 
 async function cargarVentasRango(client: SupabaseClient, desde: string, hasta: string): Promise<VentaMini[]> {
   const rows = await paginar<Record<string, unknown>>(async (from, to) => {
@@ -296,8 +325,10 @@ export function calcularSalud(input: {
     else margenEje = 20
   }
 
-  const totalProd = input.productos.length
-  const stockEje = totalProd === 0 ? 50 : clamp((input.productos.filter((p) => p.stock_actual > 0).length / totalProd) * 100)
+  const activos = input.productos.filter((p) => p.activo)
+  const totalActivos = activos.length
+  const conStock = activos.filter((p) => p.stock_actual > 0).length
+  const stockEje = totalActivos === 0 ? 0 : clamp((conStock / totalActivos) * 100)
 
   const totalV = input.ventas.length
   const clientesEje = totalV === 0 ? 50 : clamp((input.ventas.filter((v) => v.clienteId).length / totalV) * 100)
@@ -390,8 +421,6 @@ export function calcularElasticidades(
   return out.sort((a, b) => a.producto.localeCompare(b.producto, 'es'))
 }
 
-export type PuntoSerieDia = { fecha: string; total: number }
-
 function serieDiariaDe(ventas: VentaMini[], desde: string, hasta: string): PuntoSerieDia[] {
   const map = new Map<string, number>()
   for (const v of ventas) {
@@ -419,43 +448,45 @@ function agregarPorClave(serie: PuntoSerieDia[], claveDe: (fecha: string) => str
 export async function armarForecast(
   serieDiaria: PuntoSerieDia[],
   granularidad: GranularidadForecast,
-  hoy: string,
+  _hoy: string,
   diasHistorial: number,
 ): Promise<InsightForecast | null> {
-  let puntosReg: { clave: string; total: number }[]
+  const serie = [...serieDiaria]
+    .filter((p) => Boolean(p.fecha))
+    .sort((a, b) => a.fecha.localeCompare(b.fecha))
+  if (serie.length === 0) return null
+
+  let agregados: { clave: string; total: number }[]
   if (granularidad === 'dia') {
-    puntosReg = serieDiaria
-      .filter((p) => p.fecha >= sumarDiasIso(hoy, -29) && p.fecha <= hoy)
-      .map((p) => ({ clave: p.fecha, total: p.total }))
+    agregados = serie.map((p) => ({ clave: p.fecha, total: p.total }))
   } else if (granularidad === 'semana') {
-    puntosReg = agregarPorClave(
-      serieDiaria.filter((p) => p.fecha >= sumarDiasIso(hoy, -89) && p.fecha <= hoy),
-      lunesDe,
-    )
+    agregados = agregarPorClave(serie, lunesDe)
   } else {
-    puntosReg = agregarPorClave(
-      serieDiaria.filter((p) => p.fecha >= inicioMesHace(hoy, 5) && p.fecha <= hoy),
-      inicioMes,
-    )
+    agregados = agregarPorClave(serie, inicioMes)
   }
 
-  puntosReg.sort((a, b) => a.clave.localeCompare(b.clave))
+  const puntos = agregados.filter(
+    (p) => p.total != null && Number.isFinite(p.total) && p.total !== 0,
+  )
+  console.log('[insights forecast] datos:', puntos.slice(0, 5))
+
+  const maxPeriodos = granularidad === 'dia' ? 30 : granularidad === 'semana' ? 13 : 6
+  const puntosReg = puntos.slice(-maxPeriodos)
   if (puntosReg.length < 2) return null
 
   const ss = await import('simple-statistics')
   const pares: [number, number][] = puntosReg.map((p, i) => [i, p.total])
   const reg = ss.linearRegression(pares)
   const linea = ss.linearRegressionLine(reg)
+  if (!Number.isFinite(reg.m) || !Number.isFinite(reg.b)) return null
 
-  const visible = puntosReg
-  const offset = 0
   const labelDe =
     granularidad === 'dia' ? etiquetaDia : granularidad === 'semana' ? etiquetaDia : etiquetaMes
 
-  const puntos: PuntoForecast[] = visible.map((p, i) => ({
+  const chart: PuntoForecast[] = puntosReg.map((p, i) => ({
     label: labelDe(p.clave),
     historico: p.total,
-    proyeccion: i === visible.length - 1 ? p.total : null,
+    proyeccion: i === puntosReg.length - 1 ? p.total : null,
   }))
 
   const pasos = granularidad === 'dia' ? 14 : granularidad === 'semana' ? 4 : 3
@@ -473,7 +504,7 @@ export async function armarForecast(
     const x = puntosReg.length - 1 + k
     const y = Math.max(0, linea(x))
     totalProyeccion += y
-    puntos.push({
+    chart.push({
       label: labelDe(stepIso(lastClave, k)),
       historico: null,
       proyeccion: y,
@@ -492,9 +523,10 @@ export async function armarForecast(
     desde: puntosReg[0]?.clave,
     hasta: lastClave,
     puntosRegresion: puntosReg.length,
-    offsetVisible: offset,
     primerTotal: puntosReg[0]?.total,
     ultimoTotal: puntosReg[puntosReg.length - 1]?.total,
+    pendiente: reg.m,
+    intercepto: reg.b,
     columna: 'fecha',
   })
 
@@ -502,7 +534,7 @@ export async function armarForecast(
   return {
     diasHistorial,
     periodosHistorial: puntosReg.length,
-    puntos,
+    puntos: chart,
     totalProyeccion,
     tendencia,
     granularidad,
@@ -674,9 +706,10 @@ export async function cargarInsights(
   let items: ItemMini[] = []
   let historial: { productoId: string; precio: number; desde: string }[] = []
   let diasHistorial = 0
+  let serieForecast: PuntoSerieDia[] = []
 
   try {
-    const [productosRes, ventasRes, historialRows, dias] = await Promise.all([
+    const [productosRes, ventasRes, historialRows, dias, packed, serieHist] = await Promise.all([
       listarProductos(client),
       cargarVentasRango(client, desdeFetch, hoy),
       paginar<Record<string, unknown>>(async (from, to) => {
@@ -688,12 +721,22 @@ export async function cargarInsights(
         return { data: (res.data ?? []) as Record<string, unknown>[], error: res.error }
       }),
       diasDesdePrimeraVenta(client, hoy),
+      listarProductosConStock(client),
+      cargarSerieVentasHistorial(client),
     ])
     if (productosRes.error) throw new Error(productosRes.error)
     productos = productosRes.filas
+    if (!packed.error && packed.filas.length > 0) {
+      const extra = new Map(packed.filas.map((p) => [p.id, p]))
+      productos = productos.map((p) => {
+        const row = extra.get(p.id)
+        return row ? { ...p, activo: row.activo, stock_actual: row.stock_actual } : p
+      })
+    }
     ventas = ventasRes.filter((v) => v.fechaIso >= desdeFetch && v.fechaIso <= hoy)
     ventas.sort((a, b) => a.fechaIso.localeCompare(b.fechaIso) || a.id.localeCompare(b.id))
     diasHistorial = dias
+    serieForecast = serieHist
     historial = historialRows.map((r) => ({
       productoId: String(r.producto_id),
       precio: num(r.precio_venta),
@@ -736,7 +779,7 @@ export async function cargarInsights(
     errores.radar = e instanceof Error ? e.message : 'No se pudo armar el radar'
   }
 
-  const serieDiaria = serieDiariaDe(ventas, desdeFetch, hoy)
+  const serieDiaria = serieForecast.length > 0 ? serieForecast : serieDiariaDe(ventas, desdeFetch, hoy)
 
   let forecast: InsightForecast | null = null
   try {
