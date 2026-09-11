@@ -226,14 +226,6 @@ export function ProductosPage() {
   }
 
   async function imprimirProductos(productos: ProductoFila[]) {
-    const win = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700')
-    if (!win) {
-      setError('Permití ventanas emergentes para imprimir las etiquetas')
-      return
-    }
-    win.document.open()
-    win.document.write('<p style="font-family:Inter,sans-serif;padding:16px;color:#1A2F4A">Preparando etiquetas…</p>')
-    win.document.close()
     setImprimiendo(true)
     setError(null)
     try {
@@ -242,16 +234,12 @@ export function ProductosPage() {
         productos.map((p) => p.id),
       )
       if (vars.error) {
-        win.close()
         setError(vars.error)
         return
       }
       const etiquetas = etiquetasDeProductos(productos, vars.filas)
-      const fallo = await imprimirEtiquetas(etiquetas, win)
-      if (fallo) {
-        win.close()
-        setError(fallo)
-      }
+      const fallo = await imprimirEtiquetas(etiquetas)
+      if (fallo) setError(fallo)
     } finally {
       setImprimiendo(false)
     }

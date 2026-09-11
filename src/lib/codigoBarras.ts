@@ -108,19 +108,10 @@ export function etiquetasDeProductos(productos: ProductoFila[], variantes: Varia
   return out
 }
 
-export async function imprimirEtiquetas(
-  etiquetas: EtiquetaImpresion[],
-  winPrevia?: Window | null,
-): Promise<string | null> {
-  if (etiquetas.length === 0) return 'No hay etiquetas para imprimir'
-  const win = winPrevia ?? window.open('', '_blank', 'noopener,noreferrer,width=900,height=700')
-  if (!win) return 'Permití ventanas emergentes para imprimir las etiquetas'
-  const svgs = await Promise.all(etiquetas.map((e) => svgCodigoBarras(e.codigo)))
+function htmlHojaEtiquetas(etiquetas: EtiquetaImpresion[], svgs: string[]) {
   const cards = etiquetas
     .map((e, i) => {
-      const varHtml = e.variante
-        ? `<p class="var">${escapeHtml(e.variante)}</p>`
-        : ''
+      const varHtml = e.variante ? `<p class="var">${escapeHtml(e.variante)}</p>` : ''
       return `<article class="etiqueta">
         <p class="nombre">${escapeHtml(e.nombre)}</p>
         ${varHtml}
@@ -130,8 +121,7 @@ export async function imprimirEtiquetas(
       </article>`
     })
     .join('')
-  win.document.open()
-  win.document.write(`<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
@@ -203,17 +193,42 @@ export async function imprimirEtiquetas(
 <body>
   <div class="hoja">${cards}</div>
 </body>
-</html>`)
-  win.document.close()
+</html>`
+}
+
+const imprimirEtiqueta = (contenidoHTML: string) => {
+  const iframe = document.createElement('iframe')
+  iframe.style.display = 'none'
+  iframe.setAttribute('aria-hidden', 'true')
+  document.body.appendChild(iframe)
+
+  const limpiar = () => {
+    if (iframe.parentNode) document.body.removeChild(iframe)
+  }
+
   let hecho = false
-  const imprimir = () => {
+  const disparar = () => {
     if (hecho) return
     hecho = true
-    win.focus()
-    win.print()
+    iframe.contentWindow?.print()
+    window.setTimeout(limpiar, 800)
   }
-  if (win.document.readyState === 'complete') imprimir()
-  else win.addEventListener('load', imprimir, { once: true })
-  window.setTimeout(imprimir, 400)
+
+  iframe.onload = () => {
+    disparar()
+  }
+
+  iframe.contentDocument?.write(contenidoHTML)
+  iframe.contentDocument?.close()
+
+  window.setTimeout(() => {
+    if (iframe.contentDocument?.readyState === 'complete') disparar()
+  }, 400)
+}
+
+export async function imprimirEtiquetas(etiquetas: EtiquetaImpresion[]): Promise<string | null> {
+  if (etiquetas.length === 0) return 'No hay etiquetas para imprimir'
+  const svgs = await Promise.all(etiquetas.map((e) => svgCodigoBarras(e.codigo)))
+  imprimirEtiqueta(htmlHojaEtiquetas(etiquetas, svgs))
   return null
 }
