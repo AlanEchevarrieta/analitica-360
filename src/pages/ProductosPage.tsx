@@ -35,6 +35,7 @@ import { MSG_ERROR_RED, mensajeCargaTabla } from '../lib/consulta'
 import {
   actualizarProducto,
   formatoARS,
+  guardarCodigoBarra,
   listarProductos,
   listarProductosConStock,
   listarProductosPaginado,
@@ -52,7 +53,8 @@ import {
   stockPorVariante,
   sumaStockItems,
 } from '../lib/variantes'
-import { etiquetasDeProductos, imprimirEtiquetas } from '../lib/codigoBarras'
+import { ean13DesdeEntidad, etiquetasDeProductos, imprimirEtiquetas, type OpcionesEtiqueta } from '../lib/codigoBarras'
+import { EtiquetaOpcionesModal } from '../components/EtiquetaOpcionesModal'
 import { theme } from '../theme'
 
 function margenPct(precio: number, costo: number) {
@@ -97,6 +99,9 @@ export function ProductosPage() {
   const [stockAbierto, setStockAbierto] = useState<string | null>(null)
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
   const [imprimiendo, setImprimiendo] = useState(false)
+  const [pendientePrint, setPendientePrint] = useState<ProductoFila[] | null>(null)
+  const [progresoCodigos, setProgresoCodigos] = useState<string | null>(null)
+  const [generandoCodigos, setGenerandoCodigos] = useState(false)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -225,23 +230,70 @@ export function ProductosPage() {
     await cargar()
   }
 
-  async function imprimirProductos(productos: ProductoFila[]) {
+  async function abrirImpresion(productos: ProductoFila[]) {
+    if (productos.length === 0) return
+    setError(null)
+    setPendientePrint(productos)
+  }
+
+  async function confirmarImpresion(op: OpcionesEtiqueta) {
+    if (!pendientePrint || pendientePrint.length === 0) return
     setImprimiendo(true)
     setError(null)
     try {
       const vars = await listarVariantesDeProductos(
         requireSupabase(),
-        productos.map((p) => p.id),
+        pendientePrint.map((p) => p.id),
       )
       if (vars.error) {
         setError(vars.error)
         return
       }
-      const etiquetas = etiquetasDeProductos(productos, vars.filas)
-      const fallo = await imprimirEtiquetas(etiquetas)
+      const etiquetas = etiquetasDeProductos(pendientePrint, vars.filas)
+      const fallo = await imprimirEtiquetas(etiquetas, op)
       if (fallo) setError(fallo)
+      else setPendientePrint(null)
     } finally {
       setImprimiendo(false)
+    }
+  }
+
+  async function generarCodigosFaltantes() {
+    setError(null)
+    setProgresoCodigos(null)
+    const { filas: todos, error: listError } = await listarProductos(requireSupabase())
+    if (listError) {
+      setError(listError)
+      return
+    }
+    const faltan = todos.filter((p) => !p.codigo_barra?.trim())
+    if (faltan.length === 0) {
+      setProgresoCodigos('Todos los productos ya tienen código')
+      return
+    }
+    const ok = window.confirm(
+      `¿Generar código de barras EAN-13 para todos los productos que no tienen código?\n(${faltan.length} productos sin código)`,
+    )
+    if (!ok) return
+    setGenerandoCodigos(true)
+    const client = requireSupabase()
+    let hechos = 0
+    try {
+      for (let i = 0; i < faltan.length; i++) {
+        setProgresoCodigos(`Generando... ${i + 1}/${faltan.length}`)
+        const fallo = await guardarCodigoBarra(client, faltan[i].id, ean13DesdeEntidad(faltan[i].id))
+        if (fallo) {
+          setError(fallo)
+          break
+        }
+        hechos += 1
+      }
+      if (hechos > 0) {
+        setProgresoCodigos(`✅ Códigos generados para ${hechos} productos`)
+        await cargar()
+      }
+    } finally {
+      setGenerandoCodigos(false)
     }
   }
 
@@ -284,12 +336,20 @@ export function ProductosPage() {
               className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 disabled:opacity-50"
               type="button"
               disabled={imprimiendo || seleccionados.length === 0}
-              onClick={() => void imprimirProductos(seleccionados)}
+              onClick={() => void abrirImpresion(seleccionados)}
             >
               Imprimir etiquetas seleccionadas
             </button>
             {puedeEditar ? (
               <>
+                <button
+                  className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 disabled:opacity-50"
+                  type="button"
+                  disabled={generandoCodigos}
+                  onClick={() => void generarCodigosFaltantes()}
+                >
+                  Generar códigos a todos
+                </button>
                 <button
                   className="hidden h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 md:inline-flex"
                   type="button"
@@ -377,6 +437,11 @@ export function ProductosPage() {
 
         {error && error !== MSG_ERROR_RED ? (
           <p className="mb-6 rounded-xl bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p>
+        ) : null}
+        {progresoCodigos ? (
+          <p className="mb-6 rounded-xl bg-[rgba(74,222,128,0.12)] px-3 py-2 text-sm text-[#4ADE80]">
+            {progresoCodigos}
+          </p>
         ) : null}
 
         <TableCard>
@@ -588,7 +653,7 @@ export function ProductosPage() {
                       {fila.codigo_barra ? (
                         <IconBtn
                           label="Imprimir etiqueta"
-                          onClick={() => void imprimirProductos([fila])}
+                          onClick={() => void abrirImpresion([fila])}
                         >
                           🏷️
                         </IconBtn>
@@ -678,7 +743,7 @@ export function ProductosPage() {
                       className="mt-2 mr-3 inline-block text-xs font-semibold text-[#6366F1]"
                       type="button"
                       disabled={imprimiendo}
-                      onClick={() => void imprimirProductos([fila])}
+                      onClick={() => void abrirImpresion([fila])}
                     >
                       🏷️ Imprimir etiqueta
                     </button>
@@ -757,6 +822,15 @@ export function ProductosPage() {
             }}
           />
         ) : null}
+        <EtiquetaOpcionesModal
+          abierto={pendientePrint != null && pendientePrint.length > 0}
+          cantidad={pendientePrint?.length ?? 0}
+          imprimiendo={imprimiendo}
+          onCerrar={() => {
+            if (!imprimiendo) setPendientePrint(null)
+          }}
+          onImprimir={(op) => void confirmarImpresion(op)}
+        />
         {puedeEditar ? <FabLink to="/productos/nuevo" label="Nuevo producto" /> : null}
       </div>
     </div>

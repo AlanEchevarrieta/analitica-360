@@ -1,11 +1,45 @@
 import { formatoARS, type ProductoFila } from './productos'
 import { precioVarianteOBase, type VarianteFila } from './variantes'
 
+export type TamanoEtiqueta = 'pequena' | 'mediana' | 'grande'
+
+export type OpcionesEtiqueta = {
+  mostrarPrecio: boolean
+  mostrarNombre: boolean
+  mostrarVariante: boolean
+  mostrarBarras: boolean
+  mostrarQr: boolean
+  mostrarUrl: boolean
+  tamano: TamanoEtiqueta
+}
+
 export type EtiquetaImpresion = {
   nombre: string
   variante: string | null
   precio: string
+  precioNumero: number
   codigo: string
+}
+
+export const OPCIONES_ETIQUETA_DEFAULT: OpcionesEtiqueta = {
+  mostrarPrecio: true,
+  mostrarNombre: true,
+  mostrarVariante: true,
+  mostrarBarras: true,
+  mostrarQr: true,
+  mostrarUrl: false,
+  tamano: 'mediana',
+}
+
+const STORAGE_OPCIONES = 'analitica.etiqueta.opciones'
+
+const TAMANO_CSS: Record<
+  TamanoEtiqueta,
+  { w: string; h: string; cols: number; qr: string; barraH: string; qrPx: number }
+> = {
+  pequena: { w: '4cm', h: '2.5cm', cols: 4, qr: '1.4cm', barraH: '8mm', qrPx: 56 },
+  mediana: { w: '6cm', h: '4cm', cols: 3, qr: '2.2cm', barraH: '10mm', qrPx: 80 },
+  grande: { w: '9cm', h: '6cm', cols: 2, qr: '3cm', barraH: '14mm', qrPx: 114 },
 }
 
 export const calcularEAN13 = (codigo12: string): string => {
@@ -44,6 +78,31 @@ export function etiquetaAtributosLarga(atributos: Record<string, string>) {
     .join(' | ')
 }
 
+export function leerOpcionesEtiqueta(): OpcionesEtiqueta {
+  try {
+    const raw = localStorage.getItem(STORAGE_OPCIONES)
+    if (!raw) return { ...OPCIONES_ETIQUETA_DEFAULT }
+    const parsed = JSON.parse(raw) as Partial<OpcionesEtiqueta>
+    const tamano: TamanoEtiqueta =
+      parsed.tamano === 'pequena' || parsed.tamano === 'grande' ? parsed.tamano : 'mediana'
+    return {
+      mostrarPrecio: parsed.mostrarPrecio !== false,
+      mostrarNombre: parsed.mostrarNombre !== false,
+      mostrarVariante: parsed.mostrarVariante !== false,
+      mostrarBarras: parsed.mostrarBarras !== false,
+      mostrarQr: parsed.mostrarQr !== false,
+      mostrarUrl: parsed.mostrarUrl === true,
+      tamano,
+    }
+  } catch {
+    return { ...OPCIONES_ETIQUETA_DEFAULT }
+  }
+}
+
+export function guardarOpcionesEtiqueta(op: OpcionesEtiqueta) {
+  localStorage.setItem(STORAGE_OPCIONES, JSON.stringify(op))
+}
+
 async function jsBarcodeFn() {
   const mod = await import('jsbarcode')
   return mod.default
@@ -64,6 +123,26 @@ export async function svgCodigoBarras(valor: string, opts?: { mostrarNumero?: bo
     font: 'Inter, system-ui, sans-serif',
   })
   return svg.outerHTML
+}
+
+async function qrDataUrl(texto: string, width: number) {
+  const QRCode = await import('qrcode')
+  return QRCode.toDataURL(texto, {
+    width,
+    margin: 1,
+    color: { dark: '#000000', light: '#ffffff' },
+  })
+}
+
+function textoQr(e: EtiquetaImpresion, op: OpcionesEtiqueta) {
+  const nombre =
+    e.variante && op.mostrarVariante ? `${e.nombre} ${e.variante}` : e.nombre
+  const precio = Number.isInteger(e.precioNumero)
+    ? String(e.precioNumero)
+    : String(Math.round(e.precioNumero * 100) / 100)
+  let t = `PROD:${nombre}|PRECIO:${precio}`
+  if (op.mostrarUrl) t += '|URL:https://analitica360.app'
+  return t
 }
 
 function escapeHtml(s: string) {
@@ -87,10 +166,12 @@ export function etiquetasDeProductos(productos: ProductoFila[], variantes: Varia
     const vars = porProd.get(p.id) ?? []
     if (vars.length > 0) {
       for (const v of vars) {
+        const monto = precioVarianteOBase(v.precioVenta, p.precio_venta)
         out.push({
           nombre: p.nombre,
           variante: etiquetaAtributosLarga(v.atributos) || null,
-          precio: formatoARS(precioVarianteOBase(v.precioVenta, p.precio_venta)),
+          precio: formatoARS(monto),
+          precioNumero: monto,
           codigo: ean13DesdeEntidad(v.id),
         })
       }
@@ -102,23 +183,45 @@ export function etiquetasDeProductos(productos: ProductoFila[], variantes: Varia
       nombre: p.nombre,
       variante: null,
       precio: formatoARS(p.precio_venta),
+      precioNumero: p.precio_venta,
       codigo,
     })
   }
   return out
 }
 
-function htmlHojaEtiquetas(etiquetas: EtiquetaImpresion[], svgs: string[]) {
+function htmlHojaEtiquetas(
+  etiquetas: EtiquetaImpresion[],
+  extras: { svg: string | null; qr: string | null }[],
+  op: OpcionesEtiqueta,
+) {
+  const t = TAMANO_CSS[op.tamano]
   const cards = etiquetas
     .map((e, i) => {
-      const varHtml = e.variante ? `<p class="var">${escapeHtml(e.variante)}</p>` : ''
-      return `<article class="etiqueta">
-        <p class="nombre">${escapeHtml(e.nombre)}</p>
-        ${varHtml}
-        <p class="precio">${escapeHtml(e.precio)}</p>
-        <div class="barra">${svgs[i]}</div>
-        <p class="codigo">${escapeHtml(e.codigo)}</p>
-      </article>`
+      const extra = extras[i]
+      const partes: string[] = []
+      if (op.mostrarNombre) {
+        partes.push(`<p class="nombre">${escapeHtml(e.nombre)}</p>`)
+      }
+      if (op.mostrarVariante && e.variante) {
+        partes.push(`<p class="var">${escapeHtml(e.variante)}</p>`)
+      }
+      if (op.mostrarPrecio) {
+        partes.push(`<p class="precio">${escapeHtml(e.precio)}</p>`)
+      }
+      if (op.mostrarBarras && extra.svg) {
+        partes.push(`<div class="barra">${extra.svg}</div><p class="codigo">${escapeHtml(e.codigo)}</p>`)
+      }
+      if (op.mostrarQr && extra.qr) {
+        partes.push(`<div class="pie">
+          <img class="qr" src="${extra.qr}" alt="" width="80" height="80" />
+          <p class="hint">Escaneá con celular</p>
+        </div>`)
+      }
+      if (op.mostrarUrl) {
+        partes.push('<p class="url">analitica360.app</p>')
+      }
+      return `<article class="etiqueta">${partes.join('')}</article>`
     })
     .join('')
   return `<!DOCTYPE html>
@@ -127,7 +230,7 @@ function htmlHojaEtiquetas(etiquetas: EtiquetaImpresion[], svgs: string[]) {
   <meta charset="utf-8" />
   <title>Etiquetas</title>
   <style>
-    @page { margin: 8mm; }
+    @page { size: A4; margin: 8mm; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -137,17 +240,17 @@ function htmlHojaEtiquetas(etiquetas: EtiquetaImpresion[], svgs: string[]) {
     }
     .hoja {
       display: grid;
-      grid-template-columns: repeat(3, 6cm);
-      gap: 4mm;
+      grid-template-columns: repeat(${t.cols}, ${t.w});
+      gap: 2mm;
       justify-content: start;
-      padding: 4mm;
+      align-content: start;
     }
     .etiqueta {
-      width: 6cm;
-      height: 4cm;
+      width: ${t.w};
+      height: ${t.h};
       border: 1px solid #E2E8F0;
       border-radius: 4px;
-      padding: 3mm;
+      padding: 2mm;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -155,38 +258,64 @@ function htmlHojaEtiquetas(etiquetas: EtiquetaImpresion[], svgs: string[]) {
       text-align: center;
       overflow: hidden;
       page-break-inside: avoid;
+      break-inside: avoid;
     }
     .nombre {
       margin: 0;
-      font-size: 11px;
+      font-size: ${op.tamano === 'grande' ? '13px' : op.tamano === 'pequena' ? '8px' : '11px'};
       font-weight: 700;
       line-height: 1.2;
       max-height: 2.4em;
       overflow: hidden;
     }
     .var {
-      margin: 1mm 0 0;
-      font-size: 9px;
+      margin: 0.5mm 0 0;
+      font-size: 8px;
       color: #4A5568;
       line-height: 1.2;
       max-height: 2.4em;
       overflow: hidden;
     }
     .precio {
-      margin: 1.5mm 0;
-      font-size: 12px;
+      margin: 1mm 0;
+      font-size: ${op.tamano === 'pequena' ? '9px' : '12px'};
       font-weight: 700;
     }
     .barra { width: 100%; }
-    .barra svg { width: 100%; height: 12mm; display: block; }
+    .barra svg { width: 100%; height: ${t.barraH}; display: block; }
     .codigo {
-      margin: 1mm 0 0;
-      font-size: 9px;
+      margin: 0.5mm 0 0;
+      font-size: 8px;
       letter-spacing: 0.04em;
+    }
+    .pie {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2mm;
+      width: 100%;
+      margin-top: 1mm;
+    }
+    .qr {
+      width: ${t.qr};
+      height: ${t.qr};
+      object-fit: contain;
+    }
+    .hint {
+      margin: 0;
+      font-size: 7px;
+      color: #4A5568;
+      text-align: left;
+      line-height: 1.2;
+    }
+    .url {
+      margin: 0.5mm 0 0;
+      font-size: 7px;
+      color: #4A5568;
     }
     @media print {
       body { background: #fff; }
-      .hoja { padding: 0; gap: 3mm; }
+      .hoja { gap: 2mm; }
     }
   </style>
 </head>
@@ -226,9 +355,23 @@ const imprimirEtiqueta = (contenidoHTML: string) => {
   }, 400)
 }
 
-export async function imprimirEtiquetas(etiquetas: EtiquetaImpresion[]): Promise<string | null> {
+export async function imprimirEtiquetas(
+  etiquetas: EtiquetaImpresion[],
+  opciones?: OpcionesEtiqueta,
+): Promise<string | null> {
   if (etiquetas.length === 0) return 'No hay etiquetas para imprimir'
-  const svgs = await Promise.all(etiquetas.map((e) => svgCodigoBarras(e.codigo)))
-  imprimirEtiqueta(htmlHojaEtiquetas(etiquetas, svgs))
+  const op = opciones ?? leerOpcionesEtiqueta()
+  const t = TAMANO_CSS[op.tamano]
+  const extras = await Promise.all(
+    etiquetas.map(async (e) => {
+      const svg = op.mostrarBarras ? await svgCodigoBarras(e.codigo) : null
+      const qr =
+        op.mostrarQr
+          ? await qrDataUrl(textoQr(e, op), op.tamano === 'mediana' ? 80 : t.qrPx)
+          : null
+      return { svg, qr }
+    }),
+  )
+  imprimirEtiqueta(htmlHojaEtiquetas(etiquetas, extras, op))
   return null
 }
