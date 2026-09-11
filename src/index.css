@@ -812,6 +812,12 @@ select option:checked:hover {
   border-color: rgba(99, 102, 241, 0.4);
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes pulse-dot {
   0%,
   100% {
@@ -1508,22 +1514,34 @@ select option:checked:hover {
 
 .escaner-linea {
   position: absolute;
+  inset: 8%;
+  height: auto;
+  background: none;
+  box-shadow: none;
+  pointer-events: none;
+  container-type: size;
+}
+
+.escaner-linea::after {
+  content: '';
+  position: absolute;
   top: 0;
-  right: 8%;
-  left: 8%;
+  right: 0;
+  left: 0;
   height: 2px;
   background: #6366f1;
   box-shadow: 0 0 12px #6366f1;
   animation: escaner-scan 2s ease-in-out infinite;
+  will-change: transform;
 }
 
 @keyframes escaner-scan {
   0%,
   100% {
-    top: 8%;
+    transform: translate3d(0, 0, 0);
   }
   50% {
-    top: 88%;
+    transform: translate3d(0, 100cqh, 0);
   }
 }
 
@@ -1629,7 +1647,8 @@ select option:checked:hover {
     transform: none;
   }
 
-  .escaner-linea {
+  .escaner-linea,
+  .escaner-linea::after {
     animation: none;
   }
 }

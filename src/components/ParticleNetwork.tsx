@@ -9,8 +9,8 @@ type Particle = {
 }
 
 const MIN_WIDTH = 768
-const COUNT = 120
-const LINK_DIST = 130
+const COUNT = 70
+const LINK_DIST = 110
 const MOUSE_RADIUS = 150
 
 function speed() {
@@ -56,8 +56,8 @@ export function ParticleNetwork({
   enableMobile = false,
   mobileCount = 80,
   desktopCount = COUNT,
-  startWhenIdle = false,
-  pauseOffscreen = false,
+  startWhenIdle = true,
+  pauseOffscreen = true,
 }: {
   contained?: boolean
   enableMobile?: boolean
@@ -68,6 +68,7 @@ export function ParticleNetwork({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationRef = useRef(true)
+  const animFrameRef = useRef(0)
 
   useEffect(() => {
     const surface = canvasRef.current
@@ -79,7 +80,6 @@ export function ParticleNetwork({
     const brush: CanvasRenderingContext2D = gfx
 
     let particles: Particle[] = []
-    let raf = 0
     let running = false
     let colors = leerColores()
     const mouse = { x: 0, y: 0, active: false }
@@ -105,7 +105,6 @@ export function ParticleNetwork({
     }
 
     function draw() {
-      colors = leerColores()
       const { width, height } = medidas()
       if (colors.fill) {
         const g = brush.createLinearGradient(0, 0, 0, height)
@@ -171,20 +170,22 @@ export function ParticleNetwork({
         brush.fill()
       }
 
-      raf = requestAnimationFrame(draw)
+      animFrameRef.current = requestAnimationFrame(draw)
     }
 
-    function start() {
+    function startAnimation() {
       if (!animationRef.current) return
       if (running || !shouldAnimate(enableMobile)) return
+      if (document.hidden) return
       running = true
+      colors = leerColores()
       resize()
-      raf = requestAnimationFrame(draw)
+      animFrameRef.current = requestAnimationFrame(draw)
     }
 
     function stop() {
       running = false
-      cancelAnimationFrame(raf)
+      cancelAnimationFrame(animFrameRef.current)
     }
 
     function onMove(e: MouseEvent) {
@@ -205,12 +206,16 @@ export function ParticleNetwork({
 
     function onResize() {
       stop()
-      if (shouldAnimate(enableMobile)) start()
+      if (shouldAnimate(enableMobile)) startAnimation()
     }
 
     function onVisibility() {
-      if (document.hidden) stop()
-      else if (shouldAnimate(enableMobile)) start()
+      if (document.hidden) {
+        cancelAnimationFrame(animFrameRef.current)
+        running = false
+      } else {
+        startAnimation()
+      }
     }
 
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -223,14 +228,14 @@ export function ParticleNetwork({
     let observer: IntersectionObserver | null = null
     function bindObserver() {
       if (!pauseOffscreen || typeof IntersectionObserver === 'undefined') {
-        if (shouldAnimate(enableMobile)) start()
+        if (shouldAnimate(enableMobile)) startAnimation()
         return
       }
       observer = new IntersectionObserver(
         ([entry]) => {
           if (entry.isIntersecting) {
             animationRef.current = true
-            start()
+            startAnimation()
           } else {
             animationRef.current = false
             stop()

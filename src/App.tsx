@@ -5,7 +5,10 @@ import { AuthProvider, useAuth } from './auth'
 import { ThemeProvider } from './lib/tema'
 import { supabase } from './lib/supabase'
 import { RequireAuth, RequireCompletarAlta, RequireDueno, RequireGuest } from './routes'
-import { LandingPage } from './pages/LandingPage'
+
+const LandingPage = lazy(() =>
+  import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })),
+)
 
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
 const CompletarAltaPage = lazy(() =>

@@ -439,6 +439,18 @@ export function HomePage() {
     [serieHome, rangoHome],
   )
   const datosTopProductos = useMemo(() => procesarTopProductos(dash.top5), [dash.top5])
+  const alertasStock = useMemo(() => {
+    const sin = dash.alertasStock.filter((p) => p.stock <= 0)
+    const bajo = dash.alertasStock.filter((p) => p.stock > 0)
+    return { sin, bajo }
+  }, [dash.alertasStock])
+  const stockHome = useMemo(() => {
+    const gestiona = dash.stock.some((p) => p.stock !== 0)
+    return {
+      gestionaStock: gestiona,
+      alturaStock: Math.min(560, Math.max(220, dash.stock.length * 36)),
+    }
+  }, [dash.stock])
 
   if (!perfil) return null
 
@@ -452,8 +464,6 @@ export function HomePage() {
   const dias = diasRestantes(suscripcion?.fecha_vencimiento ?? null)
   const mostrarAdmin = esAdminEmail(session?.user.email ?? perfil.usuario.email)
   const verReportes = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'ver_reportes')
-  const gestionaStock = dash.stock.some((p) => p.stock !== 0)
-  const alturaStock = Math.min(560, Math.max(220, dash.stock.length * 36))
 
   return (
     <div
@@ -463,7 +473,7 @@ export function HomePage() {
         background: `linear-gradient(180deg, ${theme.canvasFrom}, ${theme.canvasTo})`,
       }}
     >
-      <ParticleNetwork />
+      <ParticleNetwork startWhenIdle pauseOffscreen />
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-8">
         <AppNav />
         <header className="mb-6">
@@ -566,8 +576,7 @@ export function HomePage() {
             </div>
 
             {(() => {
-              const sin = dash.alertasStock.filter((p) => p.stock <= 0)
-              const bajo = dash.alertasStock.filter((p) => p.stock > 0)
+              const { sin, bajo } = alertasStock
               if (sin.length === 0 && bajo.length === 0) return null
               const claro = tema === 'light'
               return (
@@ -668,9 +677,9 @@ export function HomePage() {
             >
               <GraficoExpandible
                 titulo="Estado de stock — productos activos"
-                compactoStyle={{ height: gestionaStock ? alturaStock : 160 }}
+                compactoStyle={{ height: stockHome.gestionaStock ? stockHome.alturaStock : 160 }}
               >
-                <GraficoStock data={dash.stock} gestionaStock={gestionaStock} />
+                <GraficoStock data={dash.stock} gestionaStock={stockHome.gestionaStock} />
               </GraficoExpandible>
             </div>
           </section>
