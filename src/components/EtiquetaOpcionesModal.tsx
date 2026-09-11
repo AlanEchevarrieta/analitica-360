@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react'
 import {
+  aplicarCamposPorTamano,
+  campoDisponibleEnTamano,
+  campoFijoEnTamano,
   guardarOpcionesEtiqueta,
   leerOpcionesEtiqueta,
+  tooltipCampoEtiqueta,
+  type CampoEtiqueta,
   type OpcionesEtiqueta,
   type TamanoEtiqueta,
 } from '../lib/codigoBarras'
 import { theme } from '../theme'
 
-const CHECKS: { key: keyof Omit<OpcionesEtiqueta, 'tamano'>; label: string }[] = [
+const CHECKS: { key: CampoEtiqueta; label: string }[] = [
   { key: 'mostrarPrecio', label: 'Mostrar precio' },
   { key: 'mostrarNombre', label: 'Mostrar nombre del producto' },
   { key: 'mostrarVariante', label: 'Mostrar variante (si tiene)' },
@@ -35,17 +40,22 @@ export function EtiquetaOpcionesModal({
   onCerrar: () => void
   onImprimir: (op: OpcionesEtiqueta) => void
 }) {
-  const [op, setOp] = useState<OpcionesEtiqueta>(() => leerOpcionesEtiqueta())
+  const [op, setOp] = useState<OpcionesEtiqueta>(() => aplicarCamposPorTamano(leerOpcionesEtiqueta()))
 
   useEffect(() => {
     if (!abierto) return
-    setOp(leerOpcionesEtiqueta())
+    setOp(aplicarCamposPorTamano(leerOpcionesEtiqueta()))
   }, [abierto])
 
   if (!abierto) return null
 
-  function toggle(key: keyof Omit<OpcionesEtiqueta, 'tamano'>) {
-    setOp((prev) => ({ ...prev, [key]: !prev[key] }))
+  function toggle(key: CampoEtiqueta) {
+    if (!campoDisponibleEnTamano(op.tamano, key) || campoFijoEnTamano(op.tamano, key)) return
+    setOp((prev) => aplicarCamposPorTamano({ ...prev, [key]: !prev[key] }))
+  }
+
+  function cambiarTamano(tamano: TamanoEtiqueta) {
+    setOp((prev) => aplicarCamposPorTamano({ ...prev, tamano }))
   }
 
   return (
@@ -80,7 +90,7 @@ export function EtiquetaOpcionesModal({
                 type="radio"
                 name="tamano-etiqueta"
                 checked={op.tamano === t.id}
-                onChange={() => setOp((prev) => ({ ...prev, tamano: t.id }))}
+                onChange={() => cambiarTamano(t.id)}
               />
               {t.label}
             </label>
@@ -89,12 +99,26 @@ export function EtiquetaOpcionesModal({
 
         <p className="mb-2 text-sm font-medium text-[#4A5568]">Campos</p>
         <div className="flex flex-col gap-2">
-          {CHECKS.map((c) => (
-            <label key={c.key} className="flex cursor-pointer items-center gap-2 text-sm text-[#1A2F4A]">
-              <input type="checkbox" checked={op[c.key]} onChange={() => toggle(c.key)} />
-              {c.label}
-            </label>
-          ))}
+          {CHECKS.map((c) => {
+            const disponible = campoDisponibleEnTamano(op.tamano, c.key)
+            const fijo = campoFijoEnTamano(op.tamano, c.key)
+            const tip = tooltipCampoEtiqueta(op.tamano, c.key)
+            return (
+              <label
+                key={c.key}
+                className={`flex items-center gap-2 text-sm ${disponible ? 'cursor-pointer text-[#1A2F4A]' : 'cursor-not-allowed text-[#94A3B8]'}`}
+                title={tip}
+              >
+                <input
+                  type="checkbox"
+                  checked={op[c.key]}
+                  disabled={!disponible || fijo}
+                  onChange={() => toggle(c.key)}
+                />
+                {c.label}
+              </label>
+            )
+          })}
         </div>
 
         <button
@@ -102,8 +126,9 @@ export function EtiquetaOpcionesModal({
           type="button"
           disabled={imprimiendo}
           onClick={() => {
-            guardarOpcionesEtiqueta(op)
-            onImprimir(op)
+            const listo = aplicarCamposPorTamano(op)
+            guardarOpcionesEtiqueta(listo)
+            onImprimir(listo)
           }}
         >
           {imprimiendo ? 'Generando…' : 'Imprimir'}

@@ -3,13 +3,15 @@ import { precioVarianteOBase, type VarianteFila } from './variantes'
 
 export type TamanoEtiqueta = 'pequena' | 'mediana' | 'grande'
 
-export type OpcionesEtiqueta = {
-  mostrarPrecio: boolean
-  mostrarNombre: boolean
-  mostrarVariante: boolean
-  mostrarBarras: boolean
-  mostrarQr: boolean
-  mostrarUrl: boolean
+export type CampoEtiqueta =
+  | 'mostrarPrecio'
+  | 'mostrarNombre'
+  | 'mostrarVariante'
+  | 'mostrarBarras'
+  | 'mostrarQr'
+  | 'mostrarUrl'
+
+export type OpcionesEtiqueta = Record<CampoEtiqueta, boolean> & {
   tamano: TamanoEtiqueta
 }
 
@@ -32,6 +34,77 @@ export const OPCIONES_ETIQUETA_DEFAULT: OpcionesEtiqueta = {
 }
 
 const STORAGE_OPCIONES = 'analitica.etiqueta.opciones'
+
+const CAMPOS: CampoEtiqueta[] = [
+  'mostrarPrecio',
+  'mostrarNombre',
+  'mostrarVariante',
+  'mostrarBarras',
+  'mostrarQr',
+  'mostrarUrl',
+]
+
+const DISPONIBLES: Record<TamanoEtiqueta, ReadonlySet<CampoEtiqueta>> = {
+  pequena: new Set(['mostrarNombre', 'mostrarBarras']),
+  mediana: new Set(['mostrarNombre', 'mostrarVariante', 'mostrarPrecio', 'mostrarBarras', 'mostrarQr']),
+  grande: new Set(['mostrarNombre', 'mostrarVariante', 'mostrarPrecio', 'mostrarBarras', 'mostrarQr', 'mostrarUrl']),
+}
+
+const FIJOS: Record<TamanoEtiqueta, ReadonlySet<CampoEtiqueta>> = {
+  pequena: new Set(['mostrarNombre', 'mostrarBarras']),
+  mediana: new Set(['mostrarNombre', 'mostrarVariante', 'mostrarBarras']),
+  grande: new Set([
+    'mostrarNombre',
+    'mostrarVariante',
+    'mostrarPrecio',
+    'mostrarBarras',
+    'mostrarQr',
+    'mostrarUrl',
+  ]),
+}
+
+export function campoDisponibleEnTamano(tamano: TamanoEtiqueta, campo: CampoEtiqueta) {
+  return DISPONIBLES[tamano].has(campo)
+}
+
+export function campoFijoEnTamano(tamano: TamanoEtiqueta, campo: CampoEtiqueta) {
+  return FIJOS[tamano].has(campo)
+}
+
+export function tooltipCampoEtiqueta(tamano: TamanoEtiqueta, campo: CampoEtiqueta) {
+  if (campoDisponibleEnTamano(tamano, campo)) return undefined
+  if (tamano === 'pequena') return 'No disponible en tamaño pequeño'
+  if (tamano === 'mediana') return 'No disponible en tamaño mediano'
+  return 'No disponible en este tamaño'
+}
+
+export function aplicarCamposPorTamano(op: OpcionesEtiqueta): OpcionesEtiqueta {
+  const next = { ...op }
+  for (const campo of CAMPOS) {
+    if (campoFijoEnTamano(op.tamano, campo)) next[campo] = true
+    else if (!campoDisponibleEnTamano(op.tamano, campo)) next[campo] = false
+  }
+  return next
+}
+
+function truncarTexto(texto: string, max: number) {
+  const t = texto.trim()
+  if (t.length <= max) return t
+  return `${t.slice(0, Math.max(1, max - 1))}…`
+}
+
+function textoVisible(e: EtiquetaImpresion, op: OpcionesEtiqueta) {
+  if (op.tamano === 'pequena') {
+    return { nombre: truncarTexto(e.nombre, 20), variante: null as string | null }
+  }
+  if (op.tamano === 'mediana') {
+    return {
+      nombre: truncarTexto(e.nombre, 25),
+      variante: e.variante ? truncarTexto(e.variante, 20) : null,
+    }
+  }
+  return { nombre: e.nombre, variante: e.variante }
+}
 
 const TAMANO_CSS: Record<
   TamanoEtiqueta,
@@ -85,7 +158,7 @@ export function leerOpcionesEtiqueta(): OpcionesEtiqueta {
     const parsed = JSON.parse(raw) as Partial<OpcionesEtiqueta>
     const tamano: TamanoEtiqueta =
       parsed.tamano === 'pequena' || parsed.tamano === 'grande' ? parsed.tamano : 'mediana'
-    return {
+    return aplicarCamposPorTamano({
       mostrarPrecio: parsed.mostrarPrecio !== false,
       mostrarNombre: parsed.mostrarNombre !== false,
       mostrarVariante: parsed.mostrarVariante !== false,
@@ -93,7 +166,7 @@ export function leerOpcionesEtiqueta(): OpcionesEtiqueta {
       mostrarQr: parsed.mostrarQr !== false,
       mostrarUrl: parsed.mostrarUrl === true,
       tamano,
-    }
+    })
   } catch {
     return { ...OPCIONES_ETIQUETA_DEFAULT }
   }
@@ -199,12 +272,13 @@ function htmlHojaEtiquetas(
   const cards = etiquetas
     .map((e, i) => {
       const extra = extras[i]
+      const vis = textoVisible(e, op)
       const partes: string[] = []
       if (op.mostrarNombre) {
-        partes.push(`<p class="nombre">${escapeHtml(e.nombre)}</p>`)
+        partes.push(`<p class="nombre">${escapeHtml(vis.nombre)}</p>`)
       }
-      if (op.mostrarVariante && e.variante) {
-        partes.push(`<p class="var">${escapeHtml(e.variante)}</p>`)
+      if (op.mostrarVariante && vis.variante) {
+        partes.push(`<p class="var">${escapeHtml(vis.variante)}</p>`)
       }
       if (op.mostrarPrecio) {
         partes.push(`<p class="precio">${escapeHtml(e.precio)}</p>`)
@@ -360,15 +434,12 @@ export async function imprimirEtiquetas(
   opciones?: OpcionesEtiqueta,
 ): Promise<string | null> {
   if (etiquetas.length === 0) return 'No hay etiquetas para imprimir'
-  const op = opciones ?? leerOpcionesEtiqueta()
+  const op = aplicarCamposPorTamano(opciones ?? leerOpcionesEtiqueta())
   const t = TAMANO_CSS[op.tamano]
   const extras = await Promise.all(
     etiquetas.map(async (e) => {
       const svg = op.mostrarBarras ? await svgCodigoBarras(e.codigo) : null
-      const qr =
-        op.mostrarQr
-          ? await qrDataUrl(textoQr(e, op), op.tamano === 'mediana' ? 80 : t.qrPx)
-          : null
+      const qr = op.mostrarQr ? await qrDataUrl(textoQr(e, op), t.qrPx) : null
       return { svg, qr }
     }),
   )
