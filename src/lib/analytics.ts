@@ -22,6 +22,8 @@ export type AnalyticsClientes = {
   pctRecurrentes: number
 }
 
+export type AnalyticsDiaSemanaRaw = { dia: number; total: number }
+
 export type AnalyticsPeriodo = {
   total: number
   cantidad: number
@@ -35,6 +37,7 @@ export type AnalyticsPeriodo = {
   top10: AnalyticsTop[]
   productos: AnalyticsProducto[]
   clientes: AnalyticsClientes
+  dias_semana?: AnalyticsDiaSemanaRaw[]
 }
 
 const VACIO: AnalyticsPeriodo = {
@@ -386,6 +389,7 @@ export async function cargarAnalyticsPeriodo(
         }
       }),
       clientes: parseClientes(row.clientes),
+      dias_semana: parseDiasSemanaRaw(row.dias_semana),
     },
     error: errorTexto,
   }
@@ -469,6 +473,38 @@ export function cuadranteProducto(unidades: number, margenPctVal: number, avgU: 
 }
 
 export const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] as const
+
+/** 0=Domingo … 6=Sábado (mismo criterio que EXTRACT(DOW) / Date.getDay). */
+export const NOMBRES_DIA_JS = [
+  'Domingo',
+  'Lunes',
+  'Martes',
+  'Miércoles',
+  'Jueves',
+  'Viernes',
+  'Sábado',
+] as const
+
+export function parseDiasSemanaRaw(raw: unknown): AnalyticsDiaSemanaRaw[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  return raw.map((item) => {
+    const p = item as Record<string, unknown>
+    return { dia: Number(p.dia), total: num(p.total) }
+  })
+}
+
+export function chartDiasSemanaDesdeRpc(raw: AnalyticsDiaSemanaRaw[] | undefined) {
+  const tot = [0, 0, 0, 0, 0, 0, 0]
+  for (const item of raw ?? []) {
+    if (item.dia >= 0 && item.dia <= 6) tot[item.dia] += item.total
+  }
+  const max = Math.max(...tot, 0)
+  return NOMBRES_DIA_JS.map((dia, i) => ({
+    dia,
+    total: tot[i],
+    destacado: max > 0 && tot[i] === max,
+  }))
+}
 
 export function ventasPorDiaSemana(puntos: AnalyticsPunto[]) {
   const tot = [0, 0, 0, 0, 0, 0, 0]

@@ -29,6 +29,7 @@ import { PlanesModal } from '../components/PlanesModal'
 import {
   COLOR_CUADRANTE,
   cargarAnalyticsPeriodo,
+  chartDiasSemanaDesdeRpc,
   colorFormaPago,
   contarVentasPeriodo,
   cuadranteProducto,
@@ -400,7 +401,18 @@ export function AnalyticsPage() {
     return { puntos, avgU, avgM }
   }, [data.productos])
 
-  const diasSemana = useMemo(() => ventasPorDiaSemana(data.evolucionDiaria), [data.evolucionDiaria])
+  useEffect(() => {
+    if (!data.dias_semana || data.dias_semana.length === 0) {
+      console.log('[dias semana]', data?.dias_semana)
+    }
+  }, [data.dias_semana])
+
+  const diasSemana = useMemo(() => {
+    if (!data.dias_semana || data.dias_semana.length === 0) {
+      return ventasPorDiaSemana(data.evolucionDiaria)
+    }
+    return chartDiasSemanaDesdeRpc(data.dias_semana)
+  }, [data.dias_semana, data.evolucionDiaria])
   const evolucionVista = data.evolucion
   const top10Data = useMemo(() => {
     const porNombre = new Map(data.productos.map((p) => [p.producto, p]))
