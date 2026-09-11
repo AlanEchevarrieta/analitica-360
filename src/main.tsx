@@ -15,6 +15,13 @@ createRoot(document.getElementById('root')!).render(
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    void navigator.serviceWorker.register('/sw.js')
-  })
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        console.log('SW registrado:', registration.scope);
+      })
+      .catch(error => {
+        // Error silencioso — la app funciona igual sin SW
+        console.warn('SW no disponible:', error);
+      });
+  });
 }
