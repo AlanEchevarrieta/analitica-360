@@ -262,6 +262,7 @@ const GRANULARIDADES: { id: GranularidadForecast; label: string }[] = [
   { id: 'dia', label: 'Día' },
   { id: 'semana', label: 'Semana' },
   { id: 'mes', label: 'Mes' },
+  { id: 'anio', label: 'Año' },
 ]
 
 export function InsightsPage() {
@@ -474,7 +475,7 @@ export function InsightsPage() {
               <TituloSeccion>🔮 Proyección de ventas</TituloSeccion>
               <Sub>
                 Día: 30 días + 14 de proyección. Semana: 90 días (todas las semanas del rango) + 4 adelante. Mes:
-                6 meses + 3 adelante. Siempre se usa ventas.fecha, ordenado ASC.
+                6 meses + 3 adelante. Año: años con ventas + 2 adelante. Siempre se usa ventas.fecha, ordenado ASC.
               </Sub>
               {data.errores.forecast ? (
                 <div className="mt-4">
@@ -540,9 +541,13 @@ export function InsightsPage() {
                         ? forecast.periodosHistorial === 1
                           ? 'semana'
                           : 'semanas'
-                        : forecast.periodosHistorial === 1
-                          ? 'mes'
-                          : 'meses'}{' '}
+                        : forecast.granularidad === 'mes'
+                          ? forecast.periodosHistorial === 1
+                            ? 'mes'
+                            : 'meses'
+                          : forecast.periodosHistorial === 1
+                            ? 'año'
+                            : 'años'}{' '}
                     de historial real. Los picos estacionales (ferias, fechas especiales) pueden afectar la
                     precisión. Usala como orientación, no como certeza.
                   </p>

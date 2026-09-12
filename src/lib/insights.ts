@@ -28,7 +28,7 @@ export type FilaElasticidad = {
   recomendacion: string
 }
 
-export type GranularidadForecast = 'dia' | 'semana' | 'mes'
+export type GranularidadForecast = 'dia' | 'semana' | 'mes' | 'anio'
 
 export type PuntoSerieDia = { fecha: string; total: number }
 
@@ -132,6 +132,14 @@ function etiquetaMes(iso: string) {
   const [y, mo] = iso.split('-').map(Number)
   const t = new Date(y, mo - 1, 1).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' })
   return t.replace('.', '')
+}
+
+function etiquetaAnio(iso: string) {
+  return iso.slice(0, 4)
+}
+
+function inicioAnio(iso: string) {
+  return `${iso.slice(0, 4)}-01-01`
 }
 
 function tsDesde(iso: string) {
@@ -461,8 +469,10 @@ export async function armarForecast(
     agregados = serie.map((p) => ({ clave: p.fecha, total: p.total }))
   } else if (granularidad === 'semana') {
     agregados = agregarPorClave(serie, lunesDe)
-  } else {
+  } else if (granularidad === 'mes') {
     agregados = agregarPorClave(serie, inicioMes)
+  } else {
+    agregados = agregarPorClave(serie, inicioAnio)
   }
 
   const puntos = agregados.filter(
@@ -470,7 +480,7 @@ export async function armarForecast(
   )
   console.log('[insights forecast] datos:', puntos.slice(0, 5))
 
-  const maxPeriodos = granularidad === 'dia' ? 30 : granularidad === 'semana' ? 13 : 6
+  const maxPeriodos = granularidad === 'dia' ? 30 : granularidad === 'semana' ? 13 : granularidad === 'mes' ? 6 : 8
   const puntosReg = puntos.slice(-maxPeriodos)
   if (puntosReg.length < 2) return null
 
@@ -481,7 +491,13 @@ export async function armarForecast(
   if (!Number.isFinite(reg.m) || !Number.isFinite(reg.b)) return null
 
   const labelDe =
-    granularidad === 'dia' ? etiquetaDia : granularidad === 'semana' ? etiquetaDia : etiquetaMes
+    granularidad === 'dia'
+      ? etiquetaDia
+      : granularidad === 'semana'
+        ? etiquetaDia
+        : granularidad === 'mes'
+          ? etiquetaMes
+          : etiquetaAnio
 
   const chart: PuntoForecast[] = puntosReg.map((p, i) => ({
     label: labelDe(p.clave),
@@ -489,10 +505,14 @@ export async function armarForecast(
     proyeccion: i === puntosReg.length - 1 ? p.total : null,
   }))
 
-  const pasos = granularidad === 'dia' ? 14 : granularidad === 'semana' ? 4 : 3
+  const pasos = granularidad === 'dia' ? 14 : granularidad === 'semana' ? 4 : granularidad === 'mes' ? 3 : 2
   const stepIso = (clave: string, k: number) => {
     if (granularidad === 'dia') return sumarDiasIso(clave, k)
     if (granularidad === 'semana') return sumarDiasIso(clave, 7 * k)
+    if (granularidad === 'anio') {
+      const y = Number(clave.slice(0, 4))
+      return `${y + k}-01-01`
+    }
     const [y, m] = clave.split('-').map(Number)
     const dt = new Date(Date.UTC(y, m - 1 + k, 1))
     return dt.toISOString().slice(0, 10)
@@ -516,7 +536,9 @@ export async function armarForecast(
       ? 'Proyección próximos 14 días'
       : granularidad === 'semana'
         ? 'Proyección próximas 4 semanas'
-        : 'Proyección próximos 3 meses'
+        : granularidad === 'mes'
+          ? 'Proyección próximos 3 meses'
+          : 'Proyección próximos 2 años'
 
   console.log('[insights forecast]', {
     granularidad,

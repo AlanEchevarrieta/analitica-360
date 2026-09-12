@@ -105,14 +105,35 @@ export function inicioMesIso(iso: string) {
   return `${iso.slice(0, 7)}-01`
 }
 
-export type GranularidadEje = 'dia' | 'semana' | 'mes'
+export type GranularidadEje = 'dia' | 'semana' | 'mes' | 'anio'
+
+export function inicioAnioIso(iso: string) {
+  return `${iso.slice(0, 4)}-01-01`
+}
+
+function labelAnio(iso: string) {
+  return iso.slice(0, 4)
+}
+
+export function claveGranularidad(iso: string, g: GranularidadEje) {
+  if (g === 'semana') return lunesIso(iso)
+  if (g === 'mes') return inicioMesIso(iso)
+  if (g === 'anio') return inicioAnioIso(iso)
+  return iso.slice(0, 10)
+}
+
+export function etiquetaGranularidad(iso: string, g: GranularidadEje) {
+  if (g === 'mes') return labelMes(iso)
+  if (g === 'anio') return labelAnio(iso)
+  return labelFecha(iso)
+}
 
 export function agruparEvolucion(puntos: AnalyticsPunto[], g: GranularidadEje): AnalyticsPunto[] {
   if (g === 'dia' || puntos.length === 0) return puntos
   const map = new Map<string, { Ventas: number; Anterior: number }>()
   for (const p of puntos) {
     const iso = p.fechaExacta.slice(0, 10)
-    const key = g === 'semana' ? lunesIso(iso) : inicioMesIso(iso)
+    const key = claveGranularidad(iso, g)
     const prev = map.get(key) ?? { Ventas: 0, Anterior: 0 }
     prev.Ventas += p.Ventas
     prev.Anterior += p.Anterior
@@ -121,7 +142,7 @@ export function agruparEvolucion(puntos: AnalyticsPunto[], g: GranularidadEje): 
   return [...map.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([key, v]) => ({
-      fecha: g === 'mes' ? labelMes(key) : labelFecha(key),
+      fecha: etiquetaGranularidad(key, g),
       fechaExacta: key,
       Ventas: v.Ventas,
       Anterior: v.Anterior,
@@ -275,6 +296,10 @@ export async function contarVentasPeriodo(
   return { total: fallback.count, error: error?.message ?? null }
 }
 
+function granularidadParaRpc(g: GranularidadEje): Exclude<GranularidadEje, 'anio'> {
+  return g === 'anio' ? 'dia' : g
+}
+
 export async function cargarAnalyticsEvolucion(
   client: SupabaseClient,
   desde: string,
@@ -287,12 +312,13 @@ export async function cargarAnalyticsEvolucion(
   const { data, error } = await client.rpc('analytics_evolucion', {
     p_desde: fechaInicio,
     p_hasta: fechaFin,
-    p_granularidad: granularidad,
+    p_granularidad: granularidadParaRpc(granularidad),
     p_empresa_id: empresaId ?? null,
   })
   console.log('[analytics debug]', { data, error, fechaInicio, fechaFin, granularidad, p_empresa_id: empresaId })
   if (error || data == null) return null
-  return parseEvolucion(data, granularidad)
+  const parsed = parseEvolucion(data, granularidad === 'anio' ? 'dia' : granularidad)
+  return granularidad === 'anio' ? agruparEvolucion(parsed, 'anio') : parsed
 }
 
 export async function cargarAnalyticsPeriodo(
@@ -309,7 +335,7 @@ export async function cargarAnalyticsPeriodo(
     client.rpc('analytics_periodo', args),
     client.rpc('analytics_evolucion', {
       ...args,
-      p_granularidad: granularidad,
+      p_granularidad: granularidadParaRpc(granularidad),
     }),
     client.rpc('analytics_formas_pago', args),
     client.rpc('analytics_top_productos', args),
@@ -368,7 +394,7 @@ export async function cargarAnalyticsPeriodo(
       cantidadAnt: num(row.cantidad_ant),
       costoAnt: num(row.costo_ant),
       evolucion:
-        evoRes.error || evoRes.data == null
+        granularidad === 'anio' || evoRes.error || evoRes.data == null
           ? agruparEvolucion(evolucionDiaria, granularidad)
           : parseEvolucion(evoRes.data, granularidad),
       evolucionDiaria,
@@ -401,7 +427,7 @@ function parseEvolucion(raw: unknown, granularidad: GranularidadEje = 'dia'): An
     const p = item as Record<string, unknown>
     const iso = String(p.fecha ?? '').slice(0, 10)
     return {
-      fecha: granularidad === 'mes' ? labelMes(iso) : labelFecha(iso),
+      fecha: etiquetaGranularidad(iso, granularidad),
       fechaExacta: iso,
       Ventas: num(p.Ventas),
       Anterior: num(p.Anterior),
@@ -522,4 +548,80 @@ export function ventasPorDiaSemana(puntos: AnalyticsPunto[]) {
     total: tot[i],
     destacado: max > 0 && tot[i] === max,
   }))
+}
+
+export type PuntoVentasCompras = {
+  fecha: string
+  fechaExacta: string
+  Ventas: number
+  Compras: number
+}
+
+export async function cargarComprasPeriodo(
+  client: SupabaseClient,
+  desde: string,
+  hasta: string,
+  empresaId?: string | null,
+): Promise<{ filas: { fecha: string; total: number }[]; error: string | null }> {
+  const filas: { fecha: string; total: number }[] = []
+  const PAGE = 1000
+  let from = 0
+  for (;;) {
+    let q = client
+      .from('compras')
+      .select('fecha, total')
+      .gte('fecha', desde)
+      .lte('fecha', hasta)
+      .is('deleted_at', null)
+      .order('fecha', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (empresaId) q = q.eq('empresa_id', empresaId)
+    const { data, error } = await q
+    if (error) return { filas: [], error: error.message }
+    const chunk = data ?? []
+    for (const row of chunk) {
+      const r = row as Record<string, unknown>
+      const iso = String(r.fecha ?? '').slice(0, 10)
+      if (!iso) continue
+      filas.push({ fecha: iso, total: num(r.total) })
+    }
+    if (chunk.length < PAGE) break
+    from += PAGE
+    if (from > 20_000) break
+  }
+  return { filas, error: null }
+}
+
+export function ventasVsComprasPorSemana(
+  ventasDiarias: AnalyticsPunto[],
+  compras: { fecha: string; total: number }[],
+  desde: string,
+  hasta: string,
+): PuntoVentasCompras[] {
+  const map = new Map<string, { Ventas: number; Compras: number }>()
+  const lunesDesde = lunesIso(desde)
+  const lunesHasta = lunesIso(hasta)
+  for (let d = lunesDesde; d <= lunesHasta; d = sumarDiasIso(d, 7)) {
+    map.set(d, { Ventas: 0, Compras: 0 })
+  }
+  for (const p of ventasDiarias) {
+    const key = lunesIso(p.fechaExacta.slice(0, 10))
+    const prev = map.get(key) ?? { Ventas: 0, Compras: 0 }
+    prev.Ventas += p.Ventas
+    map.set(key, prev)
+  }
+  for (const c of compras) {
+    const key = lunesIso(c.fecha.slice(0, 10))
+    const prev = map.get(key) ?? { Ventas: 0, Compras: 0 }
+    prev.Compras += c.total
+    map.set(key, prev)
+  }
+  return [...map.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([key, v]) => ({
+      fecha: labelFecha(key),
+      fechaExacta: key,
+      Ventas: v.Ventas,
+      Compras: v.Compras,
+    }))
 }

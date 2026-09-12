@@ -29,6 +29,7 @@ import { PlanesModal } from '../components/PlanesModal'
 import {
   COLOR_CUADRANTE,
   cargarAnalyticsPeriodo,
+  cargarComprasPeriodo,
   chartDiasSemanaDesdeRpc,
   colorFormaPago,
   contarVentasPeriodo,
@@ -42,6 +43,7 @@ import {
   truncarEtiqueta,
   variacionPct,
   ventasPorDiaSemana,
+  ventasVsComprasPorSemana,
   type AnalyticsPeriodo,
   type AnalyticsProducto,
   type CuadranteProducto,
@@ -73,6 +75,7 @@ import {
   TooltipMontoSimple,
   TooltipUnidades,
   TooltipTopProductos,
+  TooltipVentasCompras,
   asRechartsTooltip,
   useIndiceBarraActiva,
 } from '../components/CustomTooltip'
@@ -119,6 +122,18 @@ function diasIncluidosPeriodo(desde: string, hasta: string) {
 
 function rotacionUnidadesDia(unidades: number, dias: number) {
   return unidades / dias
+}
+
+function PuntoMargen(props: {
+  cx?: number
+  cy?: number
+  payload?: { margen_pct?: number }
+}) {
+  const { cx, cy, payload } = props
+  if (cx == null || cy == null) return null
+  const m = Number(payload?.margen_pct ?? 0)
+  const fill = m > 40 ? '#4ADE80' : m >= 20 ? '#FCD34D' : '#F87171'
+  return <circle cx={cx} cy={cy} r={4} fill={fill} stroke="#0F1B2D" strokeWidth={1} />
 }
 
 const cardStyle = { borderColor: 'rgba(99,102,241,0.2)' }
@@ -253,6 +268,7 @@ export function AnalyticsPage() {
   const [avisoLimite, setAvisoLimite] = useState<number | null>(null)
   const [errorDebug, setErrorDebug] = useState<string | null>(null)
   const [granularidadEvo, setGranularidadEvo] = useState<GranularidadEje>('dia')
+  const [comprasPeriodo, setComprasPeriodo] = useState<{ fecha: string; total: number }[]>([])
   const top10Hover = useIndiceBarraActiva()
   const diasHover = useIndiceBarraActiva()
 
@@ -274,16 +290,20 @@ export function AnalyticsPage() {
           setAvisoLimite(totalVentas)
           setData(VACIO)
           setDataVar(null)
+          setComprasPeriodo([])
           setRangosMargen(new Map())
           return
         }
         setAvisoLimite(null)
-        const [res, cfg] = await Promise.all([
+        const [res, cfg, comprasRes] = await Promise.all([
           cargarAnalyticsPeriodo(client, desde, hasta, granularidadEvo, empresaId),
           obtenerConfiguracion(client, perfil.empresa.id),
+          cargarComprasPeriodo(client, desde, hasta, empresaId),
         ])
         setData(res.data)
+        setComprasPeriodo(comprasRes.filas)
         if (res.error) setErrorDebug((prev) => (prev ? `${prev} · ${res.error}` : res.error))
+        if (comprasRes.error) setErrorDebug((prev) => (prev ? `${prev} · ${comprasRes.error}` : comprasRes.error))
         const usa = Boolean(cfg.config.usaVariantes)
         setUsaVariantes(usa)
         if (usa) {
@@ -317,6 +337,7 @@ export function AnalyticsPage() {
         const msg = error instanceof Error ? error.message : String(error)
         setErrorDebug((prev) => (prev ? `${prev} · ${msg}` : msg))
         setData(VACIO)
+        setComprasPeriodo([])
       } finally {
         setCargando(false)
       }
@@ -429,6 +450,11 @@ export function AnalyticsPage() {
       }
     })
   }, [data.top10, data.productos])
+
+  const ventasVsCompras = useMemo(
+    () => ventasVsComprasPorSemana(data.evolucionDiaria, comprasPeriodo, desde, hasta),
+    [data.evolucionDiaria, comprasPeriodo, desde, hasta],
+  )
 
   if (!perfil) return null
 
@@ -633,7 +659,9 @@ export function AnalyticsPage() {
                         ? 'Evolución de ventas diarias'
                         : granularidadEvo === 'semana'
                           ? 'Evolución de ventas semanales'
-                          : 'Evolución de ventas mensuales'
+                          : granularidadEvo === 'mes'
+                            ? 'Evolución de ventas mensuales'
+                            : 'Evolución de ventas anuales'
                     }
                     compactoClass="h-72"
                     toolbar={
@@ -643,6 +671,7 @@ export function AnalyticsPage() {
                           { id: 'dia', label: 'Día' },
                           { id: 'semana', label: 'Semana' },
                           { id: 'mes', label: 'Mes' },
+                          { id: 'anio', label: 'Año' },
                         ]}
                         onChange={setGranularidadEvo}
                       />
@@ -694,6 +723,59 @@ export function AnalyticsPage() {
                         />
                       </ComposedChart>
                     </ResponsiveContainer>
+                  </GraficoExpandible>
+                </Card>
+
+                <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
+                  <GraficoExpandible titulo="Ventas vs Compras" compactoClass="h-72">
+                    {ventasVsCompras.length === 0 ? (
+                      <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">
+                        Sin movimientos en el período
+                      </p>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={ventasVsCompras} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                          <CartesianGrid stroke={g.grilla} vertical={false} />
+                          <XAxis
+                            dataKey="fecha"
+                            tick={{ fill: g.eje, fontSize: 11 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            tick={{ fill: g.eje, fontSize: 11 }}
+                            axisLine={false}
+                            tickLine={false}
+                            tickFormatter={formatoEjeCompacto}
+                            width={56}
+                          />
+                          <RechartsTooltip
+                            cursor={{ fill: CHART_CURSOR_FILL }}
+                            content={asRechartsTooltip(TooltipVentasCompras)}
+                          />
+                          <Legend
+                            wrapperStyle={{ color: g.eje, fontSize: 12 }}
+                            formatter={(value) => String(value)}
+                          />
+                          <Bar
+                            dataKey="Ventas"
+                            name="Ventas"
+                            fill="#6366F1"
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={28}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="Compras"
+                            name="Compras"
+                            stroke="#F59E0B"
+                            strokeWidth={2}
+                            dot={{ r: 3, fill: '#F59E0B' }}
+                            activeDot={{ r: 5, fill: '#F59E0B' }}
+                          />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    )}
                   </GraficoExpandible>
                 </Card>
 
@@ -760,21 +842,32 @@ export function AnalyticsPage() {
                       <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">Sin ventas en el período</p>
                     ) : (
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
+                          <ComposedChart
                             layout="vertical"
                             data={top10Data}
-                            margin={{ top: 8, right: 40, left: 120, bottom: 0 }}
+                            margin={{ top: 28, right: 48, left: 8, bottom: 0 }}
                             barCategoryGap="30%"
                             onMouseMove={top10Hover.onMouseMove as never}
                             onMouseLeave={top10Hover.onMouseLeave}
                           >
                             <CartesianGrid stroke={g.grilla} horizontal={false} />
                             <XAxis
+                              xAxisId="unidades"
                               type="number"
                               tick={{ fill: g.eje, fontSize: 11 }}
                               axisLine={false}
                               tickLine={false}
                               allowDecimals={false}
+                            />
+                            <XAxis
+                              xAxisId="margen"
+                              type="number"
+                              orientation="top"
+                              domain={[0, 100]}
+                              tick={{ fill: g.eje, fontSize: 10 }}
+                              axisLine={false}
+                              tickLine={false}
+                              tickFormatter={(v: number) => `${v}%`}
                             />
                             <YAxis
                               type="category"
@@ -788,8 +881,11 @@ export function AnalyticsPage() {
                               cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
                               content={asRechartsTooltip(TooltipTopProductos)}
                             />
+                            <Legend wrapperStyle={{ color: g.eje, fontSize: 12 }} />
                             <Bar
+                              xAxisId="unidades"
                               dataKey="unidades"
+                              name="Unidades"
                               radius={[0, 4, 4, 0]}
                               maxBarSize={18}
                               background={{ fill: CHART_BAR_BG }}
@@ -804,7 +900,16 @@ export function AnalyticsPage() {
                               ))}
                               <LabelList dataKey="unidades" position="right" fill="#94A3B8" fontSize={11} />
                             </Bar>
-                          </BarChart>
+                            <Line
+                              xAxisId="margen"
+                              type="monotone"
+                              dataKey="margen_pct"
+                              name="Margen %"
+                              stroke="#94A3B8"
+                              strokeWidth={2}
+                              dot={<PuntoMargen />}
+                            />
+                          </ComposedChart>
                         </ResponsiveContainer>
                     )}
                     </GraficoExpandible>
