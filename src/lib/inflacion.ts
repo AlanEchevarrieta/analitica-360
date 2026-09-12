@@ -52,6 +52,28 @@ export type SerieInflacionPrecios = {
   puntos: PuntoInflacionPrecios[]
   hayPrecios: boolean
   insight: 'menos' | 'mas' | 'sin_datos'
+  resumen: ResumenInflacion
+}
+
+export type ResumenInflacion = {
+  inflacionAcumuladaPct: number | null
+  variacionPreciosPct: number | null
+  diferenciaPct: number | null
+  valorRealDe100: number | null
+}
+
+const RESUMEN_VACIO: ResumenInflacion = {
+  inflacionAcumuladaPct: null,
+  variacionPreciosPct: null,
+  diferenciaPct: null,
+  valorRealDe100: null,
+}
+
+export const SERIE_INFLACION_VACIA: SerieInflacionPrecios = {
+  puntos: [],
+  hayPrecios: false,
+  insight: 'sin_datos',
+  resumen: RESUMEN_VACIO,
 }
 
 const PAGE = 1000
@@ -266,11 +288,44 @@ export async function cargarInflacionVsPrecios(
 
   const vars = puntos.map((p) => p.variacion).filter((v): v is number => v != null)
   const inflas = puntos.map((p) => p.inflacion).filter((v): v is number => v != null)
-  const hayPrecios = vars.length > 0
+  const hayPrecios = vars.length > 0 || [...precios.keys()].some((k) => meses.includes(k))
+
+  const inflacionAcumuladaPct = inflas.length > 0 ? acumularPct(inflas) * 100 : null
+  const mesesConPrecio = meses.filter((m) => {
+    const v = precios.get(m)
+    return v != null && v > 0
+  })
+  let variacionPreciosPct: number | null = null
+  if (mesesConPrecio.length >= 2) {
+    const primero = precios.get(mesesConPrecio[0]) ?? 0
+    const ultimo = precios.get(mesesConPrecio[mesesConPrecio.length - 1]) ?? 0
+    if (primero > 0) variacionPreciosPct = ((ultimo - primero) / primero) * 100
+  }
+  const diferenciaPct =
+    variacionPreciosPct != null && inflacionAcumuladaPct != null
+      ? variacionPreciosPct - inflacionAcumuladaPct
+      : null
+  const valorRealDe100 =
+    variacionPreciosPct != null && inflacionAcumuladaPct != null
+      ? (100 * (1 + variacionPreciosPct / 100)) / (1 + inflacionAcumuladaPct / 100)
+      : null
+
   let insight: SerieInflacionPrecios['insight'] = 'sin_datos'
-  if (hayPrecios && inflas.length > 0) {
+  if (hayPrecios && diferenciaPct != null) {
+    insight = diferenciaPct < 0 ? 'menos' : 'mas'
+  } else if (hayPrecios && inflas.length > 0) {
     insight = acumularPct(vars) < acumularPct(inflas) ? 'menos' : 'mas'
   }
 
-  return { puntos, hayPrecios, insight }
+  return {
+    puntos,
+    hayPrecios,
+    insight,
+    resumen: {
+      inflacionAcumuladaPct,
+      variacionPreciosPct,
+      diferenciaPct,
+      valorRealDe100,
+    },
+  }
 }

@@ -19,10 +19,11 @@ import {
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { GraficoExpandible, SelectorChips } from '../components/GraficoExpandible'
+import { InflacionVsPreciosPanel } from '../components/InflacionVsPreciosPanel'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { PlanesModal } from '../components/PlanesModal'
 import { ChartTooltipBox } from '../components/CustomTooltip'
-import { formatoEjeCompacto, fechaHoyAR } from '../lib/analytics'
+import { formatoEjeCompacto, fechaHoyAR, sumarDiasIso } from '../lib/analytics'
 import { obtenerConfiguracion } from '../lib/configuracion'
 import {
   armarForecast,
@@ -35,6 +36,7 @@ import {
 import { planTieneInsights } from '../lib/planes'
 import { formatoARS } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
+import { cargarInflacionVsPrecios, SERIE_INFLACION_VACIA, type SerieInflacionPrecios } from '../lib/inflacion'
 import { theme } from '../theme'
 
 const CARD = {
@@ -273,6 +275,7 @@ export function InsightsPage() {
   const [granularidad, setGranularidad] = useState<GranularidadForecast>('semana')
   const [forecast, setForecast] = useState<InsightForecast | null>(null)
   const [cargandoForecast, setCargandoForecast] = useState(false)
+  const [inflacion, setInflacion] = useState<SerieInflacionPrecios>(SERIE_INFLACION_VACIA)
 
   const premium = Boolean(perfil && planTieneInsights(perfil.empresa.plan_actual))
 
@@ -287,6 +290,14 @@ export function InsightsPage() {
         const cfg = await obtenerConfiguracion(requireSupabase(), perfil.empresa.id)
         const payload = await cargarInsights(requireSupabase(), Boolean(cfg.config.usaVariantes))
         setData(payload)
+        const hoy = fechaHoyAR()
+        const infla = await cargarInflacionVsPrecios(
+          requireSupabase(),
+          sumarDiasIso(hoy, -364),
+          hoy,
+          perfil.empresa.id,
+        )
+        setInflacion(infla)
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Error inesperado'
         setData({
@@ -393,6 +404,10 @@ export function InsightsPage() {
                   >
                     <GraficoRadar ejes={data.salud.ejes} />
                   </GraficoExpandible>
+                  <p className="mt-2 text-center text-xs leading-relaxed text-[#94A3B8]">
+                    Cinco dimensiones de tu negocio de 0 a 100. Un polígono grande y simétrico indica un negocio
+                    equilibrado.
+                  </p>
                   <p className="mt-2 text-center text-5xl font-bold" style={{ color: data.salud.color }}>
                     {data.salud.score}
                   </p>
@@ -472,6 +487,16 @@ export function InsightsPage() {
             <Divider />
 
             <section className="rounded-lg p-5" style={CARD}>
+              <TituloSeccion>📉 Inflación vs evolución de tus precios</TituloSeccion>
+              <Sub>Últimos 12 meses · INDEC + tu lista de precios</Sub>
+              <div className="mt-4">
+                <InflacionVsPreciosPanel serie={inflacion} />
+              </div>
+            </section>
+
+            <Divider />
+
+            <section className="rounded-lg p-5" style={CARD}>
               <TituloSeccion>🔮 Proyección de ventas</TituloSeccion>
               <Sub>
                 Día: 30 días + 14 de proyección. Semana: 90 días (todas las semanas del rango) + 4 adelante. Mes:
@@ -502,6 +527,10 @@ export function InsightsPage() {
                   >
                     <GraficoForecast data={forecast} />
                   </GraficoExpandible>
+                  <p className="mt-2 text-xs leading-relaxed text-[#94A3B8]">
+                    Estimación basada en tu tendencia histórica. La línea punteada es proyección — usala como
+                    orientación.
+                  </p>
                   {cargandoForecast ? (
                     <p className="mt-2 text-xs text-[#94A3B8]">Actualizando proyección…</p>
                   ) : null}

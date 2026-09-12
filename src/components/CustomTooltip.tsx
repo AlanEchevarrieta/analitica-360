@@ -245,6 +245,21 @@ export function TooltipVentasCompras({ active, payload, label }: TipProps) {
       <p style={{ color: '#F59E0B', fontSize: 13, fontWeight: 600, marginTop: 2 }}>
         Compras: {formatoARS(Number(row.compras ?? row.Compras ?? 0))}
       </p>
+      {(() => {
+        const ventas = Number(row.ventas ?? row.Ventas ?? 0)
+        const compras = Number(row.compras ?? row.Compras ?? 0)
+        if (!(compras > 0)) return null
+        const ratio = ventas / compras
+        const txt =
+          ratio > 1.5
+            ? `🟢 Ratio ${ratio.toFixed(1)} — Muy saludable`
+            : ratio >= 1
+              ? `🟡 Ratio ${ratio.toFixed(1)} — Normal`
+              : `🔴 Ratio ${ratio.toFixed(1)} — Comprás más de lo que vendés`
+        return (
+          <p style={{ color: '#F1F5F9', fontSize: 12, fontWeight: 600, marginTop: 8 }}>{txt}</p>
+        )
+      })()}
     </ChartTooltipBox>
   )
 }

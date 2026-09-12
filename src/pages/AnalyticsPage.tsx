@@ -45,6 +45,7 @@ import {
   variacionPct,
   ventasPorDiaSemana,
   ventasVsComprasAgrupado,
+  insightsVentasCompras,
   type AnalyticsPeriodo,
   type AnalyticsProducto,
   type CuadranteProducto,
@@ -52,7 +53,6 @@ import {
   type GranularidadVentasCompras,
   type PresetPeriodo,
 } from '../lib/analytics'
-import { cargarInflacionVsPrecios, type SerieInflacionPrecios } from '../lib/inflacion'
 import { exportarAnalyticsPdf } from '../lib/exportarReportes'
 import { planTieneAnalytics } from '../lib/planes'
 import { formatoARS, listarProductos } from '../lib/productos'
@@ -79,7 +79,6 @@ import {
   TooltipUnidades,
   TooltipTopProductos,
   TooltipVentasCompras,
-  TooltipInflacionPrecios,
   asRechartsTooltip,
   useIndiceBarraActiva,
 } from '../components/CustomTooltip'
@@ -274,11 +273,6 @@ export function AnalyticsPage() {
   const [granularidadEvo, setGranularidadEvo] = useState<GranularidadEje>('dia')
   const [granularidadVC, setGranularidadVC] = useState<GranularidadVentasCompras>('mes')
   const [comprasPeriodo, setComprasPeriodo] = useState<{ fecha: string; total: number }[]>([])
-  const [inflacionVsPrecios, setInflacionVsPrecios] = useState<SerieInflacionPrecios>({
-    puntos: [],
-    hayPrecios: false,
-    insight: 'sin_datos',
-  })
   const top10Hover = useIndiceBarraActiva()
   const diasHover = useIndiceBarraActiva()
 
@@ -301,20 +295,17 @@ export function AnalyticsPage() {
           setData(VACIO)
           setDataVar(null)
           setComprasPeriodo([])
-          setInflacionVsPrecios({ puntos: [], hayPrecios: false, insight: 'sin_datos' })
           setRangosMargen(new Map())
           return
         }
         setAvisoLimite(null)
-        const [res, cfg, comprasRes, inflaRes] = await Promise.all([
+        const [res, cfg, comprasRes] = await Promise.all([
           cargarAnalyticsPeriodo(client, desde, hasta, 'dia', empresaId),
           obtenerConfiguracion(client, perfil.empresa.id),
           cargarComprasPeriodo(client, desde, hasta, empresaId),
-          cargarInflacionVsPrecios(client, desde, hasta, empresaId),
         ])
         setData(res.data)
         setComprasPeriodo(comprasRes.filas)
-        setInflacionVsPrecios(inflaRes)
         if (res.error) setErrorDebug((prev) => (prev ? `${prev} · ${res.error}` : res.error))
         if (comprasRes.error) setErrorDebug((prev) => (prev ? `${prev} · ${comprasRes.error}` : comprasRes.error))
         const usa = Boolean(cfg.config.usaVariantes)
@@ -351,7 +342,6 @@ export function AnalyticsPage() {
         setErrorDebug((prev) => (prev ? `${prev} · ${msg}` : msg))
         setData(VACIO)
         setComprasPeriodo([])
-        setInflacionVsPrecios({ puntos: [], hayPrecios: false, insight: 'sin_datos' })
       } finally {
         setCargando(false)
       }
@@ -476,6 +466,8 @@ export function AnalyticsPage() {
       data.evolucionDiaria.some((p) => p.Ventas > 0) ? data.evolucionDiaria : data.evolucion
     return ventasVsComprasAgrupado(ventasBase, comprasPeriodo, granularidadVC)
   }, [data.evolucion, data.evolucionDiaria, comprasPeriodo, granularidadVC])
+
+  const vcInsight = useMemo(() => insightsVentasCompras(ventasVsCompras), [ventasVsCompras])
 
   if (!perfil) return null
 
@@ -745,6 +737,9 @@ export function AnalyticsPage() {
                       </ComposedChart>
                     </ResponsiveContainer>
                   </GraficoExpandible>
+                  <p className="mt-2 text-xs leading-relaxed text-[#94A3B8]">
+                    Muestra cómo variaron tus ingresos día a día. Los picos indican tus mejores momentos de venta.
+                  </p>
                 </Card>
 
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
@@ -778,11 +773,19 @@ export function AnalyticsPage() {
                             tickLine={false}
                           />
                           <YAxis
+                            yAxisId="monto"
                             tick={{ fill: g.eje, fontSize: 11 }}
                             axisLine={false}
                             tickLine={false}
                             tickFormatter={formatoEjeCompacto}
                             width={56}
+                          />
+                          <YAxis yAxisId="ratio" orientation="right" domain={[0, 'auto']} hide />
+                          <ReferenceLine
+                            yAxisId="ratio"
+                            y={1}
+                            stroke="rgba(255,255,255,0.2)"
+                            strokeDasharray="4 4"
                           />
                           <RechartsTooltip
                             cursor={{ fill: CHART_CURSOR_FILL }}
@@ -793,6 +796,16 @@ export function AnalyticsPage() {
                             formatter={(value) => String(value)}
                           />
                           <Line
+                            yAxisId="ratio"
+                            type="monotone"
+                            dataKey="ratio"
+                            stroke="transparent"
+                            legendType="none"
+                            dot={false}
+                            isAnimationActive={false}
+                          />
+                          <Line
+                            yAxisId="monto"
                             type="monotone"
                             dataKey="compras"
                             name="Compras"
@@ -802,6 +815,7 @@ export function AnalyticsPage() {
                             activeDot={{ r: 5, fill: '#F59E0B' }}
                           />
                           <Bar
+                            yAxisId="monto"
                             dataKey="ventas"
                             name="Ventas"
                             fill="#6366F1"
@@ -813,91 +827,25 @@ export function AnalyticsPage() {
                       </ResponsiveContainer>
                     )}
                   </GraficoExpandible>
-                </Card>
-
-                <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
-                  <GraficoExpandible titulo="Inflación vs evolución de tus precios" compactoClass="h-80">
-                    <p className="mb-3 text-xs" style={{ color: 'var(--text-muted, #94A3B8)' }}>
-                      Compará cómo evolucionaron tus precios vs la inflación del período
-                    </p>
-                    {inflacionVsPrecios.puntos.length === 0 ? (
-                      <p className="flex h-64 items-center justify-center text-sm text-[#94A3B8]">
-                        Sin meses en el período
-                      </p>
-                    ) : (
-                      <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart
-                          data={inflacionVsPrecios.puntos}
-                          margin={{ top: 8, right: 48, left: 8, bottom: 8 }}
-                        >
-                          <CartesianGrid stroke={g.grilla} vertical={false} />
-                          <XAxis
-                            dataKey="mes"
-                            tick={{ fill: g.eje, fontSize: 11 }}
-                            axisLine={false}
-                            tickLine={false}
-                          />
-                          <YAxis
-                            yAxisId="propios"
-                            tick={{ fill: g.eje, fontSize: 11 }}
-                            axisLine={false}
-                            tickLine={false}
-                            tickFormatter={(v: number) => `${v}%`}
-                            width={48}
-                          />
-                          <YAxis
-                            yAxisId="indec"
-                            orientation="right"
-                            domain={[0, 30]}
-                            tick={{ fill: g.eje, fontSize: 11 }}
-                            axisLine={false}
-                            tickLine={false}
-                            tickFormatter={(v: number) => `${v}%`}
-                            width={40}
-                          />
-                          <RechartsTooltip
-                            cursor={{ fill: CHART_CURSOR_FILL }}
-                            content={asRechartsTooltip(TooltipInflacionPrecios)}
-                          />
-                          <Legend wrapperStyle={{ color: g.eje, fontSize: 12 }} />
-                          <Bar
-                            yAxisId="indec"
-                            dataKey="inflacion"
-                            name="Inflación INDEC"
-                            fill="#94A3B8"
-                            radius={[4, 4, 0, 0]}
-                            maxBarSize={28}
-                          />
-                          <Line
-                            yAxisId="propios"
-                            type="monotone"
-                            dataKey="variacion"
-                            name="Tus precios"
-                            stroke="#6366F1"
-                            strokeWidth={2}
-                            dot={{ r: 3, fill: '#6366F1' }}
-                            connectNulls={false}
-                          />
-                        </ComposedChart>
-                      </ResponsiveContainer>
-                      </div>
-                    )}
-                  </GraficoExpandible>
-                  <p
-                    className="mt-4 rounded-lg px-3 py-3 text-sm"
-                    style={{
-                      background: 'rgba(99,102,241,0.1)',
-                      border: '1px solid rgba(99,102,241,0.35)',
-                      color: '#F1F5F9',
-                    }}
-                  >
-                    {inflacionVsPrecios.insight === 'menos'
-                      ? '⚠️ Tus precios subieron menos que la inflación. Puede que estés perdiendo rentabilidad.'
-                      : inflacionVsPrecios.insight === 'mas'
-                        ? '✅ Tus precios le ganaron a la inflación.'
-                        : '📊 Modificá el precio de tus productos para ver cómo evolucionan vs la inflación.'}
+                  <p className="mt-2 text-xs leading-relaxed text-[#94A3B8]">
+                    Compará cuánto vendiste vs cuánto compraste. Lo ideal es que las ventas siempre superen las compras.
                   </p>
+                  {vcInsight.mejor ? (
+                    <div className="mt-3 space-y-1 text-sm text-[#F1F5F9]">
+                      <p>
+                        📈 Tu mejor {granularidadVC === 'anio' ? 'año' : granularidadVC === 'semana' ? 'semana' : 'mes'} fue{' '}
+                        {vcInsight.mejor.fecha}: vendiste{' '}
+                        {vcInsight.mejor.compras > 0
+                          ? `${(vcInsight.mejor.ventas / vcInsight.mejor.compras).toFixed(1)} veces más de lo que compraste`
+                          : 'sin compras registradas'}
+                      </p>
+                      {vcInsight.peor && vcInsight.peor.compras > vcInsight.peor.ventas ? (
+                        <p>
+                          ⚠️ En {vcInsight.peor.fecha} compraste más de lo que vendiste
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </Card>
 
                 <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -1034,6 +982,9 @@ export function AnalyticsPage() {
                         </ResponsiveContainer>
                     )}
                     </GraficoExpandible>
+                    <p className="mt-2 text-xs leading-relaxed text-[#94A3B8]">
+                      Tus productos más vendidos por unidades. El color indica el margen: verde alto, rojo bajo.
+                    </p>
                   </Card>
                 </div>
 

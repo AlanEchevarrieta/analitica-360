@@ -146,3 +146,55 @@ export async function registrarPagoAdmin(
   if (error.message.includes('MONTO_INVALIDO')) return 'El monto tiene que ser mayor a 0'
   return error.message
 }
+
+export type AdminCapacidad = {
+  ventas: number
+  productos: number
+  clientes: number
+  movimientos: number
+  empresas: number
+  totalRegistros: number
+  registrosUltimoMes: number
+}
+
+const CAPACIDAD_CERO: AdminCapacidad = {
+  ventas: 0,
+  productos: 0,
+  clientes: 0,
+  movimientos: 0,
+  empresas: 0,
+  totalRegistros: 0,
+  registrosUltimoMes: 0,
+}
+
+export const LIMITE_FREE_REGISTROS = 500_000
+
+export async function cargarAdminCapacidad(
+  client: SupabaseClient,
+): Promise<{ data: AdminCapacidad; error: string | null }> {
+  const { data, error } = await client.rpc('admin_capacidad')
+  if (error) {
+    console.error('[admin_capacidad]', error)
+    const t = error.message.toLowerCase()
+    if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
+      return {
+        data: CAPACIDAD_CERO,
+        error: 'Falta el SQL de capacidad. Pegá supabase/044_admin_capacidad.sql (rol postgres) y recargá.',
+      }
+    }
+    return { data: CAPACIDAD_CERO, error: error.message }
+  }
+  const row = asRecord(data)
+  return {
+    data: {
+      ventas: num(row.ventas),
+      productos: num(row.productos),
+      clientes: num(row.clientes),
+      movimientos: num(row.movimientos),
+      empresas: num(row.empresas),
+      totalRegistros: num(row.total_registros),
+      registrosUltimoMes: num(row.registros_ultimo_mes),
+    },
+    error: null,
+  }
+}

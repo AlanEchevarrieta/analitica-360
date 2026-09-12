@@ -582,6 +582,7 @@ export type PuntoVentasCompras = {
   fechaExacta: string
   ventas: number
   compras: number
+  ratio: number | null
 }
 
 export async function cargarComprasPeriodo(
@@ -648,7 +649,20 @@ export function ventasVsComprasAgrupado(
       fechaExacta: key,
       ventas: v.ventas,
       compras: v.compras,
+      ratio: v.compras > 0 ? v.ventas / v.compras : null,
     }))
   console.log('[ventas vs compras]', datos.slice(0, 3))
   return datos
+}
+
+export function insightsVentasCompras(puntos: PuntoVentasCompras[]) {
+  if (puntos.length === 0) return { mejor: null as PuntoVentasCompras | null, peor: null as PuntoVentasCompras | null }
+  let mejor = puntos[0]
+  let peor = puntos[0]
+  for (const p of puntos) {
+    const d = p.ventas - p.compras
+    if (d > mejor.ventas - mejor.compras) mejor = p
+    if (d < peor.ventas - peor.compras) peor = p
+  }
+  return { mejor, peor }
 }

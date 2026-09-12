@@ -13,7 +13,7 @@ import {
   type PlanAdmin,
 } from '../lib/suscripcion'
 import { claseBadgePlan, clavePlan, etiquetaPlan } from '../lib/planes'
-import { listarPagosAdmin, registrarPagoAdmin, type AdminPagoFila } from '../lib/adminSaaS'
+import { listarPagosAdmin, registrarPagoAdmin, cargarAdminCapacidad, LIMITE_FREE_REGISTROS, type AdminPagoFila, type AdminCapacidad } from '../lib/adminSaaS'
 import { requireSupabase } from '../lib/supabase'
 import { formatoARS } from '../lib/productos'
 import { listarTicketsAdmin } from '../lib/tickets'
@@ -142,6 +142,49 @@ function etiquetaEstadoPago(estado: string) {
   return estado || '—'
 }
 
+function CapacidadPanel({ data }: { data: AdminCapacidad }) {
+  const limite = LIMITE_FREE_REGISTROS
+  const pct = Math.min(100, (data.totalRegistros / limite) * 100)
+  const color = pct < 50 ? '#4ADE80' : pct < 80 ? '#FCD34D' : '#F87171'
+  const ritmo = data.registrosUltimoMes
+  const restantes = Math.max(0, limite - data.totalRegistros)
+  const meses = ritmo > 0 ? Math.floor(restantes / ritmo) : null
+  return (
+    <div className="mt-4">
+      <p className="text-sm" style={{ color: 'var(--kpi-label)' }}>
+        Registros actuales: {data.totalRegistros.toLocaleString('es-AR')} de ~{limite.toLocaleString('es-AR')} estimados
+      </p>
+      <div className="mt-2 h-3 overflow-hidden rounded-full bg-white/10">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <p className="mt-1 text-xs" style={{ color: 'var(--kpi-sub)' }}>
+        {pct.toFixed(1)}% del límite práctico del plan Free
+      </p>
+      <ul className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+        <li>Ventas: {data.ventas.toLocaleString('es-AR')} registros</li>
+        <li>Productos: {data.productos.toLocaleString('es-AR')} registros</li>
+        <li>Clientes: {data.clientes.toLocaleString('es-AR')} registros</li>
+        <li>Movimientos: {data.movimientos.toLocaleString('es-AR')} registros</li>
+      </ul>
+      <p className="mt-4 text-sm" style={{ color: 'var(--kpi-label)' }}>
+        {meses == null
+          ? 'Sin ritmo de alta este mes para proyectar.'
+          : `Al ritmo actual (~${ritmo.toLocaleString('es-AR')} registros/mes) el plan Free alcanza para ~${meses} meses más`}
+      </p>
+      {pct > 60 ? (
+        <a
+          className="mt-4 inline-flex h-11 items-center rounded-md bg-[#6366F1] px-4 text-sm font-semibold text-white hover:bg-[#4F46E5]"
+          href="https://supabase.com/pricing"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Upgrade a Pro
+        </a>
+      ) : null}
+    </div>
+  )
+}
+
 function fechaMasDias(dias: number) {
   const d = new Date()
   d.setDate(d.getDate() + dias)
@@ -168,6 +211,8 @@ export function AdminPage() {
   )
   const [ticketsAbiertos, setTicketsAbiertos] = useState(0)
   const [metrics, setMetrics] = useState<AdminMetricsRpc>(METRICS_CERO)
+  const [capacidad, setCapacidad] = useState<AdminCapacidad | null>(null)
+  const [errorCapacidad, setErrorCapacidad] = useState<string | null>(null)
   const [pagos, setPagos] = useState<AdminPagoFila[]>([])
   const [errorPagos, setErrorPagos] = useState<string | null>(null)
   const [filtroPagoEstado, setFiltroPagoEstado] = useState('')
@@ -201,11 +246,12 @@ export function AdminPage() {
 
   const cargar = useCallback(async () => {
     const client = requireSupabase()
-    const [subs, listaPlanes, metsRpc, tickets] = await Promise.all([
+    const [subs, listaPlanes, metsRpc, tickets, cap] = await Promise.all([
       listarSuscripcionesAdmin(client),
       listarPlanesAdmin(client),
       client.rpc('admin_saas_metrics'),
       listarTicketsAdmin(client),
+      cargarAdminCapacidad(client),
     ])
     const { data: metricsData, error: metricsError } = metsRpc
     if (metricsError) {
@@ -215,6 +261,8 @@ export function AdminPage() {
     setPlanes(listaPlanes)
     setMetrics(parseAdminMetrics(metricsData))
     setTicketsAbiertos(tickets.filas.filter((t) => t.estado === 'abierto').length)
+    setCapacidad(cap.data)
+    setErrorCapacidad(cap.error)
     setError(subs.error || metricsError?.message || tickets.error || null)
   }, [])
 
@@ -432,6 +480,26 @@ export function AdminPage() {
               ))
             )}
           </div>
+        </div>
+
+        <div
+          className="mb-6 p-5"
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(99,102,241,0.2)',
+            borderRadius: 12,
+          }}
+        >
+          <h2 className="text-lg font-semibold">Capacidad del sistema</h2>
+          {errorCapacidad ? (
+            <p className="mt-2 text-sm text-red-200">{errorCapacidad}</p>
+          ) : capacidad ? (
+            <CapacidadPanel data={capacidad} />
+          ) : (
+            <p className="mt-2 text-sm" style={{ color: 'var(--kpi-sub)' }}>
+              Cargando capacidad…
+            </p>
+          )}
         </div>
 
         <div className="mb-4 flex gap-2">
