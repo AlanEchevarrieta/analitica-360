@@ -28,6 +28,7 @@ import { ParticleNetwork } from '../components/ParticleNetwork'
 import { PlanesModal } from '../components/PlanesModal'
 import {
   COLOR_CUADRANTE,
+  agruparEvolucion,
   cargarAnalyticsPeriodo,
   cargarComprasPeriodo,
   chartDiasSemanaDesdeRpc,
@@ -43,11 +44,12 @@ import {
   truncarEtiqueta,
   variacionPct,
   ventasPorDiaSemana,
-  ventasVsComprasPorSemana,
+  ventasVsComprasAgrupado,
   type AnalyticsPeriodo,
   type AnalyticsProducto,
   type CuadranteProducto,
   type GranularidadEje,
+  type GranularidadVentasCompras,
   type PresetPeriodo,
 } from '../lib/analytics'
 import { exportarAnalyticsPdf } from '../lib/exportarReportes'
@@ -268,6 +270,7 @@ export function AnalyticsPage() {
   const [avisoLimite, setAvisoLimite] = useState<number | null>(null)
   const [errorDebug, setErrorDebug] = useState<string | null>(null)
   const [granularidadEvo, setGranularidadEvo] = useState<GranularidadEje>('dia')
+  const [granularidadVC, setGranularidadVC] = useState<GranularidadVentasCompras>('mes')
   const [comprasPeriodo, setComprasPeriodo] = useState<{ fecha: string; total: number }[]>([])
   const top10Hover = useIndiceBarraActiva()
   const diasHover = useIndiceBarraActiva()
@@ -296,7 +299,7 @@ export function AnalyticsPage() {
         }
         setAvisoLimite(null)
         const [res, cfg, comprasRes] = await Promise.all([
-          cargarAnalyticsPeriodo(client, desde, hasta, granularidadEvo, empresaId),
+          cargarAnalyticsPeriodo(client, desde, hasta, 'dia', empresaId),
           obtenerConfiguracion(client, perfil.empresa.id),
           cargarComprasPeriodo(client, desde, hasta, empresaId),
         ])
@@ -342,7 +345,7 @@ export function AnalyticsPage() {
         setCargando(false)
       }
     })()
-  }, [perfil, desde, hasta, granularidadEvo])
+  }, [perfil, desde, hasta])
 
   const diasPeriodo = diasIncluidosPeriodo(desde, hasta)
   const dataPeriodoAnterior = useMemo(
@@ -434,7 +437,13 @@ export function AnalyticsPage() {
     }
     return chartDiasSemanaDesdeRpc(data.dias_semana)
   }, [data.dias_semana, data.evolucionDiaria])
-  const evolucionVista = data.evolucion
+  const evolucionVista = useMemo(() => {
+    const base =
+      data.evolucionDiaria.some((p) => p.Ventas > 0 || p.Anterior > 0)
+        ? data.evolucionDiaria
+        : data.evolucion
+    return agruparEvolucion(base, granularidadEvo)
+  }, [data.evolucion, data.evolucionDiaria, granularidadEvo])
   const top10Data = useMemo(() => {
     const porNombre = new Map(data.productos.map((p) => [p.producto, p]))
     return data.top10.map((p) => {
@@ -451,10 +460,11 @@ export function AnalyticsPage() {
     })
   }, [data.top10, data.productos])
 
-  const ventasVsCompras = useMemo(
-    () => ventasVsComprasPorSemana(data.evolucionDiaria, comprasPeriodo, desde, hasta),
-    [data.evolucionDiaria, comprasPeriodo, desde, hasta],
-  )
+  const ventasVsCompras = useMemo(() => {
+    const ventasBase =
+      data.evolucionDiaria.some((p) => p.Ventas > 0) ? data.evolucionDiaria : data.evolucion
+    return ventasVsComprasAgrupado(ventasBase, comprasPeriodo, granularidadVC)
+  }, [data.evolucion, data.evolucionDiaria, comprasPeriodo, granularidadVC])
 
   if (!perfil) return null
 
@@ -708,7 +718,7 @@ export function AnalyticsPage() {
                           stroke="#6366F1"
                           fill="rgba(99,102,241,0.2)"
                           strokeWidth={2}
-                          dot={false}
+                          dot={granularidadEvo === 'anio' || evolucionVista.length <= 12}
                           activeDot={{ r: 4, fill: '#6366F1' }}
                         />
                         <Line
@@ -727,7 +737,21 @@ export function AnalyticsPage() {
                 </Card>
 
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
-                  <GraficoExpandible titulo="Ventas vs Compras" compactoClass="h-72">
+                  <GraficoExpandible
+                    titulo="Ventas vs Compras"
+                    compactoClass="h-72"
+                    toolbar={
+                      <SelectorChips
+                        valor={granularidadVC}
+                        opciones={[
+                          { id: 'semana', label: 'Semana' },
+                          { id: 'mes', label: 'Mes' },
+                          { id: 'anio', label: 'Año' },
+                        ]}
+                        onChange={setGranularidadVC}
+                      />
+                    }
+                  >
                     {ventasVsCompras.length === 0 ? (
                       <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">
                         Sin movimientos en el período
@@ -757,21 +781,22 @@ export function AnalyticsPage() {
                             wrapperStyle={{ color: g.eje, fontSize: 12 }}
                             formatter={(value) => String(value)}
                           />
-                          <Bar
-                            dataKey="Ventas"
-                            name="Ventas"
-                            fill="#6366F1"
-                            radius={[4, 4, 0, 0]}
-                            maxBarSize={28}
-                          />
                           <Line
                             type="monotone"
-                            dataKey="Compras"
+                            dataKey="compras"
                             name="Compras"
                             stroke="#F59E0B"
                             strokeWidth={2}
                             dot={{ r: 3, fill: '#F59E0B' }}
                             activeDot={{ r: 5, fill: '#F59E0B' }}
+                          />
+                          <Bar
+                            dataKey="ventas"
+                            name="Ventas"
+                            fill="#6366F1"
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={48}
+                            minPointSize={4}
                           />
                         </ComposedChart>
                       </ResponsiveContainer>

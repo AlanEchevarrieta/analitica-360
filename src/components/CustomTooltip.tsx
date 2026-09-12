@@ -227,17 +227,23 @@ export function TooltipMontoSimple({ active, payload, label }: TipProps) {
 
 export function TooltipVentasCompras({ active, payload, label }: TipProps) {
   if (!active || !payload?.length) return null
-  const row = (payload[0].payload ?? {}) as { Ventas?: number; Compras?: number; fecha?: string }
+  const row = (payload[0].payload ?? {}) as {
+    ventas?: number
+    compras?: number
+    Ventas?: number
+    Compras?: number
+    fecha?: string
+  }
   return (
     <ChartTooltipBox>
       <p style={{ color: '#94A3B8', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
         {String(label ?? row.fecha ?? '')}
       </p>
       <p style={{ color: '#A5B4FC', fontSize: 13, fontWeight: 600, marginTop: 6 }}>
-        Ventas: {formatoARS(Number(row.Ventas ?? 0))}
+        Ventas: {formatoARS(Number(row.ventas ?? row.Ventas ?? 0))}
       </p>
       <p style={{ color: '#F59E0B', fontSize: 13, fontWeight: 600, marginTop: 2 }}>
-        Compras: {formatoARS(Number(row.Compras ?? 0))}
+        Compras: {formatoARS(Number(row.compras ?? row.Compras ?? 0))}
       </p>
     </ChartTooltipBox>
   )

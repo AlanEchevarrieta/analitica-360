@@ -115,11 +115,32 @@ function labelAnio(iso: string) {
   return iso.slice(0, 4)
 }
 
+export function fechaIsoDe(valor: unknown) {
+  const raw = String(valor ?? '').trim()
+  const m = raw.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (m) return m[1]
+  return raw.slice(0, 10)
+}
+
+/** Año calendario de una fecha ISO (`YYYY-MM-DD`) o parseable. Evita el corrimiento UTC de `new Date('YYYY-MM-DD')`. */
+export function anioDeFecha(fecha: string) {
+  const iso = fechaIsoDe(fecha)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    return new Date(`${iso}T12:00:00`).getFullYear()
+  }
+  const año = new Date(fecha).getFullYear()
+  return Number.isFinite(año) ? año : NaN
+}
+
 export function claveGranularidad(iso: string, g: GranularidadEje) {
-  if (g === 'semana') return lunesIso(iso)
-  if (g === 'mes') return inicioMesIso(iso)
-  if (g === 'anio') return inicioAnioIso(iso)
-  return iso.slice(0, 10)
+  const fecha = fechaIsoDe(iso)
+  if (g === 'semana') return lunesIso(fecha)
+  if (g === 'mes') return inicioMesIso(fecha)
+  if (g === 'anio') {
+    const año = anioDeFecha(fecha)
+    return Number.isFinite(año) ? `${año}-01-01` : inicioAnioIso(fecha)
+  }
+  return fecha
 }
 
 export function etiquetaGranularidad(iso: string, g: GranularidadEje) {
@@ -132,14 +153,16 @@ export function agruparEvolucion(puntos: AnalyticsPunto[], g: GranularidadEje): 
   if (g === 'dia' || puntos.length === 0) return puntos
   const map = new Map<string, { Ventas: number; Anterior: number }>()
   for (const p of puntos) {
-    const iso = p.fechaExacta.slice(0, 10)
+    const iso = fechaIsoDe(p.fechaExacta || p.fecha)
+    if (!iso) continue
     const key = claveGranularidad(iso, g)
+    if (!key || key.startsWith('NaN')) continue
     const prev = map.get(key) ?? { Ventas: 0, Anterior: 0 }
-    prev.Ventas += p.Ventas
-    prev.Anterior += p.Anterior
+    prev.Ventas += num(p.Ventas)
+    prev.Anterior += num(p.Anterior)
     map.set(key, prev)
   }
-  return [...map.entries()]
+  const agrupados = [...map.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([key, v]) => ({
       fecha: etiquetaGranularidad(key, g),
@@ -147,6 +170,8 @@ export function agruparEvolucion(puntos: AnalyticsPunto[], g: GranularidadEje): 
       Ventas: v.Ventas,
       Anterior: v.Anterior,
     }))
+  if (g === 'anio') console.log('[evolucion año]', agrupados)
+  return agrupados
 }
 
 function labelMes(iso: string) {
@@ -394,9 +419,9 @@ export async function cargarAnalyticsPeriodo(
       cantidadAnt: num(row.cantidad_ant),
       costoAnt: num(row.costo_ant),
       evolucion:
-        granularidad === 'anio' || evoRes.error || evoRes.data == null
-          ? agruparEvolucion(evolucionDiaria, granularidad)
-          : parseEvolucion(evoRes.data, granularidad),
+        evoRes.error || evoRes.data == null
+          ? agruparEvolucion(evolucionDiaria, granularidad === 'anio' ? 'dia' : granularidad)
+          : parseEvolucion(evoRes.data, granularidad === 'anio' ? 'dia' : granularidad),
       evolucionDiaria,
       formasPago:
         pagosRes.error || pagosRes.data == null
@@ -425,12 +450,12 @@ function parseEvolucion(raw: unknown, granularidad: GranularidadEje = 'dia'): An
   const evolucion = Array.isArray(raw) ? raw : []
   return evolucion.map((item) => {
     const p = item as Record<string, unknown>
-    const iso = String(p.fecha ?? '').slice(0, 10)
+    const iso = String(p.fechaExacta ?? p.fecha ?? '').slice(0, 10)
     return {
       fecha: etiquetaGranularidad(iso, granularidad),
       fechaExacta: iso,
-      Ventas: num(p.Ventas),
-      Anterior: num(p.Anterior),
+      Ventas: num(p.Ventas ?? p.ventas ?? p.total ?? p.valor),
+      Anterior: num(p.Anterior ?? p.anterior),
     }
   })
 }
@@ -550,11 +575,13 @@ export function ventasPorDiaSemana(puntos: AnalyticsPunto[]) {
   }))
 }
 
+export type GranularidadVentasCompras = 'semana' | 'mes' | 'anio'
+
 export type PuntoVentasCompras = {
   fecha: string
   fechaExacta: string
-  Ventas: number
-  Compras: number
+  ventas: number
+  compras: number
 }
 
 export async function cargarComprasPeriodo(
@@ -581,7 +608,7 @@ export async function cargarComprasPeriodo(
     const chunk = data ?? []
     for (const row of chunk) {
       const r = row as Record<string, unknown>
-      const iso = String(r.fecha ?? '').slice(0, 10)
+      const iso = fechaIsoDe(r.fecha)
       if (!iso) continue
       filas.push({ fecha: iso, total: num(r.total) })
     }
@@ -592,36 +619,36 @@ export async function cargarComprasPeriodo(
   return { filas, error: null }
 }
 
-export function ventasVsComprasPorSemana(
+export function ventasVsComprasAgrupado(
   ventasDiarias: AnalyticsPunto[],
   compras: { fecha: string; total: number }[],
-  desde: string,
-  hasta: string,
+  g: GranularidadVentasCompras,
 ): PuntoVentasCompras[] {
-  const map = new Map<string, { Ventas: number; Compras: number }>()
-  const lunesDesde = lunesIso(desde)
-  const lunesHasta = lunesIso(hasta)
-  for (let d = lunesDesde; d <= lunesHasta; d = sumarDiasIso(d, 7)) {
-    map.set(d, { Ventas: 0, Compras: 0 })
+  const map = new Map<string, { ventas: number; compras: number }>()
+  const gEje: GranularidadEje = g
+  function sumar(fechaRaw: string, campo: 'ventas' | 'compras', monto: number) {
+    const iso = fechaIsoDe(fechaRaw)
+    if (!iso) return
+    const key = claveGranularidad(iso, gEje)
+    if (!key || key.startsWith('NaN')) return
+    const prev = map.get(key) ?? { ventas: 0, compras: 0 }
+    prev[campo] += monto
+    map.set(key, prev)
   }
   for (const p of ventasDiarias) {
-    const key = lunesIso(p.fechaExacta.slice(0, 10))
-    const prev = map.get(key) ?? { Ventas: 0, Compras: 0 }
-    prev.Ventas += p.Ventas
-    map.set(key, prev)
+    sumar(p.fechaExacta || p.fecha, 'ventas', num(p.Ventas))
   }
   for (const c of compras) {
-    const key = lunesIso(c.fecha.slice(0, 10))
-    const prev = map.get(key) ?? { Ventas: 0, Compras: 0 }
-    prev.Compras += c.total
-    map.set(key, prev)
+    sumar(c.fecha, 'compras', num(c.total))
   }
-  return [...map.entries()]
+  const datos = [...map.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([key, v]) => ({
-      fecha: labelFecha(key),
+      fecha: etiquetaGranularidad(key, gEje),
       fechaExacta: key,
-      Ventas: v.Ventas,
-      Compras: v.Compras,
+      ventas: v.ventas,
+      compras: v.compras,
     }))
+  console.log('[ventas vs compras]', datos.slice(0, 3))
+  return datos
 }
