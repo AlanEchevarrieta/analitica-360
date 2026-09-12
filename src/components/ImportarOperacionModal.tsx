@@ -110,7 +110,7 @@ export function ImportarOperacionModal({
       <div
         className="max-h-[90vh] w-full overflow-auto text-white"
         style={{
-          maxWidth: 560,
+          maxWidth: 640,
           background: '#0F1729',
           border: '1px solid rgba(99,102,241,0.3)',
           borderRadius: 16,

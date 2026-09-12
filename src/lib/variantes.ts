@@ -38,6 +38,38 @@ export function etiquetaCombo(atributos: Record<string, string>) {
     .join('/')
 }
 
+export function claveValoresVariante(texto: string) {
+  return texto
+    .split(/[/|,;]+/)
+    .map((p) => p.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
+    .filter(Boolean)
+    .sort()
+    .join('/')
+}
+
+export function avisoVarianteFaltante(nombre: string, variante: string) {
+  return `Variante '${variante}' no encontrada para ${nombre} — se importará sin variante`
+}
+
+export function buscarVariantePorTexto(
+  variantes: VarianteFila[],
+  productoId: string,
+  texto: string,
+): VarianteFila | null {
+  const raw = texto.trim()
+  if (!raw || !productoId) return null
+  const clave = claveValoresVariante(raw)
+  if (!clave) return null
+  const pool = variantes.filter((v) => v.productoId === productoId)
+  const lista = pool.some((v) => v.activo) ? pool.filter((v) => v.activo) : pool
+  return (
+    lista.find((v) => {
+      if (v.sku && v.sku.trim().toLowerCase() === raw.toLowerCase()) return true
+      return claveValoresVariante(Object.values(v.atributos).join('/')) === clave
+    }) ?? null
+  )
+}
+
 export function slugSku(texto: string) {
   return texto
     .normalize('NFD')

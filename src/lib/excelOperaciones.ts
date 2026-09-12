@@ -27,6 +27,13 @@ export function textoCelda(v: unknown) {
   return String(v ?? '').trim()
 }
 
+export function celdaEsNumero(v: unknown) {
+  if (typeof v === 'number' && Number.isFinite(v)) return true
+  const s = textoCelda(v)
+  if (!s) return false
+  return /^-?\d+([.,]\d+)?$/.test(s.replace(/\s/g, '').replace(/\$/g, ''))
+}
+
 export function claveColumna(h: string) {
   return h
     .trim()

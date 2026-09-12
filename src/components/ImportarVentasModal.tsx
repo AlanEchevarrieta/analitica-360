@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ImportarOperacionModal, PreviewTablaImport } from './ImportarOperacionModal'
 import {
   aplicarCatalogoVentas,
@@ -6,9 +6,11 @@ import {
   importarVentas,
   leerArchivoVentas,
   etiquetaPreviewVenta,
+  etiquetaPreviewVariantes,
   type FilaImportVenta,
 } from '../lib/importarVentas'
 import { requireSupabase } from '../lib/supabase'
+import { listarVariantesDeProductos, type VarianteFila } from '../lib/variantes'
 
 export function ImportarVentasModal({
   productos,
@@ -20,7 +22,19 @@ export function ImportarVentasModal({
   onListo: () => Promise<void>
 }) {
   const [filas, setFilas] = useState<FilaImportVenta[]>([])
-  const listas = useMemo(() => aplicarCatalogoVentas(filas, productos), [filas, productos])
+  const [variantes, setVariantes] = useState<VarianteFila[]>([])
+  const ids = productos.map((p) => p.id).join(',')
+
+  useEffect(() => {
+    const lista = ids.split(',').filter(Boolean)
+    if (lista.length === 0) {
+      setVariantes([])
+      return
+    }
+    void listarVariantesDeProductos(requireSupabase(), lista).then((res) => setVariantes(res.filas))
+  }, [ids])
+
+  const listas = useMemo(() => aplicarCatalogoVentas(filas, productos, variantes), [filas, productos, variantes])
   const listos = listas.filter((f) => !f.error).length
   const erroresN = listas.filter((f) => f.error).length
 
@@ -55,7 +69,7 @@ export function ImportarVentasModal({
       preview={
         listas.length > 0 ? (
           <PreviewTablaImport
-            headers={['Fila', 'Fecha', 'Productos', 'Pago', 'Cliente', 'Estado']}
+            headers={['Fila', 'Fecha', 'Productos', 'Variante', 'Pago', 'Cliente', 'Estado']}
             listos={listos}
             errores={erroresN}
           >
@@ -68,11 +82,14 @@ export function ImportarVentasModal({
                 <td className="px-3 py-2">{f.filaExcel}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{etiquetaPreviewVenta(f)}</td>
                 <td className="px-3 py-2">{f.resumen || '—'}</td>
+                <td className="px-3 py-2">{etiquetaPreviewVariantes(f)}</td>
                 <td className="px-3 py-2">{f.formaLabel || '—'}</td>
                 <td className="px-3 py-2">{f.cliente || '—'}</td>
                 <td className="px-3 py-2">
                   {f.error ? (
                     <span className="text-[#F87171]">{f.error}</span>
+                  ) : f.advertencias.length > 0 ? (
+                    <span className="text-[#FCD34D]">{f.advertencias.join(' ')}</span>
                   ) : (
                     <span className="text-[#4ADE80]">OK</span>
                   )}

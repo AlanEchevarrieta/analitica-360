@@ -7,6 +7,7 @@ import {
   type ProgresoImportacion,
 } from './lotesImportacion'
 import {
+  celdaEsNumero,
   claveColumna,
   claveNombre,
   descargarPlantilla,
@@ -20,22 +21,28 @@ import {
   type ErrorFila,
 } from './excelOperaciones'
 import { FORMAS_PAGO } from './ventas'
+import { avisoVarianteFaltante, buscarVariantePorTexto, listarVariantesDeProductos, type VarianteFila } from './variantes'
 
 export const COLUMNAS_PLANTILLA_VENTAS = [
   'Fecha',
   'Producto 1',
+  'Variante 1',
   'Cantidad 1',
   'Precio unitario 1',
   'Producto 2',
+  'Variante 2',
   'Cantidad 2',
   'Precio unitario 2',
   'Producto 3',
+  'Variante 3',
   'Cantidad 3',
   'Precio unitario 3',
   'Producto 4',
+  'Variante 4',
   'Cantidad 4',
   'Precio unitario 4',
   'Producto 5',
+  'Variante 5',
   'Cantidad 5',
   'Precio unitario 5',
   'Forma de pago',
@@ -48,9 +55,12 @@ const PRODUCTOS_POR_FILA = 5
 
 export type ItemImportVenta = {
   nombre: string
+  variante: string
   cantidad: number
   precio: number
   productoId?: string
+  varianteId?: string | null
+  avisoVariante?: string | null
 }
 
 export type FilaImportVenta = {
@@ -63,7 +73,12 @@ export type FilaImportVenta = {
   descuento: number
   notas: string
   error: string | null
+  advertencias: string[]
   resumen: string
+}
+
+function resumenItem(it: ItemImportVenta) {
+  return it.variante ? `${it.nombre} (${it.variante}) × ${it.cantidad}` : `${it.nombre} × ${it.cantidad}`
 }
 
 function mapearFormaPago(raw: string): { id: string; label: string } | null {
@@ -80,25 +95,36 @@ function mapearFormaPago(raw: string): { id: string; label: string } | null {
   return known ? { id: known.id, label: known.label } : null
 }
 
-function itemsDesdeRow(row: unknown[], offset: number, cantidad: number) {
-  const items: ItemImportVenta[] = []
-  for (let i = 0; i < cantidad; i++) {
-    const base = offset + i * 3
-    const nombre = textoCelda(row[base])
-    const cantidadItem = enteroCelda(row[base + 1])
-    const precio = numeroCelda(row[base + 2])
-    if (!nombre && cantidadItem === 0 && precio === 0) continue
-    items.push({ nombre, cantidad: cantidadItem, precio })
+function layoutVentas(row: unknown[], encabezado: string[]) {
+  const keys = encabezado.map((h) => claveColumna(h))
+  const formaHeader = keys.findIndex((k) => k.includes('forma') && k.includes('pago'))
+  const conVarianteHeader = keys.some((k) => k.includes('variante'))
+  if (formaHeader > 0) {
+    const stride = conVarianteHeader ? 4 : 3
+    return { offset: 1, stride, colPago: formaHeader }
   }
-  return items
+  for (const idx of [21, 16, 13, 10, 9, 5, 4]) {
+    if (!mapearFormaPago(textoCelda(row[idx]))) continue
+    const cols = idx - 1
+    if (cols > 0 && cols % 4 === 0) return { offset: 1, stride: 4, colPago: idx }
+    if (cols > 0 && cols % 3 === 0) return { offset: 1, stride: 3, colPago: idx }
+  }
+  const stride = celdaEsNumero(row[2]) ? 3 : 4
+  return { offset: 1, stride, colPago: 1 + PRODUCTOS_POR_FILA * stride }
 }
 
-function indiceBloquePago(row: unknown[], encabezado: string[]) {
-  const tieneP4 = encabezado.some((h) => claveColumna(h).includes('producto 4'))
-  if (tieneP4) return 1 + PRODUCTOS_POR_FILA * 3
-  if (mapearFormaPago(textoCelda(row[16]))) return 16
-  if (mapearFormaPago(textoCelda(row[10]))) return 10
-  return 1 + PRODUCTOS_POR_FILA * 3
+function itemsDesdeRow(row: unknown[], offset: number, cantidad: number, stride: number) {
+  const items: ItemImportVenta[] = []
+  for (let i = 0; i < cantidad; i++) {
+    const base = offset + i * stride
+    const nombre = textoCelda(row[base])
+    const variante = stride === 4 ? textoCelda(row[base + 1]) : ''
+    const cantidadItem = enteroCelda(row[base + (stride === 4 ? 2 : 1)])
+    const precio = numeroCelda(row[base + (stride === 4 ? 3 : 2)])
+    if (!nombre && !variante && cantidadItem === 0 && precio === 0) continue
+    items.push({ nombre, variante, cantidad: cantidadItem, precio })
+  }
+  return items
 }
 
 function filasDesdeMatriz(rows: unknown[][]): FilaImportVenta[] {
@@ -113,14 +139,14 @@ function filasDesdeMatriz(rows: unknown[][]): FilaImportVenta[] {
   data.forEach((row, i) => {
     if (!Array.isArray(row)) return
     const filaExcel = startExcel + i
-    const colPago = indiceBloquePago(row, encabezado)
-    const nProductos = (colPago - 1) / 3
+    const layout = layoutVentas(row, encabezado)
+    const nProductos = Math.max(1, Math.floor((layout.colPago - layout.offset) / layout.stride))
     const fecha = parseFechaCelda(row[0])
-    const items = itemsDesdeRow(row, 1, nProductos)
-    const forma = mapearFormaPago(textoCelda(row[colPago]))
-    const cliente = textoCelda(row[colPago + 1])
-    const descuento = numeroCelda(row[colPago + 2])
-    const notas = textoCelda(row[colPago + 3])
+    const items = itemsDesdeRow(row, layout.offset, nProductos, layout.stride)
+    const forma = mapearFormaPago(textoCelda(row[layout.colPago]))
+    const cliente = textoCelda(row[layout.colPago + 1])
+    const descuento = numeroCelda(row[layout.colPago + 2])
+    const notas = textoCelda(row[layout.colPago + 3])
     const vacia = !fecha && items.length === 0 && !forma && !cliente
     if (vacia) return
 
@@ -137,39 +163,34 @@ function filasDesdeMatriz(rows: unknown[][]): FilaImportVenta[] {
       fecha: fecha ?? '',
       items,
       formaPago: forma?.id ?? '',
-      formaLabel: forma?.label ?? textoCelda(row[colPago]) ?? '',
+      formaLabel: forma?.label ?? textoCelda(row[layout.colPago]) ?? '',
       cliente,
       descuento: descuento < 0 ? 0 : descuento,
       notas,
       error,
-      resumen: items.map((it) => `${it.nombre} × ${it.cantidad}`).join(', '),
+      advertencias: [],
+      resumen: items.map(resumenItem).join(', '),
     })
   })
   return out
+}
+
+function vaciosProductos(n: number) {
+  return Array.from({ length: n }, () => '')
 }
 
 export async function descargarPlantillaVentas() {
   await descargarPlantilla('plantilla_ventas.xlsx', 'Ventas', [
     [...COLUMNAS_PLANTILLA_VENTAS],
     [
-      '15/03/2024',
-      'Remera básica',
+      '01/01/2026',
+      'Bolso Matero',
+      'Negro/Ecocuero',
       2,
-      15000,
+      49000,
+      ...vaciosProductos(16),
+      'Transferencia',
       '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      'Efectivo',
-      'Juan Pérez',
       0,
       '',
     ],
@@ -184,26 +205,38 @@ export async function leerArchivoVentas(file: File): Promise<FilaImportVenta[]> 
 export function aplicarCatalogoVentas(
   filas: FilaImportVenta[],
   productos: { id: string; nombre: string }[],
+  variantes: VarianteFila[] = [],
 ): FilaImportVenta[] {
   const mapa = new Map(productos.map((p) => [claveNombre(p.nombre), p]))
   return filas.map((fila) => {
     if (fila.error) return fila
     const resueltos: ItemImportVenta[] = []
+    const advertencias: string[] = []
     for (const item of fila.items) {
       const prod = mapa.get(claveNombre(item.nombre))
       if (!prod) {
-        return { ...fila, error: `Producto no encontrado: ${item.nombre}` }
+        return { ...fila, error: `Producto no encontrado: ${item.nombre}`, advertencias: [] }
       }
-      resueltos.push({ ...item, productoId: prod.id })
+      let varianteId: string | null = null
+      let avisoVariante: string | null = null
+      if (item.variante) {
+        const hit = buscarVariantePorTexto(variantes, prod.id, item.variante)
+        if (hit) varianteId = hit.id
+        else {
+          avisoVariante = avisoVarianteFaltante(item.nombre, item.variante)
+          advertencias.push(avisoVariante)
+        }
+      }
+      resueltos.push({ ...item, productoId: prod.id, varianteId, avisoVariante })
     }
-    return { ...fila, items: resueltos }
+    return { ...fila, items: resueltos, advertencias, resumen: resueltos.map(resumenItem).join(', ') }
   })
 }
 
 function motivoErrorVenta(msg: string) {
   const t = msg.toLowerCase()
   if (t.includes('could not find the function') || t.includes('schema cache') || t.includes('pgrst202')) {
-    return 'Falta correr supabase/021_importar_ventas.sql y supabase/041_importar_lotes.sql en el SQL Editor (rol postgres).'
+    return 'Falta correr supabase/021_importar_ventas.sql, supabase/041_importar_lotes.sql y supabase/045_importar_venta_variante.sql en el SQL Editor (rol postgres).'
   }
   return msg
 }
@@ -215,6 +248,7 @@ function payloadVenta(fila: FilaImportVenta, clienteId: string | null) {
       producto_id: it.productoId,
       cantidad: it.cantidad,
       precio_unitario: it.precio,
+      variante_id: it.varianteId ?? null,
     })),
     forma_pago: fila.formaPago,
     descuento: fila.descuento,
@@ -248,7 +282,11 @@ export async function importarVentas(
   productos: { id: string; nombre: string }[],
   onProgreso?: ProgresoImportacion,
 ): Promise<{ importados: number; errores: ErrorFila[] }> {
-  const preparadas = aplicarCatalogoVentas(filas, productos)
+  const vars = await listarVariantesDeProductos(
+    client,
+    productos.map((p) => p.id),
+  )
+  const preparadas = aplicarCatalogoVentas(filas, productos, vars.filas)
   const total = preparadas.length
   const clientesRes = await client.from('clientes').select('id, nombre').is('deleted_at', null)
   const clientes = new Map<string, string>()
@@ -368,4 +406,9 @@ export async function importarVentas(
 
 export function etiquetaPreviewVenta(fila: FilaImportVenta) {
   return fila.fecha ? formatoFechaCorta(fila.fecha) : '—'
+}
+
+export function etiquetaPreviewVariantes(fila: { items: { variante?: string }[] }) {
+  const textos = fila.items.map((it) => it.variante?.trim() || '—')
+  return textos.length ? textos.join(', ') : '—'
 }
