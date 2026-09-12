@@ -532,20 +532,18 @@ export function HomePage() {
         {alertasLotes.vencidos > 0 ? (
           <Link
             className="mb-4 block rounded-lg bg-red-100 px-3 py-3 text-sm text-red-900"
-            to="/lotes?estado=vencido"
+            to="/inventario?tab=lotes&estado=vencido"
           >
-            🔴 {alertasLotes.vencidos} {alertasLotes.vencidos === 1 ? 'lote vencido' : 'lotes vencidos'} — revisá tu
-            stock
+            🔴 {alertasLotes.vencidos} {alertasLotes.vencidos === 1 ? 'lote vencido' : 'lotes vencidos'}
           </Link>
         ) : null}
 
         {alertasLotes.porVencer > 0 ? (
           <Link
             className="mb-4 block rounded-lg bg-amber-100 px-3 py-3 text-sm text-amber-950"
-            to="/lotes?estado=por_vencer"
+            to="/inventario?tab=lotes&estado=por_vencer"
           >
-            🟡 {alertasLotes.porVencer}{' '}
-            {alertasLotes.porVencer === 1 ? 'lote vence' : 'lotes vencen'} en menos de 30 días
+            🟡 {alertasLotes.porVencer} {alertasLotes.porVencer === 1 ? 'lote vence' : 'lotes vencen'} en 30 días
           </Link>
         ) : null}
 

@@ -37,9 +37,6 @@ type Linea = {
   nombre: string
   cantidad: number
   costoUnitario: number
-  numeroLote: string
-  fechaElaboracion: string
-  fechaVencimiento: string
 }
 
 function claveLinea(productoId: string, varianteId: string | null) {
@@ -81,6 +78,10 @@ export function CompraNuevaPage() {
   const resaltadoTimer = useRef<number | null>(null)
   const [usaVariantes, setUsaVariantes] = useState(false)
   const [usaLotes, setUsaLotes] = useState(false)
+  const [loteCompraAbierto, setLoteCompraAbierto] = useState(false)
+  const [compraNumeroLote, setCompraNumeroLote] = useState('')
+  const [compraElab, setCompraElab] = useState('')
+  const [compraVenc, setCompraVenc] = useState('')
   const [variantesCatalogo, setVariantesCatalogo] = useState<VarianteFila[]>([])
   const [stockVar, setStockVar] = useState<Map<string, number>>(new Map())
   const [atributosVentas, setAtributosVentas] = useState<AtributoFila[]>([])
@@ -105,6 +106,7 @@ export function CompraNuevaPage() {
       const usa = Boolean(config.usaVariantes)
       setUsaVariantes(usa)
       setUsaLotes(Boolean(config.usaLotes))
+      if (config.usaLotes) setCompraNumeroLote((prev) => prev || sugerenciaNumeroLote())
       if (!usa) {
         setVariantesCatalogo([])
         setAtributosVentas([])
@@ -183,22 +185,20 @@ export function CompraNuevaPage() {
     const varianteId = variante?.id ?? null
     const etiqueta = variante ? ` — ${etiquetaCombo(variante.atributos)}` : ''
     const costo = variante && variante.costo != null ? variante.costo : producto.costo
-    if (!usaLotes) {
-      const k = claveLinea(producto.id, varianteId)
-      const existente = lineas.find((l) => claveLinea(l.productoId, l.varianteId) === k)
-      if (existente) {
-        setLineas((prev) => [
-          { ...existente, cantidad: existente.cantidad + 1 },
-          ...prev.filter((l) => l.uid !== existente.uid),
-        ])
-        resaltarLinea(existente.uid)
-        setBusqueda('')
-        setMostrarNuevo(false)
-        setDropdownProducto(false)
-        setPicker(null)
-        setError(null)
-        return
-      }
+    const k = claveLinea(producto.id, varianteId)
+    const existente = lineas.find((l) => claveLinea(l.productoId, l.varianteId) === k)
+    if (existente) {
+      setLineas((prev) => [
+        { ...existente, cantidad: existente.cantidad + 1 },
+        ...prev.filter((l) => l.uid !== existente.uid),
+      ])
+      resaltarLinea(existente.uid)
+      setBusqueda('')
+      setMostrarNuevo(false)
+      setDropdownProducto(false)
+      setPicker(null)
+      setError(null)
+      return
     }
     const uid = crypto.randomUUID()
     setLineas((prev) => [
@@ -209,9 +209,6 @@ export function CompraNuevaPage() {
         nombre: `${producto.nombre}${etiqueta}`,
         cantidad: 1,
         costoUnitario: costo,
-        numeroLote: usaLotes ? sugerenciaNumeroLote(producto.nombre) : '',
-        fechaElaboracion: '',
-        fechaVencimiento: '',
       },
       ...prev,
     ])
@@ -381,7 +378,7 @@ export function CompraNuevaPage() {
       setError('Revisá cantidad y costo de cada línea')
       return
     }
-    if (usaLotes && lineas.some((l) => !l.numeroLote.trim())) {
+    if (usaLotes && !compraNumeroLote.trim()) {
       setError('El número de lote es obligatorio')
       return
     }
@@ -408,9 +405,9 @@ export function CompraNuevaPage() {
           empresaId: perfil.empresa.id,
           productoId: l.productoId,
           varianteId: l.varianteId,
-          numeroLote: l.numeroLote,
-          fechaElaboracion: l.fechaElaboracion || null,
-          fechaVencimiento: l.fechaVencimiento || null,
+          numeroLote: compraNumeroLote,
+          fechaElaboracion: compraElab || null,
+          fechaVencimiento: compraVenc || null,
           cantidadInicial: l.cantidad,
           proveedorId,
           registrarMovimiento: false,
@@ -644,56 +641,6 @@ export function CompraNuevaPage() {
                             />
                           </label>
                         </div>
-                        {usaLotes ? (
-                          <div className="mt-2 space-y-2">
-                            <label className="block text-xs text-[#4A5568]">
-                              N° de lote
-                              <input
-                                className={`${inputClass} mt-1 h-9`}
-                                value={linea.numeroLote}
-                                onChange={(ev) =>
-                                  setLineas((prev) =>
-                                    prev.map((l) =>
-                                      l.uid === clave ? { ...l, numeroLote: ev.target.value } : l,
-                                    ),
-                                  )
-                                }
-                              />
-                            </label>
-                            <div className="grid grid-cols-2 gap-2">
-                              <label className="text-xs text-[#4A5568]">
-                                Elaboración
-                                <input
-                                  className={`${inputClass} mt-1 h-9`}
-                                  type="date"
-                                  value={linea.fechaElaboracion}
-                                  onChange={(ev) =>
-                                    setLineas((prev) =>
-                                      prev.map((l) =>
-                                        l.uid === clave ? { ...l, fechaElaboracion: ev.target.value } : l,
-                                      ),
-                                    )
-                                  }
-                                />
-                              </label>
-                              <label className="text-xs text-[#4A5568]">
-                                Vencimiento
-                                <input
-                                  className={`${inputClass} mt-1 h-9`}
-                                  type="date"
-                                  value={linea.fechaVencimiento}
-                                  onChange={(ev) =>
-                                    setLineas((prev) =>
-                                      prev.map((l) =>
-                                        l.uid === clave ? { ...l, fechaVencimiento: ev.target.value } : l,
-                                      ),
-                                    )
-                                  }
-                                />
-                              </label>
-                            </div>
-                          </div>
-                        ) : null}
                         <p className="mt-2 text-right text-sm text-[#1A2F4A]">
                           Subtotal {formatoARS(linea.cantidad * linea.costoUnitario)}
                         </p>
@@ -709,6 +656,50 @@ export function CompraNuevaPage() {
 
               {paso === 2 ? (
                 <div className="mt-5 space-y-4">
+                  {usaLotes ? (
+                    <div className="rounded-md border border-[#E2E8F0]">
+                      <button
+                        className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-medium text-[#1A2F4A]"
+                        type="button"
+                        onClick={() => setLoteCompraAbierto((v) => !v)}
+                      >
+                        Lote de esta compra
+                        <span className="text-xs text-[#4A5568]">{loteCompraAbierto ? '▾' : '▸'}</span>
+                      </button>
+                      {loteCompraAbierto ? (
+                        <div className="space-y-2 border-t border-[#E2E8F0] px-3 py-3">
+                          <label className="block text-xs text-[#4A5568]">
+                            N° de lote
+                            <input
+                              className={`${inputClass} mt-1 h-9`}
+                              value={compraNumeroLote}
+                              onChange={(ev) => setCompraNumeroLote(ev.target.value)}
+                            />
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className="text-xs text-[#4A5568]">
+                              Fecha de elaboración
+                              <input
+                                className={`${inputClass} mt-1 h-9`}
+                                type="date"
+                                value={compraElab}
+                                onChange={(ev) => setCompraElab(ev.target.value)}
+                              />
+                            </label>
+                            <label className="text-xs text-[#4A5568]">
+                              Fecha de vencimiento
+                              <input
+                                className={`${inputClass} mt-1 h-9`}
+                                type="date"
+                                value={compraVenc}
+                                onChange={(ev) => setCompraVenc(ev.target.value)}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <div ref={comboProvRef}>
                     <p className="text-sm font-medium text-[#4A5568]">Proveedor (opcional)</p>
                     <input
@@ -817,7 +808,7 @@ export function CompraNuevaPage() {
                     {lineas.map((l) => (
                       <p key={l.uid}>
                         {l.nombre} × {l.cantidad} — {formatoARS(l.cantidad * l.costoUnitario)}
-                        {usaLotes && l.numeroLote ? ` · ${l.numeroLote}` : ''}
+                        {usaLotes && compraNumeroLote ? ` · ${compraNumeroLote}` : ''}
                       </p>
                     ))}
                     <p className="mt-2 font-semibold">Total {formatoARS(total)}</p>
@@ -832,7 +823,7 @@ export function CompraNuevaPage() {
                     {lineas.map((l) => (
                       <p key={l.uid}>
                         {l.nombre} × {l.cantidad} — {formatoARS(l.cantidad * l.costoUnitario)}
-                        {usaLotes && l.numeroLote ? ` · ${l.numeroLote}` : ''}
+                        {usaLotes && compraNumeroLote ? ` · ${compraNumeroLote}` : ''}
                       </p>
                     ))}
                     {proveedor.trim() ? <p className="mt-2">Proveedor: {proveedor.trim()}</p> : null}

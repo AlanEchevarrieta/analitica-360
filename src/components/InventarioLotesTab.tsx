@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Navigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../auth'
-import { AppNav } from '../components/AppNav'
-import { ParticleNetwork } from '../components/ParticleNetwork'
 import {
   FilterCollapse,
   ListCard,
   MobileCards,
-  PageTitle,
   PageSkeleton,
   TableCard,
   TableErrorRed,
@@ -16,9 +11,8 @@ import {
   btnPrimary,
   theadClass,
   theadStyle,
-} from '../components/listado'
+} from './listado'
 import { MSG_ERROR_RED, mensajeCargaTabla } from '../lib/consulta'
-import { obtenerConfiguracion } from '../lib/configuracion'
 import {
   crearLote,
   etiquetaEstadoLote,
@@ -32,33 +26,45 @@ import { listarProductos, type ProductoFila } from '../lib/productos'
 import { etiquetaProveedor, listarProveedoresEmpresa, type ProveedorFila } from '../lib/proveedores'
 import { requireSupabase } from '../lib/supabase'
 import { etiquetaCombo, listarVariantesDeProductos, type VarianteFila } from '../lib/variantes'
-import { theme } from '../theme'
 
 const inputClass =
   'h-11 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A] outline-none focus:border-[#6366F1] focus:bg-white focus:shadow-[0_0_0_3px_rgba(99,102,241,0.18)]'
 
 type FiltroEstado = 'todos' | 'vigente' | 'por_vencer' | 'vencido'
 
-function parseEstadoParam(raw: string | null): FiltroEstado {
-  if (raw === 'vigente' || raw === 'por_vencer' || raw === 'vencido') return raw
-  return 'todos'
+function BadgeLote({ estado }: { estado: EstadoLote }) {
+  const est = etiquetaEstadoLote(estado)
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
+      style={{ background: est.fondo, color: est.color }}
+    >
+      {est.icono} {est.texto}
+    </span>
+  )
 }
 
-export function LotesPage() {
-  const { perfil } = useAuth()
-  const [params, setParams] = useSearchParams()
-  const [habilitado, setHabilitado] = useState<boolean | null>(null)
+export function InventarioLotesTab({
+  empresaId,
+  puedeEditar,
+  estadoInicial,
+  onEstado,
+}: {
+  empresaId: string
+  puedeEditar: boolean
+  estadoInicial: FiltroEstado
+  onEstado: (estado: FiltroEstado) => void
+}) {
   const [filas, setFilas] = useState<LoteFila[]>([])
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
-  const [estadoFiltro, setEstadoFiltro] = useState<FiltroEstado>(parseEstadoParam(params.get('estado')))
+  const [estadoFiltro, setEstadoFiltro] = useState<FiltroEstado>(estadoInicial)
   const [productoId, setProductoId] = useState('')
   const [proveedorId, setProveedorId] = useState('')
   const [productos, setProductos] = useState<ProductoFila[]>([])
   const [proveedores, setProveedores] = useState<ProveedorFila[]>([])
   const [modal, setModal] = useState(false)
   const [variantes, setVariantes] = useState<VarianteFila[]>([])
-
   const [nuevoProducto, setNuevoProducto] = useState('')
   const [nuevoVariante, setNuevoVariante] = useState('')
   const [nuevoNumero, setNuevoNumero] = useState('')
@@ -71,15 +77,8 @@ export function LotesPage() {
   const [errorModal, setErrorModal] = useState<string | null>(null)
 
   useEffect(() => {
-    setEstadoFiltro(parseEstadoParam(params.get('estado')))
-  }, [params])
-
-  useEffect(() => {
-    if (!perfil) return
-    void obtenerConfiguracion(requireSupabase(), perfil.empresa.id).then(({ config }) => {
-      setHabilitado(Boolean(config.usaLotes))
-    })
-  }, [perfil])
+    setEstadoFiltro(estadoInicial)
+  }, [estadoInicial])
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -105,8 +104,8 @@ export function LotesPage() {
   }, [productoId, proveedorId])
 
   useEffect(() => {
-    if (habilitado) void cargar()
-  }, [habilitado, cargar])
+    void cargar()
+  }, [cargar])
 
   const visibles = useMemo(() => {
     if (estadoFiltro === 'todos') return filas
@@ -120,17 +119,14 @@ export function LotesPage() {
 
   function cambiarEstado(next: FiltroEstado) {
     setEstadoFiltro(next)
-    const nextParams = new URLSearchParams(params)
-    if (next === 'todos') nextParams.delete('estado')
-    else nextParams.set('estado', next)
-    setParams(nextParams, { replace: true })
+    onEstado(next)
   }
 
   async function abrirModal() {
     setErrorModal(null)
     setNuevoProducto('')
     setNuevoVariante('')
-    setNuevoNumero('')
+    setNuevoNumero(sugerenciaNumeroLote())
     setNuevoElab('')
     setNuevoVenc('')
     setNuevoCant('0')
@@ -144,15 +140,7 @@ export function LotesPage() {
     setModal(true)
   }
 
-  function onCambioProducto(id: string) {
-    setNuevoProducto(id)
-    setNuevoVariante('')
-    const prod = productos.find((p) => p.id === id)
-    if (prod) setNuevoNumero(sugerenciaNumeroLote(prod.nombre))
-  }
-
   async function guardarLote() {
-    if (!perfil) return
     if (!nuevoProducto) {
       setErrorModal('Elegí un producto')
       return
@@ -169,7 +157,7 @@ export function LotesPage() {
     setGuardando(true)
     setErrorModal(null)
     const res = await crearLote(requireSupabase(), {
-      empresaId: perfil.empresa.id,
+      empresaId,
       productoId: nuevoProducto,
       varianteId: nuevoVariante || null,
       numeroLote: nuevoNumero,
@@ -189,155 +177,115 @@ export function LotesPage() {
     await cargar()
   }
 
-  if (!perfil) return null
-  if (habilitado === null) {
-    return (
-      <div
-        className="relative min-h-dvh"
-        style={{
-          fontFamily: theme.font,
-          background: `linear-gradient(180deg, ${theme.canvasFrom}, ${theme.canvasTo})`,
-        }}
-      >
-        <ParticleNetwork />
-        <div className="relative z-10 mx-auto max-w-6xl px-4 py-8">
-          <AppNav />
-          <PageSkeleton />
-        </div>
-      </div>
-    )
-  }
-  if (habilitado === false) return <Navigate to="/inicio" replace />
-
-  const puedeEditar = perfil.usuario.rol !== 'visor'
-
   return (
-    <div
-      className="relative min-h-dvh"
-      style={{
-        fontFamily: theme.font,
-        background: `linear-gradient(180deg, ${theme.canvasFrom}, ${theme.canvasTo})`,
-      }}
-    >
-      <ParticleNetwork />
-      <div className="relative z-10 mx-auto max-w-6xl px-4 py-8">
-        <AppNav />
-        <PageTitle titulo="Lotes y vencimientos" subtitulo={`${visibles.length} ${visibles.length === 1 ? 'lote' : 'lotes'}`} />
-
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <FilterCollapse activo={estadoFiltro !== 'todos' || Boolean(productoId) || Boolean(proveedorId)}>
-            <div className="filter-field">
-              <label htmlFor="lote-estado">Estado</label>
-              <select
-                id="lote-estado"
-                value={estadoFiltro}
-                onChange={(ev) => cambiarEstado(ev.target.value as FiltroEstado)}
-              >
-                <option value="todos">Todos</option>
-                <option value="vigente">Vigentes</option>
-                <option value="por_vencer">Por vencer</option>
-                <option value="vencido">Vencidos</option>
-              </select>
-            </div>
-            <div className="filter-field">
-              <label htmlFor="lote-prod">Producto</label>
-              <select id="lote-prod" value={productoId} onChange={(ev) => setProductoId(ev.target.value)}>
-                <option value="">Todos</option>
-                {productos.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="filter-field">
-              <label htmlFor="lote-prov">Proveedor</label>
-              <select id="lote-prov" value={proveedorId} onChange={(ev) => setProveedorId(ev.target.value)}>
-                <option value="">Todos</option>
-                {proveedores.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {etiquetaProveedor(p)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </FilterCollapse>
-          {puedeEditar ? (
-            <button className={btnPrimary} type="button" onClick={() => void abrirModal()}>
-              Nuevo lote
-            </button>
-          ) : null}
-        </div>
-
-        {cargando && habilitado ? <PageSkeleton /> : null}
-        {error === MSG_ERROR_RED ? <TableErrorRed onReintentar={() => void cargar()} /> : null}
-        {!cargando && error && error !== MSG_ERROR_RED ? (
-          <p className="mb-4 rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p>
-        ) : null}
-
-        {!cargando && !error ? (
-          <TableCard>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[920px] text-left">
-                <thead className={theadClass} style={theadStyle}>
-                  <tr>
-                    <Th>N° Lote</Th>
-                    <Th>Producto</Th>
-                    <Th>Variante</Th>
-                    <Th>Fecha elaboración</Th>
-                    <Th>Fecha vencimiento</Th>
-                    <Th>Stock actual</Th>
-                    <Th>Estado</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibles.map((fila, index) => {
-                    const est = etiquetaEstadoLote(fila.estado)
-                    return (
-                      <Tr key={fila.id} index={index}>
-                        <td className="px-3 py-3 font-medium">{fila.numeroLote}</td>
-                        <td className="px-3 py-3">{fila.productoNombre}</td>
-                        <td className="px-3 py-3">{fila.varianteEtiqueta ?? '—'}</td>
-                        <td className="px-3 py-3">{formatoFechaLote(fila.fechaElaboracion)}</td>
-                        <td className="px-3 py-3">{formatoFechaLote(fila.fechaVencimiento)}</td>
-                        <td className="px-3 py-3 tabular-nums">{fila.stock}</td>
-                        <td className="px-3 py-3">
-                          {est.icono} {est.texto}
-                        </td>
-                      </Tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <MobileCards>
-              {visibles.map((fila) => {
-                const est = etiquetaEstadoLote(fila.estado as EstadoLote)
-                return (
-                  <ListCard key={fila.id}>
-                    <p className="font-semibold">{fila.numeroLote}</p>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {fila.productoNombre}
-                      {fila.varianteEtiqueta ? ` · ${fila.varianteEtiqueta}` : ''}
-                    </p>
-                    <p className="mt-1 text-sm">
-                      Vence {formatoFechaLote(fila.fechaVencimiento)} · Stock {fila.stock}
-                    </p>
-                    <p className="mt-1 text-sm">
-                      {est.icono} {est.texto}
-                    </p>
-                  </ListCard>
-                )
-              })}
-            </MobileCards>
-            {visibles.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-                No hay lotes para mostrar.
-              </p>
-            ) : null}
-          </TableCard>
+    <>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <FilterCollapse activo={estadoFiltro !== 'todos' || Boolean(productoId) || Boolean(proveedorId)}>
+          <div className="filter-field">
+            <label htmlFor="lote-estado">Estado</label>
+            <select
+              id="lote-estado"
+              value={estadoFiltro}
+              onChange={(ev) => cambiarEstado(ev.target.value as FiltroEstado)}
+            >
+              <option value="todos">Todos</option>
+              <option value="vigente">Vigentes</option>
+              <option value="por_vencer">Por vencer</option>
+              <option value="vencido">Vencidos</option>
+            </select>
+          </div>
+          <div className="filter-field">
+            <label htmlFor="lote-prod">Producto</label>
+            <select id="lote-prod" value={productoId} onChange={(ev) => setProductoId(ev.target.value)}>
+              <option value="">Todos</option>
+              {productos.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="filter-field">
+            <label htmlFor="lote-prov">Proveedor</label>
+            <select id="lote-prov" value={proveedorId} onChange={(ev) => setProveedorId(ev.target.value)}>
+              <option value="">Todos</option>
+              {proveedores.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {etiquetaProveedor(p)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </FilterCollapse>
+        {puedeEditar ? (
+          <button className={btnPrimary} type="button" onClick={() => void abrirModal()}>
+            Nuevo lote
+          </button>
         ) : null}
       </div>
+
+      {cargando ? <PageSkeleton /> : null}
+      {error === MSG_ERROR_RED ? <TableErrorRed onReintentar={() => void cargar()} /> : null}
+      {!cargando && error && error !== MSG_ERROR_RED ? (
+        <p className="mb-4 rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p>
+      ) : null}
+
+      {!cargando && !error ? (
+        <TableCard>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[920px] text-left">
+              <thead className={theadClass} style={theadStyle}>
+                <tr>
+                  <Th>N° Lote</Th>
+                  <Th>Producto</Th>
+                  <Th>Variante</Th>
+                  <Th>Elaboración</Th>
+                  <Th>Vencimiento</Th>
+                  <Th>Stock lote</Th>
+                  <Th>Estado</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibles.map((fila, index) => (
+                  <Tr key={fila.id} index={index}>
+                    <td className="px-3 py-3 font-medium">{fila.numeroLote}</td>
+                    <td className="px-3 py-3">{fila.productoNombre}</td>
+                    <td className="px-3 py-3">{fila.varianteEtiqueta ?? '—'}</td>
+                    <td className="px-3 py-3">{formatoFechaLote(fila.fechaElaboracion)}</td>
+                    <td className="px-3 py-3">{formatoFechaLote(fila.fechaVencimiento)}</td>
+                    <td className="px-3 py-3 tabular-nums">{fila.stock}</td>
+                    <td className="px-3 py-3">
+                      <BadgeLote estado={fila.estado} />
+                    </td>
+                  </Tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <MobileCards>
+            {visibles.map((fila) => (
+              <ListCard key={fila.id}>
+                <p className="font-semibold">{fila.numeroLote}</p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {fila.productoNombre}
+                  {fila.varianteEtiqueta ? ` · ${fila.varianteEtiqueta}` : ''}
+                </p>
+                <p className="mt-1 text-sm">
+                  Vence {formatoFechaLote(fila.fechaVencimiento)} · Stock {fila.stock}
+                </p>
+                <p className="mt-2">
+                  <BadgeLote estado={fila.estado} />
+                </p>
+              </ListCard>
+            ))}
+          </MobileCards>
+          {visibles.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+              No hay lotes para mostrar.
+            </p>
+          ) : null}
+        </TableCard>
+      ) : null}
 
       {modal ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
@@ -350,7 +298,14 @@ export function LotesPage() {
             <div className="mt-4 space-y-3">
               <label className="block text-xs" style={{ color: 'var(--text-muted)' }}>
                 Producto
-                <select className={`${inputClass} mt-1`} value={nuevoProducto} onChange={(ev) => onCambioProducto(ev.target.value)}>
+                <select
+                  className={`${inputClass} mt-1`}
+                  value={nuevoProducto}
+                  onChange={(ev) => {
+                    setNuevoProducto(ev.target.value)
+                    setNuevoVariante('')
+                  }}
+                >
                   <option value="">Elegí un producto</option>
                   {productos.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -427,6 +382,6 @@ export function LotesPage() {
           </div>
         </div>
       ) : null}
-    </div>
+    </>
   )
 }

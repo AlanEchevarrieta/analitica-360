@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { fechaHoyAR, sumarDiasIso } from './analytics'
-import { slugSku } from './variantes'
 
 export type EstadoLote = 'vencido' | 'por_vencer' | 'vigente' | 'sin_vencimiento'
 
@@ -22,10 +21,9 @@ export type LoteFila = {
   estado: EstadoLote
 }
 
-export function sugerenciaNumeroLote(nombreProducto: string, isoFecha = fechaHoyAR()) {
+export function sugerenciaNumeroLote(_nombreProducto?: string, isoFecha = fechaHoyAR()) {
   const [y, m] = isoFecha.split('-')
-  const slug = slugSku(nombreProducto) || 'PROD'
-  return `LOTE-${y}${m}-${slug}`
+  return `LOTE-${y}${m}`
 }
 
 export function estadoLote(fechaVencimiento: string | null, hoy = fechaHoyAR()): EstadoLote {
@@ -36,10 +34,10 @@ export function estadoLote(fechaVencimiento: string | null, hoy = fechaHoyAR()):
 }
 
 export function etiquetaEstadoLote(estado: EstadoLote) {
-  if (estado === 'vencido') return { icono: '🔴', texto: 'Vencido' }
-  if (estado === 'por_vencer') return { icono: '🟡', texto: 'Por vencer' }
-  if (estado === 'vigente') return { icono: '🟢', texto: 'Vigente' }
-  return { icono: '⚪', texto: 'Sin vencimiento' }
+  if (estado === 'vencido') return { icono: '🔴', texto: 'Vencido', fondo: '#7F1D1D', color: '#F87171' }
+  if (estado === 'por_vencer') return { icono: '🟡', texto: 'Por vencer', fondo: '#78350F', color: '#FCD34D' }
+  if (estado === 'vigente') return { icono: '🟢', texto: 'Vigente', fondo: '#14532D', color: '#4ADE80' }
+  return { icono: '⚪', texto: 'Sin vencimiento', fondo: '#334155', color: '#94A3B8' }
 }
 
 export function formatoFechaLote(iso: string | null) {

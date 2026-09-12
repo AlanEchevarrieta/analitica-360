@@ -18,7 +18,6 @@ const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m
 const InventarioPage = lazy(() =>
   import('./pages/InventarioPage').then((m) => ({ default: m.InventarioPage })),
 )
-const LotesPage = lazy(() => import('./pages/LotesPage').then((m) => ({ default: m.LotesPage })))
 const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })))
 const ResetPasswordPage = lazy(() =>
   import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
@@ -215,7 +214,6 @@ function AppRoutes() {
         <Route path="/productos/nuevo" element={<ProductoFormPage />} />
         <Route path="/productos/:id" element={<ProductoFormPage />} />
         <Route path="/inventario" element={<InventarioPage />} />
-        <Route path="/lotes" element={<LotesPage />} />
         <Route path="/soporte" element={<SoportePage />} />
         <Route path="/soporte/nuevo" element={<SoporteNuevoPage />} />
         <Route path="/soporte/:id" element={<SoporteFichaPage />} />

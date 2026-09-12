@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { ThemeToggle } from '../lib/tema'
-import { obtenerConfiguracion } from '../lib/configuracion'
 import { planTieneAnalytics, planTieneInsights } from '../lib/planes'
 import { requireSupabase, supabase } from '../lib/supabase'
 import { contarTicketsNoLeidos, EVENTO_SOPORTE_NOTIF } from '../lib/tickets'
@@ -57,7 +56,6 @@ export function AppNav() {
   const location = useLocation()
   const [mas, setMas] = useState(false)
   const [soporteNuevos, setSoporteNuevos] = useState(0)
-  const [usaLotes, setUsaLotes] = useState(false)
   const sinAnalytics = Boolean(perfil && !planTieneAnalytics(perfil.empresa.plan_actual))
   const sinInsights = Boolean(perfil && !planTieneInsights(perfil.empresa.plan_actual))
   const masActivo = [
@@ -67,7 +65,6 @@ export function AppNav() {
     '/insights',
     '/configuracion',
     '/inventario',
-    '/lotes',
     '/soporte',
   ].some((p) => location.pathname.startsWith(p))
 
@@ -104,17 +101,6 @@ export function AppNav() {
       vivo = false
       window.clearInterval(t)
       window.removeEventListener(EVENTO_SOPORTE_NOTIF, onEvt)
-    }
-  }, [perfil])
-
-  useEffect(() => {
-    if (!perfil || !supabase) return
-    let vivo = true
-    void obtenerConfiguracion(requireSupabase(), perfil.empresa.id).then(({ config }) => {
-      if (vivo) setUsaLotes(Boolean(config.usaLotes))
-    })
-    return () => {
-      vivo = false
     }
   }, [perfil])
 
@@ -161,11 +147,6 @@ export function AppNav() {
           <NavLink className={linkClass} to="/inventario">
             Inventario
           </NavLink>
-          {usaLotes ? (
-            <NavLink className={linkClass} to="/lotes">
-              Lotes
-            </NavLink>
-          ) : null}
           <NavLink className={linkClass} to="/soporte">
             <LabelSoporte n={soporteNuevos} />
           </NavLink>
@@ -214,11 +195,6 @@ export function AppNav() {
           <NavLink className={sideClass} to="/inventario">
             📋 Inventario
           </NavLink>
-          {usaLotes ? (
-            <NavLink className={sideClass} to="/lotes">
-              📅 Lotes
-            </NavLink>
-          ) : null}
           <NavLink className={sideClass} to="/soporte">
             <LabelSoporte n={soporteNuevos} emoji />
           </NavLink>
@@ -287,11 +263,6 @@ export function AppNav() {
             <NavLink className={sheetClass} to="/inventario" onClick={() => setMas(false)}>
               📋 Inventario
             </NavLink>
-            {usaLotes ? (
-              <NavLink className={sheetClass} to="/lotes" onClick={() => setMas(false)}>
-                📅 Lotes
-              </NavLink>
-            ) : null}
             <NavLink className={sheetClass} to="/soporte" onClick={() => setMas(false)}>
               <LabelSoporte n={soporteNuevos} emoji />
             </NavLink>

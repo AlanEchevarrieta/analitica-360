@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatoARS } from '../lib/productos'
 import {
   etiquetaCombo,
@@ -8,6 +8,7 @@ import {
   type VarianteFila,
 } from '../lib/variantes'
 import type { ProductoFila } from '../lib/productos'
+import { etiquetaLoteOpcion, type LoteFila } from '../lib/lotes'
 
 export function VarianteChipsPicker({
   producto,
@@ -19,6 +20,7 @@ export function VarianteChipsPicker({
   etiquetaAccion,
   onElegir,
   onCancelar,
+  cargarLotes,
 }: {
   producto: ProductoFila
   variantes: VarianteFila[]
@@ -27,10 +29,17 @@ export function VarianteChipsPicker({
   atributosCatalogo?: AtributoFila[]
   exigirStock: boolean
   etiquetaAccion: string
-  onElegir: (variante: VarianteFila | null, sel: Record<string, string>) => void
+  onElegir: (
+    variante: VarianteFila | null,
+    sel: Record<string, string>,
+    extra?: { loteId: string | null; lotes: LoteFila[] },
+  ) => void
   onCancelar: () => void
+  cargarLotes?: (productoId: string, varianteId: string | null) => Promise<LoteFila[]>
 }) {
   const [sel, setSel] = useState<Record<string, string>>({})
+  const [lotes, setLotes] = useState<LoteFila[]>([])
+  const [loteId, setLoteId] = useState<string | null>(null)
 
   const grupos = useMemo(() => {
     const permitidas = new Set(clavesVisibles)
@@ -101,6 +110,29 @@ export function VarianteChipsPicker({
   }
 
   const puedeConfirmar = completa && (variantes.length === 0 || match != null)
+  const loteSel = lotes.find((l) => l.id === loteId) ?? null
+
+  const conLotes = Boolean(cargarLotes)
+  const cargarLotesRef = useRef(cargarLotes)
+  cargarLotesRef.current = cargarLotes
+
+  useEffect(() => {
+    const fn = cargarLotesRef.current
+    if (!fn || !completa) {
+      setLotes([])
+      setLoteId(null)
+      return
+    }
+    let vivo = true
+    void fn(producto.id, match?.id ?? null).then((lista) => {
+      if (!vivo) return
+      setLotes(lista)
+      setLoteId(lista[0]?.id ?? null)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [completa, match?.id, producto.id, conLotes])
 
   return (
     <div className="mt-3 rounded-md border border-[#E2E8F0] p-3">
@@ -151,6 +183,25 @@ export function VarianteChipsPicker({
         <p className="mt-3 text-xs text-[#4A5568]">Seleccioná todos los atributos para continuar.</p>
       ) : (
         <div className="mt-3 text-sm text-[#1A2F4A]">
+          {lotes.length > 0 ? (
+            <label className="mb-2 block text-xs text-[#4A5568]">
+              Lote
+              <select
+                className="mt-1 min-h-11 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 py-2 text-sm text-[#1A2F4A]"
+                value={loteId ?? ''}
+                onChange={(ev) => setLoteId(ev.target.value || null)}
+              >
+                {lotes.map((lote) => (
+                  <option key={lote.id} value={lote.id}>
+                    {etiquetaLoteOpcion(lote)}
+                  </option>
+                ))}
+              </select>
+              {loteSel ? (
+                <p className="mt-1">Stock del lote: {loteSel.stock} {loteSel.stock === 1 ? 'unidad' : 'unidades'}</p>
+              ) : null}
+            </label>
+          ) : null}
           <p>
             Stock disponible: {stock ?? 0} {(stock ?? 0) === 1 ? 'unidad' : 'unidades'}
             {stock != null && stock <= 0 ? ' ⚠️' : ''}
@@ -170,7 +221,7 @@ export function VarianteChipsPicker({
                   sel,
                   precio,
                 })
-                onElegir(match, sel)
+                onElegir(match, sel, { loteId, lotes })
               }}
             >
               {etiquetaAccion}

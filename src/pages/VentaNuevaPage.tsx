@@ -209,7 +209,12 @@ export function VentaNuevaPage() {
     resaltadoTimer.current = window.setTimeout(() => setLineaResaltada(null), 1600)
   }
 
-  function agregarLinea(producto: ProductoFila, variante: VarianteFila | null, lotes: LoteFila[] = []) {
+  function agregarLinea(
+    producto: ProductoFila,
+    variante: VarianteFila | null,
+    lotes: LoteFila[] = [],
+    loteIdSel?: string | null,
+  ) {
     const varianteId = variante?.id ?? null
     const etiqueta = variante ? ` — ${etiquetaCombo(variante.atributos)}` : ''
     const precio = precioVarianteOBase(variante?.precioVenta, producto.precio_venta)
@@ -222,7 +227,7 @@ export function VentaNuevaPage() {
       precioUsado: precio,
     })
     const stock = variante ? (stockVar.get(variante.id) ?? 0) : producto.stock_actual
-    const loteDefault = lotes[0] ?? null
+    const loteDefault = lotes.find((l) => l.id === loteIdSel) ?? lotes[0] ?? null
     const loteId = loteDefault?.id ?? null
     const existente = lineas.find(
       (l) => l.productoId === producto.id && l.varianteId === varianteId && l.loteId === loteId,
@@ -491,17 +496,18 @@ export function VentaNuevaPage() {
                       clavesVisibles={atributosVentas.map((a) => a.nombre)}
                       exigirStock
                       etiquetaAccion="Agregar a la venta"
-                      onElegir={(variante) => {
+                      cargarLotes={
+                        config?.usaLotes
+                          ? (productoId, varianteId) =>
+                              lotesDisponiblesProducto(requireSupabase(), productoId, varianteId)
+                          : undefined
+                      }
+                      onElegir={(variante, _sel, extra) => {
                         if (!variante) {
                           setError('Seleccioná una variante válida')
                           return
                         }
-                        void (async () => {
-                          const lotes = config?.usaLotes
-                            ? await lotesDisponiblesProducto(requireSupabase(), picker.id, variante.id)
-                            : []
-                          agregarLinea(picker, variante, lotes)
-                        })()
+                        agregarLinea(picker, variante, extra?.lotes ?? [], extra?.loteId)
                       }}
                       onCancelar={() => setPicker(null)}
                     />
@@ -598,10 +604,16 @@ export function VentaNuevaPage() {
                             ⚠️ El lote seleccionado no tiene stock suficiente ({stockLote}u).
                           </p>
                         ) : null}
-                        <p className="mt-2 text-xs text-[#4A5568]">
-                          Stock disponible: {linea.stockLinea}{' '}
-                          {linea.stockLinea === 1 ? 'unidad' : 'unidades'}
-                        </p>
+                        {loteSel ? (
+                          <p className="mt-2 text-xs text-[#4A5568]">
+                            Stock del lote: {stockLote} {stockLote === 1 ? 'unidad' : 'unidades'}
+                          </p>
+                        ) : (
+                          <p className="mt-2 text-xs text-[#4A5568]">
+                            Stock disponible: {linea.stockLinea}{' '}
+                            {linea.stockLinea === 1 ? 'unidad' : 'unidades'}
+                          </p>
+                        )}
                         {linea.cantidad > linea.stockLinea ? (
                           <p className="mt-1 text-xs text-[#EA580C]">
                             ⚠️ Superás el stock disponible ({linea.stockLinea}). Podés confirmar igual.

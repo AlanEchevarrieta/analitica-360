@@ -5,7 +5,6 @@ import {
   estiloTipoMovimiento,
   formatoFechaMov,
   listarKardexProducto,
-  textoKardexConLote,
   type MovimientoKardex,
 } from '../lib/inventario'
 import { formatoARS } from '../lib/productos'
@@ -34,11 +33,15 @@ export function HistorialMovimientosPanel({
   puedeAjustar,
   onCerrar,
   onAjustar,
+  embedded,
+  mostrarLote,
 }: {
   producto: { id: string; nombre: string; stock: number }
   puedeAjustar: boolean
   onCerrar: () => void
   onAjustar?: () => void
+  embedded?: boolean
+  mostrarLote?: boolean
 }) {
   const [filas, setFilas] = useState<MovimientoKardex[]>([])
   const [total, setTotal] = useState(0)
@@ -65,6 +68,146 @@ export function HistorialMovimientosPanel({
     }
   }, [producto.id, producto.stock, pagina])
 
+  const colLote = Boolean(mostrarLote) || filas.some((m) => Boolean(m.numeroLote))
+  const colVariante = filas.some((m) => m.varianteEtiqueta)
+
+  const cuerpo = (
+    <>
+      {puedeAjustar && onAjustar ? (
+        <div className={embedded ? 'mb-3' : 'px-4 pt-3'}>
+          <button type="button" className="text-sm font-semibold text-[#6366F1]" onClick={onAjustar}>
+            Ajustar stock
+          </button>
+        </div>
+      ) : null}
+      <div className={embedded ? 'overflow-auto' : 'min-h-0 flex-1 overflow-auto px-4 py-3'}>
+        {cargando ? (
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            Cargando…
+          </p>
+        ) : null}
+        {error ? <p className="text-sm text-[#F87171]">{error}</p> : null}
+        {!cargando && !error && filas.length === 0 ? (
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            Todavía no hay movimientos.
+          </p>
+        ) : null}
+        {!cargando && filas.length > 0 ? (
+          <table className="w-full min-w-[640px] text-left text-xs">
+            <thead>
+              <tr style={{ color: TXT_SEC }}>
+                <th className="py-2 pr-2 font-semibold">Fecha</th>
+                <th className="py-2 pr-2 font-semibold">Tipo</th>
+                <th className="py-2 pr-2 font-semibold">Cant.</th>
+                <th className="py-2 pr-2 font-semibold">Precio unitario</th>
+                {colVariante ? <th className="py-2 pr-2 font-semibold">Variante</th> : null}
+                {colLote ? <th className="py-2 pr-2 font-semibold">Lote</th> : null}
+                <th className="py-2 pr-2 font-semibold">Referencia</th>
+                <th className="py-2 pr-2 font-semibold">Usuario</th>
+                <th className="py-2 font-semibold">Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map((m) => {
+                const tipo = estiloTipoMovimiento(m.tipo, m.signo)
+                const ref = textoReferencia(m)
+                const entrada = m.signo >= 0
+                return (
+                  <tr
+                    key={m.id}
+                    style={{
+                      background: FILA_BG,
+                      borderBottom: FILA_BORDE,
+                      color: TXT,
+                    }}
+                  >
+                    <td className="py-2.5 pr-2 whitespace-nowrap" style={{ color: TXT_SEC }}>
+                      {formatoFechaMov(m.fecha)}
+                    </td>
+                    <td className="py-2.5 pr-2">
+                      <span
+                        className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
+                        style={{ background: tipo.fondo, color: tipo.color }}
+                      >
+                        {tipo.icono} {tipo.texto}
+                      </span>
+                    </td>
+                    <td
+                      className="py-2.5 pr-2 font-semibold tabular-nums"
+                      style={{ color: entrada ? '#4ADE80' : '#F87171' }}
+                    >
+                      {entrada ? '+' : '-'}
+                      {m.cantidad}
+                    </td>
+                    <td className="py-2.5 pr-2 tabular-nums" style={{ color: TXT }}>
+                      {m.precioUnitario != null ? formatoARS(m.precioUnitario) : '—'}
+                    </td>
+                    {colVariante ? (
+                      <td className="py-2.5 pr-2" style={{ color: TXT_SEC }}>
+                        {m.varianteEtiqueta ?? '—'}
+                      </td>
+                    ) : null}
+                    {colLote ? (
+                      <td className="py-2.5 pr-2" style={{ color: TXT_SEC }}>
+                        {m.numeroLote ?? '—'}
+                      </td>
+                    ) : null}
+                    <td className="py-2.5 pr-2" style={{ color: TXT_SEC }}>
+                      {ref.to ? (
+                        <Link className="text-[#A5B4FC] underline" to={ref.to}>
+                          {ref.label}
+                        </Link>
+                      ) : (
+                        ref.label
+                      )}
+                    </td>
+                    <td className="py-2.5 pr-2" style={{ color: TXT_SEC }}>
+                      {m.usuarioNombre}
+                    </td>
+                    <td
+                      className="py-2.5 font-medium tabular-nums"
+                      style={{
+                        background: m.saldo > 0 ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
+                        color: TXT,
+                      }}
+                    >
+                      {m.saldo}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        ) : null}
+        {!cargando && !error && total > 0 ? (
+          <div className="mt-3">
+            <PaginacionBar
+              pagina={pagina}
+              total={total}
+              pageSize={PAGE_MOVIMIENTOS}
+              onPagina={setPagina}
+              entidad="movimientos"
+            />
+          </div>
+        ) : null}
+      </div>
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <div
+        className="rounded-xl p-4"
+        style={{ background: 'var(--card-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}
+      >
+        <p className="mb-3 text-sm" style={{ color: 'var(--text-muted)' }}>
+          {producto.nombre} · stock {producto.stock}
+        </p>
+        {cuerpo}
+      </div>
+    )
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <button className="absolute inset-0 bg-black/50" type="button" aria-label="Cerrar" onClick={onCerrar} />
@@ -83,123 +226,7 @@ export function HistorialMovimientosPanel({
             Cerrar
           </button>
         </div>
-        {puedeAjustar && onAjustar ? (
-          <div className="px-4 pt-3">
-            <button
-              type="button"
-              className="text-sm font-semibold text-[#6366F1]"
-              onClick={onAjustar}
-            >
-              Ajustar stock
-            </button>
-          </div>
-        ) : null}
-        <div className="min-h-0 flex-1 overflow-auto px-4 py-3">
-          {cargando ? (
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Cargando…
-            </p>
-          ) : null}
-          {error ? <p className="text-sm text-[#F87171]">{error}</p> : null}
-          {!cargando && !error && filas.length === 0 ? (
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Todavía no hay movimientos.
-            </p>
-          ) : null}
-          {!cargando && filas.length > 0 ? (
-            <table className="w-full min-w-[640px] text-left text-xs">
-              <thead>
-                <tr style={{ color: TXT_SEC }}>
-                  <th className="py-2 pr-2 font-semibold">Fecha</th>
-                  <th className="py-2 pr-2 font-semibold">Tipo</th>
-                  <th className="py-2 pr-2 font-semibold">Cant.</th>
-                  <th className="py-2 pr-2 font-semibold">Precio unitario</th>
-                  {filas.some((m) => m.varianteEtiqueta) ? (
-                    <th className="py-2 pr-2 font-semibold">Variante</th>
-                  ) : null}
-                  <th className="py-2 pr-2 font-semibold">Referencia</th>
-                  <th className="py-2 pr-2 font-semibold">Usuario</th>
-                  <th className="py-2 font-semibold">Saldo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filas.map((m) => {
-                  const tipo = estiloTipoMovimiento(m.tipo, m.signo)
-                  const ref = textoReferencia(m)
-                  const entrada = m.signo >= 0
-                  return (
-                    <tr
-                      key={m.id}
-                      style={{
-                        background: FILA_BG,
-                        borderBottom: FILA_BORDE,
-                        color: TXT,
-                      }}
-                    >
-                      <td className="py-2.5 pr-2 whitespace-nowrap" style={{ color: TXT_SEC }}>
-                        {formatoFechaMov(m.fecha)}
-                      </td>
-                      <td className="py-2.5 pr-2">
-                        <span
-                          className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
-                          style={{ background: tipo.fondo, color: tipo.color }}
-                        >
-                          {tipo.icono} {tipo.texto}
-                        </span>
-                      </td>
-                      <td
-                        className="py-2.5 pr-2 font-semibold tabular-nums"
-                        style={{ color: entrada ? '#4ADE80' : '#F87171' }}
-                      >
-                        {textoKardexConLote(m)}
-                      </td>
-                      <td className="py-2.5 pr-2 tabular-nums" style={{ color: TXT }}>
-                        {m.precioUnitario != null ? formatoARS(m.precioUnitario) : '—'}
-                      </td>
-                      {filas.some((x) => x.varianteEtiqueta) ? (
-                        <td className="py-2.5 pr-2" style={{ color: TXT_SEC }}>
-                          {m.varianteEtiqueta ?? '—'}
-                        </td>
-                      ) : null}
-                      <td className="py-2.5 pr-2" style={{ color: TXT_SEC }}>
-                        {ref.to ? (
-                          <Link className="text-[#A5B4FC] underline" to={ref.to}>
-                            {ref.label}
-                          </Link>
-                        ) : (
-                          ref.label
-                        )}
-                      </td>
-                      <td className="py-2.5 pr-2" style={{ color: TXT_SEC }}>
-                        {m.usuarioNombre}
-                      </td>
-                      <td
-                        className="py-2.5 font-medium tabular-nums"
-                        style={{
-                          background: m.saldo > 0 ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
-                          color: TXT,
-                        }}
-                      >
-                        {m.saldo}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          ) : null}
-          {!cargando && !error && total > 0 ? (
-            <div className="mt-3">
-              <PaginacionBar
-                pagina={pagina}
-                total={total}
-                pageSize={PAGE_MOVIMIENTOS}
-                onPagina={setPagina}
-                entidad="movimientos"
-              />
-            </div>
-          ) : null}
-        </div>
+        {cuerpo}
       </aside>
     </div>
   )

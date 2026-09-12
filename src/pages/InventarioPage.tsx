@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { AjustarStockModal } from '../components/AjustarStockModal'
 import { HistorialMovimientosPanel } from '../components/HistorialMovimientosPanel'
+import { InventarioLotesTab } from '../components/InventarioLotesTab'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import {
   FilterCollapse,
@@ -42,8 +44,24 @@ function fechaCorta(iso: string | null) {
   return formatoFechaMov(iso).split(',')[0] ?? formatoFechaMov(iso)
 }
 
+type TabInv = 'stock' | 'lotes' | 'movimientos'
+type FiltroEstadoLote = 'todos' | 'vigente' | 'por_vencer' | 'vencido'
+
+function parseTab(raw: string | null, usaLotes: boolean): TabInv {
+  if (raw === 'movimientos') return 'movimientos'
+  if (raw === 'lotes' && usaLotes) return 'lotes'
+  return 'stock'
+}
+
+function parseEstadoLote(raw: string | null): FiltroEstadoLote {
+  if (raw === 'vigente' || raw === 'por_vencer' || raw === 'vencido') return raw
+  return 'todos'
+}
+
 export function InventarioPage() {
   const { perfil } = useAuth()
+  const [params, setParams] = useSearchParams()
+  const [usaLotes, setUsaLotes] = useState(false)
   const [filas, setFilas] = useState<ResumenInventario[]>([])
   const [ubicaciones, setUbicaciones] = useState<UbicacionFila[]>([])
   const [umbral, setUmbral] = useState(5)
@@ -80,6 +98,7 @@ export function InventarioPage() {
     setError(null)
     setFilas(res.filas)
     const { config } = await obtenerConfiguracion(client, perfil.empresa.id)
+    setUsaLotes(Boolean(config.usaLotes))
     if (config.usaVariantes && res.filas.length > 0) {
       const vars = await listarVariantesDeProductos(
         client,
@@ -132,6 +151,22 @@ export function InventarioPage() {
     })
   }, [filas, categoria, estadoFiltro, umbral])
 
+  const tab = parseTab(params.get('tab'), usaLotes)
+  const estadoLoteParam = parseEstadoLote(params.get('estado'))
+
+  function irTab(next: TabInv, estado?: FiltroEstadoLote) {
+    const nextParams = new URLSearchParams(params)
+    if (next === 'stock') nextParams.delete('tab')
+    else nextParams.set('tab', next)
+    if (next === 'lotes') {
+      if (!estado || estado === 'todos') nextParams.delete('estado')
+      else nextParams.set('estado', estado)
+    } else {
+      nextParams.delete('estado')
+    }
+    setParams(nextParams, { replace: true })
+  }
+
   if (!perfil) return null
 
   const puedeMover = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'ajustar_stock')
@@ -148,8 +183,96 @@ export function InventarioPage() {
       <ParticleNetwork />
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-8">
         <AppNav />
-        <PageTitle titulo="Inventario" subtitulo={`${visibles.length} productos`} />
+        <PageTitle
+          titulo="Inventario"
+          subtitulo={
+            tab === 'lotes'
+              ? 'Lotes y vencimientos'
+              : tab === 'movimientos'
+                ? 'Kardex de movimientos'
+                : `${visibles.length} productos`
+          }
+        />
 
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === 'stock' ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'}`}
+            onClick={() => irTab('stock')}
+          >
+            Stock actual
+          </button>
+          {usaLotes ? (
+            <button
+              type="button"
+              className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === 'lotes' ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'}`}
+              onClick={() => irTab('lotes', estadoLoteParam)}
+            >
+              Lotes
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === 'movimientos' ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'}`}
+            onClick={() => irTab('movimientos')}
+          >
+            Movimientos
+          </button>
+        </div>
+
+        {tab === 'lotes' && usaLotes ? (
+          <InventarioLotesTab
+            empresaId={perfil.empresa.id}
+            puedeEditar={puedeMover}
+            estadoInicial={estadoLoteParam}
+            onEstado={(estado) => irTab('lotes', estado)}
+          />
+        ) : null}
+
+        {tab === 'movimientos' ? (
+          <div>
+            <label className="mb-4 block text-sm" style={{ color: 'var(--text-muted)' }}>
+              Producto
+              <select
+                className="mt-1.5 h-11 w-full max-w-md rounded-md border px-3 text-sm"
+                style={{ borderColor: 'var(--border)', background: 'var(--card-bg)', color: 'var(--text)' }}
+                value={historial?.id ?? ''}
+                onChange={(ev) => {
+                  const fila = filas.find((f) => f.id === ev.target.value)
+                  setHistorial(fila ?? null)
+                }}
+              >
+                <option value="">Elegí un producto</option>
+                {filas.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {historial ? (
+              <HistorialMovimientosPanel
+                key={historial.id}
+                producto={{ id: historial.id, nombre: historial.nombre, stock: historial.stock_actual }}
+                puedeAjustar={puedeMover}
+                embedded
+                mostrarLote={usaLotes}
+                onCerrar={() => setHistorial(null)}
+                onAjustar={() => {
+                  setAjuste(historial)
+                  setHistorial(null)
+                }}
+              />
+            ) : (
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                Elegí un producto para ver el historial de movimientos.
+              </p>
+            )}
+          </div>
+        ) : null}
+
+        {tab === 'stock' ? (
+        <>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <FilterCollapse activo={estadoFiltro !== 'todos' || Boolean(categoria)}>
             <div className="filter-field">
@@ -347,13 +470,16 @@ export function InventarioPage() {
           ) : null}
         </TableCard>
         )}
+        </>
+        ) : null}
       </div>
 
-      {historial ? (
+      {historial && tab === 'stock' ? (
         <HistorialMovimientosPanel
           key={historial.id}
           producto={{ id: historial.id, nombre: historial.nombre, stock: historial.stock_actual }}
           puedeAjustar={puedeMover}
+          mostrarLote={usaLotes}
           onCerrar={() => setHistorial(null)}
           onAjustar={() => {
             setAjuste(historial)
