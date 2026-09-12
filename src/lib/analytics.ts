@@ -181,6 +181,36 @@ function labelMes(iso: string) {
 
 export type PresetPeriodo = 'semana' | 'mes' | 'tres_meses' | 'anio' | 'personalizado'
 
+const STORAGE_PERIODO = 'analitica.periodo'
+
+export function guardarPeriodoAnalytics(desde: string, hasta: string) {
+  try {
+    localStorage.setItem(STORAGE_PERIODO, JSON.stringify({ desde, hasta }))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function leerPeriodoAnalytics(): { desde: string; hasta: string } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_PERIODO)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { desde?: string; hasta?: string }
+    if (!parsed.desde || !parsed.hasta) return null
+    return { desde: parsed.desde, hasta: parsed.hasta }
+  } catch {
+    return null
+  }
+}
+
+export function limpiarPeriodoAnalytics() {
+  try {
+    localStorage.removeItem(STORAGE_PERIODO)
+  } catch {
+    /* ignore */
+  }
+}
+
 export function rangoPreset(preset: PresetPeriodo, desde?: string, hasta?: string) {
   const hoy = fechaHoyAR()
   if (preset === 'personalizado') {

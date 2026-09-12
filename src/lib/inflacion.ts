@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { fechaHoyAR, fechaIsoDe, inicioMesIso } from './analytics'
+import { fechaIsoDe, inicioMesIso, leerPeriodoAnalytics } from './analytics'
 
 export const inflacionMensual: Record<string, number> = {
   '2022-01': 3.9,
@@ -53,6 +53,9 @@ export type SerieInflacionPrecios = {
   hayPrecios: boolean
   insight: 'menos' | 'mas' | 'sin_datos'
   resumen: ResumenInflacion
+  errorInflacion: string | null
+  desde: string
+  hasta: string
 }
 
 export type ResumenInflacion = {
@@ -69,16 +72,21 @@ const RESUMEN_VACIO: ResumenInflacion = {
   valorRealDe100: null,
 }
 
+const MSG_SIN_INFLACION = 'Datos de inflación no disponibles para este período'
+
 export const SERIE_INFLACION_VACIA: SerieInflacionPrecios = {
   puntos: [],
   hayPrecios: false,
   insight: 'sin_datos',
   resumen: RESUMEN_VACIO,
+  errorInflacion: null,
+  desde: '',
+  hasta: '',
 }
 
 const PAGE = 1000
-const BCRA_MONETARIAS = 'https://api.bcra.gob.ar/estadisticas/v3.0/monetarias'
-let cacheBcra: Promise<Record<string, number>> | null = null
+const BCRA_DATOS = 'https://api.bcra.gob.ar/estadisticas/v2.0/datosvariable/27'
+const cacheBcra = new Map<string, Promise<Record<string, number> | null>>()
 
 function num(v: unknown) {
   const n = Number(v)
@@ -114,6 +122,33 @@ function mesAnteriorKey(mesKey: string) {
   return dt.toISOString().slice(0, 7)
 }
 
+export function finMesIso(iso: string) {
+  const [y, m] = iso.slice(0, 7).split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m, 0))
+  return dt.toISOString().slice(0, 10)
+}
+
+export function rangoDatosIndec() {
+  const keys = Object.keys(inflacionMensual).sort()
+  const first = keys[0]
+  const last = keys[keys.length - 1]
+  return { desde: `${first}-01`, hasta: finMesIso(`${last}-01`) }
+}
+
+function fechaValidaIso(v: string | null) {
+  return Boolean(v && /^\d{4}-\d{2}-\d{2}$/.test(v))
+}
+
+export function resolverPeriodoInflacion(search = typeof window !== 'undefined' ? window.location.search : '') {
+  const sp = new URLSearchParams(search)
+  const d = sp.get('p_desde') ?? sp.get('desde')
+  const h = sp.get('p_hasta') ?? sp.get('hasta')
+  if (fechaValidaIso(d) && fechaValidaIso(h) && d! <= h!) return { desde: d!, hasta: h! }
+  const stored = leerPeriodoAnalytics()
+  if (stored && stored.desde <= stored.hasta) return stored
+  return rangoDatosIndec()
+}
+
 async function paginar<T>(
   pull: (from: number, to: number) => Promise<{ data: T[] | null; error: { message: string } | null }>,
 ) {
@@ -131,37 +166,88 @@ async function paginar<T>(
   return out
 }
 
-async function inflacionDesdeBcra(): Promise<Record<string, number>> {
+function trozosAnio(desde: string, hasta: string) {
+  const out: { desde: string; hasta: string }[] = []
+  let cur = desde
+  while (cur <= hasta) {
+    const tope = sumarDiasCapped(cur, 364, hasta)
+    out.push({ desde: cur, hasta: tope })
+    if (tope >= hasta) break
+    cur = sumarDiasCapped(tope, 1, hasta)
+  }
+  return out
+}
+
+function sumarDiasCapped(iso: string, dias: number, cap: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  dt.setUTCDate(dt.getUTCDate() + dias)
+  const next = dt.toISOString().slice(0, 10)
+  return next > cap ? cap : next
+}
+
+function filasBcra(json: unknown): { fecha?: string; valor?: number }[] {
+  if (!json || typeof json !== 'object') return []
+  const obj = json as { results?: unknown }
+  if (Array.isArray(obj.results)) return obj.results as { fecha?: string; valor?: number }[]
+  return []
+}
+
+async function fetchBcraTramo(desde: string, hasta: string): Promise<Record<string, number> | null> {
   const ctrl = new AbortController()
   const t = window.setTimeout(() => ctrl.abort(), 8000)
   try {
-    const listRes = await fetch(BCRA_MONETARIAS, { signal: ctrl.signal })
-    if (!listRes.ok) return {}
-    const listJson = (await listRes.json()) as { results?: { idVariable?: number; descripcion?: string }[] }
-    const hallado = (listJson.results ?? []).find((r) => /inflaci[oó]n mensual/i.test(r.descripcion ?? ''))
-    const id = hallado?.idVariable ?? 27
-    const hoy = fechaHoyAR()
-    const serieRes = await fetch(`${BCRA_MONETARIAS}/${id}?desde=2022-01-01&hasta=${hoy}`, { signal: ctrl.signal })
-    if (!serieRes.ok) return {}
-    const serieJson = (await serieRes.json()) as { results?: { fecha?: string; valor?: number }[] }
+    const res = await fetch(`${BCRA_DATOS}/${desde}/${hasta}`, { signal: ctrl.signal })
+    if (!res.ok) return null
+    const json: unknown = await res.json()
     const out: Record<string, number> = {}
-    for (const row of serieJson.results ?? []) {
+    for (const row of filasBcra(json)) {
       const key = mesKeyDe(String(row.fecha ?? ''))
       const valor = num(row.valor)
       if (key.length === 7 && Number.isFinite(valor)) out[key] = valor
     }
     return out
   } catch {
-    return {}
+    return null
   } finally {
     window.clearTimeout(t)
   }
 }
 
-export async function mapaInflacionMensual(): Promise<Record<string, number>> {
-  if (!cacheBcra) cacheBcra = inflacionDesdeBcra()
-  const extra = await cacheBcra
-  return { ...extra, ...inflacionMensual }
+async function inflacionDesdeBcra(desde: string, hasta: string): Promise<Record<string, number> | null> {
+  const key = `${desde}|${hasta}`
+  const cached = cacheBcra.get(key)
+  if (cached) return cached
+  const pending = (async () => {
+    const merged: Record<string, number> = {}
+    for (const tramo of trozosAnio(desde, hasta)) {
+      const chunk = await fetchBcraTramo(tramo.desde, tramo.hasta)
+      if (chunk == null) return null
+      Object.assign(merged, chunk)
+    }
+    return merged
+  })()
+  cacheBcra.set(key, pending)
+  return pending
+}
+
+export async function mapaInflacionParaPeriodo(desde: string, hasta: string) {
+  const meses = mesesEnRango(desde, hasta)
+  const mapa: Record<string, number> = {}
+  for (const mes of meses) {
+    if (inflacionMensual[mes] != null) mapa[mes] = inflacionMensual[mes]
+  }
+  const faltan = meses.filter((m) => mapa[m] == null)
+  if (faltan.length > 0) {
+    const extra = await inflacionDesdeBcra(desde, hasta)
+    if (extra) {
+      for (const mes of faltan) {
+        if (extra[mes] != null) mapa[mes] = extra[mes]
+      }
+    }
+  }
+  const hay = meses.some((m) => mapa[m] != null)
+  return { mapa, errorInflacion: hay ? null : MSG_SIN_INFLACION }
 }
 
 function promediarPorMes(filas: { mes: string; precio: number }[]) {
@@ -180,11 +266,19 @@ function promediarPorMes(filas: { mes: string; precio: number }[]) {
   return map
 }
 
-async function preciosPromedioHistorial(client: SupabaseClient, empresaId?: string | null) {
+async function preciosPromedioHistorial(
+  client: SupabaseClient,
+  desde: string,
+  hasta: string,
+  empresaId?: string | null,
+) {
+  const desdeExt = `${mesAnteriorKey(desde.slice(0, 7))}-01`
   const rows = await paginar<Record<string, unknown>>(async (from, to) => {
     let q = client
       .from('precios_historial')
       .select('precio_venta, fecha_desde')
+      .gte('fecha_desde', desdeExt)
+      .lte('fecha_desde', `${hasta}T23:59:59.999`)
       .order('fecha_desde', { ascending: true })
       .range(from, to)
     if (empresaId) q = q.eq('empresa_id', empresaId)
@@ -252,10 +346,18 @@ export async function cargarInflacionVsPrecios(
   empresaId?: string | null,
 ): Promise<SerieInflacionPrecios> {
   const meses = mesesEnRango(desde, hasta)
-  const inflacion = await mapaInflacionMensual()
+  const { mapa: inflacion, errorInflacion } = await mapaInflacionParaPeriodo(desde, hasta)
+  if (errorInflacion) {
+    return {
+      ...SERIE_INFLACION_VACIA,
+      errorInflacion,
+      desde,
+      hasta,
+    }
+  }
   let historial = new Map<string, number>()
   try {
-    historial = await preciosPromedioHistorial(client, empresaId)
+    historial = await preciosPromedioHistorial(client, desde, hasta, empresaId)
   } catch {
     historial = new Map()
   }
@@ -321,6 +423,9 @@ export async function cargarInflacionVsPrecios(
     puntos,
     hayPrecios,
     insight,
+    errorInflacion: null,
+    desde,
+    hasta,
     resumen: {
       inflacionAcumuladaPct,
       variacionPreciosPct,

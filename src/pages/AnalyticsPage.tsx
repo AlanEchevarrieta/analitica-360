@@ -40,6 +40,8 @@ import {
   LIMITE_ANALYTICS_VENTAS,
   margenPct,
   rangoPreset,
+  guardarPeriodoAnalytics,
+  leerPeriodoAnalytics,
   ticketPromedio,
   truncarEtiqueta,
   variacionPct,
@@ -252,10 +254,10 @@ export function AnalyticsPage() {
   const { tema } = useTema()
   const g = coloresGrafico(tema)
   const [preset, setPreset] = useState<PresetPeriodo>('mes')
-  const [desdeDraft, setDesdeDraft] = useState(() => rangoPreset('mes').desde)
-  const [hastaDraft, setHastaDraft] = useState(() => rangoPreset('mes').hasta)
-  const [desde, setDesde] = useState(() => rangoPreset('mes').desde)
-  const [hasta, setHasta] = useState(() => rangoPreset('mes').hasta)
+  const [desdeDraft, setDesdeDraft] = useState(() => leerPeriodoAnalytics()?.desde ?? rangoPreset('mes').desde)
+  const [hastaDraft, setHastaDraft] = useState(() => leerPeriodoAnalytics()?.hasta ?? rangoPreset('mes').hasta)
+  const [desde, setDesde] = useState(() => leerPeriodoAnalytics()?.desde ?? rangoPreset('mes').desde)
+  const [hasta, setHasta] = useState(() => leerPeriodoAnalytics()?.hasta ?? rangoPreset('mes').hasta)
   const [data, setData] = useState<AnalyticsPeriodo>(VACIO)
   const [cargando, setCargando] = useState(true)
   const [orden, setOrden] = useState<{ col: Columna; dir: 'asc' | 'desc' }>({
@@ -477,6 +479,7 @@ export function AnalyticsPage() {
     const r = rangoPreset(preset, desdeDraft, hastaDraft)
     setDesde(r.desde)
     setHasta(r.hasta)
+    guardarPeriodoAnalytics(r.desde, r.hasta)
   }
 
   function elegirPreset(id: PresetPeriodo) {

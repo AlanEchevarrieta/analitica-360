@@ -23,7 +23,11 @@ export function InflacionVsPreciosPanel({ serie }: { serie: SerieInflacionPrecio
         <p className="mb-3 text-xs" style={{ color: 'var(--text-muted, #94A3B8)' }}>
           Compará cómo evolucionaron tus precios vs la inflación del período
         </p>
-        {serie.puntos.length === 0 ? (
+        {serie.errorInflacion ? (
+          <p className="flex h-40 items-center justify-center text-center text-sm text-[#94A3B8]">
+            {serie.errorInflacion}
+          </p>
+        ) : serie.puntos.length === 0 ? (
           <p className="flex h-64 items-center justify-center text-sm text-[#94A3B8]">Sin meses en el período</p>
         ) : (
           <div className="relative h-72">
@@ -107,6 +111,7 @@ export function InflacionVsPreciosPanel({ serie }: { serie: SerieInflacionPrecio
         Compará si tus precios le ganaron a la inflación. Si tu línea está por encima de las barras, mantuviste el
         poder adquisitivo.
       </p>
+      {serie.errorInflacion ? null : (
       <p
         className="mt-4 rounded-lg px-3 py-3 text-sm"
         style={{
@@ -121,6 +126,7 @@ export function InflacionVsPreciosPanel({ serie }: { serie: SerieInflacionPrecio
             ? '✅ Tus precios le ganaron a la inflación.'
             : '📊 Modificá el precio de tus productos para ver cómo evolucionan vs la inflación.'}
       </p>
+      )}
     </>
   )
 }

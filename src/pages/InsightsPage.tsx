@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Area,
   Bar,
@@ -23,7 +24,7 @@ import { InflacionVsPreciosPanel } from '../components/InflacionVsPreciosPanel'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { PlanesModal } from '../components/PlanesModal'
 import { ChartTooltipBox } from '../components/CustomTooltip'
-import { formatoEjeCompacto, fechaHoyAR, sumarDiasIso } from '../lib/analytics'
+import { formatoEjeCompacto, fechaHoyAR, guardarPeriodoAnalytics, limpiarPeriodoAnalytics, rangoPreset, type PresetPeriodo } from '../lib/analytics'
 import { obtenerConfiguracion } from '../lib/configuracion'
 import {
   armarForecast,
@@ -36,7 +37,13 @@ import {
 import { planTieneInsights } from '../lib/planes'
 import { formatoARS } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
-import { cargarInflacionVsPrecios, SERIE_INFLACION_VACIA, type SerieInflacionPrecios } from '../lib/inflacion'
+import {
+  cargarInflacionVsPrecios,
+  rangoDatosIndec,
+  resolverPeriodoInflacion,
+  SERIE_INFLACION_VACIA,
+  type SerieInflacionPrecios,
+} from '../lib/inflacion'
 import { theme } from '../theme'
 
 const CARD = {
@@ -267,8 +274,18 @@ const GRANULARIDADES: { id: GranularidadForecast; label: string }[] = [
   { id: 'anio', label: 'Año' },
 ]
 
+const PRESETS_INFLACION: { id: PresetPeriodo | 'todo'; label: string }[] = [
+  { id: 'todo', label: 'Todos los datos' },
+  { id: 'semana', label: 'Última semana' },
+  { id: 'mes', label: 'Último mes' },
+  { id: 'tres_meses', label: 'Últimos 3 meses' },
+  { id: 'anio', label: 'Último año' },
+  { id: 'personalizado', label: 'Rango personalizado' },
+]
+
 export function InsightsPage() {
   const { perfil } = useAuth()
+  const [searchParams] = useSearchParams()
   const [modalPlanes, setModalPlanes] = useState(false)
   const [cargando, setCargando] = useState(true)
   const [data, setData] = useState<InsightsPayload | null>(null)
@@ -276,8 +293,22 @@ export function InsightsPage() {
   const [forecast, setForecast] = useState<InsightForecast | null>(null)
   const [cargandoForecast, setCargandoForecast] = useState(false)
   const [inflacion, setInflacion] = useState<SerieInflacionPrecios>(SERIE_INFLACION_VACIA)
+  const [inflacionPeriodo, setInflacionPeriodo] = useState(() => resolverPeriodoInflacion())
+  const [presetInfla, setPresetInfla] = useState<PresetPeriodo | 'todo'>('todo')
+  const [desdeDraft, setDesdeDraft] = useState(() => resolverPeriodoInflacion().desde)
+  const [hastaDraft, setHastaDraft] = useState(() => resolverPeriodoInflacion().hasta)
 
   const premium = Boolean(perfil && planTieneInsights(perfil.empresa.plan_actual))
+
+  useEffect(() => {
+    const q = searchParams.toString()
+    const r = resolverPeriodoInflacion(q ? `?${q}` : '')
+    setInflacionPeriodo(r)
+    setDesdeDraft(r.desde)
+    setHastaDraft(r.hasta)
+    const indec = rangoDatosIndec()
+    setPresetInfla(r.desde === indec.desde && r.hasta === indec.hasta ? 'todo' : 'personalizado')
+  }, [searchParams])
 
   useEffect(() => {
     if (!perfil || !planTieneInsights(perfil.empresa.plan_actual)) {
@@ -290,14 +321,6 @@ export function InsightsPage() {
         const cfg = await obtenerConfiguracion(requireSupabase(), perfil.empresa.id)
         const payload = await cargarInsights(requireSupabase(), Boolean(cfg.config.usaVariantes))
         setData(payload)
-        const hoy = fechaHoyAR()
-        const infla = await cargarInflacionVsPrecios(
-          requireSupabase(),
-          sumarDiasIso(hoy, -364),
-          hoy,
-          perfil.empresa.id,
-        )
-        setInflacion(infla)
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Error inesperado'
         setData({
@@ -323,6 +346,34 @@ export function InsightsPage() {
   }, [perfil])
 
   useEffect(() => {
+    if (!perfil || !planTieneInsights(perfil.empresa.plan_actual)) return
+    let cancel = false
+    void (async () => {
+      try {
+        const infla = await cargarInflacionVsPrecios(
+          requireSupabase(),
+          inflacionPeriodo.desde,
+          inflacionPeriodo.hasta,
+          perfil.empresa.id,
+        )
+        if (!cancel) setInflacion(infla)
+      } catch {
+        if (!cancel) {
+          setInflacion({
+            ...SERIE_INFLACION_VACIA,
+            errorInflacion: 'Datos de inflación no disponibles para este período',
+            desde: inflacionPeriodo.desde,
+            hasta: inflacionPeriodo.hasta,
+          })
+        }
+      }
+    })()
+    return () => {
+      cancel = true
+    }
+  }, [perfil, inflacionPeriodo.desde, inflacionPeriodo.hasta])
+
+  useEffect(() => {
     if (!data || data.diasHistorial < 30 || data.serieDiaria.length < 2) {
       setForecast(data?.forecast ?? null)
       return
@@ -343,6 +394,15 @@ export function InsightsPage() {
       cancel = true
     }
   }, [data, granularidad])
+
+  function aplicarPeriodoInflacion(r: { desde: string; hasta: string }, preset: PresetPeriodo | 'todo') {
+    setPresetInfla(preset)
+    setInflacionPeriodo(r)
+    setDesdeDraft(r.desde)
+    setHastaDraft(r.hasta)
+    if (preset === 'todo') limpiarPeriodoAnalytics()
+    else guardarPeriodoAnalytics(r.desde, r.hasta)
+  }
 
   if (!perfil) return null
 
@@ -488,7 +548,61 @@ export function InsightsPage() {
 
             <section className="rounded-lg p-5" style={CARD}>
               <TituloSeccion>📉 Inflación vs evolución de tus precios</TituloSeccion>
-              <Sub>Últimos 12 meses · INDEC + tu lista de precios</Sub>
+              <Sub>
+                {inflacionPeriodo.desde} → {inflacionPeriodo.hasta}
+              </Sub>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {PRESETS_INFLACION.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`rounded-md px-3 py-2 text-xs font-semibold ${
+                      presetInfla === p.id ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'
+                    }`}
+                    onClick={() => {
+                      if (p.id === 'todo') {
+                        aplicarPeriodoInflacion(rangoDatosIndec(), 'todo')
+                        return
+                      }
+                      setPresetInfla(p.id)
+                      if (p.id !== 'personalizado') {
+                        aplicarPeriodoInflacion(rangoPreset(p.id), p.id)
+                      }
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              {presetInfla === 'personalizado' ? (
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label className="text-xs text-[#94A3B8]">
+                    Desde
+                    <input
+                      className="mt-1 h-10 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A]"
+                      type="date"
+                      value={desdeDraft}
+                      onChange={(ev) => setDesdeDraft(ev.target.value)}
+                    />
+                  </label>
+                  <label className="text-xs text-[#94A3B8]">
+                    Hasta
+                    <input
+                      className="mt-1 h-10 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A]"
+                      type="date"
+                      value={hastaDraft}
+                      onChange={(ev) => setHastaDraft(ev.target.value)}
+                    />
+                  </label>
+                  <button
+                    className="h-10 self-end rounded-md bg-[#6366F1] px-4 text-sm font-semibold text-white hover:bg-[#4F46E5] sm:col-span-2"
+                    type="button"
+                    onClick={() => aplicarPeriodoInflacion(rangoPreset('personalizado', desdeDraft, hastaDraft), 'personalizado')}
+                  >
+                    Aplicar período
+                  </button>
+                </div>
+              ) : null}
               <div className="mt-4">
                 <InflacionVsPreciosPanel serie={inflacion} />
               </div>
