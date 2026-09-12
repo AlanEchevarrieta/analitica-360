@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, type ComponentType } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { ToastHost } from './components/ToastHost'
 import { AuthProvider, useAuth } from './auth'
@@ -6,80 +6,89 @@ import { ThemeProvider } from './lib/tema'
 import { supabase } from './lib/supabase'
 import { RequireAuth, RequireCompletarAlta, RequireDueno, RequireGuest } from './routes'
 
-const LandingPage = lazy(() =>
+function loadComponent(importFn: () => Promise<{ default: ComponentType }>) {
+  return lazy(() =>
+    importFn().catch(() => {
+      window.location.reload()
+      return { default: () => null }
+    }),
+  )
+}
+
+const LandingPage = loadComponent(() =>
   import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })),
 )
 
-const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
-const CompletarAltaPage = lazy(() =>
+const AdminPage = loadComponent(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
+const CompletarAltaPage = loadComponent(() =>
   import('./pages/CompletarAltaPage').then((m) => ({ default: m.CompletarAltaPage })),
 )
-const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })))
-const InventarioPage = lazy(() =>
+const HomePage = loadComponent(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })))
+const InventarioPage = loadComponent(() =>
   import('./pages/InventarioPage').then((m) => ({ default: m.InventarioPage })),
 )
-const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })))
-const ResetPasswordPage = lazy(() =>
+const LoginPage = loadComponent(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })))
+const ResetPasswordPage = loadComponent(() =>
   import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
 )
-const PrivacidadPage = lazy(() =>
+const PrivacidadPage = loadComponent(() =>
   import('./pages/PrivacidadPage').then((m) => ({ default: m.PrivacidadPage })),
 )
-const RegistroPage = lazy(() =>
+const RegistroPage = loadComponent(() =>
   import('./pages/RegistroPage').then((m) => ({ default: m.RegistroPage })),
 )
-const SetupPage = lazy(() => import('./pages/SetupPage').then((m) => ({ default: m.SetupPage })))
-const TerminosPage = lazy(() =>
+const SetupPage = loadComponent(() => import('./pages/SetupPage').then((m) => ({ default: m.SetupPage })))
+const TerminosPage = loadComponent(() =>
   import('./pages/TerminosPage').then((m) => ({ default: m.TerminosPage })),
 )
-const ProductosPage = lazy(() =>
+const ProductosPage = loadComponent(() =>
   import('./pages/ProductosPage').then((m) => ({ default: m.ProductosPage })),
 )
-const ProductoFormPage = lazy(() =>
+const ProductoFormPage = loadComponent(() =>
   import('./pages/ProductoFormPage').then((m) => ({ default: m.ProductoFormPage })),
 )
-const VentasPage = lazy(() => import('./pages/VentasPage').then((m) => ({ default: m.VentasPage })))
-const VentaNuevaPage = lazy(() =>
+const VentasPage = loadComponent(() => import('./pages/VentasPage').then((m) => ({ default: m.VentasPage })))
+const VentaNuevaPage = loadComponent(() =>
   import('./pages/VentaNuevaPage').then((m) => ({ default: m.VentaNuevaPage })),
 )
-const ComprasPage = lazy(() => import('./pages/ComprasPage').then((m) => ({ default: m.ComprasPage })))
-const CompraNuevaPage = lazy(() =>
+const ComprasPage = loadComponent(() => import('./pages/ComprasPage').then((m) => ({ default: m.ComprasPage })))
+const CompraNuevaPage = loadComponent(() =>
   import('./pages/CompraNuevaPage').then((m) => ({ default: m.CompraNuevaPage })),
 )
-const ProveedoresPage = lazy(() =>
+const ProveedoresPage = loadComponent(() =>
   import('./pages/ProveedoresPage').then((m) => ({ default: m.ProveedoresPage })),
 )
-const ProveedorFormPage = lazy(() =>
+const ProveedorFormPage = loadComponent(() =>
   import('./pages/ProveedorFormPage').then((m) => ({ default: m.ProveedorFormPage })),
 )
-const ProveedorFichaPage = lazy(() =>
+const ProveedorFichaPage = loadComponent(() =>
   import('./pages/ProveedorFichaPage').then((m) => ({ default: m.ProveedorFichaPage })),
 )
-const ClientesPage = lazy(() =>
+const ClientesPage = loadComponent(() =>
   import('./pages/ClientesPage').then((m) => ({ default: m.ClientesPage })),
 )
-const ClienteFormPage = lazy(() =>
+const ClienteFormPage = loadComponent(() =>
   import('./pages/ClienteFormPage').then((m) => ({ default: m.ClienteFormPage })),
 )
-const ClienteFichaPage = lazy(() =>
+const ClienteFichaPage = loadComponent(() =>
   import('./pages/ClienteFichaPage').then((m) => ({ default: m.ClienteFichaPage })),
 )
-const ConfiguracionPage = lazy(() =>
+const ConfiguracionPage = loadComponent(() =>
   import('./pages/ConfiguracionPage').then((m) => ({ default: m.ConfiguracionPage })),
 )
-const AnalyticsPage = lazy(() =>
+const AnalyticsPage = loadComponent(() =>
   import('./pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })),
 )
-const InsightsPage = lazy(() =>
+const InsightsPage = loadComponent(() =>
   import('./pages/InsightsPage').then((m) => ({ default: m.InsightsPage })),
 )
-const SoportePage = lazy(() =>
+const SoportePage = loadComponent(() =>
   import('./pages/SoportePage').then((m) => ({ default: m.SoportePage })),
 )
-const SoporteNuevoPage = lazy(() =>
+const SoporteNuevoPage = loadComponent(() =>
   import('./pages/SoporteNuevoPage').then((m) => ({ default: m.SoporteNuevoPage })),
 )
-const SoporteFichaPage = lazy(() =>
+const SoporteFichaPage = loadComponent(() =>
   import('./pages/SoporteFichaPage').then((m) => ({ default: m.SoporteFichaPage })),
 )
 
