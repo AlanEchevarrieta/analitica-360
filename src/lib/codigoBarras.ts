@@ -23,15 +23,38 @@ export type EtiquetaImpresion = {
   codigo: string
 }
 
-export const OPCIONES_ETIQUETA_DEFAULT: OpcionesEtiqueta = {
-  mostrarPrecio: true,
-  mostrarNombre: true,
-  mostrarVariante: true,
-  mostrarBarras: true,
-  mostrarQr: true,
-  mostrarUrl: false,
-  tamano: 'mediana',
+const SUGERIDOS: Record<TamanoEtiqueta, Record<CampoEtiqueta, boolean>> = {
+  pequena: {
+    mostrarNombre: true,
+    mostrarBarras: true,
+    mostrarPrecio: false,
+    mostrarVariante: false,
+    mostrarQr: false,
+    mostrarUrl: false,
+  },
+  mediana: {
+    mostrarNombre: true,
+    mostrarPrecio: true,
+    mostrarBarras: true,
+    mostrarQr: true,
+    mostrarVariante: false,
+    mostrarUrl: false,
+  },
+  grande: {
+    mostrarNombre: true,
+    mostrarVariante: true,
+    mostrarPrecio: true,
+    mostrarBarras: true,
+    mostrarQr: true,
+    mostrarUrl: true,
+  },
 }
+
+export function sugeridosPorTamano(tamano: TamanoEtiqueta): OpcionesEtiqueta {
+  return { tamano, ...SUGERIDOS[tamano] }
+}
+
+export const OPCIONES_ETIQUETA_DEFAULT: OpcionesEtiqueta = sugeridosPorTamano('mediana')
 
 const STORAGE_OPCIONES = 'analitica.etiqueta.opciones'
 
@@ -50,25 +73,8 @@ const DISPONIBLES: Record<TamanoEtiqueta, ReadonlySet<CampoEtiqueta>> = {
   grande: new Set(['mostrarNombre', 'mostrarVariante', 'mostrarPrecio', 'mostrarBarras', 'mostrarQr', 'mostrarUrl']),
 }
 
-const FIJOS: Record<TamanoEtiqueta, ReadonlySet<CampoEtiqueta>> = {
-  pequena: new Set(['mostrarNombre', 'mostrarBarras']),
-  mediana: new Set(['mostrarNombre', 'mostrarVariante', 'mostrarBarras']),
-  grande: new Set([
-    'mostrarNombre',
-    'mostrarVariante',
-    'mostrarPrecio',
-    'mostrarBarras',
-    'mostrarQr',
-    'mostrarUrl',
-  ]),
-}
-
 export function campoDisponibleEnTamano(tamano: TamanoEtiqueta, campo: CampoEtiqueta) {
   return DISPONIBLES[tamano].has(campo)
-}
-
-export function campoFijoEnTamano(tamano: TamanoEtiqueta, campo: CampoEtiqueta) {
-  return FIJOS[tamano].has(campo)
 }
 
 export function tooltipCampoEtiqueta(tamano: TamanoEtiqueta, campo: CampoEtiqueta) {
@@ -81,8 +87,7 @@ export function tooltipCampoEtiqueta(tamano: TamanoEtiqueta, campo: CampoEtiquet
 export function aplicarCamposPorTamano(op: OpcionesEtiqueta): OpcionesEtiqueta {
   const next = { ...op }
   for (const campo of CAMPOS) {
-    if (campoFijoEnTamano(op.tamano, campo)) next[campo] = true
-    else if (!campoDisponibleEnTamano(op.tamano, campo)) next[campo] = false
+    if (!campoDisponibleEnTamano(op.tamano, campo)) next[campo] = false
   }
   return next
 }
@@ -158,15 +163,11 @@ export function leerOpcionesEtiqueta(): OpcionesEtiqueta {
     const parsed = JSON.parse(raw) as Partial<OpcionesEtiqueta>
     const tamano: TamanoEtiqueta =
       parsed.tamano === 'pequena' || parsed.tamano === 'grande' ? parsed.tamano : 'mediana'
-    return aplicarCamposPorTamano({
-      mostrarPrecio: parsed.mostrarPrecio !== false,
-      mostrarNombre: parsed.mostrarNombre !== false,
-      mostrarVariante: parsed.mostrarVariante !== false,
-      mostrarBarras: parsed.mostrarBarras !== false,
-      mostrarQr: parsed.mostrarQr !== false,
-      mostrarUrl: parsed.mostrarUrl === true,
-      tamano,
-    })
+    const next = sugeridosPorTamano(tamano)
+    for (const campo of CAMPOS) {
+      if (typeof parsed[campo] === 'boolean') next[campo] = parsed[campo]
+    }
+    return aplicarCamposPorTamano(next)
   } catch {
     return { ...OPCIONES_ETIQUETA_DEFAULT }
   }
@@ -328,7 +329,7 @@ function htmlHojaEtiquetas(
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       text-align: center;
       overflow: hidden;
       page-break-inside: avoid;
@@ -336,11 +337,16 @@ function htmlHojaEtiquetas(
     }
     .nombre {
       margin: 0;
-      font-size: ${op.tamano === 'grande' ? '13px' : op.tamano === 'pequena' ? '8px' : '11px'};
-      font-weight: 700;
+      margin-bottom: ${op.tamano === 'grande' ? '4px' : '0'};
+      font-size: ${op.tamano === 'grande' ? '14px' : op.tamano === 'pequena' ? '8px' : '11px'};
+      font-weight: ${op.tamano === 'grande' ? '600' : '700'};
       line-height: 1.2;
-      max-height: 2.4em;
-      overflow: hidden;
+      max-height: ${op.tamano === 'grande' ? 'none' : '2.4em'};
+      overflow: ${op.tamano === 'grande' ? 'visible' : 'hidden'};
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+      width: 100%;
     }
     .var {
       margin: 0.5mm 0 0;
@@ -390,6 +396,20 @@ function htmlHojaEtiquetas(
     @media print {
       body { background: #fff; }
       .hoja { gap: 2mm; }
+      ${
+        op.tamano === 'grande'
+          ? `.nombre {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        overflow: visible;
+        max-height: none;
+        display: block;
+        flex-shrink: 0;
+        z-index: 1;
+      }`
+          : ''
+      }
     }
   </style>
 </head>

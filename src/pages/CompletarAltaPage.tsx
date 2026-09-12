@@ -40,7 +40,7 @@ export function CompletarAltaPage() {
         <label className="text-left text-sm font-medium text-[#4A5568]">
           Nombre de la empresa
           <span className="relative mt-1.5 block">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+            <span className="input-icon">
               <BuildingIcon />
             </span>
             <input

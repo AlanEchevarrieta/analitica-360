@@ -233,20 +233,22 @@ export function SearchField({
   value,
   onChange,
   placeholder,
+  wide,
 }: {
   value: string
   onChange: (v: string) => void
   placeholder: string
+  wide?: boolean
 }) {
   return (
-    <label className="relative block min-w-0 w-full flex-1 sm:min-w-[220px] sm:max-w-md">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+    <label className={`relative block min-w-0 w-full ${wide ? '' : 'flex-1 sm:min-w-[220px] sm:max-w-md'}`}>
+      <span className="input-icon" aria-hidden>
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" />
         </svg>
       </span>
       <input
-        className="search-input h-11 w-full rounded-lg border py-2 pl-10 pr-3 text-sm outline-none"
+        className="search-input h-11 w-full rounded-lg border py-2 pr-3 text-sm outline-none"
         style={{
           borderColor: 'var(--input-border)',
           background: 'var(--input-bg)',

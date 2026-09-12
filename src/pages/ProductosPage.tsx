@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { ParticleNetwork } from '../components/ParticleNetwork'
@@ -8,7 +8,6 @@ import {
   BadgeMargen,
   IconBtn,
   PAGE_PRODUCTOS,
-  PageTitle,
   PaginacionBar,
   SearchField,
   StockCelda,
@@ -19,8 +18,6 @@ import {
   ThFilter,
   Tr,
   btnPrimary,
-  btnPrimaryDesk,
-  FabLink,
   FilterCollapse,
   ListCard,
   MobileCards,
@@ -67,6 +64,9 @@ function stockDesdeQuery(valor: string | null): 'todos' | 'con' | 'sin' | 'bajo'
   return 'todos'
 }
 
+const btnOutline =
+  'inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 disabled:opacity-50 whitespace-nowrap'
+
 export function ProductosPage() {
   const { perfil } = useAuth()
   const [searchParams] = useSearchParams()
@@ -102,6 +102,19 @@ export function ProductosPage() {
   const [pendientePrint, setPendientePrint] = useState<ProductoFila[] | null>(null)
   const [progresoCodigos, setProgresoCodigos] = useState<string | null>(null)
   const [generandoCodigos, setGenerandoCodigos] = useState(false)
+  const [masAcciones, setMasAcciones] = useState(false)
+  const masAccionesRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!masAcciones) return
+    function onDoc(ev: MouseEvent) {
+      if (masAccionesRef.current && !masAccionesRef.current.contains(ev.target as Node)) {
+        setMasAcciones(false)
+      }
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [masAcciones])
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -306,6 +319,17 @@ export function ProductosPage() {
     })
   }
 
+  function abrirImportarExcel() {
+    void listarProductos(requireSupabase()).then(({ filas: data, error: listError }) => {
+      if (listError) {
+        setError('No se pudieron cargar los productos. Corré supabase/006_productos.sql en el SQL Editor.')
+        return
+      }
+      setExistentesImport(data)
+      setImportar(true)
+    })
+  }
+
   return (
     <div
       className="relative min-h-dvh"
@@ -317,62 +341,128 @@ export function ProductosPage() {
       <ParticleNetwork />
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-8">
         <AppNav />
-        <PageTitle
-          titulo="Productos"
-          subtitulo={`${activos} ${activos === 1 ? 'producto activo' : 'productos activos'}`}
-        />
-
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <SearchField
-            value={busqueda}
-            onChange={(v) => {
-              setPagina(1)
-              setBusqueda(v)
-            }}
-            placeholder="Buscar producto..."
-          />
-          <div className="flex flex-wrap gap-2">
-            <button
-              className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 disabled:opacity-50"
-              type="button"
-              disabled={imprimiendo || seleccionados.length === 0}
-              onClick={() => void abrirImpresion(seleccionados)}
-            >
-              Imprimir etiquetas seleccionadas
-            </button>
-            {puedeEditar ? (
-              <>
-                <button
-                  className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 disabled:opacity-50"
-                  type="button"
-                  disabled={generandoCodigos}
-                  onClick={() => void generarCodigosFaltantes()}
-                >
-                  Generar códigos a todos
-                </button>
-                <button
-                  className="hidden h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5 md:inline-flex"
-                  type="button"
-                  onClick={() => {
-                    void listarProductos(requireSupabase()).then(({ filas: data, error: listError }) => {
-                      if (listError) {
-                        setError(
-                          'No se pudieron cargar los productos. Corré supabase/006_productos.sql en el SQL Editor.',
-                        )
-                        return
-                      }
-                      setExistentesImport(data)
-                      setImportar(true)
-                    })
-                  }}
-                >
-                  Importar Excel
-                </button>
-                <Link className={btnPrimaryDesk} to="/productos/nuevo">
-                  <span aria-hidden>➕</span> Nuevo producto
+        <div className="mb-6 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <h1
+                className="text-[28px] font-semibold leading-tight"
+                style={{ fontFamily: theme.fontDisplay, color: 'var(--text)' }}
+              >
+                Productos
+              </h1>
+              <span
+                className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                style={{ background: 'rgba(99,102,241,0.15)', color: '#6366F1' }}
+              >
+                {activos} activos
+              </span>
+            </div>
+            <div className="flex items-center gap-2 md:hidden">
+              {puedeEditar ? (
+                <Link className={btnPrimary} to="/productos/nuevo">
+                  <span aria-hidden>+</span> Nuevo producto
                 </Link>
-              </>
-            ) : null}
+              ) : null}
+              {puedeEditar || seleccionados.length > 0 ? (
+              <div className="relative" ref={masAccionesRef}>
+                <button
+                  className={btnOutline}
+                  type="button"
+                  aria-expanded={masAcciones}
+                  onClick={() => setMasAcciones((v) => !v)}
+                >
+                  ⋮ Más acciones
+                </button>
+                {masAcciones ? (
+                  <div
+                    className="absolute right-0 z-20 mt-1 min-w-[220px] rounded-lg border py-1 shadow-lg"
+                    style={{ background: 'var(--card-bg)', borderColor: 'var(--border)' }}
+                  >
+                    {seleccionados.length > 0 ? (
+                      <button
+                        className="block w-full px-3 py-2 text-left text-sm hover:bg-white/5"
+                        type="button"
+                        disabled={imprimiendo}
+                        onClick={() => {
+                          setMasAcciones(false)
+                          void abrirImpresion(seleccionados)
+                        }}
+                      >
+                        Imprimir seleccionadas
+                      </button>
+                    ) : null}
+                    {puedeEditar ? (
+                      <>
+                        <button
+                          className="block w-full px-3 py-2 text-left text-sm hover:bg-white/5 disabled:opacity-50"
+                          type="button"
+                          disabled={generandoCodigos}
+                          onClick={() => {
+                            setMasAcciones(false)
+                            void generarCodigosFaltantes()
+                          }}
+                        >
+                          Generar códigos
+                        </button>
+                        <button
+                          className="block w-full px-3 py-2 text-left text-sm hover:bg-white/5"
+                          type="button"
+                          onClick={() => {
+                            setMasAcciones(false)
+                            abrirImportarExcel()
+                          }}
+                        >
+                          Importar Excel
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <SearchField
+              wide
+              value={busqueda}
+              onChange={(v) => {
+                setPagina(1)
+                setBusqueda(v)
+              }}
+              placeholder="Buscar producto..."
+            />
+            <div className="hidden shrink-0 items-center gap-2 md:flex">
+              {seleccionados.length > 0 ? (
+                <button
+                  className={btnOutline}
+                  type="button"
+                  disabled={imprimiendo}
+                  onClick={() => void abrirImpresion(seleccionados)}
+                >
+                  Imprimir seleccionadas
+                </button>
+              ) : null}
+              {puedeEditar ? (
+                <>
+                  <button
+                    className={btnOutline}
+                    type="button"
+                    disabled={generandoCodigos}
+                    onClick={() => void generarCodigosFaltantes()}
+                  >
+                    Generar códigos
+                  </button>
+                  <button className={btnOutline} type="button" onClick={abrirImportarExcel}>
+                    Importar Excel
+                  </button>
+                  <Link className={btnPrimary} to="/productos/nuevo">
+                    <span aria-hidden>+</span> Nuevo producto
+                  </Link>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
         <div className="mb-4">
@@ -831,7 +921,6 @@ export function ProductosPage() {
           }}
           onImprimir={(op) => void confirmarImpresion(op)}
         />
-        {puedeEditar ? <FabLink to="/productos/nuevo" label="Nuevo producto" /> : null}
       </div>
     </div>
   )

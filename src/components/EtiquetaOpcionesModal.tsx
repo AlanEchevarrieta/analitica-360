@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import {
   aplicarCamposPorTamano,
   campoDisponibleEnTamano,
-  campoFijoEnTamano,
   guardarOpcionesEtiqueta,
   leerOpcionesEtiqueta,
+  sugeridosPorTamano,
   tooltipCampoEtiqueta,
   type CampoEtiqueta,
   type OpcionesEtiqueta,
@@ -50,12 +50,12 @@ export function EtiquetaOpcionesModal({
   if (!abierto) return null
 
   function toggle(key: CampoEtiqueta) {
-    if (!campoDisponibleEnTamano(op.tamano, key) || campoFijoEnTamano(op.tamano, key)) return
+    if (!campoDisponibleEnTamano(op.tamano, key)) return
     setOp((prev) => aplicarCamposPorTamano({ ...prev, [key]: !prev[key] }))
   }
 
   function cambiarTamano(tamano: TamanoEtiqueta) {
-    setOp((prev) => aplicarCamposPorTamano({ ...prev, tamano }))
+    setOp(sugeridosPorTamano(tamano))
   }
 
   return (
@@ -101,7 +101,6 @@ export function EtiquetaOpcionesModal({
         <div className="flex flex-col gap-2">
           {CHECKS.map((c) => {
             const disponible = campoDisponibleEnTamano(op.tamano, c.key)
-            const fijo = campoFijoEnTamano(op.tamano, c.key)
             const tip = tooltipCampoEtiqueta(op.tamano, c.key)
             return (
               <label
@@ -112,7 +111,7 @@ export function EtiquetaOpcionesModal({
                 <input
                   type="checkbox"
                   checked={op[c.key]}
-                  disabled={!disponible || fijo}
+                  disabled={!disponible}
                   onChange={() => toggle(c.key)}
                 />
                 {c.label}

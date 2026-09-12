@@ -83,7 +83,7 @@ export function ResetPasswordPage() {
           <label className="text-left text-sm font-medium text-[#4A5568]">
             Contraseña nueva
             <span className="relative mt-1.5 block">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+              <span className="input-icon">
                 <LockIcon />
               </span>
               <input
@@ -105,7 +105,7 @@ export function ResetPasswordPage() {
           <label className="mt-4 text-left text-sm font-medium text-[#4A5568]">
             Confirmar contraseña
             <span className="relative mt-1.5 block">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+              <span className="input-icon">
                 <LockIcon />
               </span>
               <input

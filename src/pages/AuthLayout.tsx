@@ -6,7 +6,8 @@ import { ThemeToggle } from '../lib/tema'
 export const authInputClass =
   'auth-input h-11 w-full rounded-md border px-3 text-sm outline-none transition placeholder:text-[#7C73C0] focus:border-[#6366F1] focus:bg-white focus:shadow-[0_0_0_3px_rgba(99,102,241,0.18)]'
 
-export const authInputWithIconClass = `${authInputClass} pl-10`
+export const authInputWithIconClass =
+  'auth-input auth-input-icon h-11 w-full rounded-md border pr-3 text-sm outline-none transition placeholder:text-[#7C73C0] focus:border-[#6366F1] focus:bg-white focus:shadow-[0_0_0_3px_rgba(99,102,241,0.18)]'
 
 export function AuthLayout({
   children,

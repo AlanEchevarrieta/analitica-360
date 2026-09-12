@@ -93,7 +93,7 @@ export function RegistroPage() {
         <label className="text-left text-sm font-medium text-[#4A5568]">
           Nombre de la empresa
           <span className="relative mt-1.5 block">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+            <span className="input-icon">
               <BuildingIcon />
             </span>
             <input
@@ -170,7 +170,7 @@ export function RegistroPage() {
         <label className="mt-4 text-left text-sm font-medium text-[#4A5568]">
           Email
           <span className="relative mt-1.5 block">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+            <span className="input-icon">
               <UserIcon />
             </span>
             <input
@@ -186,7 +186,7 @@ export function RegistroPage() {
         <label className="mt-4 text-left text-sm font-medium text-[#4A5568]">
           Contraseña
           <span className="relative mt-1.5 block">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+            <span className="input-icon">
               <LockIcon />
             </span>
             <input
@@ -209,7 +209,7 @@ export function RegistroPage() {
         <label className="mt-4 text-left text-sm font-medium text-[#4A5568]">
           Repetir contraseña
           <span className="relative mt-1.5 block">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+            <span className="input-icon">
               <LockIcon />
             </span>
             <input
