@@ -51,7 +51,7 @@ import { btnPrimary, cardShell } from '../components/listado'
 const inputClass =
   'h-10 w-full rounded-lg border border-[rgba(99,102,241,0.3)] bg-white/5 px-3 text-sm text-[#F1F5F9] outline-none focus:border-[#6366F1]'
 
-type TabId = 'medios' | 'categorias' | 'cuotas' | 'usuarios' | 'flujo' | 'inventario' | 'variantes' | 'plan'
+type TabId = 'medios' | 'categorias' | 'cuotas' | 'usuarios' | 'flujo' | 'inventario' | 'variantes' | 'lotes' | 'plan'
 
 const MOSAICO: {
   id: TabId
@@ -63,6 +63,7 @@ const MOSAICO: {
   { id: 'cuotas', icono: '📊', titulo: 'Cuotas y tasas', subtitulo: 'Configurá los intereses por cuotas' },
   { id: 'categorias', icono: '🏷️', titulo: 'Categorías', subtitulo: 'Organizá tus productos' },
   { id: 'variantes', icono: '🎨', titulo: 'Variantes', subtitulo: 'Color, talle, material y más' },
+  { id: 'lotes', icono: '📅', titulo: 'Lotes y Vencimientos', subtitulo: 'Stock por lote y fechas de vencimiento' },
   { id: 'usuarios', icono: '👥', titulo: 'Usuarios', subtitulo: 'Gestioná el acceso de tu equipo' },
   { id: 'flujo', icono: '💸', titulo: 'Flujo de ventas', subtitulo: 'Configurá el proceso de venta' },
   { id: 'inventario', icono: '📦', titulo: 'Inventario', subtitulo: 'Umbral de stock bajo y alertas' },
@@ -119,6 +120,8 @@ export function ConfiguracionPage() {
   const [flujo, setFlujo] = useState<FlujoVentas>({ ...FLUJO_VENTAS_DEFAULT })
   const [umbralStock, setUmbralStock] = useState('5')
   const [usaVariantes, setUsaVariantes] = useState(false)
+  const [usaLotes, setUsaLotes] = useState(false)
+  const [avisoLotes, setAvisoLotes] = useState(false)
   const [atributos, setAtributos] = useState<AtributoFila[]>([])
   const [altaAtributo, setAltaAtributo] = useState(false)
   const [editAtributo, setEditAtributo] = useState<AtributoFila | null>(null)
@@ -181,6 +184,7 @@ export function ConfiguracionPage() {
       setFlujo(config.flujoVentas)
       setUmbralStock(String(config.umbralStockBajo ?? 5))
       setUsaVariantes(Boolean(config.usaVariantes))
+      setUsaLotes(Boolean(config.usaLotes))
       if (config.usaVariantes) {
         const atr = await listarAtributos(requireSupabase())
         if (!atr.error) setAtributos(atr.filas)
@@ -245,6 +249,7 @@ export function ConfiguracionPage() {
       flujoVentas: flujo,
       umbralStockBajo: Number.parseInt(umbralStock, 10),
       usaVariantes,
+      usaLotes,
     })
     setGuardando(false)
     if (fallo) {
@@ -279,6 +284,14 @@ export function ConfiguracionPage() {
       await recargarAtributos()
     }
     setUsaVariantes(next)
+  }
+
+  function toggleUsaLotes() {
+    setOk(null)
+    setError(null)
+    const next = !usaLotes
+    setUsaLotes(next)
+    if (next) setAvisoLotes(true)
   }
 
   function resetFormAtributo() {
@@ -1027,6 +1040,27 @@ export function ConfiguracionPage() {
                 </div>
               ) : null}
 
+              {tab === 'lotes' ? (
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-start justify-between gap-3 rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-[#F1F5F9]">Usar lotes y vencimientos</p>
+                      <p className="mt-0.5 text-xs text-[#94A3B8]">
+                        Activá esto para controlar el stock por lote de compra y gestionar fechas de vencimiento.
+                        Ideal para alimentos, cosméticos y farmacia.
+                      </p>
+                    </div>
+                    <Toggle on={usaLotes} onChange={() => toggleUsaLotes()} />
+                  </div>
+                  {avisoLotes && usaLotes ? (
+                    <p className="rounded-lg bg-indigo-500/10 px-3 py-3 text-sm text-[#A5B4FC]">
+                      Tus productos existentes no tienen lote asignado. A partir de ahora cada compra puede tener un
+                      lote.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
               {tab === 'plan' ? (
                 <div className="mt-6 space-y-3 text-sm">
                   <div className="rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-3">
@@ -1072,7 +1106,7 @@ export function ConfiguracionPage() {
                 <p className="mt-6 rounded-xl bg-green-950/50 px-3 py-2 text-sm text-green-200">{ok}</p>
               ) : null}
 
-              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' || tab === 'inventario' || tab === 'variantes' ? (
+              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' || tab === 'inventario' || tab === 'variantes' || tab === 'lotes' ? (
                 <button
                   className={`${btnPrimary} mt-6 w-full`}
                   type="button"

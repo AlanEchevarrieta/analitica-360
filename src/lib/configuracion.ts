@@ -24,6 +24,7 @@ export type ConfiguracionEmpresa = {
   flujoVentas: FlujoVentas
   umbralStockBajo: number
   usaVariantes: boolean
+  usaLotes: boolean
 }
 
 export const MEDIOS_PAGO = [
@@ -119,6 +120,7 @@ export const CONFIG_DEFAULT: Omit<ConfiguracionEmpresa, 'empresaId'> = {
   flujoVentas: { ...FLUJO_VENTAS_DEFAULT },
   umbralStockBajo: 5,
   usaVariantes: false,
+  usaLotes: false,
 }
 
 function normalizarFlujo(raw: unknown): FlujoVentas {
@@ -152,11 +154,19 @@ export async function obtenerConfiguracion(
   client: SupabaseClient,
   empresaId: string,
 ): Promise<{ config: ConfiguracionEmpresa; error: string | null }> {
-  const conFlujo = await client
+  let conFlujo = await client
     .from('configuracion_empresa')
-    .select('empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes')
+    .select('empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes, usa_lotes')
     .eq('empresa_id', empresaId)
     .maybeSingle()
+
+  if (conFlujo.error && /usa_lotes/i.test(conFlujo.error.message)) {
+    conFlujo = await client
+      .from('configuracion_empresa')
+      .select('empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes')
+      .eq('empresa_id', empresaId)
+      .maybeSingle()
+  }
 
   const { data, error } = conFlujo.error
     ? await client
@@ -195,6 +205,7 @@ export async function obtenerConfiguracion(
       flujoVentas: normalizarFlujo((fila as { flujo_ventas?: unknown }).flujo_ventas),
       umbralStockBajo: Number.isFinite(umbral) && umbral >= 0 ? umbral : 5,
       usaVariantes: Boolean((fila as { usa_variantes?: unknown }).usa_variantes),
+      usaLotes: Boolean((fila as { usa_lotes?: unknown }).usa_lotes),
     },
     error: null,
   }
@@ -241,7 +252,9 @@ export async function guardarConfiguracion(
   }
   const inv = await guardarInventario(client, input)
   if (inv) return inv
-  return guardarUsaVariantes(client, input)
+  const vari = await guardarUsaVariantes(client, input)
+  if (vari) return vari
+  return guardarUsaLotes(client, input)
 }
 
 async function guardarUsaVariantes(client: SupabaseClient, input: ConfiguracionEmpresa) {
@@ -257,6 +270,23 @@ async function guardarUsaVariantes(client: SupabaseClient, input: ConfiguracionE
   if (t.includes('usa_variantes') || t.includes('schema cache') || t.includes('does not exist')) {
     if (!input.usaVariantes) return null
     return 'Falta el módulo de variantes. Pegá TODO supabase/035_variantes.sql (rol postgres), dale Run y recargá.'
+  }
+  return error.message
+}
+
+async function guardarUsaLotes(client: SupabaseClient, input: ConfiguracionEmpresa) {
+  const { error } = await client
+    .from('configuracion_empresa')
+    .update({
+      usa_lotes: Boolean(input.usaLotes),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('empresa_id', input.empresaId)
+  if (!error) return null
+  const t = error.message.toLowerCase()
+  if (t.includes('usa_lotes') || t.includes('schema cache') || t.includes('does not exist')) {
+    if (!input.usaLotes) return null
+    return 'Falta el módulo de lotes. Pegá TODO supabase/046_lotes.sql (rol postgres), dale Run y recargá.'
   }
   return error.message
 }

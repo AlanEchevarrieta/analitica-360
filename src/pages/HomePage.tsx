@@ -29,6 +29,8 @@ import { textoCumpleProximo } from '../lib/clientes'
 import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
 import { bannerTicketsHome, type BannerTicketHome } from '../lib/tickets'
+import { contarAlertasLotes } from '../lib/lotes'
+import { obtenerConfiguracion } from '../lib/configuracion'
 import {
   esAdminEmail,
   diasRestantes,
@@ -407,6 +409,7 @@ export function HomePage() {
   const [rangoHome, setRangoHome] = useState<RangoHome>(7)
   const [cargandoDash, setCargandoDash] = useState(true)
   const [bannerTicket, setBannerTicket] = useState<BannerTicketHome | null>(null)
+  const [alertasLotes, setAlertasLotes] = useState({ vencidos: 0, porVencer: 0 })
 
   useEffect(() => {
     if (!perfil) return
@@ -431,6 +434,12 @@ export function HomePage() {
       setCargandoDash(false)
       const banner = await bannerTicketsHome(client)
       setBannerTicket(banner)
+      const cfg = await obtenerConfiguracion(client, perfil.empresa.id)
+      if (cfg.config.usaLotes) {
+        setAlertasLotes(await contarAlertasLotes(client))
+      } else {
+        setAlertasLotes({ vencidos: 0, porVencer: 0 })
+      }
     })()
   }, [perfil])
 
@@ -517,6 +526,26 @@ export function HomePage() {
             {bannerTicket.tipo === 'respuesta'
               ? `💬 Tenés una respuesta nueva en ${bannerTicket.numero}`
               : `🎫 Tu ticket ${bannerTicket.numero} está siendo revisado`}
+          </Link>
+        ) : null}
+
+        {alertasLotes.vencidos > 0 ? (
+          <Link
+            className="mb-4 block rounded-lg bg-red-100 px-3 py-3 text-sm text-red-900"
+            to="/lotes?estado=vencido"
+          >
+            🔴 {alertasLotes.vencidos} {alertasLotes.vencidos === 1 ? 'lote vencido' : 'lotes vencidos'} — revisá tu
+            stock
+          </Link>
+        ) : null}
+
+        {alertasLotes.porVencer > 0 ? (
+          <Link
+            className="mb-4 block rounded-lg bg-amber-100 px-3 py-3 text-sm text-amber-950"
+            to="/lotes?estado=por_vencer"
+          >
+            🟡 {alertasLotes.porVencer}{' '}
+            {alertasLotes.porVencer === 1 ? 'lote vence' : 'lotes vencen'} en menos de 30 días
           </Link>
         ) : null}
 

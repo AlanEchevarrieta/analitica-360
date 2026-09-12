@@ -242,7 +242,13 @@ export function calcularTotalesCredito(totalSinInteres: number, coeficiente: num
 export async function confirmarVenta(
   client: SupabaseClient,
   input: {
-    items: { producto_id: string; cantidad: number; precio_unitario: number; variante_id?: string | null }[]
+    items: {
+      producto_id: string
+      cantidad: number
+      precio_unitario: number
+      variante_id?: string | null
+      lote_id?: string | null
+    }[]
     formaPago: string
     descuento: number
     cliente: string
@@ -271,7 +277,7 @@ export async function confirmarVenta(
   }
   const t = msg.toLowerCase()
   if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
-    return 'Falta actualizar confirmar_venta en Supabase. Pegá TODO supabase/038_perf_seguridad_productos_ventas.sql (rol postgres), dale Run y recargá.'
+    return 'Falta actualizar confirmar_venta en Supabase. Pegá TODO supabase/038_perf_seguridad_productos_ventas.sql y supabase/046_lotes.sql (rol postgres), dale Run y recargá.'
   }
   return msg
 }

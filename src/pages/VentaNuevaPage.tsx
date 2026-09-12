@@ -31,18 +31,18 @@ import {
 } from '../lib/variantes'
 import { VarianteChipsPicker } from '../components/VarianteChipsPicker'
 import { theme } from '../theme'
+import { etiquetaLoteOpcion, lotesDisponiblesProducto, type LoteFila } from '../lib/lotes'
 
 type Linea = {
+  uid: string
   productoId: string
   varianteId: string | null
   nombre: string
   cantidad: number
   precioUnitario: number
   stockLinea: number
-}
-
-function claveLinea(productoId: string, varianteId: string | null) {
-  return varianteId ? `${productoId}:${varianteId}` : productoId
+  loteId: string | null
+  lotes: LoteFila[]
 }
 
 const inputClass =
@@ -209,7 +209,7 @@ export function VentaNuevaPage() {
     resaltadoTimer.current = window.setTimeout(() => setLineaResaltada(null), 1600)
   }
 
-  function agregarLinea(producto: ProductoFila, variante: VarianteFila | null) {
+  function agregarLinea(producto: ProductoFila, variante: VarianteFila | null, lotes: LoteFila[] = []) {
     const varianteId = variante?.id ?? null
     const etiqueta = variante ? ` — ${etiquetaCombo(variante.atributos)}` : ''
     const precio = precioVarianteOBase(variante?.precioVenta, producto.precio_venta)
@@ -222,26 +222,36 @@ export function VentaNuevaPage() {
       precioUsado: precio,
     })
     const stock = variante ? (stockVar.get(variante.id) ?? 0) : producto.stock_actual
-    const clave = claveLinea(producto.id, varianteId)
+    const loteDefault = lotes[0] ?? null
+    const loteId = loteDefault?.id ?? null
+    const existente = lineas.find(
+      (l) => l.productoId === producto.id && l.varianteId === varianteId && l.loteId === loteId,
+    )
+    const uid = existente?.uid ?? crypto.randomUUID()
     setLineas((prev) => {
-      const existente = prev.find((l) => claveLinea(l.productoId, l.varianteId) === clave)
-      if (existente) {
-        const actualizada = { ...existente, cantidad: existente.cantidad + 1 }
-        return [actualizada, ...prev.filter((l) => claveLinea(l.productoId, l.varianteId) !== clave)]
+      const hit = prev.find(
+        (l) => l.productoId === producto.id && l.varianteId === varianteId && l.loteId === loteId,
+      )
+      if (hit) {
+        const actualizada = { ...hit, cantidad: hit.cantidad + 1 }
+        return [actualizada, ...prev.filter((l) => l.uid !== hit.uid)]
       }
       return [
         {
+          uid,
           productoId: producto.id,
           varianteId,
           nombre: `${producto.nombre}${etiqueta}`,
           cantidad: 1,
           precioUnitario: precio,
           stockLinea: stock,
+          loteId,
+          lotes,
         },
         ...prev,
       ]
     })
-    resaltarLinea(clave)
+    resaltarLinea(uid)
     setBusqueda('')
     setError(null)
     setPicker(null)
@@ -277,7 +287,10 @@ export function VentaNuevaPage() {
       setError(null)
       return
     }
-    agregarLinea(producto, null)
+    const lotes = config?.usaLotes
+      ? await lotesDisponiblesProducto(requireSupabase(), producto.id, null)
+      : []
+    agregarLinea(producto, null, lotes)
   }
 
   function onCodigoDetectado(codigo: string) {
@@ -291,13 +304,9 @@ export function VentaNuevaPage() {
     window.setTimeout(() => busquedaRef.current?.focus(), 50)
   }
 
-  function cambiarCantidad(clave: string, delta: number) {
+  function cambiarCantidad(uid: string, delta: number) {
     setLineas((prev) =>
-      prev.map((l) =>
-        claveLinea(l.productoId, l.varianteId) === clave
-          ? { ...l, cantidad: Math.max(1, l.cantidad + delta) }
-          : l,
-      ),
+      prev.map((l) => (l.uid === uid ? { ...l, cantidad: Math.max(1, l.cantidad + delta) } : l)),
     )
   }
 
@@ -382,6 +391,7 @@ export function VentaNuevaPage() {
         cantidad: l.cantidad,
         precio_unitario: l.precioUnitario,
         variante_id: l.varianteId,
+        lote_id: l.loteId,
       })),
       formaPago,
       descuento: desc,
@@ -482,8 +492,16 @@ export function VentaNuevaPage() {
                       exigirStock
                       etiquetaAccion="Agregar a la venta"
                       onElegir={(variante) => {
-                        if (variante) agregarLinea(picker, variante)
-                        else setError('Seleccioná una variante válida')
+                        if (!variante) {
+                          setError('Seleccioná una variante válida')
+                          return
+                        }
+                        void (async () => {
+                          const lotes = config?.usaLotes
+                            ? await lotesDisponiblesProducto(requireSupabase(), picker.id, variante.id)
+                            : []
+                          agregarLinea(picker, variante, lotes)
+                        })()
                       }}
                       onCancelar={() => setPicker(null)}
                     />
@@ -491,7 +509,9 @@ export function VentaNuevaPage() {
 
                   <div className="mt-4 space-y-3">
                     {lineas.map((linea) => {
-                      const clave = claveLinea(linea.productoId, linea.varianteId)
+                      const clave = linea.uid
+                      const loteSel = linea.lotes.find((l) => l.id === linea.loteId) ?? null
+                      const stockLote = loteSel?.stock ?? 0
                       return (
                       <div
                         key={clave}
@@ -506,11 +526,7 @@ export function VentaNuevaPage() {
                           <button
                             className="text-xs text-[#DC2626]"
                             type="button"
-                            onClick={() =>
-                              setLineas((prev) =>
-                                prev.filter((l) => claveLinea(l.productoId, l.varianteId) !== clave),
-                              )
-                            }
+                            onClick={() => setLineas((prev) => prev.filter((l) => l.uid !== clave))}
                           >
                             Quitar
                           </button>
@@ -547,7 +563,7 @@ export function VentaNuevaPage() {
                                 const n = Number(ev.target.value.replace(',', '.'))
                                 setLineas((prev) =>
                                   prev.map((l) =>
-                                    claveLinea(l.productoId, l.varianteId) === clave
+                                    l.uid === clave
                                       ? { ...l, precioUnitario: Number.isFinite(n) ? n : 0 }
                                       : l,
                                   ),
@@ -556,6 +572,32 @@ export function VentaNuevaPage() {
                             />
                           </label>
                         </div>
+                        {config?.usaLotes && linea.lotes.length > 0 ? (
+                          <label className="mt-2 block text-xs text-[#4A5568]">
+                            Lote
+                            <select
+                              className={`${inputClass} mt-1 min-h-11 py-2 text-sm`}
+                              value={linea.loteId ?? ''}
+                              onChange={(ev) => {
+                                const id = ev.target.value || null
+                                setLineas((prev) =>
+                                  prev.map((l) => (l.uid === clave ? { ...l, loteId: id } : l)),
+                                )
+                              }}
+                            >
+                              {linea.lotes.map((lote) => (
+                                <option key={lote.id} value={lote.id}>
+                                  {etiquetaLoteOpcion(lote)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : null}
+                        {config?.usaLotes && loteSel && linea.cantidad > stockLote ? (
+                          <p className="mt-1 rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
+                            ⚠️ El lote seleccionado no tiene stock suficiente ({stockLote}u).
+                          </p>
+                        ) : null}
                         <p className="mt-2 text-xs text-[#4A5568]">
                           Stock disponible: {linea.stockLinea}{' '}
                           {linea.stockLinea === 1 ? 'unidad' : 'unidades'}
@@ -753,7 +795,7 @@ export function VentaNuevaPage() {
                   ) : null}
                   <div className="mt-4 rounded-md bg-[#EEF2F6] px-3 py-3 text-sm text-[#1A2F4A]">
                     {lineas.map((l) => (
-                      <p key={l.productoId}>
+                      <p key={l.uid}>
                         {l.nombre} × {l.cantidad} — {formatoARS(l.cantidad * l.precioUnitario)}
                       </p>
                     ))}
@@ -775,7 +817,7 @@ export function VentaNuevaPage() {
                   <p>Vas a registrar esta venta:</p>
                   <div className="mt-3 rounded-md bg-[#EEF2F6] px-3 py-3">
                     {lineas.map((l) => (
-                      <p key={l.productoId}>
+                      <p key={l.uid}>
                         {l.nombre} × {l.cantidad}
                       </p>
                     ))}

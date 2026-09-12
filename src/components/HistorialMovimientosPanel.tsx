@@ -5,6 +5,7 @@ import {
   estiloTipoMovimiento,
   formatoFechaMov,
   listarKardexProducto,
+  textoKardexConLote,
   type MovimientoKardex,
 } from '../lib/inventario'
 import { formatoARS } from '../lib/productos'
@@ -150,8 +151,7 @@ export function HistorialMovimientosPanel({
                         className="py-2.5 pr-2 font-semibold tabular-nums"
                         style={{ color: entrada ? '#4ADE80' : '#F87171' }}
                       >
-                        {entrada ? '+' : '-'}
-                        {m.cantidad}
+                        {textoKardexConLote(m)}
                       </td>
                       <td className="py-2.5 pr-2 tabular-nums" style={{ color: TXT }}>
                         {m.precioUnitario != null ? formatoARS(m.precioUnitario) : '—'}

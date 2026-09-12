@@ -48,6 +48,7 @@ export type MovimientoKardex = {
   ventaFecha: string | null
   precioUnitario: number | null
   varianteEtiqueta: string | null
+  numeroLote: string | null
 }
 
 const BADGE_ENTRADA = { fondo: '#14532D', color: '#4ADE80' }
@@ -106,6 +107,18 @@ export function formatoFechaMov(iso: string) {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
   return d.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+export function textoKardexConLote(m: {
+  signo: number
+  cantidad: number
+  fecha: string
+  numeroLote: string | null
+}) {
+  const lado = m.signo >= 0 ? 'Entrada' : 'Salida'
+  const fecha = formatoFechaMov(m.fecha).split(',')[0]?.trim() ?? formatoFechaMov(m.fecha)
+  const lote = m.numeroLote ? ` · Lote ${m.numeroLote}` : ''
+  return `${lado}: ${m.cantidad}u${lote} · ${fecha}`
 }
 
 export async function listarUbicaciones(
@@ -258,9 +271,9 @@ export async function listarKardexProducto(
   const from = (input.pagina - 1) * input.pageSize
   const to = from + input.pageSize - 1
   const colsConUbic =
-    'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino, precio_unitario, costo_unitario, variante_id'
+    'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino, precio_unitario, costo_unitario, variante_id, lote_id'
   const colsSinUbic =
-    'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, precio_unitario, costo_unitario, variante_id'
+    'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, precio_unitario, costo_unitario, variante_id, lote_id'
 
   const pedirPagina = (cols: string) =>
     client
@@ -286,8 +299,18 @@ export async function listarKardexProducto(
   }
   if (pagina.error && /variante_id/i.test(pagina.error.message)) {
     pagina = await pedirPagina(
-      'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino, precio_unitario, costo_unitario',
+      'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino, precio_unitario, costo_unitario, lote_id',
     )
+  }
+  if (pagina.error && /lote_id/i.test(pagina.error.message)) {
+    pagina = await pedirPagina(
+      'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino, precio_unitario, costo_unitario, variante_id',
+    )
+    if (pagina.error && /variante_id/i.test(pagina.error.message)) {
+      pagina = await pedirPagina(
+        'id, tipo, cantidad, signo, motivo, fecha, referencia_id, usuario_id, ubicacion_origen, ubicacion_destino, precio_unitario, costo_unitario',
+      )
+    }
   }
   if (pagina.error) return { filas: [], total: 0, error: pagina.error.message }
 
@@ -343,6 +366,15 @@ export async function listarKardexProducto(
     }
   }
 
+  const loteIds = [...new Set(raw.map((r) => (r.lote_id == null ? '' : String(r.lote_id))).filter(Boolean))]
+  const numerosLote = new Map<string, string>()
+  if (loteIds.length > 0) {
+    const lr = await client.from('lotes').select('id, numero_lote').in('id', loteIds)
+    for (const row of (lr.data ?? []) as Record<string, unknown>[]) {
+      numerosLote.set(String(row.id), String(row.numero_lote ?? ''))
+    }
+  }
+
   let saldo = Number(input.stockActual) - netNewer
   const filas: MovimientoKardex[] = raw.map((row) => {
     const tipo = String(row.tipo ?? '')
@@ -370,6 +402,7 @@ export async function listarKardexProducto(
         return null
       })(),
       varianteEtiqueta: row.variante_id ? etiquetasVar.get(String(row.variante_id)) ?? null : null,
+      numeroLote: row.lote_id ? numerosLote.get(String(row.lote_id)) ?? null : null,
     }
     saldo -= deltaStockKardex(tipo, cant, signo)
     return item

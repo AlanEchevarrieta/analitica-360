@@ -77,6 +77,7 @@ export async function confirmarCompra(
       cantidad: number
       costo_unitario: number
       variante_id?: string | null
+      lote_id?: string | null
     }[]
     proveedor: string
     proveedorId?: string | null
@@ -98,7 +99,7 @@ export async function confirmarCompra(
   if (msg.includes('PRODUCTO_INVALIDO')) return 'Hay un producto que ya no está disponible'
   if (msg.includes('PROVEEDOR_INVALIDO')) return 'Ese proveedor ya no está disponible'
   if (msg.includes('VARIANTE_INVALIDA')) return 'La variante elegida no es válida'
-  return 'No se pudo confirmar la compra. Corré supabase/016_compras.sql, supabase/022_proveedores.sql y supabase/036_variantes_compras_dimensiones.sql en el SQL Editor.'
+  return 'No se pudo confirmar la compra. Corré supabase/016_compras.sql, supabase/022_proveedores.sql, supabase/036_variantes_compras_dimensiones.sql y supabase/046_lotes.sql en el SQL Editor.'
 }
 
 export async function anularCompra(

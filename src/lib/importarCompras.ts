@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { confirmarCompra } from './compras'
+import { crearLote } from './lotes'
 import {
   ejecutarLoteConRetry,
   esFuncionImportacionFaltante,
@@ -28,14 +29,23 @@ export const COLUMNAS_PLANTILLA_COMPRAS = [
   'Variante 1',
   'Cantidad 1',
   'Costo unitario 1',
+  'N° Lote 1',
+  'Fecha elaboración 1',
+  'Fecha vencimiento 1',
   'Producto 2',
   'Variante 2',
   'Cantidad 2',
   'Costo unitario 2',
+  'N° Lote 2',
+  'Fecha elaboración 2',
+  'Fecha vencimiento 2',
   'Producto 3',
   'Variante 3',
   'Cantidad 3',
   'Costo unitario 3',
+  'N° Lote 3',
+  'Fecha elaboración 3',
+  'Fecha vencimiento 3',
   'Notas',
 ] as const
 
@@ -44,6 +54,9 @@ export type ItemImportCompra = {
   variante: string
   cantidad: number
   costo: number
+  numeroLote: string
+  fechaElaboracion: string
+  fechaVencimiento: string
   productoId?: string
   varianteId?: string | null
   avisoVariante?: string | null
@@ -67,9 +80,13 @@ function resumenItem(it: ItemImportCompra) {
 function layoutCompras(row: unknown[], encabezado: string[]) {
   const keys = encabezado.map((h) => claveColumna(h))
   const conVariante = keys.some((k) => k.includes('variante'))
+  const conLote = keys.some((k) => k.includes('lote') || k.includes('elaboracion') || k.includes('vencimiento'))
   const notasIdx = keys.findIndex((k) => k.includes('nota'))
   if (keys.length > 0) {
-    const stride = conVariante ? 4 : 3
+    let stride = 3
+    if (conVariante && conLote) stride = 7
+    else if (conLote) stride = 6
+    else if (conVariante) stride = 4
     return { offset: 2, stride, colNotas: notasIdx >= 0 ? notasIdx : 2 + 3 * stride }
   }
   const stride = celdaEsNumero(row[3]) ? 3 : 4
@@ -78,14 +95,20 @@ function layoutCompras(row: unknown[], encabezado: string[]) {
 
 function itemsDesdeRow(row: unknown[], offset: number, stride: number) {
   const items: ItemImportCompra[] = []
+  const conVariante = stride === 4 || stride === 7
+  const conLote = stride === 6 || stride === 7
   for (let i = 0; i < 3; i++) {
     const base = offset + i * stride
     const nombre = textoCelda(row[base])
-    const variante = stride === 4 ? textoCelda(row[base + 1]) : ''
-    const cantidad = enteroCelda(row[base + (stride === 4 ? 2 : 1)])
-    const costo = numeroCelda(row[base + (stride === 4 ? 3 : 2)])
-    if (!nombre && !variante && cantidad === 0 && costo === 0) continue
-    items.push({ nombre, variante, cantidad, costo })
+    const variante = conVariante ? textoCelda(row[base + 1]) : ''
+    const cantidad = enteroCelda(row[base + (conVariante ? 2 : 1)])
+    const costo = numeroCelda(row[base + (conVariante ? 3 : 2)])
+    const loteOff = conVariante ? 4 : 3
+    const numeroLote = conLote ? textoCelda(row[base + loteOff]) : ''
+    const fechaElaboracion = conLote ? parseFechaCelda(row[base + loteOff + 1]) ?? '' : ''
+    const fechaVencimiento = conLote ? parseFechaCelda(row[base + loteOff + 2]) ?? '' : ''
+    if (!nombre && !variante && cantidad === 0 && costo === 0 && !numeroLote) continue
+    items.push({ nombre, variante, cantidad, costo, numeroLote, fechaElaboracion, fechaVencimiento })
   }
   return items
 }
@@ -134,7 +157,7 @@ function filasDesdeMatriz(rows: unknown[][]): FilaImportCompra[] {
 export async function descargarPlantillaCompras() {
   await descargarPlantilla('plantilla_compras.xlsx', 'Compras', [
     [...COLUMNAS_PLANTILLA_COMPRAS],
-    ['01/01/2026', 'Proveedor SA', 'Bolso Matero', 'Negro/Ecocuero', 5, 25000, '', '', '', '', '', '', '', '', ''],
+    ['01/01/2026', 'Proveedor SA', 'Bolso Matero', 'Negro/Ecocuero', 5, 25000, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
   ])
 }
 
@@ -181,6 +204,9 @@ async function resolverItemsCompra(
     cantidad: number
     costo_unitario: number
     variante_id: string | null
+    numeroLote: string
+    fechaElaboracion: string
+    fechaVencimiento: string
   }[] = []
   for (const item of fila.items) {
     const prod = await asegurarProducto(client, mapa, item.nombre, item.costo)
@@ -196,6 +222,9 @@ async function resolverItemsCompra(
       cantidad: item.cantidad,
       costo_unitario: item.costo,
       variante_id: varianteId,
+      numeroLote: item.numeroLote ?? '',
+      fechaElaboracion: item.fechaElaboracion ?? '',
+      fechaVencimiento: item.fechaVencimiento ?? '',
     })
   }
   return { items }
@@ -277,6 +306,10 @@ export async function importarCompras(
       cantidad: number
       costo_unitario: number
       variante_id: string | null
+      lote_id?: string | null
+      numeroLote: string
+      fechaElaboracion: string
+      fechaVencimiento: string
     }[]
   }[] = []
 
@@ -293,11 +326,42 @@ export async function importarCompras(
     pendientes.push({ fila, items: res.items })
   }
 
+  const { data: auth } = await client.auth.getUser()
+  let empresaId = ''
+  if (auth.user?.id) {
+    const u = await client.from('usuarios').select('empresa_id').eq('id', auth.user.id).maybeSingle()
+    empresaId = String((u.data as { empresa_id?: string } | null)?.empresa_id ?? '')
+  }
+  const hayLotes = pendientes.some((p) => p.items.some((it) => it.numeroLote.trim()))
+  if (hayLotes && empresaId) {
+    for (const p of pendientes) {
+      for (const it of p.items) {
+        if (!it.numeroLote.trim()) continue
+        const creado = await crearLote(client, {
+          empresaId,
+          productoId: it.producto_id,
+          varianteId: it.variante_id,
+          numeroLote: it.numeroLote,
+          fechaElaboracion: it.fechaElaboracion || null,
+          fechaVencimiento: it.fechaVencimiento || null,
+          cantidadInicial: it.cantidad,
+          registrarMovimiento: false,
+        })
+        if (creado.error || !creado.id) {
+          errores.push({ fila: p.fila.filaExcel, motivo: creado.error || 'No se pudo crear el lote' })
+          p.items = []
+          break
+        }
+        it.lote_id = creado.id
+      }
+    }
+  }
+
   onProgreso?.(errores.length, total)
 
   let importados = 0
   let hechos = errores.length
-  let usarLoteRpc = true
+  let usarLoteRpc = !hayLotes
 
   for (const lote of partirEnLotes(pendientes)) {
     if (usarLoteRpc) {
@@ -306,7 +370,13 @@ export async function importarCompras(
           const res = await client.rpc('importar_compras_lote', {
             p_compras: lote.map((v) => ({
               fila: v.fila.filaExcel,
-              items: v.items,
+              items: v.items.map((it) => ({
+                producto_id: it.producto_id,
+                producto_nombre: it.producto_nombre,
+                cantidad: it.cantidad,
+                costo_unitario: it.costo_unitario,
+                variante_id: it.variante_id,
+              })),
               proveedor: v.fila.proveedor,
               fecha: v.fila.fecha,
               notas: v.fila.notas,
@@ -334,12 +404,14 @@ export async function importarCompras(
       const resultados = await ejecutarLoteConRetry(() =>
         Promise.allSettled(
           lote.map((v) =>
-            confirmarCompra(client, {
-              items: v.items,
-              proveedor: v.fila.proveedor,
-              fecha: v.fila.fecha,
-              notas: v.fila.notas,
-            }),
+            v.items.length === 0
+              ? Promise.resolve('Fila omitida por error de lote')
+              : confirmarCompra(client, {
+                  items: v.items,
+                  proveedor: v.fila.proveedor,
+                  fecha: v.fila.fecha,
+                  notas: v.fila.notas,
+                }),
           ),
         ),
       )
