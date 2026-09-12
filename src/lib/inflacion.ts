@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { fechaIsoDe, inicioMesIso, leerPeriodoAnalytics } from './analytics'
 
-export const inflacionMensual: Record<string, number> = {
+export const INFLACION_INDEC: Record<string, number> = {
   '2022-01': 3.9,
   '2022-02': 4.7,
   '2022-03': 6.7,
@@ -129,7 +129,7 @@ export function finMesIso(iso: string) {
 }
 
 export function rangoDatosIndec() {
-  const keys = Object.keys(inflacionMensual).sort()
+  const keys = Object.keys(INFLACION_INDEC).sort()
   const first = keys[0]
   const last = keys[keys.length - 1]
   return { desde: `${first}-01`, hasta: finMesIso(`${last}-01`) }
@@ -235,7 +235,7 @@ export async function mapaInflacionParaPeriodo(desde: string, hasta: string) {
   const meses = mesesEnRango(desde, hasta)
   const mapa: Record<string, number> = {}
   for (const mes of meses) {
-    if (inflacionMensual[mes] != null) mapa[mes] = inflacionMensual[mes]
+    if (INFLACION_INDEC[mes] != null) mapa[mes] = INFLACION_INDEC[mes]
   }
   const faltan = meses.filter((m) => mapa[m] == null)
   if (faltan.length > 0) {

@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import { ComposedChart, CartesianGrid, XAxis, YAxis, Bar, Line, Legend, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import { GraficoExpandible } from './GraficoExpandible'
 import { CHART_CURSOR_FILL, TooltipInflacionPrecios, asRechartsTooltip } from './CustomTooltip'
@@ -9,10 +10,19 @@ function fmtPct(n: number | null) {
   return `${n.toFixed(1)}%`
 }
 
-export function InflacionVsPreciosPanel({ serie }: { serie: SerieInflacionPrecios }) {
+function tickPct(v: number) {
+  return `${v}%`
+}
+
+export const InflacionVsPreciosPanel = memo(function InflacionVsPreciosPanel({
+  serie,
+}: {
+  serie: SerieInflacionPrecios
+}) {
   const { tema } = useTema()
-  const g = coloresGrafico(tema)
+  const g = useMemo(() => coloresGrafico(tema), [tema])
   const r = serie.resumen
+  const puntos = serie.puntos
   const diff = r.diferenciaPct
   const ganaste = diff != null && diff > 0
   const perdiste = diff != null && diff < 0
@@ -27,7 +37,7 @@ export function InflacionVsPreciosPanel({ serie }: { serie: SerieInflacionPrecio
           <p className="flex h-40 items-center justify-center text-center text-sm text-[#94A3B8]">
             {serie.errorInflacion}
           </p>
-        ) : serie.puntos.length === 0 ? (
+        ) : puntos.length === 0 ? (
           <p className="flex h-64 items-center justify-center text-sm text-[#94A3B8]">Sin meses en el período</p>
         ) : (
           <div className="relative h-72">
@@ -61,7 +71,7 @@ export function InflacionVsPreciosPanel({ serie }: { serie: SerieInflacionPrecio
               ) : null}
             </div>
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={serie.puntos} margin={{ top: 8, right: 48, left: 8, bottom: 8 }}>
+              <ComposedChart data={puntos} margin={{ top: 8, right: 48, left: 8, bottom: 8 }}>
                 <CartesianGrid stroke={g.grilla} vertical={false} />
                 <XAxis dataKey="mes" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis
@@ -69,7 +79,7 @@ export function InflacionVsPreciosPanel({ serie }: { serie: SerieInflacionPrecio
                   tick={{ fill: g.eje, fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
-                  tickFormatter={(v: number) => `${v}%`}
+                  tickFormatter={tickPct}
                   width={48}
                 />
                 <YAxis
@@ -79,7 +89,7 @@ export function InflacionVsPreciosPanel({ serie }: { serie: SerieInflacionPrecio
                   tick={{ fill: g.eje, fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
-                  tickFormatter={(v: number) => `${v}%`}
+                  tickFormatter={tickPct}
                   width={40}
                 />
                 <RechartsTooltip cursor={{ fill: CHART_CURSOR_FILL }} content={asRechartsTooltip(TooltipInflacionPrecios)} />
@@ -91,6 +101,7 @@ export function InflacionVsPreciosPanel({ serie }: { serie: SerieInflacionPrecio
                   fill="#94A3B8"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={28}
+                  isAnimationActive={false}
                 />
                 <Line
                   yAxisId="propios"
@@ -101,6 +112,7 @@ export function InflacionVsPreciosPanel({ serie }: { serie: SerieInflacionPrecio
                   strokeWidth={2}
                   dot={{ r: 3, fill: '#6366F1' }}
                   connectNulls={false}
+                  isAnimationActive={false}
                 />
               </ComposedChart>
             </ResponsiveContainer>
@@ -129,4 +141,4 @@ export function InflacionVsPreciosPanel({ serie }: { serie: SerieInflacionPrecio
       )}
     </>
   )
-}
+})

@@ -1389,12 +1389,14 @@ select option:checked:hover {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(99, 102, 241, 0.2);
   border-radius: 16px;
-  transition: border-color 200ms ease, background 200ms ease;
+  transform: translateZ(0);
+  transition: opacity 200ms ease, transform 200ms ease;
+  will-change: opacity, transform;
 }
 
 .config-mosaic-card:hover {
-  border-color: #6366f1;
-  background: rgba(99, 102, 241, 0.08);
+  opacity: 0.92;
+  transform: translateZ(0) scale(1.01);
 }
 
 .config-mosaic-icon {

@@ -68,25 +68,26 @@ export function useTema() {
   return ctx
 }
 
+const COLORES_GRAFICO_LIGHT = {
+  eje: '#1E1B4B',
+  grilla: 'rgba(99,102,241,0.15)',
+  tooltipBg: '#FFFFFF',
+  tooltipBorder: '#6366F1',
+  tooltipFg: '#1E1B4B',
+  muted: '#3730A3',
+} as const
+
+const COLORES_GRAFICO_DARK = {
+  eje: '#94A3B8',
+  grilla: 'rgba(255,255,255,0.06)',
+  tooltipBg: '#1A2F4A',
+  tooltipBorder: 'rgba(99,102,241,0.3)',
+  tooltipFg: '#ffffff',
+  muted: '#94A3B8',
+} as const
+
 export function coloresGrafico(tema: Tema) {
-  if (tema === 'light') {
-    return {
-      eje: '#1E1B4B',
-      grilla: 'rgba(99,102,241,0.15)',
-      tooltipBg: '#FFFFFF',
-      tooltipBorder: '#6366F1',
-      tooltipFg: '#1E1B4B',
-      muted: '#3730A3',
-    }
-  }
-  return {
-    eje: '#94A3B8',
-    grilla: 'rgba(255,255,255,0.06)',
-    tooltipBg: '#1A2F4A',
-    tooltipBorder: 'rgba(99,102,241,0.3)',
-    tooltipFg: '#ffffff',
-    muted: '#94A3B8',
-  }
+  return tema === 'light' ? COLORES_GRAFICO_LIGHT : COLORES_GRAFICO_DARK
 }
 
 export function ThemeToggle({ className = '' }: { className?: string }) {

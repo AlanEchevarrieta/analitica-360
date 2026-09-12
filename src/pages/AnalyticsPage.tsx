@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { Card, Text } from '@tremor/react'
 import {
   Area,
@@ -54,6 +54,7 @@ import {
   type GranularidadEje,
   type GranularidadVentasCompras,
   type PresetPeriodo,
+  type PuntoVentasCompras,
 } from '../lib/analytics'
 import { exportarAnalyticsPdf } from '../lib/exportarReportes'
 import { planTieneAnalytics } from '../lib/planes'
@@ -249,10 +250,71 @@ function BarraMargen({ pct, etiqueta }: { pct: number; etiqueta?: string }) {
   )
 }
 
+const VentasVsComprasChart = memo(function VentasVsComprasChart({
+  datos,
+  eje,
+  grilla,
+}: {
+  datos: PuntoVentasCompras[]
+  eje: string
+  grilla: string
+}) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart data={datos} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+        <CartesianGrid stroke={grilla} vertical={false} />
+        <XAxis dataKey="fecha" tick={{ fill: eje, fontSize: 11 }} axisLine={false} tickLine={false} />
+        <YAxis
+          yAxisId="monto"
+          tick={{ fill: eje, fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+          tickFormatter={formatoEjeCompacto}
+          width={56}
+        />
+        <YAxis yAxisId="ratio" orientation="right" domain={[0, 'auto']} hide />
+        <ReferenceLine yAxisId="ratio" y={1} stroke="rgba(255,255,255,0.2)" strokeDasharray="4 4" />
+        <RechartsTooltip cursor={{ fill: CHART_CURSOR_FILL }} content={asRechartsTooltip(TooltipVentasCompras)} />
+        <Legend wrapperStyle={{ color: eje, fontSize: 12 }} formatter={(value) => String(value)} />
+        <Line
+          yAxisId="ratio"
+          type="monotone"
+          dataKey="ratio"
+          stroke="transparent"
+          legendType="none"
+          dot={false}
+          isAnimationActive={false}
+        />
+        <Line
+          yAxisId="monto"
+          type="monotone"
+          dataKey="compras"
+          name="Compras"
+          stroke="#F59E0B"
+          strokeWidth={2}
+          dot={{ r: 3, fill: '#F59E0B' }}
+          activeDot={{ r: 5, fill: '#F59E0B' }}
+          isAnimationActive={false}
+        />
+        <Bar
+          yAxisId="monto"
+          dataKey="ventas"
+          name="Ventas"
+          fill="#6366F1"
+          radius={[4, 4, 0, 0]}
+          maxBarSize={48}
+          minPointSize={4}
+          isAnimationActive={false}
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  )
+})
+
 export function AnalyticsPage() {
   const { perfil } = useAuth()
   const { tema } = useTema()
-  const g = coloresGrafico(tema)
+  const g = useMemo(() => coloresGrafico(tema), [tema])
   const [preset, setPreset] = useState<PresetPeriodo>('mes')
   const [desdeDraft, setDesdeDraft] = useState(() => leerPeriodoAnalytics()?.desde ?? rangoPreset('mes').desde)
   const [hastaDraft, setHastaDraft] = useState(() => leerPeriodoAnalytics()?.hasta ?? rangoPreset('mes').hasta)
@@ -726,6 +788,7 @@ export function AnalyticsPage() {
                           strokeWidth={2}
                           dot={granularidadEvo === 'anio' || evolucionVista.length <= 12}
                           activeDot={{ r: 4, fill: '#6366F1' }}
+                          isAnimationActive={false}
                         />
                         <Line
                           type="monotone"
@@ -736,6 +799,7 @@ export function AnalyticsPage() {
                           strokeDasharray="6 4"
                           dot={false}
                           connectNulls
+                          isAnimationActive={false}
                         />
                       </ComposedChart>
                     </ResponsiveContainer>
@@ -766,68 +830,7 @@ export function AnalyticsPage() {
                         Sin movimientos en el período
                       </p>
                     ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={ventasVsCompras} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-                          <CartesianGrid stroke={g.grilla} vertical={false} />
-                          <XAxis
-                            dataKey="fecha"
-                            tick={{ fill: g.eje, fontSize: 11 }}
-                            axisLine={false}
-                            tickLine={false}
-                          />
-                          <YAxis
-                            yAxisId="monto"
-                            tick={{ fill: g.eje, fontSize: 11 }}
-                            axisLine={false}
-                            tickLine={false}
-                            tickFormatter={formatoEjeCompacto}
-                            width={56}
-                          />
-                          <YAxis yAxisId="ratio" orientation="right" domain={[0, 'auto']} hide />
-                          <ReferenceLine
-                            yAxisId="ratio"
-                            y={1}
-                            stroke="rgba(255,255,255,0.2)"
-                            strokeDasharray="4 4"
-                          />
-                          <RechartsTooltip
-                            cursor={{ fill: CHART_CURSOR_FILL }}
-                            content={asRechartsTooltip(TooltipVentasCompras)}
-                          />
-                          <Legend
-                            wrapperStyle={{ color: g.eje, fontSize: 12 }}
-                            formatter={(value) => String(value)}
-                          />
-                          <Line
-                            yAxisId="ratio"
-                            type="monotone"
-                            dataKey="ratio"
-                            stroke="transparent"
-                            legendType="none"
-                            dot={false}
-                            isAnimationActive={false}
-                          />
-                          <Line
-                            yAxisId="monto"
-                            type="monotone"
-                            dataKey="compras"
-                            name="Compras"
-                            stroke="#F59E0B"
-                            strokeWidth={2}
-                            dot={{ r: 3, fill: '#F59E0B' }}
-                            activeDot={{ r: 5, fill: '#F59E0B' }}
-                          />
-                          <Bar
-                            yAxisId="monto"
-                            dataKey="ventas"
-                            name="Ventas"
-                            fill="#6366F1"
-                            radius={[4, 4, 0, 0]}
-                            maxBarSize={48}
-                            minPointSize={4}
-                          />
-                        </ComposedChart>
-                      </ResponsiveContainer>
+                      <VentasVsComprasChart datos={ventasVsCompras} eje={g.eje} grilla={g.grilla} />
                     )}
                   </GraficoExpandible>
                   <p className="mt-2 text-xs leading-relaxed text-[#94A3B8]">
