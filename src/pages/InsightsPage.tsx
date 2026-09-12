@@ -30,6 +30,8 @@ import {
   armarForecast,
   cargarInsights,
   cargarInsightsCombos,
+  cargarInsightsCombos3,
+  contarProductosCatalogo,
   type FilaElasticidad,
   type GranularidadForecast,
   type InsightCombo,
@@ -120,6 +122,7 @@ function ComboCard({
 }) {
   const badge = badgeLift(combo.lift)
   const soportePct = Math.min(100, Math.max(0, combo.soporte))
+  const titulo = [combo.nombreA, combo.nombreB, combo.nombreC].filter(Boolean).join(' + ')
   return (
     <article
       className="flex flex-col rounded-xl p-4"
@@ -131,7 +134,7 @@ function ComboCard({
       <div className="flex items-start justify-between gap-2">
         <h3 className="min-w-0 text-sm font-semibold text-[#F1F5F9]">
           {destacado ? '🏆 ' : ''}
-          {combo.nombreA} + {combo.nombreB}
+          {titulo}
         </h3>
         <span
           className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
@@ -144,7 +147,9 @@ function ComboCard({
         Se vendieron juntos {combo.vecesJuntos.toLocaleString('es-AR')} veces
       </p>
       <p className="mt-3 text-sm text-[#F1F5F9]">
-        Confianza: {combo.confianzaA.toLocaleString('es-AR')}% · Lift: {combo.lift.toLocaleString('es-AR')}
+        {combo.confianzaA != null
+          ? `Confianza: ${combo.confianzaA.toLocaleString('es-AR')}% · Lift: ${combo.lift.toLocaleString('es-AR')}`
+          : `Lift: ${combo.lift.toLocaleString('es-AR')}`}
       </p>
       <div className="mt-2">
         <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
@@ -152,10 +157,12 @@ function ComboCard({
         </div>
         <p className="mt-1 text-xs text-[#94A3B8]">Soporte: {combo.soporte.toLocaleString('es-AR')}%</p>
       </div>
-      <p className="mt-3 text-sm leading-relaxed text-[#F1F5F9]">
-        💡 Cuando alguien compra {combo.nombreA}, {combo.confianzaA.toLocaleString('es-AR')}% de las veces también
-        lleva {combo.nombreB}
-      </p>
+      {combo.confianzaA != null && combo.nombreC == null ? (
+        <p className="mt-3 text-sm leading-relaxed text-[#F1F5F9]">
+          💡 Cuando alguien compra {combo.nombreA}, {combo.confianzaA.toLocaleString('es-AR')}% de las veces también
+          lleva {combo.nombreB}
+        </p>
+      ) : null}
       <button
         className="mt-4 h-10 rounded-lg bg-[#6366F1] px-3 text-sm font-semibold text-white hover:bg-[#4F46E5]"
         type="button"
@@ -334,6 +341,11 @@ function GraficoBarrasAtributo({
   )
 }
 
+const COMBOS_TAMANO: { id: '2' | '3'; label: string }[] = [
+  { id: '2', label: '2 productos' },
+  { id: '3', label: '3 productos' },
+]
+
 const GRANULARIDADES: { id: GranularidadForecast; label: string }[] = [
   { id: 'dia', label: 'Día' },
   { id: 'semana', label: 'Semana' },
@@ -365,7 +377,13 @@ export function InsightsPage() {
   const [desdeDraft, setDesdeDraft] = useState(() => resolverPeriodoInflacion().desde)
   const [hastaDraft, setHastaDraft] = useState(() => resolverPeriodoInflacion().hasta)
   const [combos, setCombos] = useState<InsightCombo[]>([])
+  const [combos3, setCombos3] = useState<InsightCombo[]>([])
   const [errorCombos, setErrorCombos] = useState<string | null>(null)
+  const [errorCombos3, setErrorCombos3] = useState<string | null>(null)
+  const [combos3Listo, setCombos3Listo] = useState(false)
+  const [cargandoCombos3, setCargandoCombos3] = useState(false)
+  const [tamanoCombo, setTamanoCombo] = useState<'2' | '3'>('2')
+  const [nProductos, setNProductos] = useState(0)
   const [modalCombo, setModalCombo] = useState(false)
 
   const premium = Boolean(perfil && planTieneInsights(perfil.empresa.plan_actual))
@@ -390,13 +408,15 @@ export function InsightsPage() {
       try {
         const cfg = await obtenerConfiguracion(requireSupabase(), perfil.empresa.id)
         const client = requireSupabase()
-        const [payload, combosRes] = await Promise.all([
+        const [payload, combosRes, nProds] = await Promise.all([
           cargarInsights(client, Boolean(cfg.config.usaVariantes)),
           cargarInsightsCombos(client, perfil.empresa.id),
+          contarProductosCatalogo(client),
         ])
         setData(payload)
         setCombos(combosRes.filas)
         setErrorCombos(combosRes.error)
+        setNProductos(nProds)
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Error inesperado'
         setData({
@@ -420,6 +440,25 @@ export function InsightsPage() {
       }
     })()
   }, [perfil])
+
+  useEffect(() => {
+    if (!perfil || !planTieneInsights(perfil.empresa.plan_actual)) return
+    if (tamanoCombo !== '3' || combos3Listo) return
+    let cancel = false
+    setCargandoCombos3(true)
+    void (async () => {
+      const res = await cargarInsightsCombos3(requireSupabase(), perfil.empresa.id)
+      if (cancel) return
+      setCombos3(res.filas)
+      setErrorCombos3(res.error)
+      setCombos3Listo(true)
+      setCargandoCombos3(false)
+    })()
+    return () => {
+      cancel = true
+      setCargandoCombos3(false)
+    }
+  }, [perfil, tamanoCombo, combos3Listo])
 
   useEffect(() => {
     if (!perfil || !planTieneInsights(perfil.empresa.plan_actual)) return
@@ -897,27 +936,47 @@ export function InsightsPage() {
               <p className="mt-1 text-xs leading-relaxed text-[#94A3B8]">
                 Basado en el análisis de todas tus ventas con múltiples productos.
               </p>
-              {errorCombos ? (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <p className="text-sm text-[#94A3B8]">Mostrar combos de:</p>
+                <SelectorChips valor={tamanoCombo} opciones={COMBOS_TAMANO} onChange={setTamanoCombo} />
+              </div>
+              {tamanoCombo === '3' && nProductos > 50 ? (
+                <p className="mt-3 rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                  ⚠️ Con muchos productos este análisis puede tardar unos segundos
+                </p>
+              ) : null}
+              {tamanoCombo === '2' && errorCombos ? (
                 <div className="mt-4">
                   <ErrorSeccion mensaje={errorCombos} />
                 </div>
+              ) : tamanoCombo === '3' && errorCombos3 ? (
+                <div className="mt-4">
+                  <ErrorSeccion mensaje={errorCombos3} />
+                </div>
               ) : (
                 <div className="mt-4">
-                  <GraficoExpandible titulo="🎁 Oportunidades de combos" ocultarTitulo compactoClass="overflow-auto">
-                    {combos.length === 0 ? (
+                  <GraficoExpandible
+                    titulo="🎁 Oportunidades de combos"
+                    ocultarTitulo
+                    compactoClass="overflow-auto"
+                  >
+                    {tamanoCombo === '3' && cargandoCombos3 ? (
+                      <p className="px-3 py-8 text-center text-sm text-[#94A3B8]">Calculando combos de 3 productos…</p>
+                    ) : (tamanoCombo === '2' ? combos : combos3).length === 0 ? (
                       <div className="px-3 py-10 text-center">
                         <p className="text-4xl">🎁</p>
                         <p className="mt-3 text-base font-semibold text-[#F1F5F9]">Aún no hay datos de combos</p>
                         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[#94A3B8]">
-                          Cuando tengas ventas con 2 o más productos, acá vas a ver qué combinaciones son más
-                          populares para crear ofertas y combos.
+                          {tamanoCombo === '3'
+                            ? 'Cuando tengas ventas con 3 o más productos, acá vas a ver qué tríos se compran juntos.'
+                            : 'Cuando tengas ventas con 2 o más productos, acá vas a ver qué combinaciones son más populares para crear ofertas y combos.'}
                         </p>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        {combos.map((combo, i) => (
+                        {(tamanoCombo === '2' ? combos : combos3).map((combo, i) => (
                           <ComboCard
-                            key={`${combo.productoAId}-${combo.productoBId}`}
+                            key={`${combo.nombreA}|${combo.nombreB}|${combo.nombreC ?? ''}`}
                             combo={combo}
                             destacado={i === 0}
                             onCrear={() => setModalCombo(true)}

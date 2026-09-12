@@ -846,14 +846,21 @@ export async function cargarInsights(
 export type InsightCombo = {
   productoAId: string
   productoBId: string
+  productoCId?: string
   nombreA: string
   nombreB: string
+  nombreC?: string
   vecesJuntos: number
   totalVentas: number
   soporte: number
-  confianzaA: number
-  confianzaB: number
+  confianzaA: number | null
+  confianzaB: number | null
   lift: number
+}
+
+export async function contarProductosCatalogo(client: SupabaseClient): Promise<number> {
+  const { count } = await client.from('productos').select('id', { count: 'exact', head: true }).is('deleted_at', null)
+  return count ?? 0
 }
 
 export async function cargarInsightsCombos(
@@ -885,6 +892,42 @@ export async function cargarInsightsCombos(
     soporte: num(row.soporte),
     confianzaA: num(row.confianza_a),
     confianzaB: num(row.confianza_b),
+    lift: num(row.lift),
+  }))
+  return { filas, error: null }
+}
+
+export async function cargarInsightsCombos3(
+  client: SupabaseClient,
+  empresaId: string,
+): Promise<{ filas: InsightCombo[]; error: string | null }> {
+  const { data, error } = await client.rpc('insights_combos_3', {
+    p_empresa_id: empresaId,
+    p_limit: 10,
+  })
+  if (error) {
+    const t = error.message.toLowerCase()
+    if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist') || t.includes('pgrst202')) {
+      return {
+        filas: [],
+        error:
+          'Falta crear insights_combos_3. Pegá TODO supabase/049_combos_3.sql (rol postgres), dale Run y recargá.',
+      }
+    }
+    return { filas: [], error: error.message }
+  }
+  const filas: InsightCombo[] = ((data ?? []) as Record<string, unknown>[]).map((row, i) => ({
+    productoAId: `a-${i}`,
+    productoBId: `b-${i}`,
+    productoCId: `c-${i}`,
+    nombreA: String(row.nombre_a ?? ''),
+    nombreB: String(row.nombre_b ?? ''),
+    nombreC: String(row.nombre_c ?? ''),
+    vecesJuntos: num(row.veces_juntos),
+    totalVentas: 0,
+    soporte: num(row.soporte),
+    confianzaA: null,
+    confianzaB: null,
     lift: num(row.lift),
   }))
   return { filas, error: null }
