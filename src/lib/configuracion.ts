@@ -25,6 +25,8 @@ export type ConfiguracionEmpresa = {
   umbralStockBajo: number
   usaVariantes: boolean
   usaLotes: boolean
+  usaModoFeria: boolean
+  aliasTransferencia: string
 }
 
 export const MEDIOS_PAGO = [
@@ -121,6 +123,8 @@ export const CONFIG_DEFAULT: Omit<ConfiguracionEmpresa, 'empresaId'> = {
   umbralStockBajo: 5,
   usaVariantes: false,
   usaLotes: false,
+  usaModoFeria: false,
+  aliasTransferencia: '',
 }
 
 function normalizarFlujo(raw: unknown): FlujoVentas {
@@ -156,9 +160,19 @@ export async function obtenerConfiguracion(
 ): Promise<{ config: ConfiguracionEmpresa; error: string | null }> {
   let conFlujo = await client
     .from('configuracion_empresa')
-    .select('empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes, usa_lotes')
+    .select(
+      'empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes, usa_lotes, usa_modo_feria, alias_transferencia',
+    )
     .eq('empresa_id', empresaId)
     .maybeSingle()
+
+  if (conFlujo.error && /usa_modo_feria|alias_transferencia/i.test(conFlujo.error.message)) {
+    conFlujo = await client
+      .from('configuracion_empresa')
+      .select('empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes, usa_lotes')
+      .eq('empresa_id', empresaId)
+      .maybeSingle()
+  }
 
   if (conFlujo.error && /usa_lotes/i.test(conFlujo.error.message)) {
     conFlujo = await client
@@ -206,6 +220,8 @@ export async function obtenerConfiguracion(
       umbralStockBajo: Number.isFinite(umbral) && umbral >= 0 ? umbral : 5,
       usaVariantes: Boolean((fila as { usa_variantes?: unknown }).usa_variantes),
       usaLotes: Boolean((fila as { usa_lotes?: unknown }).usa_lotes),
+      usaModoFeria: Boolean((fila as { usa_modo_feria?: unknown }).usa_modo_feria),
+      aliasTransferencia: String((fila as { alias_transferencia?: unknown }).alias_transferencia ?? '').trim(),
     },
     error: null,
   }
@@ -254,7 +270,9 @@ export async function guardarConfiguracion(
   if (inv) return inv
   const vari = await guardarUsaVariantes(client, input)
   if (vari) return vari
-  return guardarUsaLotes(client, input)
+  const lotes = await guardarUsaLotes(client, input)
+  if (lotes) return lotes
+  return guardarModoFeria(client, input)
 }
 
 async function guardarUsaVariantes(client: SupabaseClient, input: ConfiguracionEmpresa) {
@@ -287,6 +305,36 @@ async function guardarUsaLotes(client: SupabaseClient, input: ConfiguracionEmpre
   if (t.includes('usa_lotes') || t.includes('schema cache') || t.includes('does not exist')) {
     if (!input.usaLotes) return null
     return 'Falta el módulo de lotes. Pegá TODO supabase/046_lotes.sql (rol postgres), dale Run y recargá.'
+  }
+  return error.message
+}
+
+async function guardarModoFeria(client: SupabaseClient, input: ConfiguracionEmpresa) {
+  const payload: Record<string, unknown> = {
+    usa_modo_feria: Boolean(input.usaModoFeria),
+    alias_transferencia: input.aliasTransferencia.trim() || null,
+    updated_at: new Date().toISOString(),
+  }
+  const { error } = await client.from('configuracion_empresa').update(payload).eq('empresa_id', input.empresaId)
+  if (!error) return null
+  const t = error.message.toLowerCase()
+  if (t.includes('alias_transferencia')) {
+    delete payload.alias_transferencia
+    const retry = await client.from('configuracion_empresa').update(payload).eq('empresa_id', input.empresaId)
+    if (!retry.error) {
+      return input.aliasTransferencia.trim()
+        ? 'Falta el alias de transferencia. Pegá supabase/050_modo_feria.sql (rol postgres), dale Run y recargá.'
+        : null
+    }
+    if (/usa_modo_feria|schema cache|does not exist/i.test(retry.error.message)) {
+      if (!input.usaModoFeria) return null
+      return 'Falta el modo feria. Pegá supabase/050_modo_feria.sql (rol postgres), dale Run y recargá.'
+    }
+    return retry.error.message
+  }
+  if (t.includes('usa_modo_feria') || t.includes('schema cache') || t.includes('does not exist')) {
+    if (!input.usaModoFeria && !input.aliasTransferencia.trim()) return null
+    return 'Falta el modo feria. Pegá supabase/050_modo_feria.sql (rol postgres), dale Run y recargá.'
   }
   return error.message
 }

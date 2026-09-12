@@ -410,6 +410,7 @@ export function HomePage() {
   const [cargandoDash, setCargandoDash] = useState(true)
   const [bannerTicket, setBannerTicket] = useState<BannerTicketHome | null>(null)
   const [alertasLotes, setAlertasLotes] = useState({ vencidos: 0, porVencer: 0 })
+  const [usaModoFeria, setUsaModoFeria] = useState(false)
 
   useEffect(() => {
     if (!perfil) return
@@ -435,6 +436,7 @@ export function HomePage() {
       const banner = await bannerTicketsHome(client)
       setBannerTicket(banner)
       const cfg = await obtenerConfiguracion(client, perfil.empresa.id)
+      setUsaModoFeria(Boolean(cfg.config.usaModoFeria))
       if (cfg.config.usaLotes) {
         setAlertasLotes(await contarAlertasLotes(client))
       } else {
@@ -473,6 +475,29 @@ export function HomePage() {
   const dias = diasRestantes(suscripcion?.fecha_vencimiento ?? null)
   const mostrarAdmin = esAdminEmail(session?.user.email ?? perfil.usuario.email)
   const verReportes = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'ver_reportes')
+  const puedeVender = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'registrar_ventas')
+  const botonFeria =
+    usaModoFeria && puedeVender ? (
+      <Link
+        to="/venta-rapida"
+        className="mt-6 flex min-h-16 w-full items-center gap-3 rounded-xl px-4 text-white"
+        style={{
+          background: '#6366F1',
+          fontSize: 18,
+          fontWeight: 700,
+          boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+          borderRadius: 12,
+        }}
+      >
+        <span className="text-2xl" aria-hidden>
+          ⚡
+        </span>
+        <span className="text-left leading-tight">
+          <span className="block">Modo Feria</span>
+          <span className="block text-sm font-medium text-white/90">Registrá una venta rápida</span>
+        </span>
+      </Link>
+    ) : null
 
   return (
     <div
@@ -561,6 +586,8 @@ export function HomePage() {
           </p>
         ) : null}
 
+        {!verReportes ? botonFeria : null}
+
         {verReportes && cargandoDash ? <DashboardSkeleton /> : null}
 
         {verReportes && !cargandoDash ? (
@@ -601,6 +628,8 @@ export function HomePage() {
               />
               </div>
             </div>
+
+            {botonFeria}
 
             {(() => {
               const { sin, bajo } = alertasStock

@@ -70,6 +70,7 @@ type TabId =
   | 'ubicaciones'
   | 'variantes'
   | 'lotes'
+  | 'feria'
   | 'plan'
 
 const MOSAICO: {
@@ -83,6 +84,7 @@ const MOSAICO: {
   { id: 'categorias', icono: '🏷️', titulo: 'Categorías', subtitulo: 'Organizá tus productos' },
   { id: 'variantes', icono: '🎨', titulo: 'Variantes', subtitulo: 'Color, talle, material y más' },
   { id: 'lotes', icono: '📅', titulo: 'Lotes y Vencimientos', subtitulo: 'Stock por lote y fechas de vencimiento' },
+  { id: 'feria', icono: '⚡', titulo: 'Modo Feria', subtitulo: 'Venta rápida en 3 toques' },
   { id: 'usuarios', icono: '👥', titulo: 'Usuarios', subtitulo: 'Gestioná el acceso de tu equipo' },
   { id: 'flujo', icono: '💸', titulo: 'Flujo de ventas', subtitulo: 'Configurá el proceso de venta' },
   { id: 'inventario', icono: '📦', titulo: 'Inventario', subtitulo: 'Umbral de stock bajo y alertas' },
@@ -141,6 +143,8 @@ export function ConfiguracionPage() {
   const [umbralStock, setUmbralStock] = useState('5')
   const [usaVariantes, setUsaVariantes] = useState(false)
   const [usaLotes, setUsaLotes] = useState(false)
+  const [usaModoFeria, setUsaModoFeria] = useState(false)
+  const [aliasFeria, setAliasFeria] = useState('')
   const [avisoLotes, setAvisoLotes] = useState(false)
   const [atributos, setAtributos] = useState<AtributoFila[]>([])
   const [altaAtributo, setAltaAtributo] = useState(false)
@@ -227,6 +231,8 @@ export function ConfiguracionPage() {
       setUmbralStock(String(config.umbralStockBajo ?? 5))
       setUsaVariantes(Boolean(config.usaVariantes))
       setUsaLotes(Boolean(config.usaLotes))
+      setUsaModoFeria(Boolean(config.usaModoFeria))
+      setAliasFeria(config.aliasTransferencia)
       if (config.usaVariantes) {
         const atr = await listarAtributos(requireSupabase())
         if (!atr.error) setAtributos(atr.filas)
@@ -297,6 +303,8 @@ export function ConfiguracionPage() {
       umbralStockBajo: Number.parseInt(umbralStock, 10),
       usaVariantes,
       usaLotes,
+      usaModoFeria,
+      aliasTransferencia: aliasFeria,
     })
     setGuardando(false)
     if (fallo) {
@@ -1266,6 +1274,38 @@ export function ConfiguracionPage() {
                 </div>
               ) : null}
 
+              {tab === 'feria' ? (
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-start justify-between gap-3 rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-[#F1F5F9]">Activar modo feria / venta rápida</p>
+                      <p className="mt-0.5 text-xs text-[#94A3B8]">
+                        Registrá ventas en 3 toques. Ideal para ferias, mercados y mostrador.
+                      </p>
+                    </div>
+                    <Toggle
+                      on={usaModoFeria}
+                      onChange={() => {
+                        setOk(null)
+                        setUsaModoFeria((v) => !v)
+                      }}
+                    />
+                  </div>
+                  <label className="block text-sm font-medium text-[#94A3B8]">
+                    Alias de transferencia
+                    <input
+                      className={`${inputClass} mt-1`}
+                      value={aliasFeria}
+                      placeholder="CBU, alias o CVU"
+                      onChange={(ev) => setAliasFeria(ev.target.value)}
+                    />
+                  </label>
+                  <p className="text-xs text-[#94A3B8]">
+                    Se muestra al cobrar por transferencia en /venta-rapida.
+                  </p>
+                </div>
+              ) : null}
+
               {tab === 'plan' ? (
                 <div className="mt-6 space-y-3 text-sm">
                   <div className="rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-3">
@@ -1311,7 +1351,7 @@ export function ConfiguracionPage() {
                 <p className="mt-6 rounded-xl bg-green-950/50 px-3 py-2 text-sm text-green-200">{ok}</p>
               ) : null}
 
-              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' || tab === 'inventario' || tab === 'variantes' || tab === 'lotes' ? (
+              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' || tab === 'inventario' || tab === 'variantes' || tab === 'lotes' || tab === 'feria' ? (
                 <button
                   className={`${btnPrimary} mt-6 w-full`}
                   type="button"

@@ -51,6 +51,9 @@ const VentasPage = loadComponent(() => import('./pages/VentasPage').then((m) => 
 const VentaNuevaPage = loadComponent(() =>
   import('./pages/VentaNuevaPage').then((m) => ({ default: m.VentaNuevaPage })),
 )
+const VentaRapidaPage = loadComponent(() =>
+  import('./pages/VentaRapidaPage').then((m) => ({ default: m.VentaRapidaPage })),
+)
 const ComprasPage = loadComponent(() => import('./pages/ComprasPage').then((m) => ({ default: m.ComprasPage })))
 const CompraNuevaPage = loadComponent(() =>
   import('./pages/CompraNuevaPage').then((m) => ({ default: m.CompraNuevaPage })),
@@ -228,6 +231,7 @@ function AppRoutes() {
         <Route path="/soporte/:id" element={<SoporteFichaPage />} />
         <Route path="/ventas" element={<VentasPage />} />
         <Route path="/ventas/nueva" element={<VentaNuevaPage />} />
+        <Route path="/venta-rapida" element={<VentaRapidaPage />} />
         <Route path="/compras" element={<ComprasPage />} />
         <Route path="/compras/nueva" element={<CompraNuevaPage />} />
         <Route path="/proveedores" element={<ProveedoresPage />} />
