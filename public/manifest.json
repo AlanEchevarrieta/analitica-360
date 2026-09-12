@@ -8,15 +8,6 @@
   "theme_color": "#6366F1",
   "orientation": "portrait",
   "permissions": ["camera"],
-  "shortcuts": [
-    {
-      "name": "Venta rápida",
-      "short_name": "Vender",
-      "description": "Registrá una venta en 3 toques",
-      "url": "/venta-rapida",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    }
-  ],
   "icons": [
     {
       "src": "/icon-192.png",

@@ -323,27 +323,3 @@ export function formatoFechaVenta(iso: string) {
     minute: '2-digit',
   })
 }
-
-export async function rankingVentasPorProducto(
-  client: SupabaseClient,
-): Promise<Map<string, number>> {
-  const map = new Map<string, number>()
-  const PAGE = 1000
-  let from = 0
-  for (;;) {
-    const { data, error } = await client
-      .from('ventas_items')
-      .select('producto_id')
-      .range(from, from + PAGE - 1)
-    if (error || !data?.length) break
-    for (const row of data as Record<string, unknown>[]) {
-      const id = String(row.producto_id ?? '')
-      if (!id) continue
-      map.set(id, (map.get(id) ?? 0) + 1)
-    }
-    if (data.length < PAGE) break
-    from += PAGE
-    if (from > 30_000) break
-  }
-  return map
-}

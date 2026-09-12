@@ -168,6 +168,66 @@ export async function stockPorUbicaciones(
   return out
 }
 
+export async function stockPorVarianteUbicaciones(
+  client: SupabaseClient,
+  productoIds: string[],
+): Promise<Map<string, Map<string, number>>> {
+  const out = new Map<string, Map<string, number>>()
+  if (productoIds.length === 0) return out
+  const PAGE = 100
+  const data: Record<string, unknown>[] = []
+  for (let i = 0; i < productoIds.length; i += PAGE) {
+    const res = await client
+      .from('movimientos_inventario')
+      .select('variante_id, tipo, cantidad, signo, ubicacion_origen, ubicacion_destino')
+      .in('producto_id', productoIds.slice(i, i + PAGE))
+      .is('deleted_at', null)
+      .not('variante_id', 'is', null)
+    if (res.error || !res.data) continue
+    data.push(...(res.data as Record<string, unknown>[]))
+  }
+  for (const row of data) {
+    const vid = String(row.variante_id ?? '')
+    if (!vid) continue
+    const tipo = String(row.tipo ?? '')
+    const cant = Number(row.cantidad ?? 0)
+    const signo = Number(row.signo ?? 0)
+    const orig = row.ubicacion_origen == null ? '' : String(row.ubicacion_origen)
+    const dest = row.ubicacion_destino == null ? '' : String(row.ubicacion_destino)
+    let porVar = out.get(vid)
+    if (!porVar) {
+      porVar = new Map()
+      out.set(vid, porVar)
+    }
+    const add = (nombre: string, delta: number) => {
+      if (!nombre) return
+      porVar!.set(nombre, (porVar!.get(nombre) ?? 0) + delta)
+    }
+    if (tipo === 'transferencia') {
+      if (signo === 1) add(dest, cant)
+      if (signo === -1) add(orig, -cant)
+      continue
+    }
+    if (dest) add(dest, cant * signo)
+    else if (orig) add(orig, cant * signo)
+  }
+  return out
+}
+
+export function textoStockUbicaciones(
+  mapa: Map<string, Map<string, number>>,
+  id: string,
+  ubicaciones: { nombre: string }[],
+  fallbackTotal?: number,
+) {
+  if (ubicaciones.length === 0) {
+    return fallbackTotal == null ? '' : `Stock disponible: ${fallbackTotal}u`
+  }
+  return `Stock disponible: ${ubicaciones
+    .map((u) => `${u.nombre} ${mapa.get(id)?.get(u.nombre) ?? 0}u`)
+    .join(' · ')}`
+}
+
 export function stockDe(mapa: Map<string, Map<string, number>>, productoId: string, ubicacion: string) {
   return mapa.get(productoId)?.get(ubicacion) ?? 0
 }

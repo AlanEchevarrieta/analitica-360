@@ -32,7 +32,7 @@ import {
 import { VarianteChipsPicker } from '../components/VarianteChipsPicker'
 import { theme } from '../theme'
 import { etiquetaLoteOpcion, lotesDisponiblesProducto, type LoteFila } from '../lib/lotes'
-import { listarUbicaciones, stockDe, stockPorUbicaciones, type UbicacionFila } from '../lib/ubicaciones'
+import { listarUbicaciones, stockDe, stockPorUbicaciones, stockPorVarianteUbicaciones, textoStockUbicaciones, type UbicacionFila } from '../lib/ubicaciones'
 
 type Linea = {
   uid: string
@@ -85,6 +85,7 @@ export function VentaNuevaPage() {
   const [ubicaciones, setUbicaciones] = useState<UbicacionFila[]>([])
   const [ubicacionOrigen, setUbicacionOrigen] = useState('')
   const [stockUbic, setStockUbic] = useState<Map<string, Map<string, number>>>(new Map())
+  const [stockVarUbic, setStockVarUbic] = useState<Map<string, Map<string, number>>>(new Map())
 
   useEffect(() => {
     void listarProductos(requireSupabase()).then(({ filas }) => {
@@ -102,10 +103,15 @@ export function VentaNuevaPage() {
       const client = requireSupabase()
       const ub = await listarUbicaciones(client)
       setUbicaciones(ub.filas)
-      setUbicacionOrigen((prev) => prev || ub.filas[0]?.nombre || '')
+      setUbicacionOrigen((prev) => {
+        if (prev) return prev
+        const def = cfg.ubicacionVentaDefault.trim()
+        if (def && ub.filas.some((u) => u.nombre === def)) return def
+        return ub.filas[0]?.nombre || ''
+      })
       const { filas } = await listarProductos(client)
       const activos = filas.filter((p) => p.activo)
-      if (ub.filas.length > 1 && activos.length > 0) {
+      if (ub.filas.length > 0 && activos.length > 0) {
         setStockUbic(await stockPorUbicaciones(client, activos.map((p) => p.id)))
       }
       if (!cfg.usaVariantes) {
@@ -124,6 +130,9 @@ export function VentaNuevaPage() {
       } else {
         setVariantesCatalogo(vars.filas)
         setStockVar(await stockPorVariante(client, vars.filas.map((v) => v.id)))
+        if (ub.filas.length > 0 && activos.length > 0) {
+          setStockVarUbic(await stockPorVarianteUbicaciones(client, activos.map((p) => p.id)))
+        }
       }
     })
   }, [perfil])
@@ -238,8 +247,10 @@ export function VentaNuevaPage() {
       precioUsado: precio,
     })
     const stockUbicacion =
-      ubicaciones.length > 1 && ubicacionOrigen
-        ? stockDe(stockUbic, producto.id, ubicacionOrigen)
+      ubicaciones.length > 0 && (ubicacionOrigen || ubicaciones[0]?.nombre)
+        ? variante
+          ? stockDe(stockVarUbic, variante.id, ubicacionOrigen || ubicaciones[0]!.nombre)
+          : stockDe(stockUbic, producto.id, ubicacionOrigen || ubicaciones[0]!.nombre)
         : null
     const stock =
       stockUbicacion != null
@@ -479,7 +490,9 @@ export function VentaNuevaPage() {
                           setLineas((prev) =>
                             prev.map((l) => ({
                               ...l,
-                              stockLinea: stockDe(stockUbic, l.productoId, nombre),
+                              stockLinea: l.varianteId
+                                ? stockDe(stockVarUbic, l.varianteId, nombre)
+                                : stockDe(stockUbic, l.productoId, nombre),
                             })),
                           )
                         }}
@@ -524,7 +537,12 @@ export function VentaNuevaPage() {
                             type="button"
                             onClick={() => void agregarProducto(p)}
                           >
-                            <span>{p.nombre}</span>
+                            <span>
+                              <span className="block">{p.nombre}</span>
+                              <span className="mt-0.5 block text-xs text-[#4A5568]">
+                                {textoStockUbicaciones(stockUbic, p.id, ubicaciones, p.stock_actual)}
+                              </span>
+                            </span>
                             <span className="text-[#4A5568]">{formatoARS(p.precio_venta)}</span>
                           </button>
                         </li>
@@ -542,6 +560,9 @@ export function VentaNuevaPage() {
                       clavesVisibles={atributosVentas.map((a) => a.nombre)}
                       exigirStock
                       etiquetaAccion="Agregar a la venta"
+                      ubicaciones={ubicaciones}
+                      stockUbicProducto={stockUbic.get(picker.id)}
+                      stockUbicVariante={stockVarUbic}
                       cargarLotes={
                         config?.usaLotes
                           ? (productoId, varianteId) =>
@@ -656,10 +677,12 @@ export function VentaNuevaPage() {
                           </p>
                         ) : (
                           <p className="mt-2 text-xs text-[#4A5568]">
-                            Stock disponible
-                            {ubicaciones.length > 1 && ubicacionOrigen ? ` en ${ubicacionOrigen}` : ''}
-                            : {linea.stockLinea}{' '}
-                            {linea.stockLinea === 1 ? 'unidad' : 'unidades'}
+                            {textoStockUbicaciones(
+                              linea.varianteId ? stockVarUbic : stockUbic,
+                              linea.varianteId ?? linea.productoId,
+                              ubicaciones,
+                              linea.stockLinea,
+                            )}
                           </p>
                         )}
                         {linea.cantidad > linea.stockLinea ? (
@@ -765,27 +788,68 @@ export function VentaNuevaPage() {
                     </div>
                   ) : null}
 
-                  {mostrarCampoCliente ? (
-                    <div className="mt-4" ref={comboRef}>
-                      <p className="text-sm font-medium text-[#4A5568]">
-                        {clienteObligatorio ? 'Cliente' : 'Cliente (opcional)'}
+                  <div className="mt-4 rounded-md bg-[#EEF2F6] px-3 py-3 text-sm text-[#1A2F4A]">
+                    {lineas.map((l) => (
+                      <p key={l.uid}>
+                        {l.nombre} × {l.cantidad} — {formatoARS(l.cantidad * l.precioUnitario)}
                       </p>
-                      <input
-                        className={`${inputClass} mt-1.5`}
-                        value={busquedaCliente}
-                        placeholder="Buscar cliente por nombre o teléfono..."
-                        onFocus={() => {
-                          if (busquedaCliente.trim()) setDropdownCliente(true)
-                        }}
-                        onChange={(ev) => {
-                          const v = ev.target.value
-                          setBusquedaCliente(v)
-                          setClienteId(null)
-                          setCliente('')
-                          setMostrarAltaCliente(false)
-                          setDropdownCliente(v.trim().length > 0)
-                        }}
-                      />
+                    ))}
+                    {desc > 0 ? <p className="mt-1">Descuento: −{formatoARS(desc)}</p> : null}
+                    {credito && coefNum > 0 ? (
+                      <>
+                        <p className="mt-1">Total sin interés: {formatoARS(total)}</p>
+                        <p>Interés: {formatoARS(totalesCredito.interes)}</p>
+                      </>
+                    ) : null}
+                    <p className="mt-2 font-semibold">Total final {formatoARS(totalACobrar)}</p>
+                    <p className="mt-1 text-[#4A5568]">{etiquetaMedioPago(formaPago)}</p>
+                  </div>
+                </div>
+              ) : null}
+
+              {paso === 3 ? (
+                <div className="mt-5 text-sm text-[#1A2F4A]">
+                  {mostrarCampoCliente ? (
+                    <div className="mb-4" ref={comboRef}>
+                      <div className="flex items-end gap-2">
+                        <label className="min-w-0 flex-1 text-sm font-medium text-[#4A5568]">
+                          {clienteObligatorio ? 'Cliente' : 'Cliente (opcional)'}
+                          <input
+                            className={`${inputClass} mt-1.5`}
+                            value={busquedaCliente}
+                            placeholder="Buscar cliente por nombre o teléfono..."
+                            onFocus={() => {
+                              if (busquedaCliente.trim()) setDropdownCliente(true)
+                            }}
+                            onChange={(ev) => {
+                              const v = ev.target.value
+                              setBusquedaCliente(v)
+                              setClienteId(null)
+                              setCliente('')
+                              setMostrarAltaCliente(false)
+                              setDropdownCliente(v.trim().length > 0)
+                            }}
+                          />
+                        </label>
+                        {!clienteObligatorio ? (
+                          <button
+                            className="h-12 shrink-0 rounded-md bg-[#EEF2FF] px-5 text-sm font-bold text-[#6366F1]"
+                            type="button"
+                            onClick={() => {
+                              setClienteId(null)
+                              setCliente('')
+                              setBusquedaCliente('')
+                              setMostrarAltaCliente(false)
+                              setDropdownCliente(false)
+                              setNombreAlta('')
+                              setNuevoTel('')
+                              setError(null)
+                            }}
+                          >
+                            Saltar
+                          </button>
+                        ) : null}
+                      </div>
                       {dropdownCliente && busquedaCliente.trim() && !mostrarAltaCliente ? (
                         <ul className="mt-1 overflow-hidden rounded-md border border-[#E2E8F0] bg-white shadow-sm">
                           {sugeridosClientes.map((c) => (
@@ -822,7 +886,9 @@ export function VentaNuevaPage() {
                       ) : null}
                       {clienteId ? (
                         <p className="mt-1.5 text-xs text-[#6366F1]">Cliente vinculado: {cliente}</p>
-                      ) : null}
+                      ) : (
+                        <p className="mt-1.5 text-xs text-[#4A5568]">Sin cliente vinculado</p>
+                      )}
                       {mostrarAltaCliente ? (
                         <div className="mt-2 rounded-md border border-[#E2E8F0] p-3">
                           <label className="block text-xs text-[#4A5568]">
@@ -853,27 +919,6 @@ export function VentaNuevaPage() {
                       ) : null}
                     </div>
                   ) : null}
-                  <div className="mt-4 rounded-md bg-[#EEF2F6] px-3 py-3 text-sm text-[#1A2F4A]">
-                    {lineas.map((l) => (
-                      <p key={l.uid}>
-                        {l.nombre} × {l.cantidad} — {formatoARS(l.cantidad * l.precioUnitario)}
-                      </p>
-                    ))}
-                    {desc > 0 ? <p className="mt-1">Descuento: −{formatoARS(desc)}</p> : null}
-                    {credito && coefNum > 0 ? (
-                      <>
-                        <p className="mt-1">Total sin interés: {formatoARS(total)}</p>
-                        <p>Interés: {formatoARS(totalesCredito.interes)}</p>
-                      </>
-                    ) : null}
-                    <p className="mt-2 font-semibold">Total final {formatoARS(totalACobrar)}</p>
-                    <p className="mt-1 text-[#4A5568]">{etiquetaMedioPago(formaPago)}</p>
-                  </div>
-                </div>
-              ) : null}
-
-              {paso === 3 ? (
-                <div className="mt-5 text-sm text-[#1A2F4A]">
                   <p>Vas a registrar esta venta:</p>
                   <div className="mt-3 rounded-md bg-[#EEF2F6] px-3 py-3">
                     {lineas.map((l) => (
@@ -921,10 +966,6 @@ export function VentaNuevaPage() {
                     onClick={() => {
                       if (formaPago === 'credito' && cuotasActivas.length === 0) {
                         setError('No hay cuotas activas para tarjeta de crédito')
-                        return
-                      }
-                      if (clienteObligatorio && !clienteId) {
-                        setError('Seleccioná un cliente para continuar')
                         return
                       }
                       setError(null)

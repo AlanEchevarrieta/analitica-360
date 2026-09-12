@@ -10,6 +10,48 @@ import {
 import type { ProductoFila } from '../lib/productos'
 import { etiquetaLoteOpcion, type LoteFila } from '../lib/lotes'
 
+const HEX_COLOR: Record<string, string> = {
+  negro: '#111827',
+  black: '#111827',
+  blanco: '#F8FAFC',
+  white: '#F8FAFC',
+  rojo: '#DC2626',
+  red: '#DC2626',
+  verde: '#16A34A',
+  green: '#16A34A',
+  azul: '#2563EB',
+  blue: '#2563EB',
+  marron: '#92400E',
+  marrón: '#92400E',
+  brown: '#92400E',
+  gris: '#6B7280',
+  gray: '#6B7280',
+  grey: '#6B7280',
+  beige: '#D6C4A8',
+  amarillo: '#EAB308',
+  yellow: '#EAB308',
+  naranja: '#EA580C',
+  orange: '#EA580C',
+  rosa: '#EC4899',
+  pink: '#EC4899',
+  violeta: '#7C3AED',
+  morado: '#7C3AED',
+  purple: '#7C3AED',
+  celeste: '#38BDF8',
+}
+
+function hexDeColor(valor: string) {
+  const k = valor.trim().toLowerCase()
+  if (HEX_COLOR[k]) return HEX_COLOR[k]
+  let h = 0
+  for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0
+  return `hsl(${h % 360} 55% 42%)`
+}
+
+function esAtributoColor(nombre: string) {
+  return nombre.trim().toLowerCase() === 'color'
+}
+
 export function VarianteChipsPicker({
   producto,
   variantes,
@@ -21,6 +63,9 @@ export function VarianteChipsPicker({
   onElegir,
   onCancelar,
   cargarLotes,
+  ubicaciones = [],
+  stockUbicProducto,
+  stockUbicVariante,
 }: {
   producto: ProductoFila
   variantes: VarianteFila[]
@@ -36,6 +81,9 @@ export function VarianteChipsPicker({
   ) => void
   onCancelar: () => void
   cargarLotes?: (productoId: string, varianteId: string | null) => Promise<LoteFila[]>
+  ubicaciones?: { nombre: string }[]
+  stockUbicProducto?: Map<string, number>
+  stockUbicVariante?: Map<string, Map<string, number>>
 }) {
   const [sel, setSel] = useState<Record<string, string>>({})
   const [lotes, setLotes] = useState<LoteFila[]>([])
@@ -134,39 +182,87 @@ export function VarianteChipsPicker({
     }
   }, [completa, match?.id, producto.id, conLotes])
 
+  const stockUbicMatch =
+    match && stockUbicVariante
+      ? stockUbicVariante.get(match.id)
+      : stockUbicProducto
+  const textoUbic =
+    completa && ubicaciones.length > 0
+      ? `Stock disponible: ${ubicaciones
+          .map((u) => `${u.nombre}: ${stockUbicMatch?.get(u.nombre) ?? 0}u`)
+          .join(' · ')}`
+      : null
+
   return (
-    <div className="mt-3 rounded-md border border-[#E2E8F0] p-3">
-      <p className="text-sm font-semibold text-[#1A2F4A]">{producto.nombre}</p>
+    <div className="mt-3 rounded-lg border border-[#E2E8F0] bg-white p-4 shadow-sm">
+      <p className="text-lg font-bold text-[#1A2F4A]">{producto.nombre}</p>
+      {exigirStock ? (
+        <p className="mt-1 text-sm text-[#4A5568]">Precio base {formatoARS(producto.precio_venta)}</p>
+      ) : (
+        <p className="mt-1 text-sm text-[#4A5568]">Costo base {formatoARS(producto.costo)}</p>
+      )}
       {grupos.map(([nombre, valores]) => (
-        <div key={nombre} className="mt-3">
-          <p className="text-xs font-medium text-[#4A5568]">{nombre}</p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
+        <div key={nombre} className="mt-4">
+          <p className="text-sm font-medium text-[#4A5568]">{nombre}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
             {valores.map((val) => {
               const on = sel[nombre] === val
               const posible = chipPosible(nombre, val)
               const sinStock = chipSinStock(nombre, val)
+              const esColor = esAtributoColor(nombre)
+              const hex = esColor ? hexDeColor(val) : null
+              if (esColor && hex) {
+                const claro = /#(F8FAFC|D6C4A8|FFFFFF|FFF)/i.test(hex)
+                return (
+                  <button
+                    key={val}
+                    type="button"
+                    disabled={!posible}
+                    title={val}
+                    className={`flex min-h-11 items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold ${
+                      !posible
+                        ? 'cursor-not-allowed opacity-40'
+                        : sinStock
+                          ? 'border-[#DC2626] bg-[#FEF2F2] text-[#DC2626]'
+                          : on
+                            ? 'border-[#6366F1] bg-[#EEF2FF] text-[#1A2F4A]'
+                            : 'border-[#E2E8F0] bg-white text-[#1A2F4A]'
+                    }`}
+                    onClick={() => {
+                      if (!posible) return
+                      setSel((prev) => ({ ...prev, [nombre]: val }))
+                    }}
+                  >
+                    <span
+                      className="h-5 w-5 shrink-0 rounded-full border"
+                      style={{ background: hex, borderColor: claro ? '#CBD5E1' : hex }}
+                    />
+                    {sinStock ? `⚠️ ${val}` : val}
+                  </button>
+                )
+              }
               return (
                 <button
                   key={val}
                   type="button"
                   disabled={!posible}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  className={`min-h-11 rounded-md border px-3 py-2 text-sm font-semibold ${
                     on && sinStock
-                      ? 'bg-[#DC2626] text-white'
+                      ? 'border-[#DC2626] bg-[#DC2626] text-white'
                       : on
-                        ? 'bg-[#6366F1] text-white'
+                        ? 'border-[#6366F1] bg-[#6366F1] text-white'
                         : !posible
-                          ? 'cursor-not-allowed bg-[#E2E8F0] text-[#94A3B8]'
+                          ? 'cursor-not-allowed border-[#E2E8F0] bg-[#E2E8F0] text-[#94A3B8]'
                           : sinStock
-                            ? 'border border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]'
-                            : 'border border-[#E2E8F0] bg-white text-[#1A2F4A]'
+                            ? 'border-[#DC2626] bg-[#FEF2F2] text-[#DC2626]'
+                            : 'border-[#E2E8F0] bg-white text-[#1A2F4A]'
                   }`}
                   onClick={() => {
                     if (!posible) return
                     setSel((prev) => ({ ...prev, [nombre]: val }))
                   }}
                 >
-                  {sinStock ? `⚠️ ${on ? `${val} ✓` : val}` : on ? `${val} ✓` : val}
+                  {sinStock ? `⚠️ ${val}` : val}
                 </button>
               )
             })}
@@ -203,10 +299,17 @@ export function VarianteChipsPicker({
             </label>
           ) : null}
           <p>
-            Stock disponible: {stock ?? 0} {(stock ?? 0) === 1 ? 'unidad' : 'unidades'}
-            {stock != null && stock <= 0 ? ' ⚠️' : ''}
+            {textoUbic
+              ? textoUbic
+              : `Stock disponible: ${stock ?? 0} ${(stock ?? 0) === 1 ? 'unidad' : 'unidades'}${
+                  stock != null && stock <= 0 ? ' ⚠️' : ''
+                }`}
           </p>
-          {exigirStock ? <p>Precio: {formatoARS(precio)}</p> : <p>Costo: {formatoARS(costo)}</p>}
+          {exigirStock ? (
+            <p className="mt-1 font-semibold text-[#1A2F4A]">Precio: {formatoARS(precio)}</p>
+          ) : (
+            <p>Costo: {formatoARS(costo)}</p>
+          )}
           {match ? <p className="text-xs text-[#4A5568]">{etiquetaCombo(match.atributos)}</p> : null}
           {!match && variantes.length > 0 ? (
             <p className="mt-2 text-xs text-[#EA580C]">Esa combinación no se vende.</p>
