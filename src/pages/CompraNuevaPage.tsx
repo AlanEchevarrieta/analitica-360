@@ -28,7 +28,7 @@ import {
   type AtributoFila,
   type VarianteFila,
 } from '../lib/variantes'
-import { crearLote, sugerenciaNumeroLote } from '../lib/lotes'
+import { crearLote, prefijoLoteMes, sugerenciaNumeroLote } from '../lib/lotes'
 
 type Linea = {
   uid: string
@@ -106,7 +106,10 @@ export function CompraNuevaPage() {
       const usa = Boolean(config.usaVariantes)
       setUsaVariantes(usa)
       setUsaLotes(Boolean(config.usaLotes))
-      if (config.usaLotes) setCompraNumeroLote((prev) => prev || sugerenciaNumeroLote())
+      if (config.usaLotes) {
+        const sug = await sugerenciaNumeroLote(requireSupabase(), perfil.empresa.id)
+        setCompraNumeroLote((prev) => prev || sug)
+      }
       if (!usa) {
         setVariantesCatalogo([])
         setAtributosVentas([])
@@ -365,7 +368,7 @@ export function CompraNuevaPage() {
     setNombreAltaProv('')
   }
 
-  function irPaso2() {
+  async function irPaso2() {
     if (picker) {
       setError('Completá la variante del producto antes de continuar')
       return
@@ -378,9 +381,17 @@ export function CompraNuevaPage() {
       setError('Revisá cantidad y costo de cada línea')
       return
     }
-    if (usaLotes && !compraNumeroLote.trim()) {
-      setError('El número de lote es obligatorio')
-      return
+    if (usaLotes && perfil) {
+      const sug = await sugerenciaNumeroLote(requireSupabase(), perfil.empresa.id)
+      const pref = prefijoLoteMes()
+      const auto = new RegExp(`^${pref}-\\d{3}$`)
+      const actual = compraNumeroLote.trim()
+      const siguiente = !actual || auto.test(actual) ? sug : actual
+      setCompraNumeroLote(siguiente)
+      if (!siguiente) {
+        setError('El número de lote es obligatorio')
+        return
+      }
     }
     setError(null)
     setPaso(2)
@@ -863,7 +874,7 @@ export function CompraNuevaPage() {
                   <button
                     className="h-11 flex-1 rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"
                     type="button"
-                    onClick={irPaso2}
+                    onClick={() => void irPaso2()}
                   >
                     Siguiente
                   </button>

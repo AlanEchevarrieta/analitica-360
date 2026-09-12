@@ -21,9 +21,24 @@ export type LoteFila = {
   estado: EstadoLote
 }
 
-export function sugerenciaNumeroLote(_nombreProducto?: string, isoFecha = fechaHoyAR()) {
+export function prefijoLoteMes(isoFecha = fechaHoyAR()) {
   const [y, m] = isoFecha.split('-')
   return `LOTE-${y}${m}`
+}
+
+export async function sugerenciaNumeroLote(
+  client: SupabaseClient,
+  empresaId: string,
+  isoFecha = fechaHoyAR(),
+) {
+  const prefijo = prefijoLoteMes(isoFecha)
+  const { count, error } = await client
+    .from('lotes')
+    .select('id', { count: 'exact', head: true })
+    .eq('empresa_id', empresaId)
+    .like('numero_lote', `${prefijo}%`)
+  const siguiente = error || count == null ? 1 : count + 1
+  return `${prefijo}-${String(siguiente).padStart(3, '0')}`
 }
 
 export function estadoLote(fechaVencimiento: string | null, hoy = fechaHoyAR()): EstadoLote {

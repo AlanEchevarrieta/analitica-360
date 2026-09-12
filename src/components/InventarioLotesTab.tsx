@@ -126,7 +126,7 @@ export function InventarioLotesTab({
     setErrorModal(null)
     setNuevoProducto('')
     setNuevoVariante('')
-    setNuevoNumero(sugerenciaNumeroLote())
+    setNuevoNumero(await sugerenciaNumeroLote(requireSupabase(), empresaId))
     setNuevoElab('')
     setNuevoVenc('')
     setNuevoCant('0')
