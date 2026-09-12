@@ -248,3 +248,36 @@ export function TooltipVentasCompras({ active, payload, label }: TipProps) {
     </ChartTooltipBox>
   )
 }
+
+export function TooltipInflacionPrecios({ active, payload, label }: TipProps) {
+  if (!active || !payload?.length) return null
+  const row = (payload[0].payload ?? {}) as {
+    mes?: string
+    inflacion?: number | null
+    variacion?: number | null
+    diferencia?: number | null
+  }
+  const infla = row.inflacion
+  const vari = row.variacion
+  const diff = row.diferencia
+  const diffColor = diff == null ? '#94A3B8' : diff > 0 ? '#4ADE80' : diff < 0 ? '#F87171' : '#94A3B8'
+  return (
+    <ChartTooltipBox>
+      <p style={{ color: '#94A3B8', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        {String(label ?? row.mes ?? '')}
+      </p>
+      <p style={{ color: '#CBD5E1', fontSize: 13, marginTop: 6 }}>
+        Inflación INDEC: {infla == null ? 's/d' : `${Number(infla).toFixed(1)}%`}
+      </p>
+      <p style={{ color: '#A5B4FC', fontSize: 13, marginTop: 2 }}>
+        Variación tus precios: {vari == null ? 's/d' : `${Number(vari).toFixed(1)}%`}
+      </p>
+      {diff != null ? (
+        <p style={{ color: diffColor, fontSize: 13, fontWeight: 600, marginTop: 4 }}>
+          Diferencia: {diff > 0 ? '+' : ''}
+          {diff.toFixed(1)} pp
+        </p>
+      ) : null}
+    </ChartTooltipBox>
+  )
+}

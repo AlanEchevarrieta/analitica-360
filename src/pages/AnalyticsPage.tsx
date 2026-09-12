@@ -52,6 +52,7 @@ import {
   type GranularidadVentasCompras,
   type PresetPeriodo,
 } from '../lib/analytics'
+import { cargarInflacionVsPrecios, type SerieInflacionPrecios } from '../lib/inflacion'
 import { exportarAnalyticsPdf } from '../lib/exportarReportes'
 import { planTieneAnalytics } from '../lib/planes'
 import { formatoARS, listarProductos } from '../lib/productos'
@@ -78,6 +79,7 @@ import {
   TooltipUnidades,
   TooltipTopProductos,
   TooltipVentasCompras,
+  TooltipInflacionPrecios,
   asRechartsTooltip,
   useIndiceBarraActiva,
 } from '../components/CustomTooltip'
@@ -272,6 +274,11 @@ export function AnalyticsPage() {
   const [granularidadEvo, setGranularidadEvo] = useState<GranularidadEje>('dia')
   const [granularidadVC, setGranularidadVC] = useState<GranularidadVentasCompras>('mes')
   const [comprasPeriodo, setComprasPeriodo] = useState<{ fecha: string; total: number }[]>([])
+  const [inflacionVsPrecios, setInflacionVsPrecios] = useState<SerieInflacionPrecios>({
+    puntos: [],
+    hayPrecios: false,
+    insight: 'sin_datos',
+  })
   const top10Hover = useIndiceBarraActiva()
   const diasHover = useIndiceBarraActiva()
 
@@ -294,17 +301,20 @@ export function AnalyticsPage() {
           setData(VACIO)
           setDataVar(null)
           setComprasPeriodo([])
+          setInflacionVsPrecios({ puntos: [], hayPrecios: false, insight: 'sin_datos' })
           setRangosMargen(new Map())
           return
         }
         setAvisoLimite(null)
-        const [res, cfg, comprasRes] = await Promise.all([
+        const [res, cfg, comprasRes, inflaRes] = await Promise.all([
           cargarAnalyticsPeriodo(client, desde, hasta, 'dia', empresaId),
           obtenerConfiguracion(client, perfil.empresa.id),
           cargarComprasPeriodo(client, desde, hasta, empresaId),
+          cargarInflacionVsPrecios(client, desde, hasta, empresaId),
         ])
         setData(res.data)
         setComprasPeriodo(comprasRes.filas)
+        setInflacionVsPrecios(inflaRes)
         if (res.error) setErrorDebug((prev) => (prev ? `${prev} · ${res.error}` : res.error))
         if (comprasRes.error) setErrorDebug((prev) => (prev ? `${prev} · ${comprasRes.error}` : comprasRes.error))
         const usa = Boolean(cfg.config.usaVariantes)
@@ -341,6 +351,7 @@ export function AnalyticsPage() {
         setErrorDebug((prev) => (prev ? `${prev} · ${msg}` : msg))
         setData(VACIO)
         setComprasPeriodo([])
+        setInflacionVsPrecios({ puntos: [], hayPrecios: false, insight: 'sin_datos' })
       } finally {
         setCargando(false)
       }
@@ -802,6 +813,91 @@ export function AnalyticsPage() {
                       </ResponsiveContainer>
                     )}
                   </GraficoExpandible>
+                </Card>
+
+                <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
+                  <GraficoExpandible titulo="Inflación vs evolución de tus precios" compactoClass="h-80">
+                    <p className="mb-3 text-xs" style={{ color: 'var(--text-muted, #94A3B8)' }}>
+                      Compará cómo evolucionaron tus precios vs la inflación del período
+                    </p>
+                    {inflacionVsPrecios.puntos.length === 0 ? (
+                      <p className="flex h-64 items-center justify-center text-sm text-[#94A3B8]">
+                        Sin meses en el período
+                      </p>
+                    ) : (
+                      <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart
+                          data={inflacionVsPrecios.puntos}
+                          margin={{ top: 8, right: 48, left: 8, bottom: 8 }}
+                        >
+                          <CartesianGrid stroke={g.grilla} vertical={false} />
+                          <XAxis
+                            dataKey="mes"
+                            tick={{ fill: g.eje, fontSize: 11 }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis
+                            yAxisId="propios"
+                            tick={{ fill: g.eje, fontSize: 11 }}
+                            axisLine={false}
+                            tickLine={false}
+                            tickFormatter={(v: number) => `${v}%`}
+                            width={48}
+                          />
+                          <YAxis
+                            yAxisId="indec"
+                            orientation="right"
+                            domain={[0, 30]}
+                            tick={{ fill: g.eje, fontSize: 11 }}
+                            axisLine={false}
+                            tickLine={false}
+                            tickFormatter={(v: number) => `${v}%`}
+                            width={40}
+                          />
+                          <RechartsTooltip
+                            cursor={{ fill: CHART_CURSOR_FILL }}
+                            content={asRechartsTooltip(TooltipInflacionPrecios)}
+                          />
+                          <Legend wrapperStyle={{ color: g.eje, fontSize: 12 }} />
+                          <Bar
+                            yAxisId="indec"
+                            dataKey="inflacion"
+                            name="Inflación INDEC"
+                            fill="#94A3B8"
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={28}
+                          />
+                          <Line
+                            yAxisId="propios"
+                            type="monotone"
+                            dataKey="variacion"
+                            name="Tus precios"
+                            stroke="#6366F1"
+                            strokeWidth={2}
+                            dot={{ r: 3, fill: '#6366F1' }}
+                            connectNulls={false}
+                          />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                      </div>
+                    )}
+                  </GraficoExpandible>
+                  <p
+                    className="mt-4 rounded-lg px-3 py-3 text-sm"
+                    style={{
+                      background: 'rgba(99,102,241,0.1)',
+                      border: '1px solid rgba(99,102,241,0.35)',
+                      color: '#F1F5F9',
+                    }}
+                  >
+                    {inflacionVsPrecios.insight === 'menos'
+                      ? '⚠️ Tus precios subieron menos que la inflación. Puede que estés perdiendo rentabilidad.'
+                      : inflacionVsPrecios.insight === 'mas'
+                        ? '✅ Tus precios le ganaron a la inflación.'
+                        : '📊 Modificá el precio de tus productos para ver cómo evolucionan vs la inflación.'}
+                  </p>
                 </Card>
 
                 <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
