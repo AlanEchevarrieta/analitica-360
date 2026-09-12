@@ -60,6 +60,7 @@ import { exportarAnalyticsPdf } from '../lib/exportarReportes'
 import { planTieneAnalytics } from '../lib/planes'
 import { formatoARS, listarProductos } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
+import { listarUbicaciones, type UbicacionFila } from '../lib/ubicaciones'
 import { theme } from '../theme'
 import { obtenerConfiguracion } from '../lib/configuracion'
 import {
@@ -320,6 +321,9 @@ export function AnalyticsPage() {
   const [hastaDraft, setHastaDraft] = useState(() => leerPeriodoAnalytics()?.hasta ?? rangoPreset('mes').hasta)
   const [desde, setDesde] = useState(() => leerPeriodoAnalytics()?.desde ?? rangoPreset('mes').desde)
   const [hasta, setHasta] = useState(() => leerPeriodoAnalytics()?.hasta ?? rangoPreset('mes').hasta)
+  const [ubicaciones, setUbicaciones] = useState<UbicacionFila[]>([])
+  const [ubicacionDraft, setUbicacionDraft] = useState('')
+  const [ubicacion, setUbicacion] = useState('')
   const [data, setData] = useState<AnalyticsPeriodo>(VACIO)
   const [cargando, setCargando] = useState(true)
   const [orden, setOrden] = useState<{ col: Columna; dir: 'asc' | 'desc' }>({
@@ -351,7 +355,10 @@ export function AnalyticsPage() {
       try {
         const client = requireSupabase()
         const empresaId = await leerEmpresaIdAnalytics(client, perfil.empresa.id)
-        const conteo = await contarVentasPeriodo(client, desde, hasta, empresaId)
+        const ub = await listarUbicaciones(client, { soloActivas: false })
+        setUbicaciones(ub.filas)
+        const filtroUbic = ubicacion || null
+        const conteo = await contarVentasPeriodo(client, desde, hasta, empresaId, filtroUbic)
         if (conteo.error) setErrorDebug(conteo.error)
         const totalVentas = conteo.total
         if (totalVentas > LIMITE_ANALYTICS_VENTAS) {
@@ -364,9 +371,9 @@ export function AnalyticsPage() {
         }
         setAvisoLimite(null)
         const [res, cfg, comprasRes] = await Promise.all([
-          cargarAnalyticsPeriodo(client, desde, hasta, 'dia', empresaId),
+          cargarAnalyticsPeriodo(client, desde, hasta, 'dia', empresaId, filtroUbic),
           obtenerConfiguracion(client, perfil.empresa.id),
-          cargarComprasPeriodo(client, desde, hasta, empresaId),
+          cargarComprasPeriodo(client, desde, hasta, empresaId, filtroUbic),
         ])
         setData(res.data)
         setComprasPeriodo(comprasRes.filas)
@@ -374,7 +381,7 @@ export function AnalyticsPage() {
         if (comprasRes.error) setErrorDebug((prev) => (prev ? `${prev} · ${comprasRes.error}` : comprasRes.error))
         const usa = Boolean(cfg.config.usaVariantes)
         setUsaVariantes(usa)
-        if (usa) {
+        if (usa && !filtroUbic) {
           setDataVar(await cargarAnalyticsVariantes(client, desde, hasta, empresaId))
           const prods = await listarProductos(client)
           if (!prods.error && prods.filas.length > 0) {
@@ -410,7 +417,7 @@ export function AnalyticsPage() {
         setCargando(false)
       }
     })()
-  }, [perfil, desde, hasta])
+  }, [perfil, desde, hasta, ubicacion])
 
   const diasPeriodo = diasIncluidosPeriodo(desde, hasta)
   const dataPeriodoAnterior = useMemo(
@@ -541,6 +548,7 @@ export function AnalyticsPage() {
     const r = rangoPreset(preset, desdeDraft, hastaDraft)
     setDesde(r.desde)
     setHasta(r.hasta)
+    setUbicacion(ubicacionDraft)
     guardarPeriodoAnalytics(r.desde, r.hasta)
   }
 
@@ -681,6 +689,24 @@ export function AnalyticsPage() {
                     />
                   </label>
                 </div>
+              ) : null}
+              {ubicaciones.length > 0 ? (
+                <label className="mt-4 block text-xs text-[#94A3B8]">
+                  Ubicación
+                  <select
+                    className="mt-1 h-10 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A] sm:max-w-xs"
+                    value={ubicacionDraft}
+                    onChange={(ev) => setUbicacionDraft(ev.target.value)}
+                  >
+                    <option value="">Todas</option>
+                    {ubicaciones.map((u) => (
+                      <option key={u.id} value={u.nombre}>
+                        {u.nombre}
+                        {u.activo ? '' : ' (inactiva)'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               ) : null}
               <button
                 className="mt-4 h-10 rounded-md bg-[#6366F1] px-4 text-sm font-semibold text-white hover:bg-[#4F46E5]"

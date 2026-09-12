@@ -1,11 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { etiquetaCombo } from './variantes'
 
-export type UbicacionFila = {
-  id: string
-  nombre: string
-  descripcion: string | null
-}
+export { listarUbicaciones, type UbicacionFila } from './ubicaciones'
 
 export type ResumenInventario = {
   id: string
@@ -119,31 +115,6 @@ export function textoKardexConLote(m: {
   const fecha = formatoFechaMov(m.fecha).split(',')[0]?.trim() ?? formatoFechaMov(m.fecha)
   const lote = m.numeroLote ? ` · Lote ${m.numeroLote}` : ''
   return `${lado}: ${m.cantidad}u${lote} · ${fecha}`
-}
-
-export async function listarUbicaciones(
-  client: SupabaseClient,
-): Promise<{ filas: UbicacionFila[]; error: string | null }> {
-  const { data, error } = await client
-    .from('ubicaciones')
-    .select('id, nombre, descripcion')
-    .eq('activo', true)
-    .order('nombre')
-  if (error) {
-    const t = error.message.toLowerCase()
-    if (t.includes('ubicaciones') || t.includes('schema cache') || t.includes('does not exist')) {
-      return { filas: [], error: null }
-    }
-    return { filas: [], error: error.message }
-  }
-  return {
-    filas: ((data ?? []) as Record<string, unknown>[]).map((row) => ({
-      id: String(row.id),
-      nombre: String(row.nombre),
-      descripcion: row.descripcion == null ? null : String(row.descripcion),
-    })),
-    error: null,
-  }
 }
 
 export async function leerUmbralStock(client: SupabaseClient, empresaId: string) {

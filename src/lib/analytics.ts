@@ -310,12 +310,171 @@ export async function leerEmpresaIdAnalytics(
   return fallback ?? null
 }
 
+const FORMA_PAGO_ANALYTICS: Record<string, string> = {
+  efectivo: 'Efectivo',
+  transferencia: 'Transferencia',
+  debito: 'Débito',
+  credito: 'Crédito',
+  qr: 'MP QR',
+}
+
+async function idsMovimientosUbicacion(
+  client: SupabaseClient,
+  tipo: 'venta' | 'compra',
+  campo: 'ubicacion_origen' | 'ubicacion_destino',
+  nombre: string,
+): Promise<string[]> {
+  const ids: string[] = []
+  const PAGE = 1000
+  let from = 0
+  for (;;) {
+    const { data, error } = await client
+      .from('movimientos_inventario')
+      .select('referencia_id')
+      .eq('tipo', tipo)
+      .eq(campo, nombre)
+      .is('deleted_at', null)
+      .not('referencia_id', 'is', null)
+      .range(from, from + PAGE - 1)
+    if (error || !data?.length) break
+    for (const row of data as Record<string, unknown>[]) {
+      const id = row.referencia_id == null ? '' : String(row.referencia_id)
+      if (id) ids.push(id)
+    }
+    if (data.length < PAGE) break
+    from += PAGE
+    if (from > 40_000) break
+  }
+  return [...new Set(ids)]
+}
+
+async function ventasPeriodoPorIds(
+  client: SupabaseClient,
+  ids: string[],
+  desde: string,
+  hasta: string,
+  empresaId?: string | null,
+): Promise<{
+  filas: { id: string; fecha: string; forma_pago: string; total: number; cliente_id: string | null }[]
+  error: string | null
+}> {
+  const filas: { id: string; fecha: string; forma_pago: string; total: number; cliente_id: string | null }[] = []
+  if (ids.length === 0) return { filas, error: null }
+  const PAGE = 100
+  for (let i = 0; i < ids.length; i += PAGE) {
+    let q = client
+      .from('ventas')
+      .select('id, fecha, forma_pago, total_con_interes, cliente_id')
+      .in('id', ids.slice(i, i + PAGE))
+      .is('deleted_at', null)
+      .gte('fecha', `${desde}T00:00:00-03:00`)
+      .lt('fecha', `${sumarDiasIso(hasta, 1)}T00:00:00-03:00`)
+    if (empresaId) q = q.eq('empresa_id', empresaId)
+    const { data, error } = await q
+    if (error) return { filas: [], error: error.message }
+    for (const row of (data ?? []) as Record<string, unknown>[]) {
+      const iso = fechaIsoDe(row.fecha)
+      if (!iso) continue
+      filas.push({
+        id: String(row.id),
+        fecha: iso,
+        forma_pago: String(row.forma_pago ?? ''),
+        total: num(row.total_con_interes),
+        cliente_id: row.cliente_id == null ? null : String(row.cliente_id),
+      })
+    }
+  }
+  return { filas, error: null }
+}
+
+function armarPeriodoDesdeVentas(
+  ventas: { id: string; fecha: string; forma_pago: string; total: number; cliente_id: string | null }[],
+  items: { venta_id: string; nombre: string; unidades: number; total: number; costo: number }[],
+  ant: { total: number; cantidad: number; costo: number },
+  granularidad: GranularidadEje,
+): AnalyticsPeriodo {
+  const porDia = new Map<string, number>()
+  const porPago = new Map<string, number>()
+  const porProd = new Map<string, { unidades: number; total: number; costo: number }>()
+  let total = 0
+  for (const v of ventas) {
+    total += v.total
+    porDia.set(v.fecha, (porDia.get(v.fecha) ?? 0) + v.total)
+    const pago = FORMA_PAGO_ANALYTICS[v.forma_pago] ?? v.forma_pago
+    if (pago) porPago.set(pago, (porPago.get(pago) ?? 0) + v.total)
+  }
+  for (const it of items) {
+    const prev = porProd.get(it.nombre) ?? { unidades: 0, total: 0, costo: 0 }
+    prev.unidades += it.unidades
+    prev.total += it.total
+    prev.costo += it.costo
+    porProd.set(it.nombre, prev)
+  }
+  const evolucionDiaria: AnalyticsPunto[] = [...porDia.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([iso, Ventas]) => ({
+      fecha: etiquetaGranularidad(iso, 'dia'),
+      fechaExacta: iso,
+      Ventas,
+      Anterior: 0,
+    }))
+  const productos: AnalyticsProducto[] = [...porProd.entries()].map(([producto, p]) => {
+    const margen = p.total - p.costo
+    return {
+      producto,
+      unidades: p.unidades,
+      total: p.total,
+      costo: p.costo,
+      margen,
+      margen_pct: p.total > 0 ? (margen / p.total) * 100 : 0,
+    }
+  })
+  const top10 = [...productos]
+    .sort((a, b) => b.unidades - a.unidades)
+    .slice(0, 10)
+    .map((p) => ({ nombre: p.producto, unidades: p.unidades }))
+  const g = granularidad === 'anio' ? 'dia' : granularidad
+  return {
+    total,
+    cantidad: ventas.length,
+    costo: productos.reduce((a, p) => a + p.costo, 0),
+    totalAnt: ant.total,
+    cantidadAnt: ant.cantidad,
+    costoAnt: ant.costo,
+    evolucion: agruparEvolucion(evolucionDiaria, g),
+    evolucionDiaria,
+    formasPago: [...porPago.entries()].map(([name, value]) => ({ name, value })),
+    top10,
+    productos,
+    clientes: {
+      hay: false,
+      activos: 0,
+      ticket: 0,
+      topNombre: '',
+      topTotal: 0,
+      pctNuevos: 0,
+      pctRecurrentes: 0,
+    },
+    dias_semana: evolucionDiaria.map((p) => {
+      const [y, m, d] = p.fechaExacta.split('-').map(Number)
+      const js = y && m && d ? new Date(y, m - 1, d).getDay() : 0
+      return { dia: js, total: p.Ventas }
+    }),
+  }
+}
+
 export async function contarVentasPeriodo(
   client: SupabaseClient,
   desde: string,
   hasta: string,
   empresaId?: string | null,
+  ubicacion?: string | null,
 ): Promise<{ total: number; error: string | null }> {
+  if (ubicacion) {
+    const ids = await idsMovimientosUbicacion(client, 'venta', 'ubicacion_origen', ubicacion)
+    const { filas, error: errIds } = await ventasPeriodoPorIds(client, ids, desde, hasta, empresaId)
+    return { total: filas.length, error: errIds }
+  }
   const fechaInicio = desde
   const fechaFin = hasta
   const { data, error } = await client.rpc('analytics_contar_ventas', {
@@ -382,7 +541,64 @@ export async function cargarAnalyticsPeriodo(
   hasta: string,
   granularidad: GranularidadEje = 'dia',
   empresaId?: string | null,
+  ubicacion?: string | null,
 ): Promise<{ data: AnalyticsPeriodo; error: string | null }> {
+  if (ubicacion) {
+    const idsVenta = await idsMovimientosUbicacion(client, 'venta', 'ubicacion_origen', ubicacion)
+    const actual = await ventasPeriodoPorIds(client, idsVenta, desde, hasta, empresaId)
+    if (actual.error) return { data: VACIO, error: actual.error }
+    const ms = Date.parse(`${hasta}T00:00:00`) - Date.parse(`${desde}T00:00:00`)
+    const dias = Math.max(1, Math.round(ms / 86400000) + 1)
+    const hastaAnt = sumarDiasIso(desde, -1)
+    const desdeAnt = sumarDiasIso(hastaAnt, -(dias - 1))
+    const anterior = await ventasPeriodoPorIds(client, idsVenta, desdeAnt, hastaAnt, empresaId)
+    const ventaIds = actual.filas.map((v) => v.id)
+    const items: { venta_id: string; nombre: string; unidades: number; total: number; costo: number }[] = []
+    const PAGE = 100
+    for (let i = 0; i < ventaIds.length; i += PAGE) {
+      const { data, error } = await client
+        .from('ventas_items')
+        .select('venta_id, cantidad, precio_unitario, costo_unitario, producto_id, productos(nombre)')
+        .in('venta_id', ventaIds.slice(i, i + PAGE))
+      if (error) return { data: VACIO, error: error.message }
+      for (const row of (data ?? []) as Record<string, unknown>[]) {
+        const prod = row.productos as Record<string, unknown> | null
+        const nombre =
+          prod && typeof prod === 'object' && prod.nombre != null
+            ? String(prod.nombre)
+            : String(row.producto_id ?? 'Producto')
+        const cantidad = num(row.cantidad)
+        const precio = num(row.precio_unitario)
+        items.push({
+          venta_id: String(row.venta_id),
+          nombre,
+          unidades: cantidad,
+          total: cantidad * precio,
+          costo: cantidad * num(row.costo_unitario),
+        })
+      }
+    }
+    let costoAnt = 0
+    const antIds = anterior.filas.map((v) => v.id)
+    for (let i = 0; i < antIds.length; i += PAGE) {
+      const { data } = await client
+        .from('ventas_items')
+        .select('cantidad, costo_unitario')
+        .in('venta_id', antIds.slice(i, i + PAGE))
+      for (const row of (data ?? []) as Record<string, unknown>[]) {
+        costoAnt += num(row.cantidad) * num(row.costo_unitario)
+      }
+    }
+    return {
+      data: armarPeriodoDesdeVentas(
+        actual.filas,
+        items,
+        { total: anterior.filas.reduce((a, v) => a + v.total, 0), cantidad: anterior.filas.length, costo: costoAnt },
+        granularidad,
+      ),
+      error: null,
+    }
+  }
   const fechaInicio = desde
   const fechaFin = hasta
   const args = { p_desde: fechaInicio, p_hasta: fechaFin, p_empresa_id: empresaId ?? null }
@@ -620,8 +836,36 @@ export async function cargarComprasPeriodo(
   desde: string,
   hasta: string,
   empresaId?: string | null,
+  ubicacion?: string | null,
 ): Promise<{ filas: { fecha: string; total: number }[]; error: string | null }> {
+  const idsUbic = ubicacion
+    ? await idsMovimientosUbicacion(client, 'compra', 'ubicacion_destino', ubicacion)
+    : null
+  if (idsUbic && idsUbic.length === 0) return { filas: [], error: null }
   const filas: { fecha: string; total: number }[] = []
+  if (idsUbic) {
+    const PAGE = 100
+    for (let i = 0; i < idsUbic.length; i += PAGE) {
+      let q = client
+        .from('compras')
+        .select('fecha, total')
+        .in('id', idsUbic.slice(i, i + PAGE))
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
+        .is('deleted_at', null)
+      if (empresaId) q = q.eq('empresa_id', empresaId)
+      const { data, error } = await q
+      if (error) return { filas: [], error: error.message }
+      for (const row of data ?? []) {
+        const r = row as Record<string, unknown>
+        const iso = fechaIsoDe(r.fecha)
+        if (!iso) continue
+        filas.push({ fecha: iso, total: num(r.total) })
+      }
+    }
+    filas.sort((a, b) => a.fecha.localeCompare(b.fecha))
+    return { filas, error: null }
+  }
   const PAGE = 1000
   let from = 0
   for (;;) {

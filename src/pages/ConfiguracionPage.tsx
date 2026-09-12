@@ -46,12 +46,31 @@ import {
   sembrarCategoriasDefault,
   type CategoriaFila,
 } from '../lib/categorias'
+import {
+  TIPOS_UBICACION,
+  eliminarUbicacion,
+  etiquetaTipoUbicacion,
+  guardarUbicacion,
+  listarUbicaciones,
+  type TipoUbicacion,
+  type UbicacionFila,
+} from '../lib/ubicaciones'
 import { btnPrimary, cardShell } from '../components/listado'
 
 const inputClass =
   'h-10 w-full rounded-lg border border-[rgba(99,102,241,0.3)] bg-white/5 px-3 text-sm text-[#F1F5F9] outline-none focus:border-[#6366F1]'
 
-type TabId = 'medios' | 'categorias' | 'cuotas' | 'usuarios' | 'flujo' | 'inventario' | 'variantes' | 'lotes' | 'plan'
+type TabId =
+  | 'medios'
+  | 'categorias'
+  | 'cuotas'
+  | 'usuarios'
+  | 'flujo'
+  | 'inventario'
+  | 'ubicaciones'
+  | 'variantes'
+  | 'lotes'
+  | 'plan'
 
 const MOSAICO: {
   id: TabId
@@ -67,6 +86,7 @@ const MOSAICO: {
   { id: 'usuarios', icono: '👥', titulo: 'Usuarios', subtitulo: 'Gestioná el acceso de tu equipo' },
   { id: 'flujo', icono: '💸', titulo: 'Flujo de ventas', subtitulo: 'Configurá el proceso de venta' },
   { id: 'inventario', icono: '📦', titulo: 'Inventario', subtitulo: 'Umbral de stock bajo y alertas' },
+  { id: 'ubicaciones', icono: '📍', titulo: 'Ubicaciones', subtitulo: 'Depósitos, locales y stands' },
   { id: 'plan', icono: '⭐', titulo: 'Mi Plan', subtitulo: 'Plan actual y facturación' },
 ]
 
@@ -149,6 +169,13 @@ export function ConfiguracionPage() {
   const [nombreCat, setNombreCat] = useState('')
   const [descCat, setDescCat] = useState('')
   const [activoCat, setActivoCat] = useState(true)
+  const [ubicacionesCfg, setUbicacionesCfg] = useState<UbicacionFila[]>([])
+  const [altaUbic, setAltaUbic] = useState(false)
+  const [editUbic, setEditUbic] = useState<UbicacionFila | null>(null)
+  const [nombreUbic, setNombreUbic] = useState('')
+  const [descUbic, setDescUbic] = useState('')
+  const [tipoUbic, setTipoUbic] = useState<TipoUbicacion>('otro')
+  const [activoUbic, setActivoUbic] = useState(true)
 
   async function recargarCategorias() {
     const seed = await sembrarCategoriasDefault(requireSupabase())
@@ -164,6 +191,21 @@ export function ConfiguracionPage() {
     setNombreCat('')
     setDescCat('')
     setActivoCat(true)
+  }
+
+  async function recargarUbicaciones() {
+    const res = await listarUbicaciones(requireSupabase(), { soloActivas: false })
+    if (res.error) setError(res.error)
+    else setUbicacionesCfg(res.filas)
+  }
+
+  function resetFormUbicacion() {
+    setAltaUbic(false)
+    setEditUbic(null)
+    setNombreUbic('')
+    setDescUbic('')
+    setTipoUbic('otro')
+    setActivoUbic(true)
   }
 
   async function cargarUsuarios() {
@@ -200,6 +242,11 @@ export function ConfiguracionPage() {
   useEffect(() => {
     if (!perfil || tab !== 'categorias') return
     void recargarCategorias()
+  }, [perfil, tab])
+
+  useEffect(() => {
+    if (!perfil || tab !== 'ubicaciones') return
+    void recargarUbicaciones()
   }, [perfil, tab])
 
   if (!perfil) return null
@@ -581,6 +628,164 @@ export function ConfiguracionPage() {
                           className="h-10 flex-1 rounded-lg border border-[rgba(99,102,241,0.3)] text-sm font-semibold text-[#94A3B8]"
                           type="button"
                           onClick={() => resetFormCategoria()}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {tab === 'ubicaciones' ? (
+                <div className="mt-6 space-y-4">
+                  <p className="text-sm font-medium text-[#F1F5F9]">Ubicaciones</p>
+                  <p className="text-xs text-[#94A3B8]">
+                    Depósitos, locales y stands de la empresa. Si una ubicación tiene movimientos, desactivala
+                    en vez de eliminarla.
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {ubicacionesCfg.map((u) => (
+                      <li key={u.id} className="rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium text-[#F1F5F9]">{u.nombre}</p>
+                            {u.descripcion ? (
+                              <p className="mt-1 text-xs text-[#94A3B8]">{u.descripcion}</p>
+                            ) : null}
+                            <p className="mt-1 text-[11px] text-[#94A3B8]">
+                              {etiquetaTipoUbicacion(u.tipo)} · {u.activo ? 'Activa' : 'Inactiva'}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <Toggle
+                              on={u.activo}
+                              onChange={() => {
+                                void (async () => {
+                                  const fallo = await guardarUbicacion(requireSupabase(), {
+                                    id: u.id,
+                                    empresaId: perfil.empresa.id,
+                                    nombre: u.nombre,
+                                    descripcion: u.descripcion ?? '',
+                                    tipo: u.tipo,
+                                    activo: !u.activo,
+                                  })
+                                  if (fallo) setError(fallo)
+                                  else void recargarUbicaciones()
+                                })()
+                              }}
+                            />
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-[#A5B4FC]"
+                              onClick={() => {
+                                setEditUbic(u)
+                                setAltaUbic(true)
+                                setNombreUbic(u.nombre)
+                                setDescUbic(u.descripcion ?? '')
+                                setTipoUbic(u.tipo)
+                                setActivoUbic(u.activo)
+                                setOk(null)
+                                setError(null)
+                              }}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-[#DC2626]"
+                              onClick={() => {
+                                void (async () => {
+                                  if (!window.confirm(`¿Eliminar “${u.nombre}”?`)) return
+                                  const fallo = await eliminarUbicacion(requireSupabase(), u)
+                                  if (fallo) setError(fallo)
+                                  else void recargarUbicaciones()
+                                })()
+                              }}
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    className="mt-3 h-10 w-full rounded-lg border border-[rgba(99,102,241,0.3)] text-sm font-semibold text-[#A5B4FC]"
+                    type="button"
+                    onClick={() => {
+                      resetFormUbicacion()
+                      setAltaUbic(true)
+                    }}
+                  >
+                    Nueva ubicación
+                  </button>
+                  {altaUbic ? (
+                    <div className="mt-3 space-y-3 rounded-xl border border-[rgba(99,102,241,0.15)] p-3">
+                      <label className="block text-sm font-medium text-[#94A3B8]">
+                        Nombre
+                        <input
+                          className={`${inputClass} mt-1`}
+                          value={nombreUbic}
+                          placeholder='Ej: "Depósito central", "Local 1"'
+                          onChange={(ev) => setNombreUbic(ev.target.value)}
+                        />
+                      </label>
+                      <label className="block text-sm font-medium text-[#94A3B8]">
+                        Descripción
+                        <input
+                          className={`${inputClass} mt-1`}
+                          value={descUbic}
+                          onChange={(ev) => setDescUbic(ev.target.value)}
+                        />
+                      </label>
+                      <label className="block text-sm font-medium text-[#94A3B8]">
+                        Tipo
+                        <select
+                          className={`${inputClass} mt-1`}
+                          value={tipoUbic}
+                          onChange={(ev) => setTipoUbic(ev.target.value as TipoUbicacion)}
+                        >
+                          {TIPOS_UBICACION.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-[#94A3B8]">Activo</p>
+                        <Toggle on={activoUbic} onChange={() => setActivoUbic((v) => !v)} />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          className={`${btnPrimary} flex-1`}
+                          type="button"
+                          onClick={() => {
+                            void (async () => {
+                              const fallo = await guardarUbicacion(requireSupabase(), {
+                                id: editUbic?.id,
+                                empresaId: perfil.empresa.id,
+                                nombre: nombreUbic,
+                                descripcion: descUbic,
+                                tipo: tipoUbic,
+                                activo: activoUbic,
+                              })
+                              if (fallo) setError(fallo)
+                              else {
+                                resetFormUbicacion()
+                                setOk('Ubicación guardada')
+                                void recargarUbicaciones()
+                              }
+                            })()
+                          }}
+                        >
+                          Guardar
+                        </button>
+                        <button
+                          className="h-10 flex-1 rounded-lg border border-[rgba(99,102,241,0.3)] text-sm font-semibold text-[#94A3B8]"
+                          type="button"
+                          onClick={() => resetFormUbicacion()}
                         >
                           Cancelar
                         </button>

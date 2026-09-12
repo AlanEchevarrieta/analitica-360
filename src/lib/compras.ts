@@ -83,15 +83,26 @@ export async function confirmarCompra(
     proveedorId?: string | null
     fecha: string
     notas: string
+    ubicacionDestino?: string | null
   },
 ): Promise<string | null> {
-  const { error } = await client.rpc('confirmar_compra', {
+  const args: Record<string, unknown> = {
     p_items: input.items,
     p_proveedor: input.proveedor,
     p_fecha: input.fecha,
     p_notas: input.notas,
     p_proveedor_id: input.proveedorId ?? null,
-  })
+  }
+  if (input.ubicacionDestino) args.p_ubicacion_destino = input.ubicacionDestino
+  let { error } = await client.rpc('confirmar_compra', args)
+  if (error && args.p_ubicacion_destino) {
+    const t = error.message.toLowerCase()
+    if (t.includes('p_ubicacion_destino') || t.includes('schema cache') || t.includes('could not find')) {
+      delete args.p_ubicacion_destino
+      const retry = await client.rpc('confirmar_compra', args)
+      error = retry.error
+    }
+  }
   if (!error) return null
   const msg = error.message
   if (msg.includes('SIN_PRODUCTOS')) return 'Agregá al menos un producto'
@@ -99,7 +110,8 @@ export async function confirmarCompra(
   if (msg.includes('PRODUCTO_INVALIDO')) return 'Hay un producto que ya no está disponible'
   if (msg.includes('PROVEEDOR_INVALIDO')) return 'Ese proveedor ya no está disponible'
   if (msg.includes('VARIANTE_INVALIDA')) return 'La variante elegida no es válida'
-  return 'No se pudo confirmar la compra. Corré supabase/016_compras.sql, supabase/022_proveedores.sql, supabase/036_variantes_compras_dimensiones.sql y supabase/046_lotes.sql en el SQL Editor.'
+  if (msg.includes('UBICACION_INVALIDA')) return 'Esa ubicación no está disponible'
+  return 'No se pudo confirmar la compra. Corré supabase/016_compras.sql, supabase/022_proveedores.sql, supabase/036_variantes_compras_dimensiones.sql, supabase/046_lotes.sql y supabase/047_ubicaciones.sql en el SQL Editor.'
 }
 
 export async function anularCompra(

@@ -32,6 +32,7 @@ import {
 import { VarianteChipsPicker } from '../components/VarianteChipsPicker'
 import { theme } from '../theme'
 import { etiquetaLoteOpcion, lotesDisponiblesProducto, type LoteFila } from '../lib/lotes'
+import { listarUbicaciones, stockDe, stockPorUbicaciones, type UbicacionFila } from '../lib/ubicaciones'
 
 type Linea = {
   uid: string
@@ -81,6 +82,9 @@ export function VentaNuevaPage() {
   const [picker, setPicker] = useState<ProductoFila | null>(null)
   const [escaner, setEscaner] = useState(false)
   const busquedaRef = useRef<HTMLInputElement | null>(null)
+  const [ubicaciones, setUbicaciones] = useState<UbicacionFila[]>([])
+  const [ubicacionOrigen, setUbicacionOrigen] = useState('')
+  const [stockUbic, setStockUbic] = useState<Map<string, Map<string, number>>>(new Map())
 
   useEffect(() => {
     void listarProductos(requireSupabase()).then(({ filas }) => {
@@ -95,24 +99,31 @@ export function VentaNuevaPage() {
     if (!perfil) return
     void obtenerConfiguracion(requireSupabase(), perfil.empresa.id).then(async ({ config: cfg }) => {
       setConfig(cfg)
+      const client = requireSupabase()
+      const ub = await listarUbicaciones(client)
+      setUbicaciones(ub.filas)
+      setUbicacionOrigen((prev) => prev || ub.filas[0]?.nombre || '')
+      const { filas } = await listarProductos(client)
+      const activos = filas.filter((p) => p.activo)
+      if (ub.filas.length > 1 && activos.length > 0) {
+        setStockUbic(await stockPorUbicaciones(client, activos.map((p) => p.id)))
+      }
       if (!cfg.usaVariantes) {
         setVariantesCatalogo([])
         setAtributosVentas([])
         return
       }
-      const atr = await listarAtributos(requireSupabase())
+      const atr = await listarAtributos(client)
       if (!atr.error) setAtributosVentas(atr.filas.filter((a) => a.activoVentas))
-      const { filas } = await listarProductos(requireSupabase())
-      const activos = filas.filter((p) => p.activo)
       const vars = await listarVariantesActivas(
-        requireSupabase(),
+        client,
         activos.map((p) => p.id),
       )
       if (vars.error) {
         console.log('[variantes] venta: no se pudieron cargar variantes', vars.error)
       } else {
         setVariantesCatalogo(vars.filas)
-        setStockVar(await stockPorVariante(requireSupabase(), vars.filas.map((v) => v.id)))
+        setStockVar(await stockPorVariante(client, vars.filas.map((v) => v.id)))
       }
     })
   }, [perfil])
@@ -226,7 +237,16 @@ export function VentaNuevaPage() {
       variantePrecio: variante?.precioVenta ?? null,
       precioUsado: precio,
     })
-    const stock = variante ? (stockVar.get(variante.id) ?? 0) : producto.stock_actual
+    const stockUbicacion =
+      ubicaciones.length > 1 && ubicacionOrigen
+        ? stockDe(stockUbic, producto.id, ubicacionOrigen)
+        : null
+    const stock =
+      stockUbicacion != null
+        ? stockUbicacion
+        : variante
+          ? (stockVar.get(variante.id) ?? 0)
+          : producto.stock_actual
     const loteDefault = lotes.find((l) => l.id === loteIdSel) ?? lotes[0] ?? null
     const loteId = loteDefault?.id ?? null
     const existente = lineas.find(
@@ -406,6 +426,7 @@ export function VentaNuevaPage() {
       coeficienteInteres: credito ? coefNum : 0,
       totalSinInteres: total,
       totalConInteres: totalACobrar,
+      ubicacionOrigen: ubicaciones.length > 1 ? ubicacionOrigen || ubicaciones[0]?.nombre : null,
     })
     setEnviando(false)
     if (fallo) {
@@ -446,6 +467,31 @@ export function VentaNuevaPage() {
             <>
               {paso === 1 ? (
                 <div className="mt-5">
+                  {ubicaciones.length > 1 ? (
+                    <label className="mb-4 block text-sm font-medium text-[#4A5568]">
+                      Vender desde ubicación
+                      <select
+                        className={`${inputClass} mt-1.5`}
+                        value={ubicacionOrigen}
+                        onChange={(ev) => {
+                          const nombre = ev.target.value
+                          setUbicacionOrigen(nombre)
+                          setLineas((prev) =>
+                            prev.map((l) => ({
+                              ...l,
+                              stockLinea: stockDe(stockUbic, l.productoId, nombre),
+                            })),
+                          )
+                        }}
+                      >
+                        {ubicaciones.map((u) => (
+                          <option key={u.id} value={u.nombre}>
+                            {u.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
                   <label className="block w-full text-sm font-medium text-[#4A5568]">
                     Buscar producto
                     <span className="mt-1.5 flex gap-2">
@@ -610,7 +656,9 @@ export function VentaNuevaPage() {
                           </p>
                         ) : (
                           <p className="mt-2 text-xs text-[#4A5568]">
-                            Stock disponible: {linea.stockLinea}{' '}
+                            Stock disponible
+                            {ubicaciones.length > 1 && ubicacionOrigen ? ` en ${ubicacionOrigen}` : ''}
+                            : {linea.stockLinea}{' '}
                             {linea.stockLinea === 1 ? 'unidad' : 'unidades'}
                           </p>
                         )}

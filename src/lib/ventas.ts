@@ -257,9 +257,10 @@ export async function confirmarVenta(
     coeficienteInteres?: number
     totalSinInteres?: number
     totalConInteres?: number
+    ubicacionOrigen?: string | null
   },
 ): Promise<string | null> {
-  const { error } = await client.rpc('confirmar_venta', {
+  const args: Record<string, unknown> = {
     p_items: input.items,
     p_forma_pago: input.formaPago,
     p_descuento: input.descuento,
@@ -269,15 +270,26 @@ export async function confirmarVenta(
     p_coeficiente_interes: input.coeficienteInteres ?? 0,
     p_total_sin_interes: input.totalSinInteres ?? null,
     p_total_con_interes: input.totalConInteres ?? null,
-  })
+  }
+  if (input.ubicacionOrigen) args.p_ubicacion_origen = input.ubicacionOrigen
+  let { error } = await client.rpc('confirmar_venta', args)
+  if (error && args.p_ubicacion_origen) {
+    const t = error.message.toLowerCase()
+    if (t.includes('p_ubicacion_origen') || t.includes('schema cache') || t.includes('could not find')) {
+      delete args.p_ubicacion_origen
+      const retry = await client.rpc('confirmar_venta', args)
+      error = retry.error
+    }
+  }
   if (!error) return null
   const msg = error.message
   if (msg.includes('Producto no pertenece a esta empresa')) {
     return 'Producto no pertenece a esta empresa'
   }
+  if (msg.includes('UBICACION_INVALIDA')) return 'Esa ubicación no está disponible'
   const t = msg.toLowerCase()
   if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
-    return 'Falta actualizar confirmar_venta en Supabase. Pegá TODO supabase/038_perf_seguridad_productos_ventas.sql y supabase/046_lotes.sql (rol postgres), dale Run y recargá.'
+    return 'Falta actualizar confirmar_venta en Supabase. Pegá TODO supabase/038_perf_seguridad_productos_ventas.sql, supabase/046_lotes.sql y supabase/047_ubicaciones.sql (rol postgres), dale Run y recargá.'
   }
   return msg
 }

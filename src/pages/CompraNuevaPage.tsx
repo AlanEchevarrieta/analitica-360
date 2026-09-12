@@ -29,6 +29,7 @@ import {
   type VarianteFila,
 } from '../lib/variantes'
 import { crearLote, prefijoLoteMes, sugerenciaNumeroLote } from '../lib/lotes'
+import { listarUbicaciones, type UbicacionFila } from '../lib/ubicaciones'
 
 type Linea = {
   uid: string
@@ -86,6 +87,8 @@ export function CompraNuevaPage() {
   const [stockVar, setStockVar] = useState<Map<string, number>>(new Map())
   const [atributosVentas, setAtributosVentas] = useState<AtributoFila[]>([])
   const [picker, setPicker] = useState<ProductoFila | null>(null)
+  const [ubicaciones, setUbicaciones] = useState<UbicacionFila[]>([])
+  const [ubicacionDestino, setUbicacionDestino] = useState('')
 
   async function recargarCatalogo() {
     const { filas } = await listarProductos(requireSupabase())
@@ -106,6 +109,9 @@ export function CompraNuevaPage() {
       const usa = Boolean(config.usaVariantes)
       setUsaVariantes(usa)
       setUsaLotes(Boolean(config.usaLotes))
+      const ub = await listarUbicaciones(requireSupabase())
+      setUbicaciones(ub.filas)
+      setUbicacionDestino((prev) => prev || ub.filas[0]?.nombre || '')
       if (config.usaLotes) {
         const sug = await sugerenciaNumeroLote(requireSupabase(), perfil.empresa.id)
         setCompraNumeroLote((prev) => prev || sug)
@@ -445,6 +451,7 @@ export function CompraNuevaPage() {
       proveedorId,
       fecha,
       notas,
+      ubicacionDestino: ubicaciones.length > 1 ? ubicacionDestino || ubicaciones[0]?.nombre : null,
     })
     setEnviando(false)
     if (fallo) {
@@ -667,6 +674,22 @@ export function CompraNuevaPage() {
 
               {paso === 2 ? (
                 <div className="mt-5 space-y-4">
+                  {ubicaciones.length > 1 ? (
+                    <label className="block text-sm font-medium text-[#4A5568]">
+                      Ingresar a ubicación
+                      <select
+                        className={`${inputClass} mt-1.5`}
+                        value={ubicacionDestino}
+                        onChange={(ev) => setUbicacionDestino(ev.target.value)}
+                      >
+                        {ubicaciones.map((u) => (
+                          <option key={u.id} value={u.nombre}>
+                            {u.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
                   {usaLotes ? (
                     <div className="rounded-md border border-[#E2E8F0]">
                       <button

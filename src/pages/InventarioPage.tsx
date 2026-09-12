@@ -32,6 +32,7 @@ import {
   type EstadoStock,
   type UbicacionFila,
 } from '../lib/inventario'
+import { esCasaStand, stockDe, stockPorUbicaciones } from '../lib/ubicaciones'
 import { listarProductosNombres } from '../lib/productos'
 import { obtenerConfiguracion } from '../lib/configuracion'
 import { etiquetaCombo, listarVariantesDeProductos, stockPorVariante, sumaStockItems } from '../lib/variantes'
@@ -77,6 +78,7 @@ export function InventarioPage() {
     new Map(),
   )
   const [abiertos, setAbiertos] = useState<Record<string, boolean>>({})
+  const [stockUbic, setStockUbic] = useState<Map<string, Map<string, number>>>(new Map())
 
   const cargar = useCallback(async () => {
     if (!perfil) return
@@ -97,6 +99,13 @@ export function InventarioPage() {
     }
     setError(null)
     setFilas(res.filas)
+    const layoutDinamico =
+      ub.filas.length > 2 || (ub.filas.length >= 2 && !esCasaStand(ub.filas))
+    if (layoutDinamico && res.filas.length > 0) {
+      setStockUbic(await stockPorUbicaciones(client, res.filas.map((f) => f.id)))
+    } else {
+      setStockUbic(new Map())
+    }
     const { config } = await obtenerConfiguracion(client, perfil.empresa.id)
     setUsaLotes(Boolean(config.usaLotes))
     if (config.usaVariantes && res.filas.length > 0) {
@@ -171,6 +180,8 @@ export function InventarioPage() {
 
   const puedeMover = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'ajustar_stock')
   const mostrarUbicaciones = ubicaciones.length >= 2
+  const columnasCasaStand = mostrarUbicaciones && esCasaStand(ubicaciones)
+  const columnasDinamicas = mostrarUbicaciones && !columnasCasaStand
 
   return (
     <div
@@ -323,7 +334,9 @@ export function InventarioPage() {
           >
             <h2 className="text-sm font-semibold">Traslados</h2>
             <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-              Mové stock entre Casa y Stand. El total del producto no cambia.
+              {columnasCasaStand
+                ? 'Mové stock entre Casa y Stand. El total del producto no cambia.'
+                : 'Mové stock entre ubicaciones. El total del producto no cambia.'}
             </p>
           </section>
         ) : null}
@@ -339,8 +352,11 @@ export function InventarioPage() {
                   <Th>Producto</Th>
                   <Th>Categoría</Th>
                   <Th>Stock</Th>
-                  {mostrarUbicaciones ? <Th>Casa</Th> : null}
-                  {mostrarUbicaciones ? <Th>Stand</Th> : null}
+                  {columnasCasaStand ? <Th>Casa</Th> : null}
+                  {columnasCasaStand ? <Th>Stand</Th> : null}
+                  {columnasDinamicas
+                    ? ubicaciones.map((u) => <Th key={u.id}>{u.nombre}</Th>)
+                    : null}
                   <Th>Última entrada</Th>
                   <Th>Última salida</Th>
                   <Th>Rotación 30d</Th>
@@ -391,8 +407,15 @@ export function InventarioPage() {
                             {fila.stock_actual}
                           </button>
                         </td>
-                        {mostrarUbicaciones ? <td className="px-3 py-3">{fila.stock_casa}</td> : null}
-                        {mostrarUbicaciones ? <td className="px-3 py-3">{fila.stock_stand}</td> : null}
+                        {columnasCasaStand ? <td className="px-3 py-3">{fila.stock_casa}</td> : null}
+                        {columnasCasaStand ? <td className="px-3 py-3">{fila.stock_stand}</td> : null}
+                        {columnasDinamicas
+                          ? ubicaciones.map((u) => (
+                              <td key={u.id} className="px-3 py-3">
+                                {stockDe(stockUbic, fila.id, u.nombre)}
+                              </td>
+                            ))
+                          : null}
                         <td className="px-3 py-3">{fechaCorta(fila.ultima_entrada)}</td>
                         <td className="px-3 py-3">{fechaCorta(fila.ultima_salida)}</td>
                         <td className="px-3 py-3">{fila.rotacion_30}</td>
@@ -447,9 +470,16 @@ export function InventarioPage() {
                     >
                       Stock {fila.stock_actual}
                     </button>
-                    {mostrarUbicaciones ? (
+                    {columnasCasaStand ? (
                       <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
                         Casa {fila.stock_casa} · Stand {fila.stock_stand}
+                      </p>
+                    ) : null}
+                    {columnasDinamicas ? (
+                      <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {ubicaciones
+                          .map((u) => `${u.nombre} ${stockDe(stockUbic, fila.id, u.nombre)}`)
+                          .join(' · ')}
                       </p>
                     ) : null}
                     <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
