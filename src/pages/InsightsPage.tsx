@@ -29,8 +29,10 @@ import { obtenerConfiguracion } from '../lib/configuracion'
 import {
   armarForecast,
   cargarInsights,
+  cargarInsightsCombos,
   type FilaElasticidad,
   type GranularidadForecast,
+  type InsightCombo,
   type InsightForecast,
   type InsightsPayload,
 } from '../lib/insights'
@@ -97,6 +99,71 @@ function SkeletonInsights() {
         </div>
       ))}
     </div>
+  )
+}
+
+function badgeLift(lift: number) {
+  if (lift > 2) return { bg: 'rgba(74,222,128,0.15)', fg: '#4ADE80', label: '🔥 Muy fuerte' }
+  if (lift >= 1.5) return { bg: 'rgba(99,102,241,0.2)', fg: '#A5B4FC', label: '💪 Fuerte' }
+  if (lift >= 1) return { bg: 'rgba(252,211,77,0.15)', fg: '#FCD34D', label: '👍 Moderado' }
+  return { bg: 'rgba(148,163,184,0.15)', fg: '#94A3B8', label: 'Bajo' }
+}
+
+function ComboCard({
+  combo,
+  destacado,
+  onCrear,
+}: {
+  combo: InsightCombo
+  destacado: boolean
+  onCrear: () => void
+}) {
+  const badge = badgeLift(combo.lift)
+  const soportePct = Math.min(100, Math.max(0, combo.soporte))
+  return (
+    <article
+      className="flex flex-col rounded-xl p-4"
+      style={{
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(99,102,241,0.2)',
+      }}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="min-w-0 text-sm font-semibold text-[#F1F5F9]">
+          {destacado ? '🏆 ' : ''}
+          {combo.nombreA} + {combo.nombreB}
+        </h3>
+        <span
+          className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+          style={{ background: badge.bg, color: badge.fg }}
+        >
+          {badge.label}
+        </span>
+      </div>
+      <p className="mt-2 text-sm text-[#94A3B8]">
+        Se vendieron juntos {combo.vecesJuntos.toLocaleString('es-AR')} veces
+      </p>
+      <p className="mt-3 text-sm text-[#F1F5F9]">
+        Confianza: {combo.confianzaA.toLocaleString('es-AR')}% · Lift: {combo.lift.toLocaleString('es-AR')}
+      </p>
+      <div className="mt-2">
+        <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+          <div className="h-full rounded-full bg-[#6366F1]" style={{ width: `${soportePct}%` }} />
+        </div>
+        <p className="mt-1 text-xs text-[#94A3B8]">Soporte: {combo.soporte.toLocaleString('es-AR')}%</p>
+      </div>
+      <p className="mt-3 text-sm leading-relaxed text-[#F1F5F9]">
+        💡 Cuando alguien compra {combo.nombreA}, {combo.confianzaA.toLocaleString('es-AR')}% de las veces también
+        lleva {combo.nombreB}
+      </p>
+      <button
+        className="mt-4 h-10 rounded-lg bg-[#6366F1] px-3 text-sm font-semibold text-white hover:bg-[#4F46E5]"
+        type="button"
+        onClick={onCrear}
+      >
+        🎁 Crear combo con descuento
+      </button>
+    </article>
   )
 }
 
@@ -297,6 +364,9 @@ export function InsightsPage() {
   const [presetInfla, setPresetInfla] = useState<PresetPeriodo | 'todo'>('todo')
   const [desdeDraft, setDesdeDraft] = useState(() => resolverPeriodoInflacion().desde)
   const [hastaDraft, setHastaDraft] = useState(() => resolverPeriodoInflacion().hasta)
+  const [combos, setCombos] = useState<InsightCombo[]>([])
+  const [errorCombos, setErrorCombos] = useState<string | null>(null)
+  const [modalCombo, setModalCombo] = useState(false)
 
   const premium = Boolean(perfil && planTieneInsights(perfil.empresa.plan_actual))
 
@@ -319,8 +389,14 @@ export function InsightsPage() {
     void (async () => {
       try {
         const cfg = await obtenerConfiguracion(requireSupabase(), perfil.empresa.id)
-        const payload = await cargarInsights(requireSupabase(), Boolean(cfg.config.usaVariantes))
+        const client = requireSupabase()
+        const [payload, combosRes] = await Promise.all([
+          cargarInsights(client, Boolean(cfg.config.usaVariantes)),
+          cargarInsightsCombos(client, perfil.empresa.id),
+        ])
         setData(payload)
+        setCombos(combosRes.filas)
+        setErrorCombos(combosRes.error)
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Error inesperado'
         setData({
@@ -813,10 +889,77 @@ export function InsightsPage() {
                 </section>
               </>
             ) : null}
+
+            <Divider />
+            <section className="rounded-lg p-5" style={CARD}>
+              <TituloSeccion>🎁 Oportunidades de combos</TituloSeccion>
+              <Sub>Productos que tus clientes compran juntos</Sub>
+              <p className="mt-1 text-xs leading-relaxed text-[#94A3B8]">
+                Basado en el análisis de todas tus ventas con múltiples productos.
+              </p>
+              {errorCombos ? (
+                <div className="mt-4">
+                  <ErrorSeccion mensaje={errorCombos} />
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <GraficoExpandible titulo="🎁 Oportunidades de combos" ocultarTitulo compactoClass="overflow-auto">
+                    {combos.length === 0 ? (
+                      <div className="px-3 py-10 text-center">
+                        <p className="text-4xl">🎁</p>
+                        <p className="mt-3 text-base font-semibold text-[#F1F5F9]">Aún no hay datos de combos</p>
+                        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[#94A3B8]">
+                          Cuando tengas ventas con 2 o más productos, acá vas a ver qué combinaciones son más
+                          populares para crear ofertas y combos.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        {combos.map((combo, i) => (
+                          <ComboCard
+                            key={`${combo.productoAId}-${combo.productoBId}`}
+                            combo={combo}
+                            destacado={i === 0}
+                            onCrear={() => setModalCombo(true)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </GraficoExpandible>
+                </div>
+              )}
+            </section>
           </>
         ) : null}
       </div>
       <PlanesModal abierto={modalPlanes} onCerrar={() => setModalPlanes(false)} />
+      {modalCombo ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setModalCombo(false)}
+        >
+          <div
+            className="w-full max-w-[440px] rounded-xl p-6"
+            style={{
+              background: 'rgba(15,23,41,0.96)',
+              border: '1px solid rgba(99,102,241,0.3)',
+            }}
+            onClick={(ev) => ev.stopPropagation()}
+          >
+            <p className="text-lg font-semibold text-[#F1F5F9]">🎁 Crear combo</p>
+            <p className="mt-3 text-sm leading-relaxed text-[#94A3B8]">
+              Próximamente: creá combos con descuento directamente desde acá
+            </p>
+            <button
+              className="mt-5 h-10 w-full rounded-lg bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"
+              type="button"
+              onClick={() => setModalCombo(false)}
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

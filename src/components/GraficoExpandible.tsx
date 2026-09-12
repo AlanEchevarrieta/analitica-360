@@ -112,7 +112,7 @@ export function GraficoExpandible({
                 ✕
               </button>
             </div>
-            <div className="mx-auto" style={{ width: '90vw', height: '80vh' }}>
+            <div className="mx-auto overflow-auto" style={{ width: '90vw', height: '80vh' }}>
               {children}
             </div>
           </div>

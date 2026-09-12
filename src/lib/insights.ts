@@ -842,3 +842,50 @@ export async function cargarInsights(
 
   return { salud, elasticidades, forecast, serieDiaria, diasHistorial, variantes, precios, errores }
 }
+
+export type InsightCombo = {
+  productoAId: string
+  productoBId: string
+  nombreA: string
+  nombreB: string
+  vecesJuntos: number
+  totalVentas: number
+  soporte: number
+  confianzaA: number
+  confianzaB: number
+  lift: number
+}
+
+export async function cargarInsightsCombos(
+  client: SupabaseClient,
+  empresaId: string,
+): Promise<{ filas: InsightCombo[]; error: string | null }> {
+  const { data, error } = await client.rpc('insights_combos', {
+    p_empresa_id: empresaId,
+    p_limit: 10,
+  })
+  if (error) {
+    const t = error.message.toLowerCase()
+    if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist') || t.includes('pgrst202')) {
+      return {
+        filas: [],
+        error:
+          'Falta crear insights_combos. Pegá TODO supabase/048_insights_combos.sql (rol postgres), dale Run y recargá.',
+      }
+    }
+    return { filas: [], error: error.message }
+  }
+  const filas: InsightCombo[] = ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    productoAId: String(row.producto_a_id ?? ''),
+    productoBId: String(row.producto_b_id ?? ''),
+    nombreA: String(row.nombre_a ?? ''),
+    nombreB: String(row.nombre_b ?? ''),
+    vecesJuntos: num(row.veces_juntos),
+    totalVentas: num(row.total_ventas),
+    soporte: num(row.soporte),
+    confianzaA: num(row.confianza_a),
+    confianzaB: num(row.confianza_b),
+    lift: num(row.lift),
+  }))
+  return { filas, error: null }
+}
