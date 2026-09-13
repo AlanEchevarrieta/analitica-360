@@ -1026,7 +1026,7 @@ export function ConfiguracionPage() {
                                   : 'Inactivo'}
                             </td>
                             <td className="py-2.5">
-                              {u.rol === 'dueno' ? (
+                              {u.id === perfil.usuario.id ? (
                                 <span className="text-xs text-[#94A3B8]">Acceso total</span>
                               ) : (
                                 <div className="flex flex-wrap gap-2">

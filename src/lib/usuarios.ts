@@ -19,37 +19,75 @@ export type UsuarioEmpresa = {
   esInvitacion: boolean
 }
 
-export async function listarUsuariosEmpresa(
-  client: SupabaseClient,
-): Promise<{ filas: UsuarioEmpresa[]; error: string | null }> {
-  const { data, error } = await client
-    .from('usuarios')
-    .select('id, nombre, email, rol, activo, invitacion_pendiente')
-    .is('deleted_at', null)
-    .order('nombre')
-
-  if (error) return { filas: [], error: error.message }
-  const filas: UsuarioEmpresa[] = ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+function filaDesdeRow(row: Record<string, unknown>, acceso: AccesoColaborador): UsuarioEmpresa {
+  return {
     id: String(row.id),
     nombre: String(row.nombre ?? ''),
     email: String(row.email ?? ''),
     rol: parseRol(row.rol),
     activo: Boolean(row.activo),
-    acceso: accesoSoloPedidos(),
+    acceso,
     invitacionPendiente: Boolean(row.invitacion_pendiente),
     esInvitacion: false,
-  }))
+  }
+}
 
-  const perm = await client.from('colaborador_permisos').select('usuario_id, modulos, acciones')
-  if (!perm.error) {
-    const mapa = new Map<string, AccesoColaborador>()
-    for (const row of (perm.data ?? []) as Record<string, unknown>[]) {
-      mapa.set(String(row.usuario_id), parseAcceso(row.modulos, row.acciones))
-    }
-    for (const u of filas) {
-      const acc = mapa.get(u.id)
-      if (acc) u.acceso = acc
-      else if (u.rol === 'dueno') u.acceso = accesoTotal(true)
+function accesoDePermisos(modulos: unknown, acciones: unknown, rol: Rol): AccesoColaborador {
+  if (modulos != null || acciones != null) return parseAcceso(modulos, acciones)
+  if (rol === 'dueno') return accesoTotal(true)
+  return accesoSoloPedidos()
+}
+
+async function listarUsuariosEmpresaFallback(
+  client: SupabaseClient,
+): Promise<{ filas: UsuarioEmpresa[]; error: string | null }> {
+  const { data: authData } = await client.auth.getUser()
+  const yo = authData.user?.id
+  if (!yo) return { filas: [], error: 'NO_AUTENTICADO' }
+
+  const { data, error } = await client
+    .from('usuarios')
+    .select(
+      'id, nombre, email, rol, activo, invitacion_pendiente, empresa_id, colaborador_permisos(modulos, acciones, empresa_id)',
+    )
+    .is('deleted_at', null)
+    .neq('id', yo)
+    .order('nombre')
+
+  if (error) return { filas: [], error: error.message }
+
+  const filas: UsuarioEmpresa[] = ((data ?? []) as Record<string, unknown>[]).map((row) => {
+    const rol = parseRol(row.rol)
+    const nested = row.colaborador_permisos
+    const lista = Array.isArray(nested) ? nested : nested ? [nested] : []
+    const empresaId = String(row.empresa_id ?? '')
+    const cp = (lista as Record<string, unknown>[]).find(
+      (p) => !p.empresa_id || String(p.empresa_id) === empresaId,
+    )
+    return filaDesdeRow(row, accesoDePermisos(cp?.modulos, cp?.acciones, rol))
+  })
+  return { filas, error: null }
+}
+
+export async function listarUsuariosEmpresa(
+  client: SupabaseClient,
+): Promise<{ filas: UsuarioEmpresa[]; error: string | null }> {
+  const rpc = await client.rpc('listar_equipo')
+  let filas: UsuarioEmpresa[] = []
+
+  if (!rpc.error) {
+    filas = ((rpc.data ?? []) as Record<string, unknown>[]).map((row) => {
+      const rol = parseRol(row.rol)
+      return filaDesdeRow(row, accesoDePermisos(row.modulos, row.acciones, rol))
+    })
+  } else {
+    const msg = rpc.error.message ?? ''
+    if (msg.includes('could not find') || msg.includes('does not exist') || msg.includes('PGRST202')) {
+      const fallback = await listarUsuariosEmpresaFallback(client)
+      if (fallback.error) return fallback
+      filas = fallback.filas
+    } else {
+      return { filas: [], error: rpc.error.message }
     }
   }
 
@@ -62,7 +100,7 @@ export async function listarUsuariosEmpresa(
   if (!inv.error) {
     for (const row of (inv.data ?? []) as Record<string, unknown>[]) {
       const email = String(row.email ?? '')
-      if (filas.some((u) => u.email.toLowerCase() === email.toLowerCase() && u.activo)) continue
+      if (filas.some((u) => u.email.toLowerCase() === email.toLowerCase())) continue
       filas.push({
         id: String(row.id),
         nombre: email.split('@')[0] || 'Invitado',
@@ -94,7 +132,10 @@ export async function desactivarUsuario(
   client: SupabaseClient,
   usuario: UsuarioEmpresa,
 ): Promise<string | null> {
-  if (usuario.rol === 'dueno') return 'El dueño no se puede desactivar'
+  if (usuario.rol === 'dueno' && !usuario.esInvitacion) {
+    const { data } = await client.auth.getUser()
+    if (data.user?.id === usuario.id) return 'El dueño no se puede desactivar'
+  }
   if (usuario.esInvitacion) {
     const { error } = await client
       .from('invitaciones_colaboradores')
@@ -111,7 +152,8 @@ export async function guardarPermisosColaborador(
   usuario: UsuarioEmpresa,
   acceso: AccesoColaborador,
 ): Promise<string | null> {
-  if (usuario.rol === 'dueno') return 'El dueño tiene acceso total'
+  const { data: authData } = await client.auth.getUser()
+  if (authData.user?.id === usuario.id) return 'El dueño tiene acceso total'
   if (usuario.esInvitacion) {
     const { error } = await client
       .from('invitaciones_colaboradores')
@@ -127,7 +169,7 @@ export async function guardarPermisosColaborador(
   if (!error) return null
   const msg = error.message
   if (msg.includes('could not find') || msg.includes('does not exist') || msg.includes('PGRST202')) {
-    return 'Falta el SQL de permisos. Pegá TODO supabase/056_permisos_granulares.sql (rol postgres), dale Run y recargá.'
+    return 'Falta el SQL de permisos. Pegá supabase/056_permisos_granulares.sql y supabase/057_listar_equipo.sql (rol postgres), dale Run y recargá.'
   }
   return msg
 }
