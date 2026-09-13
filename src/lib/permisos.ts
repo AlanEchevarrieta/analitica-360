@@ -49,8 +49,10 @@ export const PERMISOS_CAMPOS: { clave: PermisoClave; label: string; nota?: strin
   { clave: 'anular_ventas', label: 'Anular ventas', nota: 'Solo sugerido para Operador avanzado' },
 ]
 
-export function permisosPorRol(rol: 'operador' | 'visor'): Permisos {
-  return rol === 'visor' ? { ...PERMISOS_VISOR } : { ...PERMISOS_OPERADOR }
+export function permisosPorRol(rol: 'operador' | 'visor' | 'operario' | 'administrador'): Permisos {
+  if (rol === 'administrador') return { ...PERMISOS_DUENO }
+  if (rol === 'visor') return { ...PERMISOS_VISOR }
+  return { ...PERMISOS_OPERADOR }
 }
 
 export function parsePermisos(raw: unknown): Permisos {
@@ -68,6 +70,6 @@ export function tienePermiso(
   permisos: Permisos | null | undefined,
   clave: PermisoClave,
 ) {
-  if (rol === 'dueno') return true
+  if (rol === 'dueno' || rol === 'administrador') return true
   return Boolean(permisos?.[clave])
 }

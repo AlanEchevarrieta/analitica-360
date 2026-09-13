@@ -14,6 +14,7 @@ import {
   etiquetaItemPedido,
   formatoFechaPedido,
   generarRemitoPdf,
+  guardarAsignacionPedido,
   guardarItemPreparacion,
   itemPickingCompleto,
   itemsPorCodigoBarras,
@@ -32,6 +33,7 @@ import {
   type PedidoItemFicha,
 } from '../lib/pedidos'
 import { formatoARS } from '../lib/productos'
+import { listarColaboradoresActivos } from '../lib/usuarios'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
 
@@ -99,6 +101,7 @@ export function PedidoFichaPage() {
   const navigate = useNavigate()
   const [ficha, setFicha] = useState<PedidoFicha | null>(null)
   const [items, setItems] = useState<PedidoItemFicha[]>([])
+  const [colaboradores, setColaboradores] = useState<{ id: string; nombre: string }[]>([])
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
@@ -122,6 +125,10 @@ export function PedidoFichaPage() {
     setTransportista(res.ficha?.transportista || res.ficha?.metodoEnvio || '')
     setSeguimiento(res.ficha?.numeroSeguimiento ?? '')
     setError(res.error)
+    const colab = await listarColaboradoresActivos(requireSupabase())
+    if (!colab.error) {
+      setColaboradores(colab.filas.map((u) => ({ id: u.id, nombre: u.nombre || u.email })))
+    }
   }, [id])
 
   useEffect(() => {
@@ -378,6 +385,29 @@ export function PedidoFichaPage() {
               subtitulo={`${ficha.clienteNombre || 'Sin cliente'} · ${formatoARS(ficha.total)} · ${formatoFechaPedido(ficha.createdAt)}`}
               accion={<BadgeEstado estado={ficha.estado} />}
             />
+            <label className="mb-4 flex max-w-md flex-col text-sm text-[#94A3B8]">
+              Asignado a
+              <select
+                className={`${inputDark} mt-1`}
+                value={ficha.asignadoA ?? ''}
+                disabled={guardando}
+                onChange={(ev) => {
+                  const val = ev.target.value || null
+                  setFicha({ ...ficha, asignadoA: val })
+                  void guardarAsignacionPedido(requireSupabase(), ficha.id, val).then((fallo) => {
+                    if (fallo) setError(fallo)
+                    else mostrarToast('Asignación actualizada', 'ok')
+                  })
+                }}
+              >
+                <option value="">Sin asignar</option>
+                {colaboradores.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
             {error ? (
               <p className="mb-4 whitespace-pre-wrap rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-200">
                 {error}

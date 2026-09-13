@@ -21,6 +21,7 @@ export type PedidoFila = {
   estado: EstadoPedido
   total: number
   createdAt: string
+  asignadoA: string | null
 }
 
 export type PedidoItemFicha = {
@@ -58,6 +59,7 @@ export type PedidoFicha = {
   notas: string
   total: number
   createdAt: string
+  asignadoA: string | null
   items: PedidoItemFicha[]
 }
 
@@ -266,6 +268,9 @@ ${firma}`.replace(/\n{3,}/g, '\n\n')
 function msgSql(msg: string) {
   const t = msg.toLowerCase()
   if (t.includes('schema cache') || t.includes('does not exist') || t.includes('pedidos')) {
+    if (t.includes('asignado_a') || t.includes('invitaciones')) {
+      return 'Falta el SQL de equipo. Pegá TODO supabase/054_equipo_roles.sql (rol postgres), dale Run y recargá.'
+    }
     return 'Falta el módulo de pedidos. Pegá TODO supabase/052_pedidos.sql (rol postgres), dale Run y recargá.'
   }
   return msg
@@ -290,6 +295,7 @@ function mapFila(row: Record<string, unknown>): PedidoFila {
     estado: esEstado(estado) ? estado : 'nuevo',
     total: Number(row.total ?? 0),
     createdAt: String(row.created_at ?? ''),
+    asignadoA: row.asignado_a == null ? null : String(row.asignado_a),
   }
 }
 
@@ -309,6 +315,7 @@ export async function listarPedidosPaginado(
     pageSize: number
     estado: EstadoPedido | ''
     origen: OrigenPedido | ''
+    asignadoA?: string | null
   },
 ): Promise<{ filas: PedidoFila[]; total: number; error: string | null }> {
   const from = (input.pagina - 1) * input.pageSize
@@ -316,7 +323,7 @@ export async function listarPedidosPaginado(
   let q = client
     .from('pedidos')
     .select(
-      'id, numero_pedido, cliente_nombre, origen, estado, total, created_at',
+      'id, numero_pedido, cliente_nombre, origen, estado, total, created_at, asignado_a',
       { count: 'exact' },
     )
     .is('deleted_at', null)
@@ -324,6 +331,7 @@ export async function listarPedidosPaginado(
     .range(from, to)
   if (input.estado) q = q.eq('estado', input.estado)
   if (input.origen) q = q.eq('origen', input.origen)
+  if (input.asignadoA) q = q.eq('asignado_a', input.asignadoA)
   const { data, error, count } = await q
   if (error) return { filas: [], total: 0, error: msgSql(error.message) }
   return {
@@ -331,6 +339,26 @@ export async function listarPedidosPaginado(
     total: count ?? 0,
     error: null,
   }
+}
+
+export async function contarPedidosAsignadosPendientes(client: SupabaseClient, usuarioId: string) {
+  const { count, error } = await client
+    .from('pedidos')
+    .select('id', { count: 'exact', head: true })
+    .eq('asignado_a', usuarioId)
+    .in('estado', ['nuevo', 'en_preparacion', 'listo_despacho'])
+    .is('deleted_at', null)
+  if (error) return 0
+  return count ?? 0
+}
+
+export async function guardarAsignacionPedido(
+  client: SupabaseClient,
+  pedidoId: string,
+  asignadoA: string | null,
+): Promise<string | null> {
+  const { error } = await client.from('pedidos').update({ asignado_a: asignadoA }).eq('id', pedidoId)
+  return error ? msgSql(error.message) : null
 }
 
 export async function contarPedidosNuevos(client: SupabaseClient) {
@@ -419,7 +447,7 @@ export async function obtenerFichaPedido(
   const { data, error } = await client
     .from('pedidos')
     .select(
-      'id, numero_pedido, cliente_id, cliente_nombre, cliente_email, cliente_telefono, origen, estado, direccion_envio, codigo_postal, localidad, provincia, metodo_envio, numero_seguimiento, transportista, notas, total, created_at',
+      'id, numero_pedido, cliente_id, cliente_nombre, cliente_email, cliente_telefono, origen, estado, direccion_envio, codigo_postal, localidad, provincia, metodo_envio, numero_seguimiento, transportista, notas, total, created_at, asignado_a',
     )
     .eq('id', id)
     .is('deleted_at', null)
@@ -487,6 +515,7 @@ export async function obtenerFichaPedido(
       notas: String(row.notas ?? ''),
       total: Number(row.total ?? 0),
       createdAt: String(row.created_at ?? ''),
+      asignadoA: row.asignado_a == null ? null : String(row.asignado_a),
       items,
     },
     error: null,

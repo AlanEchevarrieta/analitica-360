@@ -64,7 +64,7 @@ export function ProveedorFichaPage() {
 
   const wa = linkWhatsApp(fila?.telefono ?? null)
   const titulo = fila ? etiquetaProveedor(fila) : ''
-  const puedeEditar = perfil.usuario.rol !== 'visor'
+  const puedeEditar = true
 
   return (
     <div

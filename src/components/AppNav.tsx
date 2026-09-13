@@ -5,6 +5,7 @@ import { ThemeToggle } from '../lib/tema'
 import { planTieneAnalytics, planTieneInsights } from '../lib/planes'
 import { requireSupabase, supabase } from '../lib/supabase'
 import { contarTicketsNoLeidos, EVENTO_SOPORTE_NOTIF } from '../lib/tickets'
+import { puedeConfigurar, esOperario } from '../lib/roles'
 import { theme } from '../theme'
 
 function linkClass({ isActive }: { isActive: boolean }) {
@@ -41,6 +42,10 @@ function BadgeNotif({ n }: { n: number }) {
   )
 }
 
+function NavSep() {
+  return <span className="app-nav-sep" role="separator" aria-hidden />
+}
+
 function LabelSoporte({ n, emoji }: { n: number; emoji?: boolean }) {
   return (
     <span className="nav-label-con-badge">
@@ -52,7 +57,8 @@ function LabelSoporte({ n, emoji }: { n: number; emoji?: boolean }) {
 
 export function AppNav() {
   const { perfil, cerrarSesion } = useAuth()
-  const esDueno = perfil?.usuario.rol === 'dueno'
+  const esConfig = puedeConfigurar(perfil?.usuario.rol)
+  const modoOperario = esOperario(perfil?.usuario.rol)
   const location = useLocation()
   const [mas, setMas] = useState(false)
   const [soporteNuevos, setSoporteNuevos] = useState(0)
@@ -130,41 +136,58 @@ export function AppNav() {
           <NavLink className={linkClass} to="/inicio" end>
             Inicio
           </NavLink>
-          <NavLink className={linkClass} to="/productos">
-            Productos
-          </NavLink>
-          <NavLink className={linkClass} to="/ventas">
-            Ventas
-          </NavLink>
-          <NavLink className={linkClass} to="/clientes">
-            Clientes
-          </NavLink>
-          <NavLink className={linkClass} to="/compras">
-            Compras
-          </NavLink>
-          <NavLink className={linkClass} to="/pedidos">
-            Pedidos
-          </NavLink>
-          <NavLink className={linkClass} to="/proveedores">
-            Proveedores
-          </NavLink>
-          <NavLink className={linkClass} to="/inventario">
-            Inventario
-          </NavLink>
-          <NavLink className={linkClass} to="/soporte">
-            <LabelSoporte n={soporteNuevos} />
-          </NavLink>
-          <NavLink className={linkClass} to="/analytics">
-            {analyticsLabel}
-          </NavLink>
-          <NavLink className={linkClass} to="/insights">
-            {insightsLabel}
-          </NavLink>
-          {esDueno ? (
-            <NavLink className={linkClass} to="/configuracion">
-              Configuración
-            </NavLink>
-          ) : null}
+          {modoOperario ? (
+            <>
+              <NavLink className={linkClass} to="/pedidos">
+                Pedidos
+              </NavLink>
+              <NavLink className={linkClass} to="/ventas">
+                Ventas
+              </NavLink>
+            </>
+          ) : (
+            <>
+              <NavSep />
+              <NavLink className={linkClass} to="/productos">
+                Productos
+              </NavLink>
+              <NavLink className={linkClass} to="/ventas">
+                Ventas
+              </NavLink>
+              <NavLink className={linkClass} to="/clientes">
+                Clientes
+              </NavLink>
+              <NavSep />
+              <NavLink className={linkClass} to="/compras">
+                Compras
+              </NavLink>
+              <NavLink className={linkClass} to="/pedidos">
+                Pedidos
+              </NavLink>
+              <NavLink className={linkClass} to="/proveedores">
+                Proveedores
+              </NavLink>
+              <NavLink className={linkClass} to="/inventario">
+                Inventario
+              </NavLink>
+              <NavSep />
+              <NavLink className={linkClass} to="/analytics">
+                {analyticsLabel}
+              </NavLink>
+              <NavLink className={linkClass} to="/insights">
+                {insightsLabel}
+              </NavLink>
+              <NavSep />
+              <NavLink className={linkClass} to="/soporte">
+                <LabelSoporte n={soporteNuevos} />
+              </NavLink>
+              {esConfig ? (
+                <NavLink className={linkClass} to="/configuracion">
+                  Configuración
+                </NavLink>
+              ) : null}
+            </>
+          )}
         </div>
         <div className="app-nav-actions">
           <ThemeToggle />
@@ -178,44 +201,60 @@ export function AppNav() {
       <aside className="app-sidebar hidden md:flex lg:hidden" aria-label="Navegación">
         <p className="app-sidebar-brand">Analítica 360</p>
         <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
-          <NavLink className={sideClass} to="/inicio" end>
-            🏠 Inicio
-          </NavLink>
-          <NavLink className={sideClass} to="/ventas">
-            💸 Ventas
-          </NavLink>
-          <NavLink className={sideClass} to="/productos">
-            📦 Productos
-          </NavLink>
-          <NavLink className={sideClass} to="/clientes">
-            👥 Clientes
-          </NavLink>
-          <NavLink className={sideClass} to="/compras">
-            🛒 Compras
-          </NavLink>
-          <NavLink className={sideClass} to="/pedidos">
-            📤 Pedidos
-          </NavLink>
-          <NavLink className={sideClass} to="/proveedores">
-            🏭 Proveedores
-          </NavLink>
-          <NavLink className={sideClass} to="/inventario">
-            📋 Inventario
-          </NavLink>
-          <NavLink className={sideClass} to="/soporte">
-            <LabelSoporte n={soporteNuevos} emoji />
-          </NavLink>
-          <NavLink className={sideClass} to="/analytics">
-            📊 {analyticsLabel}
-          </NavLink>
-          <NavLink className={sideClass} to="/insights">
-            ✨ {insightsLabel}
-          </NavLink>
-          {esDueno ? (
-            <NavLink className={sideClass} to="/configuracion">
-              ⚙️ Configuración
-            </NavLink>
-          ) : null}
+          {modoOperario ? (
+            <>
+              <NavLink className={sideClass} to="/inicio" end>
+                🏠 Inicio
+              </NavLink>
+              <NavLink className={sideClass} to="/pedidos">
+                📤 Pedidos
+              </NavLink>
+              <NavLink className={sideClass} to="/ventas">
+                💸 Ventas
+              </NavLink>
+            </>
+          ) : (
+            <>
+              <NavLink className={sideClass} to="/inicio" end>
+                🏠 Inicio
+              </NavLink>
+              <NavLink className={sideClass} to="/ventas">
+                💸 Ventas
+              </NavLink>
+              <NavLink className={sideClass} to="/productos">
+                📦 Productos
+              </NavLink>
+              <NavLink className={sideClass} to="/clientes">
+                👥 Clientes
+              </NavLink>
+              <NavLink className={sideClass} to="/compras">
+                🛒 Compras
+              </NavLink>
+              <NavLink className={sideClass} to="/pedidos">
+                📤 Pedidos
+              </NavLink>
+              <NavLink className={sideClass} to="/proveedores">
+                🏭 Proveedores
+              </NavLink>
+              <NavLink className={sideClass} to="/inventario">
+                📋 Inventario
+              </NavLink>
+              <NavLink className={sideClass} to="/soporte">
+                <LabelSoporte n={soporteNuevos} emoji />
+              </NavLink>
+              <NavLink className={sideClass} to="/analytics">
+                📊 {analyticsLabel}
+              </NavLink>
+              <NavLink className={sideClass} to="/insights">
+                ✨ {insightsLabel}
+              </NavLink>
+              {esConfig ? (
+                <NavLink className={sideClass} to="/configuracion">
+                  ⚙️ Configuración
+                </NavLink>
+              ) : null}
+            </>
+          )}
         </div>
         <div className="mt-auto flex flex-col gap-2 border-t border-[rgba(99,102,241,0.2)] pt-3">
           <ThemeToggle />
@@ -235,25 +274,34 @@ export function AppNav() {
           <span aria-hidden>💸</span>
           Ventas
         </NavLink>
-        <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/productos">
-          <span aria-hidden>📦</span>
-          Productos
-        </NavLink>
-        <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/clientes">
-          <span aria-hidden>👥</span>
-          Clientes
-        </NavLink>
-        <button
-          className={`app-nav-bottom-item${mas || masActivo ? ' active' : ''}`}
-          type="button"
-          onClick={() => setMas(true)}
-        >
-          <span className="relative inline-block" aria-hidden>
-            ☰
-            <BadgeNotif n={soporteNuevos} />
-          </span>
-          Más
-        </button>
+        {modoOperario ? (
+          <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/pedidos">
+            <span aria-hidden>📤</span>
+            Pedidos
+          </NavLink>
+        ) : (
+          <>
+            <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/productos">
+              <span aria-hidden>📦</span>
+              Productos
+            </NavLink>
+            <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/clientes">
+              <span aria-hidden>👥</span>
+              Clientes
+            </NavLink>
+            <button
+              className={`app-nav-bottom-item${mas || masActivo ? ' active' : ''}`}
+              type="button"
+              onClick={() => setMas(true)}
+            >
+              <span className="relative inline-block" aria-hidden>
+                ☰
+                <BadgeNotif n={soporteNuevos} />
+              </span>
+              Más
+            </button>
+          </>
+        )}
       </nav>
 
       {mas ? (
@@ -282,7 +330,7 @@ export function AppNav() {
             <NavLink className={sheetClass} to="/insights" onClick={() => setMas(false)}>
               ✨ {insightsLabel}
             </NavLink>
-            {esDueno ? (
+            {esConfig ? (
               <NavLink className={sheetClass} to="/configuracion" onClick={() => setMas(false)}>
                 ⚙️ Configuración
               </NavLink>

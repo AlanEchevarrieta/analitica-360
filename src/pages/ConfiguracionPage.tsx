@@ -15,19 +15,15 @@ import {
   type MostrarClienteVenta,
   type TasaCuota,
 } from '../lib/configuracion'
-import {
-  PERMISOS_CAMPOS,
-  permisosPorRol,
-  type Permisos,
-} from '../lib/permisos'
-import { evaluarPassword, passwordValida } from '../lib/password'
 import { requireSupabase } from '../lib/supabase'
 import {
-  crearUsuarioEmpresa,
+  actualizarRolUsuario,
   desactivarUsuario,
+  invitarColaborador,
   listarUsuariosEmpresa,
   type UsuarioEmpresa,
 } from '../lib/usuarios'
+import { etiquetaRol, linkInvitacionColaborador, puedeConfigurar, puedeFacturacion, textoLinkInvitacion, type RolAsignable } from '../lib/roles'
 import { etiquetaEstadoSuscripcion, etiquetaPlan } from '../lib/planes'
 import { diasRestantes, leerSuscripcionActiva, type SuscripcionActiva } from '../lib/suscripcion'
 import { theme } from '../theme'
@@ -84,7 +80,7 @@ const MOSAICO: {
   { id: 'categorias', icono: '🏷️', titulo: 'Categorías', subtitulo: 'Organizá tus productos' },
   { id: 'variantes', icono: '🎨', titulo: 'Variantes', subtitulo: 'Color, talle, material y más' },
   { id: 'lotes', icono: '📅', titulo: 'Lotes y Vencimientos', subtitulo: 'Stock por lote y fechas de vencimiento' },
-  { id: 'usuarios', icono: '👥', titulo: 'Usuarios', subtitulo: 'Gestioná el acceso de tu equipo' },
+  { id: 'usuarios', icono: '👥', titulo: 'Equipo — Usuarios y colaboradores', subtitulo: 'Invitá al equipo y asigná roles' },
   { id: 'flujo', icono: '💸', titulo: 'Flujo de ventas', subtitulo: 'Configurá el proceso de venta' },
   { id: 'inventario', icono: '📦', titulo: 'Inventario', subtitulo: 'Umbral de stock bajo y alertas' },
   { id: 'ubicaciones', icono: '📍', titulo: 'Ubicaciones', subtitulo: 'Depósitos, locales y stands' },
@@ -157,12 +153,12 @@ export function ConfiguracionPage() {
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [invitar, setInvitar] = useState(false)
-  const [nombreInv, setNombreInv] = useState('')
   const [emailInv, setEmailInv] = useState('')
-  const [passwordInv, setPasswordInv] = useState('')
-  const [rolInv, setRolInv] = useState<'operador' | 'visor'>('operador')
-  const [permisosInv, setPermisosInv] = useState<Permisos>(permisosPorRol('operador'))
+  const [rolInv, setRolInv] = useState<RolAsignable>('operario')
   const [enviandoInv, setEnviandoInv] = useState(false)
+  const [linkInv, setLinkInv] = useState<{ url: string; texto: string } | null>(null)
+  const [editUser, setEditUser] = useState<UsuarioEmpresa | null>(null)
+  const [rolEdit, setRolEdit] = useState<RolAsignable>('operario')
   const [suscripcion, setSuscripcion] = useState<SuscripcionActiva | null>(null)
   const [modalPlanes, setModalPlanes] = useState(false)
   const [categorias, setCategorias] = useState<CategoriaFila[]>([])
@@ -222,7 +218,7 @@ export function ConfiguracionPage() {
   }
 
   useEffect(() => {
-    if (!perfil || perfil.usuario.rol !== 'dueno') return
+    if (!perfil || !puedeConfigurar(perfil.usuario.rol)) return
     void (async () => {
       const { config, error: loadError } = await obtenerConfiguracion(
         requireSupabase(),
@@ -262,7 +258,8 @@ export function ConfiguracionPage() {
   }, [perfil, tab])
 
   if (!perfil) return null
-  if (perfil.usuario.rol !== 'dueno') return <Navigate to="/inicio" replace />
+  if (!puedeConfigurar(perfil.usuario.rol)) return <Navigate to="/inicio" replace />
+  const mosaicoVisible = MOSAICO.filter((c) => c.id !== 'plan' || puedeFacturacion(perfil.usuario.rol))
 
   const creditoActivo = medios.includes('credito')
 
@@ -389,56 +386,61 @@ export function ConfiguracionPage() {
     await recargarAtributos()
   }
 
-  async function onDesactivar(id: string) {
+  async function onDesactivar(u: UsuarioEmpresa) {
     setError(null)
     setOk(null)
-    const fallo = await desactivarUsuario(requireSupabase(), id)
+    const fallo = await desactivarUsuario(requireSupabase(), u)
     if (fallo) {
       setError(fallo)
       return
     }
-    setOk('Usuario desactivado')
+    setOk(u.esInvitacion ? 'Invitación cancelada' : 'Usuario desactivado')
     await cargarUsuarios()
   }
 
-  async function onCrearUsuario() {
+  async function onGuardarRol() {
+    if (!editUser) return
     setError(null)
-    setOk(null)
-    if (!nombreInv.trim() || !emailInv.trim()) {
-      setError('Completá nombre y email')
+    const fallo = await actualizarRolUsuario(requireSupabase(), editUser, rolEdit)
+    if (fallo) {
+      setError(fallo)
       return
     }
-    if (!passwordValida(evaluarPassword(passwordInv))) {
-      setError('La contraseña temporal debe tener 12 caracteres, mayúscula, minúscula, número y un especial')
+    setOk('Rol actualizado')
+    setEditUser(null)
+    await cargarUsuarios()
+  }
+
+  async function onInvitarColaborador() {
+    if (!perfil) return
+    setError(null)
+    setOk(null)
+    if (!emailInv.trim()) {
+      setError('Completá el email del colaborador')
       return
     }
     setEnviandoInv(true)
-    const fallo = await crearUsuarioEmpresa(requireSupabase(), {
-      nombre: nombreInv.trim(),
+    const fallo = await invitarColaborador(requireSupabase(), {
       email: emailInv.trim(),
-      password: passwordInv,
       rol: rolInv,
-      permisos: permisosInv,
     })
     setEnviandoInv(false)
     if (fallo) {
       setError(fallo)
       return
     }
-    setOk('Usuario creado. Pasale el email y la contraseña temporal.')
+    const rolAsignado = rolInv
+    setOk(
+      `Invitación enviada a ${emailInv.trim()} — cuando se registre tendrá acceso como ${etiquetaRol(rolAsignado)}`,
+    )
+    setLinkInv({
+      url: linkInvitacionColaborador(perfil.empresa.id, rolAsignado),
+      texto: textoLinkInvitacion(perfil.empresa.id, rolAsignado),
+    })
     setInvitar(false)
-    setNombreInv('')
     setEmailInv('')
-    setPasswordInv('')
-    setRolInv('operador')
-    setPermisosInv(permisosPorRol('operador'))
+    setRolInv('operario')
     await cargarUsuarios()
-  }
-
-  function etiquetaRol(rol: string) {
-    if (rol === 'dueno') return 'Dueño'
-    if (rol === 'visor') return 'Visor'
-    return 'Operador'
   }
 
   return (
@@ -475,7 +477,7 @@ export function ConfiguracionPage() {
             </button>
           ) : (
             <div className="config-mosaic mt-6">
-              {MOSAICO.map((card) => (
+              {mosaicoVisible.map((card) => (
                 <button
                   key={card.id}
                   type="button"
@@ -928,8 +930,8 @@ export function ConfiguracionPage() {
 
               {tab === 'usuarios' ? (
                 <div className="mt-6">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-[#F1F5F9]">Usuarios</p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-[#F1F5F9]">Equipo — Usuarios y colaboradores</p>
                     <button
                       className="h-9 rounded-lg bg-[#6366F1] px-3 text-xs font-semibold text-white hover:bg-[#4F46E5]"
                       type="button"
@@ -939,22 +941,14 @@ export function ConfiguracionPage() {
                         setOk(null)
                       }}
                     >
-                      {invitar ? 'Cerrar' : '+ Agregar usuario'}
+                      {invitar ? 'Cerrar' : 'Invitar colaborador'}
                     </button>
                   </div>
 
                   {invitar ? (
                     <div className="mt-3 space-y-3 rounded-xl border border-[rgba(99,102,241,0.15)] p-3">
                       <label className="block text-sm font-medium text-[#94A3B8]">
-                        Nombre
-                        <input
-                          className={`${inputClass} mt-1`}
-                          value={nombreInv}
-                          onChange={(ev) => setNombreInv(ev.target.value)}
-                        />
-                      </label>
-                      <label className="block text-sm font-medium text-[#94A3B8]">
-                        Email
+                        Email del colaborador
                         <input
                           className={`${inputClass} mt-1`}
                           type="email"
@@ -962,23 +956,9 @@ export function ConfiguracionPage() {
                           onChange={(ev) => setEmailInv(ev.target.value)}
                         />
                       </label>
-                      <label className="block text-sm font-medium text-[#94A3B8]">
-                        Contraseña temporal
-                        <input
-                          className={`${inputClass} mt-1`}
-                          type="text"
-                          autoComplete="new-password"
-                          value={passwordInv}
-                          onChange={(ev) => setPasswordInv(ev.target.value)}
-                        />
-                      </label>
-                      <p className="text-xs text-[#94A3B8]">
-                        Comunicásela al empleado por WhatsApp u otro medio. Pedile que la cambie
-                        después desde Inicio.
-                      </p>
-                      <p className="text-sm font-medium text-[#94A3B8]">Rol</p>
+                      <p className="text-sm font-medium text-[#94A3B8]">Rol asignado</p>
                       <div className="grid grid-cols-2 gap-2">
-                        {(['operador', 'visor'] as const).map((rol) => (
+                        {(['administrador', 'operario'] as const).map((rol) => (
                           <button
                             key={rol}
                             type="button"
@@ -987,76 +967,83 @@ export function ConfiguracionPage() {
                                 ? 'border-[#6366F1] bg-[rgba(99,102,241,0.2)] font-semibold text-[#F1F5F9]'
                                 : 'border-[rgba(99,102,241,0.15)] text-[#94A3B8]'
                             }`}
-                            onClick={() => {
-                              setRolInv(rol)
-                              setPermisosInv(permisosPorRol(rol))
-                            }}
+                            onClick={() => setRolInv(rol)}
                           >
-                            {rol === 'operador' ? 'Operador' : 'Visor'}
+                            {etiquetaRol(rol)}
                           </button>
                         ))}
                       </div>
-                      <p className="text-sm font-medium text-[#94A3B8]">Permisos</p>
-                      <ul className="space-y-2">
-                        {PERMISOS_CAMPOS.map((campo) => (
-                          <li key={campo.clave}>
-                            <label className="flex items-start gap-2 text-sm text-[#F1F5F9]">
-                              <input
-                                type="checkbox"
-                                className="mt-0.5 h-4 w-4 accent-[#6366F1]"
-                                checked={permisosInv[campo.clave]}
-                                onChange={(ev) =>
-                                  setPermisosInv((prev) => ({
-                                    ...prev,
-                                    [campo.clave]: ev.target.checked,
-                                  }))
-                                }
-                              />
-                              <span>
-                                {campo.label}
-                                {campo.nota ? (
-                                  <span className="block text-xs text-[#94A3B8]">{campo.nota}</span>
-                                ) : null}
-                              </span>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
+                      <p className="text-xs text-[#94A3B8]">
+                        Dueño: acceso total (no se puede eliminar). Administrador: todo excepto facturación.
+                        Operario: pedidos, ventas y picking.
+                      </p>
                       <button
                         className="h-10 w-full rounded-lg bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
                         type="button"
                         disabled={enviandoInv}
-                        onClick={() => void onCrearUsuario()}
+                        onClick={() => void onInvitarColaborador()}
                       >
-                        {enviandoInv ? 'GUARDANDO…' : 'Crear usuario'}
+                        {enviandoInv ? 'ENVIANDO…' : 'Enviar invitación'}
                       </button>
                     </div>
                   ) : null}
 
-                  <ul className="mt-3 space-y-2">
-                    {usuarios.map((u) => (
-                      <li key={u.id} className="rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-medium text-[#F1F5F9]">{u.nombre}</p>
-                            <p className="text-xs text-[#94A3B8]">{u.email}</p>
-                            <p className="mt-1 text-xs text-[#94A3B8]">
-                              {etiquetaRol(u.rol)} · {u.activo ? 'activo' : 'inactivo'}
-                            </p>
-                          </div>
-                          {u.rol !== 'dueno' && u.activo ? (
-                            <button
-                              className="text-xs font-semibold text-[#DC2626]"
-                              type="button"
-                              onClick={() => void onDesactivar(u.id)}
-                            >
-                              Desactivar
-                            </button>
-                          ) : null}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="w-full min-w-[520px] text-left text-sm">
+                      <thead>
+                        <tr className="text-[11px] uppercase tracking-wide text-[#94A3B8]">
+                          <th className="py-2 pr-3">Nombre</th>
+                          <th className="py-2 pr-3">Email</th>
+                          <th className="py-2 pr-3">Rol</th>
+                          <th className="py-2 pr-3">Estado</th>
+                          <th className="py-2">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {usuarios.map((u) => (
+                          <tr key={u.id} className="border-t border-[rgba(99,102,241,0.15)]">
+                            <td className="py-2.5 pr-3 font-medium text-[#F1F5F9]">{u.nombre}</td>
+                            <td className="py-2.5 pr-3 text-[#CBD5E1]">{u.email}</td>
+                            <td className="py-2.5 pr-3 text-[#CBD5E1]">{etiquetaRol(u.rol)}</td>
+                            <td className="py-2.5 pr-3 text-[#CBD5E1]">
+                              {u.invitacionPendiente || u.esInvitacion
+                                ? 'Invitación pendiente'
+                                : u.activo
+                                  ? 'Activo'
+                                  : 'Inactivo'}
+                            </td>
+                            <td className="py-2.5">
+                              {u.rol === 'dueno' ? (
+                                <span className="text-xs text-[#94A3B8]">—</span>
+                              ) : (
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    className="text-xs font-semibold text-[#A5B4FC]"
+                                    type="button"
+                                    onClick={() => {
+                                      setEditUser(u)
+                                      setRolEdit(u.rol === 'administrador' ? 'administrador' : 'operario')
+                                    }}
+                                  >
+                                    Editar
+                                  </button>
+                                  {u.activo || u.esInvitacion ? (
+                                    <button
+                                      className="text-xs font-semibold text-[#DC2626]"
+                                      type="button"
+                                      onClick={() => void onDesactivar(u)}
+                                    >
+                                      Desactivar
+                                    </button>
+                                  ) : null}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               ) : null}
 
@@ -1349,7 +1336,7 @@ export function ConfiguracionPage() {
                 </div>
               ) : null}
 
-              {tab === 'plan' ? (
+              {tab === 'plan' && puedeFacturacion(perfil.usuario.rol) ? (
                 <div className="mt-6 space-y-3 text-sm">
                   <div className="rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-3">
                     <p className="text-xs font-medium text-[#94A3B8]">Plan actual</p>
@@ -1413,6 +1400,69 @@ export function ConfiguracionPage() {
         </div>
       </div>
       <PlanesModal abierto={modalPlanes} onCerrar={() => setModalPlanes(false)} />
+      {linkInv && perfil ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 md:items-center">
+          <div className="w-full max-w-md rounded-lg bg-white p-5 text-[#1A2F4A] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+            <h3 className="text-lg font-bold">Compartí este link con tu colaborador</h3>
+            <p className="mt-3 break-all rounded-md bg-[#EEF2F6] px-3 py-2 text-sm">
+              {linkInv.texto}
+            </p>
+            <p className="mt-2 text-xs text-[#4A5568]">{linkInv.url}</p>
+            <div className="mt-4 flex gap-2">
+              <button
+                className={btnPrimary}
+                type="button"
+                onClick={() => {
+                  void navigator.clipboard.writeText(linkInv.url).then(
+                    () => setOk('Link copiado'),
+                    () => setError('No se pudo copiar'),
+                  )
+                }}
+              >
+                Copiar link
+              </button>
+              <button
+                className="h-11 rounded-lg border border-[#E2E8F0] px-4 text-sm font-semibold text-[#4A5568]"
+                type="button"
+                onClick={() => setLinkInv(null)}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {editUser ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 md:items-center">
+          <div className="w-full max-w-md rounded-lg bg-white p-5 text-[#1A2F4A] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+            <h3 className="text-lg font-bold">Editar colaborador</h3>
+            <p className="mt-1 text-sm text-[#4A5568]">{editUser.email}</p>
+            <label className="mt-3 block text-sm font-medium">
+              Rol
+              <select
+                className="mt-1 h-11 w-full rounded-lg border border-[#E2E8F0] px-3"
+                value={rolEdit}
+                onChange={(ev) => setRolEdit(ev.target.value as RolAsignable)}
+              >
+                <option value="administrador">Administrador</option>
+                <option value="operario">Operario</option>
+              </select>
+            </label>
+            <div className="mt-4 flex gap-2">
+              <button className={btnPrimary} type="button" onClick={() => void onGuardarRol()}>
+                Guardar
+              </button>
+              <button
+                className="h-11 rounded-lg border border-[#E2E8F0] px-4 text-sm font-semibold text-[#4A5568]"
+                type="button"
+                onClick={() => setEditUser(null)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

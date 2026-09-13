@@ -1,6 +1,6 @@
 import type { Permisos } from './lib/permisos'
 
-export type Rol = 'dueno' | 'operador' | 'visor'
+export type Rol = 'dueno' | 'administrador' | 'operario'
 
 export type Empresa = {
   id: string

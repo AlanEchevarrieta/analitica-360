@@ -27,6 +27,8 @@ import {
 } from '../lib/dashboard'
 import { textoCumpleProximo } from '../lib/clientes'
 import { tienePermiso } from '../lib/permisos'
+import { contarPedidosAsignadosPendientes } from '../lib/pedidos'
+import { esOperario, etiquetaRol } from '../lib/roles'
 import { requireSupabase } from '../lib/supabase'
 import { bannerTicketsHome, type BannerTicketHome } from '../lib/tickets'
 import { contarAlertasLotes } from '../lib/lotes'
@@ -410,10 +412,15 @@ export function HomePage() {
   const [cargandoDash, setCargandoDash] = useState(true)
   const [bannerTicket, setBannerTicket] = useState<BannerTicketHome | null>(null)
   const [alertasLotes, setAlertasLotes] = useState({ vencidos: 0, porVencer: 0 })
+  const [pedidosAsignados, setPedidosAsignados] = useState<number | null>(null)
 
   useEffect(() => {
     if (!perfil) return
     const client = requireSupabase()
+    if (esOperario(perfil.usuario.rol)) {
+      void contarPedidosAsignadosPendientes(client, perfil.usuario.id).then(setPedidosAsignados)
+      return
+    }
     void (async () => {
       setCargandoDash(true)
       const [sub, dashData, serie] = await Promise.all([
@@ -463,12 +470,51 @@ export function HomePage() {
 
   if (!perfil) return null
 
-  const rolLabel =
-    perfil.usuario.rol === 'dueno'
-      ? 'Dueño'
-      : perfil.usuario.rol === 'operador'
-        ? 'Operador'
-        : 'Visor'
+  const rolLabel = etiquetaRol(perfil.usuario.rol)
+
+  if (esOperario(perfil.usuario.rol)) {
+    return (
+      <div
+        className="relative min-h-dvh"
+        style={{
+          fontFamily: theme.font,
+          background: `linear-gradient(180deg, ${theme.canvasFrom}, ${theme.canvasTo})`,
+        }}
+      >
+        <ParticleNetwork startWhenIdle pauseOffscreen />
+        <div className="relative z-10 mx-auto max-w-6xl px-4 py-8">
+          <AppNav />
+          <header className="mb-6">
+            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--nav-idle)' }}>
+              Analítica 360
+            </p>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>
+              {perfil.empresa.nombre}
+            </h1>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+              Hola, {perfil.usuario.nombre} · {rolLabel}
+            </p>
+          </header>
+          <Link
+            className="block rounded-lg p-5"
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              color: 'var(--text)',
+            }}
+            to="/pedidos?asignado=yo"
+          >
+            <p className="text-base font-semibold">
+              📦 Mis pedidos asignados: {pedidosAsignados ?? '…'} pendientes
+            </p>
+            <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+              Abrí el listado para preparar y despachar
+            </p>
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   const dias = diasRestantes(suscripcion?.fecha_vencimiento ?? null)
   const mostrarAdmin = esAdminEmail(session?.user.email ?? perfil.usuario.email)

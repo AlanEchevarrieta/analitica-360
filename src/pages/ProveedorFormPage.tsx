@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
@@ -130,9 +130,6 @@ export function ProveedorFormPage() {
   }
 
   if (!perfil) return null
-  if (perfil.usuario.rol === 'visor') {
-    return <Navigate to="/proveedores" replace />
-  }
 
   const wa = linkWhatsApp(form.telefono)
 

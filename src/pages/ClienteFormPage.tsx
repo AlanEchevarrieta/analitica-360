@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
@@ -66,9 +66,6 @@ export function ClienteFormPage() {
   }
 
   if (!perfil) return null
-  if (perfil.usuario.rol === 'visor') {
-    return <Navigate to="/clientes" replace />
-  }
 
   return (
     <div

@@ -86,7 +86,7 @@ export function ClientesPage() {
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre o teléfono" />
-          {perfil.usuario.rol !== 'visor' ? (
+          {true ? (
             <Link className={btnPrimaryDesk} to="/clientes/nuevo">
               Nuevo cliente
             </Link>
@@ -196,7 +196,7 @@ export function ClientesPage() {
             )
           ) : null}
         </TableCard>
-        {perfil.usuario.rol !== 'visor' ? <FabLink to="/clientes/nuevo" label="Nuevo cliente" /> : null}
+        {true ? <FabLink to="/clientes/nuevo" label="Nuevo cliente" /> : null}
       </div>
     </div>
   )

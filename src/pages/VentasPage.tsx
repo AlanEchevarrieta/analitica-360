@@ -134,7 +134,7 @@ export function VentasPage() {
 
   if (!perfil) return null
 
-  const puedeAnular = perfil.usuario.rol === 'dueno'
+  const puedeAnular = perfil.usuario.rol === 'dueno' || perfil.usuario.rol === 'administrador'
   const nombreEmpresa = perfil.empresa.nombre
 
   const filtrosExport = {
@@ -463,7 +463,7 @@ export function VentasPage() {
                 titulo="Todavía no hay ventas"
                 subtitulo="Registrá tu primera venta para empezar a ver tus métricas"
                 accion={
-                  perfil.usuario.rol !== 'visor' ? (
+                  true ? (
                     <Link className={btnPrimary} to="/ventas/nueva">
                       Nueva venta
                     </Link>

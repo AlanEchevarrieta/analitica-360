@@ -203,6 +203,16 @@ body {
   color: #94a3b8;
 }
 
+.app-nav-sep {
+  display: inline-block;
+  width: 1px;
+  height: 20px;
+  margin: 0 8px;
+  background: rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
 .app-nav-pills {
   display: flex;
   min-width: 0;

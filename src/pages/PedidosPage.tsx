@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
@@ -36,6 +36,7 @@ import {
 } from '../lib/pedidos'
 import { formatoARS } from '../lib/productos'
 import { tienePermiso } from '../lib/permisos'
+import { esOperario } from '../lib/roles'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
 
@@ -53,6 +54,8 @@ function BadgeEstado({ estado }: { estado: EstadoPedido }) {
 
 export function PedidosPage() {
   const { perfil } = useAuth()
+  const [searchParams] = useSearchParams()
+  const asignadoYo = searchParams.get('asignado') === 'yo'
   const [filas, setFilas] = useState<PedidoFila[]>([])
   const [total, setTotal] = useState(0)
   const [nuevos, setNuevos] = useState(0)
@@ -63,10 +66,18 @@ export function PedidosPage() {
   const [origen, setOrigen] = useState<OrigenPedido | ''>('')
 
   const cargar = useCallback(async () => {
+    if (!perfil) return
     setCargando(true)
     const client = requireSupabase()
+    const soloMios = asignadoYo || esOperario(perfil.usuario.rol)
     const [{ filas: data, total: n, error: listError }, nNuevos] = await Promise.all([
-      listarPedidosPaginado(client, { pagina, pageSize: PAGE_PEDIDOS, estado, origen }),
+      listarPedidosPaginado(client, {
+        pagina,
+        pageSize: PAGE_PEDIDOS,
+        estado,
+        origen,
+        asignadoA: soloMios ? perfil.usuario.id : null,
+      }),
       contarPedidosNuevos(client),
     ])
     setCargando(false)
@@ -79,7 +90,7 @@ export function PedidosPage() {
     setError(null)
     setFilas(data)
     setTotal(n)
-  }, [pagina, estado, origen])
+  }, [pagina, estado, origen, asignadoYo, perfil])
 
   useEffect(() => {
     void cargar()

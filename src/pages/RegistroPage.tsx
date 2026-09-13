@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import {
   evaluarPassword,
@@ -25,6 +26,10 @@ const REQUISITOS: { key: keyof ReturnType<typeof evaluarPassword>; label: string
 
 export function RegistroPage() {
   const { registrar } = useAuth()
+  const [searchParams] = useSearchParams()
+  const empresaInv = searchParams.get('empresa') ?? ''
+  const rolInvRaw = searchParams.get('rol') === 'administrador' ? 'administrador' : 'operario'
+  const esInvitacion = Boolean(empresaInv)
   const [nombreEmpresa, setNombreEmpresa] = useState('')
   const [rubro, setRubro] = useState('')
   const [nombreUsuario, setNombreUsuario] = useState('')
@@ -49,7 +54,7 @@ export function RegistroPage() {
     if (enviando || bloqueo) return
     setError(null)
     setAviso(null)
-    if (!nombreEmpresa.trim()) {
+    if (!esInvitacion && !nombreEmpresa.trim()) {
       setError('El nombre de la empresa es obligatorio')
       return
     }
@@ -75,9 +80,12 @@ export function RegistroPage() {
     const result = await registrar({
       email: email.trim(),
       password,
-      nombreEmpresa: nombreEmpresa.trim(),
+      nombreEmpresa: esInvitacion ? 'Equipo' : nombreEmpresa.trim(),
       rubro: rubro.trim(),
       nombreUsuario: nombreUsuario.trim(),
+      invitacion: esInvitacion
+        ? { empresaId: empresaInv, rol: rolInvRaw }
+        : undefined,
     })
     setEnviando(false)
     if (result.error) setError(result.error)
@@ -89,7 +97,14 @@ export function RegistroPage() {
   return (
     <AuthLayout tabs>
       <h1 className="text-center text-[22px] font-bold leading-none text-[#1A2F4A]">Analítica 360</h1>
+      {esInvitacion ? (
+        <p className="mt-4 rounded-lg bg-[#EEF2F6] px-3 py-2 text-sm text-[#1A2F4A]">
+          Te invitaron a unirte al equipo como {rolInvRaw === 'administrador' ? 'Administrador' : 'Operario'}.
+        </p>
+      ) : null}
       <form className="mt-6 flex flex-col" onSubmit={onSubmit}>
+        {esInvitacion ? null : (
+          <>
         <label className="text-left text-sm font-medium text-[#4A5568]">
           Nombre de la empresa
           <span className="relative mt-1.5 block">
@@ -156,6 +171,8 @@ export function RegistroPage() {
             <option value="Otro">Otro</option>
           </select>
         </label>
+          </>
+        )}
 
         <label className="mt-4 text-left text-sm font-medium text-[#4A5568]">
           Tu nombre

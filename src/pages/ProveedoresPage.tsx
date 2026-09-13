@@ -57,7 +57,7 @@ export function ProveedoresPage() {
 
   if (!perfil) return null
 
-  const puedeEditar = perfil.usuario.rol !== 'visor'
+  const puedeEditar = true
 
   return (
     <div

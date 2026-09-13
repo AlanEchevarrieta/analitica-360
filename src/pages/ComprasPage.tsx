@@ -101,7 +101,7 @@ export function ComprasPage() {
               placeholder="Buscar por proveedor"
             />
             <div className="hidden flex-wrap gap-2 md:flex">
-              {perfil.usuario.rol !== 'visor' ? (
+              {true ? (
                 <button
                   className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
                   type="button"
@@ -229,7 +229,7 @@ export function ComprasPage() {
           entidad="compras"
         />
         ) : null}
-        {perfil.usuario.rol !== 'visor' ? <FabLink to="/compras/nueva" label="Nueva compra" /> : null}
+        {true ? <FabLink to="/compras/nueva" label="Nueva compra" /> : null}
         {importar ? (
           <ImportarComprasModal
             productos={productos}

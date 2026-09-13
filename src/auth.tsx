@@ -17,6 +17,13 @@ import { requireSupabase, supabase, supabaseConfigured } from './lib/supabase'
 import { esErrorAuth } from './lib/consulta'
 import { iniciarPeriodoPrueba, registrarAceptacionTerminos } from './lib/suscripcion'
 import { parsePermisos, PERMISOS_DUENO } from './lib/permisos'
+import { parseRol } from './lib/roles'
+import { aceptarInvitacionColaborador } from './lib/usuarios'
+import {
+  guardarInvitacionPendiente,
+  leerInvitacionPendiente,
+  limpiarInvitacionPendiente,
+} from './lib/invitacionPendiente'
 import type { Empresa, Perfil, Usuario } from './types'
 
 function userAgentActual() {
@@ -55,6 +62,7 @@ type AuthContextValue = {
     nombreEmpresa: string
     rubro: string
     nombreUsuario: string
+    invitacion?: { empresaId: string; rol: 'administrador' | 'operario' }
   }) => Promise<{ error: string | null; esperaConfirmacion: boolean }>
   completarAlta: (input: {
     nombreEmpresa: string
@@ -122,17 +130,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    const rol = parseRol(data.rol)
     const usuario: Usuario = {
       id: data.id,
       empresa_id: data.empresa_id,
       nombre: data.nombre,
       email: data.email,
-      rol: data.rol,
+      rol,
       activo: data.activo,
-      permisos: data.rol === 'dueno' ? { ...PERMISOS_DUENO } : parsePermisos(data.permisos),
+      permisos: rol === 'dueno' || rol === 'administrador' ? { ...PERMISOS_DUENO } : parsePermisos(data.permisos),
     }
     setPerfil({ usuario, empresa })
     setError(null)
+  }, [])
+
+  const intentarUnirseEquipo = useCallback(async () => {
+    const pendiente = leerInvitacionPendiente()
+    if (!pendiente) return
+    const client = requireSupabase()
+    const { data: userData } = await client.auth.getUser()
+    const userId = userData.user?.id
+    if (!userId) return
+    const { data: existente } = await client.from('usuarios').select('id').eq('id', userId).maybeSingle()
+    if (existente) {
+      limpiarInvitacionPendiente()
+      return
+    }
+    const fallo = await aceptarInvitacionColaborador(client, {
+      empresaId: pendiente.empresaId,
+      rol: pendiente.rol,
+      nombre: pendiente.nombreUsuario,
+    })
+    if (!fallo) limpiarInvitacionPendiente()
   }, [])
 
   const intentarAltaPendiente = useCallback(async () => {
@@ -176,6 +205,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setListo(true)
         return
       }
+      await intentarUnirseEquipo()
+      if (cancelado) return
       await intentarAltaPendiente()
       if (cancelado) return
       await cargarPerfil(next.user.id)
@@ -198,7 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelado = true
       sub.subscription.unsubscribe()
     }
-  }, [cargarPerfil, intentarAltaPendiente])
+  }, [cargarPerfil, intentarAltaPendiente, intentarUnirseEquipo])
 
   const ingresar = useCallback(async (email: string, password: string) => {
     const client = requireSupabase()
@@ -214,13 +245,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       nombreEmpresa: string
       rubro: string
       nombreUsuario: string
+      invitacion?: { empresaId: string; rol: 'administrador' | 'operario' }
     }) => {
       const client = requireSupabase()
-      guardarAltaPendiente({
-        nombreEmpresa: input.nombreEmpresa,
-        rubro: input.rubro,
-        nombreUsuario: input.nombreUsuario,
-      })
+      if (input.invitacion) {
+        guardarInvitacionPendiente({
+          empresaId: input.invitacion.empresaId,
+          rol: input.invitacion.rol,
+          nombreUsuario: input.nombreUsuario,
+        })
+      } else {
+        guardarAltaPendiente({
+          nombreEmpresa: input.nombreEmpresa,
+          rubro: input.rubro,
+          nombreUsuario: input.nombreUsuario,
+        })
+      }
       const { data, error: authError } = await client.auth.signUp({
         email: input.email,
         password: input.password,
@@ -232,6 +272,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           error: null,
           esperaConfirmacion: true,
         }
+      }
+
+      if (input.invitacion) {
+        const fallo = await aceptarInvitacionColaborador(client, {
+          empresaId: input.invitacion.empresaId,
+          rol: input.invitacion.rol,
+          nombre: input.nombreUsuario,
+        })
+        if (fallo) return { error: fallo, esperaConfirmacion: false }
+        limpiarInvitacionPendiente()
+        if (data.user) await cargarPerfil(data.user.id)
+        return { error: null, esperaConfirmacion: false }
       }
 
       const { error: rpcError } = await rpcRegistrarEmpresa(client, input)
@@ -259,6 +311,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const completarAlta = useCallback(
     async (input: { nombreEmpresa: string; rubro: string; nombreUsuario: string }) => {
       const client = requireSupabase()
+      const invitacion = leerInvitacionPendiente()
+      if (invitacion) {
+        const fallo = await aceptarInvitacionColaborador(client, {
+          empresaId: invitacion.empresaId,
+          rol: invitacion.rol,
+          nombre: input.nombreUsuario || invitacion.nombreUsuario,
+        })
+        if (fallo) return fallo
+        limpiarInvitacionPendiente()
+        const userId = session?.user.id
+        if (userId) await cargarPerfil(userId)
+        return null
+      }
       const { error: rpcError } = await rpcRegistrarEmpresa(client, input)
       if (rpcError && !rpcError.message.includes('YA_TIENE_EMPRESA')) {
         return 'No se pudo crear la empresa'
