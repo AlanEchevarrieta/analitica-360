@@ -17,6 +17,8 @@ export type FlujoVentas = {
   crearDesdeVenta: boolean
 }
 
+export type ModoAsignacion = 'manual' | 'round_robin' | 'todo_a_uno'
+
 export type ConfiguracionEmpresa = {
   empresaId: string
   mediosPago: MedioPagoId[]
@@ -30,6 +32,9 @@ export type ConfiguracionEmpresa = {
   remitenteDireccion: string
   remitenteTelefono: string
   remitenteEmail: string
+  modoAsignacion: ModoAsignacion
+  asignacionFijaUsuarioId: string
+  asignacionRotacionIds: string[]
 }
 
 export const MEDIOS_PAGO = [
@@ -131,6 +136,9 @@ export const CONFIG_DEFAULT: Omit<ConfiguracionEmpresa, 'empresaId'> = {
   remitenteDireccion: '',
   remitenteTelefono: '',
   remitenteEmail: '',
+  modoAsignacion: 'manual',
+  asignacionFijaUsuarioId: '',
+  asignacionRotacionIds: [],
 }
 
 function normalizarFlujo(raw: unknown): FlujoVentas {
@@ -153,6 +161,17 @@ function normalizarFlujo(raw: unknown): FlujoVentas {
   }
 }
 
+function normalizarModoAsignacion(raw: unknown): ModoAsignacion {
+  const v = String(raw ?? '')
+  if (v === 'round_robin' || v === 'todo_a_uno' || v === 'manual') return v
+  return 'manual'
+}
+
+function normalizarIds(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw.map((id) => String(id ?? '').trim()).filter(Boolean))]
+}
+
 function flujoAJson(flujo: FlujoVentas) {
   return {
     mostrar_cliente: flujo.mostrarCliente,
@@ -167,10 +186,20 @@ export async function obtenerConfiguracion(
   let conFlujo = await client
     .from('configuracion_empresa')
     .select(
-      'empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes, usa_lotes, ubicacion_venta_default, remitente_nombre, remitente_direccion, remitente_telefono, remitente_email',
+      'empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes, usa_lotes, ubicacion_venta_default, remitente_nombre, remitente_direccion, remitente_telefono, remitente_email, modo_asignacion, asignacion_fija_usuario_id, asignacion_rotacion_ids',
     )
     .eq('empresa_id', empresaId)
     .maybeSingle()
+
+  if (conFlujo.error && /modo_asignacion|asignacion_fija|asignacion_rotacion/i.test(conFlujo.error.message)) {
+    conFlujo = await client
+      .from('configuracion_empresa')
+      .select(
+        'empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes, usa_lotes, ubicacion_venta_default, remitente_nombre, remitente_direccion, remitente_telefono, remitente_email',
+      )
+      .eq('empresa_id', empresaId)
+      .maybeSingle()
+  }
 
   if (conFlujo.error && /remitente_nombre/i.test(conFlujo.error.message)) {
     conFlujo = await client
@@ -253,6 +282,11 @@ export async function obtenerConfiguracion(
       remitenteEmail: String(
         (fila as { remitente_email?: unknown }).remitente_email ?? inv?.remitente_email ?? '',
       ).trim(),
+      modoAsignacion: normalizarModoAsignacion((fila as { modo_asignacion?: unknown }).modo_asignacion),
+      asignacionFijaUsuarioId: String(
+        (fila as { asignacion_fija_usuario_id?: unknown }).asignacion_fija_usuario_id ?? '',
+      ).trim(),
+      asignacionRotacionIds: normalizarIds((fila as { asignacion_rotacion_ids?: unknown }).asignacion_rotacion_ids),
     },
     error: null,
   }
@@ -305,7 +339,9 @@ export async function guardarConfiguracion(
   if (lotes) return lotes
   const ubi = await guardarUbicacionVentaDefault(client, input)
   if (ubi) return ubi
-  return guardarRemitente(client, input)
+  const remitente = await guardarRemitente(client, input)
+  if (remitente) return remitente
+  return guardarAsignacionPedidos(client, input)
 }
 
 async function guardarUsaVariantes(client: SupabaseClient, input: ConfiguracionEmpresa) {
@@ -399,6 +435,30 @@ async function guardarRemitente(client: SupabaseClient, input: ConfiguracionEmpr
   const t = error.message.toLowerCase()
   if (t.includes('remitente_') || t.includes('schema cache') || t.includes('does not exist')) {
     return null
+  }
+  return error.message
+}
+
+async function guardarAsignacionPedidos(client: SupabaseClient, input: ConfiguracionEmpresa) {
+  const { error } = await client
+    .from('configuracion_empresa')
+    .update({
+      modo_asignacion: input.modoAsignacion,
+      asignacion_fija_usuario_id: input.asignacionFijaUsuarioId.trim() || null,
+      asignacion_rotacion_ids: input.asignacionRotacionIds,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('empresa_id', input.empresaId)
+  if (!error) return null
+  const t = error.message.toLowerCase()
+  if (
+    t.includes('modo_asignacion') ||
+    t.includes('asignacion_') ||
+    t.includes('schema cache') ||
+    t.includes('does not exist')
+  ) {
+    if (input.modoAsignacion === 'manual' && !input.asignacionFijaUsuarioId) return null
+    return 'Falta la asignación automática. Pegá TODO supabase/055_asignacion_pedidos.sql (rol postgres), dale Run y recargá.'
   }
   return error.message
 }

@@ -12,6 +12,7 @@ import {
   obtenerConfiguracion,
   type FlujoVentas,
   type MedioPagoId,
+  type ModoAsignacion,
   type MostrarClienteVenta,
   type TasaCuota,
 } from '../lib/configuracion'
@@ -179,6 +180,9 @@ export function ConfiguracionPage() {
   const [remitenteDireccion, setRemitenteDireccion] = useState('')
   const [remitenteTelefono, setRemitenteTelefono] = useState('')
   const [remitenteEmail, setRemitenteEmail] = useState('')
+  const [modoAsignacion, setModoAsignacion] = useState<ModoAsignacion>('manual')
+  const [asignacionFija, setAsignacionFija] = useState('')
+  const [rotacionIds, setRotacionIds] = useState<string[]>([])
 
   async function recargarCategorias() {
     const seed = await sembrarCategoriasDefault(requireSupabase())
@@ -235,6 +239,9 @@ export function ConfiguracionPage() {
       setRemitenteDireccion(config.remitenteDireccion)
       setRemitenteTelefono(config.remitenteTelefono)
       setRemitenteEmail(config.remitenteEmail)
+      setModoAsignacion(config.modoAsignacion)
+      setAsignacionFija(config.asignacionFijaUsuarioId)
+      setRotacionIds(config.asignacionRotacionIds)
       if (config.usaVariantes) {
         const atr = await listarAtributos(requireSupabase())
         if (!atr.error) setAtributos(atr.filas)
@@ -297,6 +304,10 @@ export function ConfiguracionPage() {
         personalizada: Boolean(fila.personalizada),
       }
     })
+    if (modoAsignacion === 'todo_a_uno' && !asignacionFija) {
+      setError('Elegí a quién asignar todos los pedidos')
+      return
+    }
     setGuardando(true)
     const fallo = await guardarConfiguracion(requireSupabase(), {
       empresaId: perfil.empresa.id,
@@ -311,11 +322,14 @@ export function ConfiguracionPage() {
       remitenteDireccion,
       remitenteTelefono,
       remitenteEmail,
+      modoAsignacion,
+      asignacionFijaUsuarioId: asignacionFija,
+      asignacionRotacionIds: rotacionIds,
     })
     setGuardando(false)
     if (fallo) {
       setError(
-        fallo.includes('flujo de ventas')
+        fallo.includes('flujo de ventas') || fallo.includes('asignación automática')
           ? fallo
           : 'No se pudo guardar. Corré supabase/009_configuracion_empresa.sql en el SQL Editor.',
       )
@@ -1044,6 +1058,117 @@ export function ConfiguracionPage() {
                       </tbody>
                     </table>
                   </div>
+
+                  <div className="mt-8 border-t border-[rgba(99,102,241,0.15)] pt-5">
+                    <p className="text-sm font-medium text-[#F1F5F9]">Modo de asignación de pedidos</p>
+                    <div className="mt-3 grid gap-2">
+                      {(
+                        [
+                          {
+                            id: 'manual' as const,
+                            icono: '⚪',
+                            titulo: 'Manual',
+                            nota: 'El dueño asigna cada pedido',
+                          },
+                          {
+                            id: 'round_robin' as const,
+                            icono: '🔄',
+                            titulo: 'Round Robin',
+                            nota: 'Rota entre colaboradores activos',
+                          },
+                          {
+                            id: 'todo_a_uno' as const,
+                            icono: '👤',
+                            titulo: 'Todo a uno',
+                            nota: 'Siempre al mismo colaborador',
+                          },
+                        ] as const
+                      ).map((op) => (
+                        <label
+                          key={op.id}
+                          className="flex cursor-pointer items-start gap-3 rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-3"
+                        >
+                          <input
+                            className="mt-1"
+                            type="radio"
+                            name="modo-asignacion"
+                            checked={modoAsignacion === op.id}
+                            onChange={() => {
+                              setOk(null)
+                              setModoAsignacion(op.id)
+                            }}
+                          />
+                          <span>
+                            <span className="block text-sm font-medium text-[#F1F5F9]">
+                              {op.icono} {op.titulo}
+                            </span>
+                            <span className="mt-0.5 block text-xs text-[#94A3B8]">{op.nota}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+
+                    {modoAsignacion === 'todo_a_uno' ? (
+                      <label className="mt-4 block text-sm font-medium text-[#94A3B8]">
+                        Asignar siempre a
+                        <select
+                          className={`${inputClass} mt-1`}
+                          value={asignacionFija}
+                          onChange={(ev) => {
+                            setOk(null)
+                            setAsignacionFija(ev.target.value)
+                          }}
+                        >
+                          <option value="">Elegí colaborador</option>
+                          {usuarios
+                            .filter((u) => u.activo && !u.esInvitacion)
+                            .map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.nombre || u.email} · {etiquetaRol(u.rol)}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                    ) : null}
+
+                    {modoAsignacion === 'round_robin' ? (
+                      <ul className="mt-4 space-y-2">
+                        {usuarios
+                          .filter((u) => u.activo && !u.esInvitacion)
+                          .map((u) => {
+                            const on =
+                              rotacionIds.length === 0 ? true : rotacionIds.includes(u.id)
+                            return (
+                              <li
+                                key={u.id}
+                                className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-2"
+                              >
+                                <span className="text-sm text-[#F1F5F9]">
+                                  {u.nombre || u.email}
+                                  <span className="mt-0.5 block text-xs text-[#94A3B8]">
+                                    {etiquetaRol(u.rol)}
+                                  </span>
+                                </span>
+                                <Toggle
+                                  on={on}
+                                  onChange={() => {
+                                    setOk(null)
+                                    const activos = usuarios
+                                      .filter((x) => x.activo && !x.esInvitacion)
+                                      .map((x) => x.id)
+                                    const actual = rotacionIds.length === 0 ? activos : rotacionIds
+                                    const next = actual.includes(u.id)
+                                      ? actual.filter((id) => id !== u.id)
+                                      : [...actual, u.id]
+                                    setRotacionIds(next)
+                                  }}
+                                />
+                              </li>
+                            )
+                          })}
+                      </ul>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
 
@@ -1381,7 +1506,7 @@ export function ConfiguracionPage() {
                 <p className="mt-6 rounded-xl bg-green-950/50 px-3 py-2 text-sm text-green-200">{ok}</p>
               ) : null}
 
-              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' || tab === 'inventario' || tab === 'variantes' || tab === 'lotes' || tab === 'ubicaciones' || tab === 'remitente' ? (
+              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' || tab === 'inventario' || tab === 'variantes' || tab === 'lotes' || tab === 'ubicaciones' || tab === 'remitente' || tab === 'usuarios' ? (
                 <button
                   className={`${btnPrimary} mt-6 w-full`}
                   type="button"

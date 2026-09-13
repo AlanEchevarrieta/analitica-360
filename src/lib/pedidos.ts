@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { obtenerConfiguracion } from './configuracion'
 import { formatoARS } from './productos'
+import { listarColaboradoresActivos } from './usuarios'
 import { etiquetaCombo } from './variantes'
 
 export type EstadoPedido =
@@ -371,6 +373,48 @@ export async function contarPedidosNuevos(client: SupabaseClient) {
   return count ?? 0
 }
 
+export async function resolverAsignacionPedido(
+  client: SupabaseClient,
+  empresaId: string,
+): Promise<string | null> {
+  const { config } = await obtenerConfiguracion(client, empresaId)
+  if (config.modoAsignacion === 'manual') return null
+  if (config.modoAsignacion === 'todo_a_uno') {
+    return config.asignacionFijaUsuarioId || null
+  }
+  const colab = await listarColaboradoresActivos(client)
+  const activos = colab.filas.map((u) => u.id)
+  const pool =
+    config.asignacionRotacionIds.length > 0
+      ? activos.filter((id) => config.asignacionRotacionIds.includes(id))
+      : activos
+  if (pool.length === 0) return null
+  const desde = new Date()
+  desde.setDate(desde.getDate() - 7)
+  const { data } = await client
+    .from('pedidos')
+    .select('asignado_a')
+    .in('asignado_a', pool)
+    .gte('created_at', desde.toISOString())
+    .is('deleted_at', null)
+  const conteo = new Map<string, number>(pool.map((id) => [id, 0]))
+  for (const row of (data ?? []) as { asignado_a?: string | null }[]) {
+    const id = row.asignado_a
+    if (!id || !conteo.has(id)) continue
+    conteo.set(id, (conteo.get(id) ?? 0) + 1)
+  }
+  let elegido = pool[0]
+  let min = conteo.get(elegido) ?? 0
+  for (const id of pool) {
+    const n = conteo.get(id) ?? 0
+    if (n < min || (n === min && id.localeCompare(elegido) < 0)) {
+      min = n
+      elegido = id
+    }
+  }
+  return elegido
+}
+
 export async function crearPedido(
   client: SupabaseClient,
   input: {
@@ -396,6 +440,7 @@ export async function crearPedido(
 ): Promise<{ id: string | null; numeroPedido: string | null; error: string | null }> {
   if (input.items.length === 0) return { id: null, numeroPedido: null, error: 'Agregá al menos un producto' }
   const total = input.items.reduce((acc, i) => acc + i.cantidad * i.precioUnitario, 0)
+  const asignadoA = await resolverAsignacionPedido(client, input.empresaId)
   const { data, error } = await client
     .from('pedidos')
     .insert({
@@ -413,6 +458,7 @@ export async function crearPedido(
       metodo_envio: input.metodoEnvio.trim() || null,
       notas: input.notas.trim() || null,
       total,
+      asignado_a: asignadoA,
     })
     .select('id, numero_pedido')
     .single()
