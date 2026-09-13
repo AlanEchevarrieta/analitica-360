@@ -16,7 +16,7 @@ import {
 import { requireSupabase, supabase, supabaseConfigured } from './lib/supabase'
 import { esErrorAuth } from './lib/consulta'
 import { iniciarPeriodoPrueba, registrarAceptacionTerminos } from './lib/suscripcion'
-import { parsePermisos, PERMISOS_DUENO } from './lib/permisos'
+import { leerAccesoColaborador } from './lib/permisos'
 import { parseRol } from './lib/roles'
 import { aceptarInvitacionColaborador } from './lib/usuarios'
 import {
@@ -62,7 +62,7 @@ type AuthContextValue = {
     nombreEmpresa: string
     rubro: string
     nombreUsuario: string
-    invitacion?: { empresaId: string; rol: 'administrador' | 'operario' }
+    invitacion?: { empresaId: string }
   }) => Promise<{ error: string | null; esperaConfirmacion: boolean }>
   completarAlta: (input: {
     nombreEmpresa: string
@@ -131,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const rol = parseRol(data.rol)
+    const acceso = await leerAccesoColaborador(client, data.id, rol)
     const usuario: Usuario = {
       id: data.id,
       empresa_id: data.empresa_id,
@@ -138,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: data.email,
       rol,
       activo: data.activo,
-      permisos: rol === 'dueno' || rol === 'administrador' ? { ...PERMISOS_DUENO } : parsePermisos(data.permisos),
+      acceso,
     }
     setPerfil({ usuario, empresa })
     setError(null)
@@ -158,7 +159,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const fallo = await aceptarInvitacionColaborador(client, {
       empresaId: pendiente.empresaId,
-      rol: pendiente.rol,
       nombre: pendiente.nombreUsuario,
     })
     if (!fallo) limpiarInvitacionPendiente()
@@ -231,6 +231,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [cargarPerfil, intentarAltaPendiente, intentarUnirseEquipo])
 
+  useEffect(() => {
+    if (!supabase || !session?.user.id) return
+    const client = supabase
+    const usuarioId = session.user.id
+    const canal = client
+      .channel(`permisos-${usuarioId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'colaborador_permisos', filter: `usuario_id=eq.${usuarioId}` },
+        () => {
+          void cargarPerfil(usuarioId)
+        },
+      )
+      .subscribe()
+    return () => {
+      void client.removeChannel(canal)
+    }
+  }, [cargarPerfil, session?.user.id])
+
   const ingresar = useCallback(async (email: string, password: string) => {
     const client = requireSupabase()
     const { error: authError } = await client.auth.signInWithPassword({ email, password })
@@ -245,13 +264,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       nombreEmpresa: string
       rubro: string
       nombreUsuario: string
-      invitacion?: { empresaId: string; rol: 'administrador' | 'operario' }
+      invitacion?: { empresaId: string }
     }) => {
       const client = requireSupabase()
       if (input.invitacion) {
         guardarInvitacionPendiente({
           empresaId: input.invitacion.empresaId,
-          rol: input.invitacion.rol,
           nombreUsuario: input.nombreUsuario,
         })
       } else {
@@ -277,7 +295,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (input.invitacion) {
         const fallo = await aceptarInvitacionColaborador(client, {
           empresaId: input.invitacion.empresaId,
-          rol: input.invitacion.rol,
           nombre: input.nombreUsuario,
         })
         if (fallo) return { error: fallo, esperaConfirmacion: false }
@@ -315,7 +332,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (invitacion) {
         const fallo = await aceptarInvitacionColaborador(client, {
           empresaId: invitacion.empresaId,
-          rol: invitacion.rol,
           nombre: input.nombreUsuario || invitacion.nombreUsuario,
         })
         if (fallo) return fallo

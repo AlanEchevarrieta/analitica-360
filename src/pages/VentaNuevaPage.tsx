@@ -18,6 +18,8 @@ import { crearCliente, listarClientes, type ClienteFila } from '../lib/clientes'
 import { EscanerCodigoBarras, dispararPedidoCamara } from '../components/EscanerCodigoBarras'
 import { formatoARS, esBusquedaCodigoBarras, listarProductos, type ProductoFila } from '../lib/productos'
 import { mostrarToast } from '../lib/consulta'
+import { AccesoDenegado } from '../components/AccesoDenegado'
+import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
 import { calcularTotalesCredito, confirmarVenta } from '../lib/ventas'
 import {
@@ -449,6 +451,7 @@ export function VentaNuevaPage() {
   }
 
   if (!perfil) return null
+  if (!tienePermiso(perfil, 'registrar_ventas')) return <AccesoDenegado />
 
   return (
     <div

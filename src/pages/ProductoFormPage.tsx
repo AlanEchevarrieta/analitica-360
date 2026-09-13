@@ -279,7 +279,7 @@ export function ProductoFormPage() {
   }
 
   if (!perfil) return null
-  if (!tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'editar_productos')) {
+  if (!tienePermiso(perfil, 'editar_productos')) {
     return <Navigate to="/productos" replace />
   }
 
@@ -402,6 +402,7 @@ export function ProductoFormPage() {
                   como fallback si la variante no tiene precio propio.
                 </p>
               ) : null}
+              {tienePermiso(perfil, 'ver_costos') ? (
               <label className="mt-4 text-sm font-medium text-[#4A5568]">
                 {usaVariantes && costoDesdeVariantes != null
                   ? 'Calculado desde variantes'
@@ -420,6 +421,7 @@ export function ProductoFormPage() {
                   onChange={(ev) => setCosto(ev.target.value)}
                 />
               </label>
+              ) : null}
               {usaVariantes && costoDesdeVariantes != null ? (
                 <p className="mt-1.5 text-xs text-[#4A5568]">
                   Promedio ponderado de los costos de las variantes activas.

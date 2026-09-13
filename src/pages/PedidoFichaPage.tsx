@@ -33,6 +33,7 @@ import {
   type PedidoItemFicha,
 } from '../lib/pedidos'
 import { formatoARS } from '../lib/productos'
+import { tienePermiso } from '../lib/permisos'
 import { listarColaboradoresActivos } from '../lib/usuarios'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
@@ -326,6 +327,7 @@ export function PedidoFichaPage() {
   }
 
   const pickingBloqueado =
+    !tienePermiso(perfil, 'hacer_picking') ||
     ficha?.estado === 'despachado' ||
     ficha?.estado === 'con_transportista' ||
     ficha?.estado === 'entregado' ||

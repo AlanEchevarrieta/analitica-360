@@ -22,6 +22,7 @@ import {
 import { COLOR_ETIQUETA, listarClientes, type ClienteFila } from '../lib/clientes'
 import { MSG_ERROR_RED, mensajeCargaTabla } from '../lib/consulta'
 import { formatoARS } from '../lib/productos'
+import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
 
@@ -86,7 +87,7 @@ export function ClientesPage() {
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre o teléfono" />
-          {true ? (
+          {tienePermiso(perfil, 'gestionar_clientes') ? (
             <Link className={btnPrimaryDesk} to="/clientes/nuevo">
               Nuevo cliente
             </Link>
@@ -149,6 +150,7 @@ export function ClientesPage() {
                     </div>
                   </td>
                   <td className="px-3 py-3">
+                    {tienePermiso(perfil, 'gestionar_clientes') ? (
                     <Link
                       className="inline-flex rounded-lg p-1.5 text-[#94A3B8] hover:text-[#6366F1]"
                       to={`/clientes/${fila.id}`}
@@ -158,6 +160,7 @@ export function ClientesPage() {
                     >
                       ✏️
                     </Link>
+                    ) : null}
                   </td>
                 </Tr>
               ))}
@@ -196,7 +199,7 @@ export function ClientesPage() {
             )
           ) : null}
         </TableCard>
-        {true ? <FabLink to="/clientes/nuevo" label="Nuevo cliente" /> : null}
+        {tienePermiso(perfil, 'gestionar_clientes') ? <FabLink to="/clientes/nuevo" label="Nuevo cliente" /> : null}
       </div>
     </div>
   )

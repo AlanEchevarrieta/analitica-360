@@ -4,7 +4,7 @@ import { ToastHost } from './components/ToastHost'
 import { AuthProvider, useAuth } from './auth'
 import { ThemeProvider } from './lib/tema'
 import { supabase } from './lib/supabase'
-import { RequireAuth, RequireCompletarAlta, RequireConfiguracion, RequireGuest, RequireNotOperario } from './routes'
+import { GateModulos, RequireAuth, RequireCompletarAlta, RequireGuest } from './routes'
 
 function loadComponent(importFn: () => Promise<{ default: ComponentType }>) {
   return lazy(() =>
@@ -225,6 +225,7 @@ function AppRoutes() {
         <Route path="/completar-alta" element={<CompletarAltaPage />} />
       </Route>
       <Route element={<RequireAuth />}>
+        <Route element={<GateModulos />}>
         <Route path="/inicio" element={<HomePage />} />
         <Route path="/ventas" element={<VentasPage />} />
         <Route path="/ventas/nueva" element={<VentaNuevaPage />} />
@@ -232,28 +233,25 @@ function AppRoutes() {
         <Route path="/pedidos/nueva" element={<PedidoNuevaPage />} />
         <Route path="/pedidos/:id" element={<PedidoFichaPage />} />
         <Route path="/admin" element={<AdminPage />} />
-        <Route element={<RequireNotOperario />}>
-          <Route path="/productos" element={<ProductosPage />} />
-          <Route path="/productos/nuevo" element={<ProductoFormPage />} />
-          <Route path="/productos/:id" element={<ProductoFormPage />} />
-          <Route path="/inventario" element={<InventarioPage />} />
-          <Route path="/soporte" element={<SoportePage />} />
-          <Route path="/soporte/nuevo" element={<SoporteNuevoPage />} />
-          <Route path="/soporte/:id" element={<SoporteFichaPage />} />
-          <Route path="/compras" element={<ComprasPage />} />
-          <Route path="/compras/nueva" element={<CompraNuevaPage />} />
-          <Route path="/proveedores" element={<ProveedoresPage />} />
-          <Route path="/proveedores/nuevo" element={<ProveedorFormPage />} />
-          <Route path="/proveedores/:id/editar" element={<ProveedorFormPage />} />
-          <Route path="/proveedores/:id" element={<ProveedorFichaPage />} />
-          <Route path="/clientes" element={<ClientesPage />} />
-          <Route path="/clientes/nuevo" element={<ClienteFormPage />} />
-          <Route path="/clientes/:id" element={<ClienteFichaPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/insights" element={<InsightsPage />} />
-        </Route>
-        <Route element={<RequireConfiguracion />}>
-          <Route path="/configuracion" element={<ConfiguracionPage />} />
+        <Route path="/productos" element={<ProductosPage />} />
+        <Route path="/productos/nuevo" element={<ProductoFormPage />} />
+        <Route path="/productos/:id" element={<ProductoFormPage />} />
+        <Route path="/inventario" element={<InventarioPage />} />
+        <Route path="/soporte" element={<SoportePage />} />
+        <Route path="/soporte/nuevo" element={<SoporteNuevoPage />} />
+        <Route path="/soporte/:id" element={<SoporteFichaPage />} />
+        <Route path="/compras" element={<ComprasPage />} />
+        <Route path="/compras/nueva" element={<CompraNuevaPage />} />
+        <Route path="/proveedores" element={<ProveedoresPage />} />
+        <Route path="/proveedores/nuevo" element={<ProveedorFormPage />} />
+        <Route path="/proveedores/:id/editar" element={<ProveedorFormPage />} />
+        <Route path="/proveedores/:id" element={<ProveedorFichaPage />} />
+        <Route path="/clientes" element={<ClientesPage />} />
+        <Route path="/clientes/nuevo" element={<ClienteFormPage />} />
+        <Route path="/clientes/:id" element={<ClienteFichaPage />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/insights" element={<InsightsPage />} />
+        <Route path="/configuracion" element={<ConfiguracionPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

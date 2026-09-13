@@ -2,7 +2,6 @@ const KEY = 'analitica.invitacion-equipo'
 
 export type InvitacionPendiente = {
   empresaId: string
-  rol: 'administrador' | 'operario'
   nombreUsuario: string
 }
 

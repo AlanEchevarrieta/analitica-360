@@ -18,13 +18,20 @@ import {
 } from '../lib/configuracion'
 import { requireSupabase } from '../lib/supabase'
 import {
-  actualizarRolUsuario,
   desactivarUsuario,
+  guardarPermisosColaborador,
   invitarColaborador,
   listarUsuariosEmpresa,
   type UsuarioEmpresa,
 } from '../lib/usuarios'
-import { etiquetaRol, linkInvitacionColaborador, puedeConfigurar, puedeFacturacion, textoLinkInvitacion, type RolAsignable } from '../lib/roles'
+import { esDueno, linkInvitacionColaborador, textoLinkInvitacion } from '../lib/roles'
+import { PermisosChecklist } from '../components/PermisosChecklist'
+import {
+  accesoSoloPedidos,
+  detectarPreset,
+  type AccesoColaborador,
+  type PresetPermiso,
+} from '../lib/permisos'
 import { etiquetaEstadoSuscripcion, etiquetaPlan } from '../lib/planes'
 import { diasRestantes, leerSuscripcionActiva, type SuscripcionActiva } from '../lib/suscripcion'
 import { theme } from '../theme'
@@ -81,7 +88,7 @@ const MOSAICO: {
   { id: 'categorias', icono: '🏷️', titulo: 'Categorías', subtitulo: 'Organizá tus productos' },
   { id: 'variantes', icono: '🎨', titulo: 'Variantes', subtitulo: 'Color, talle, material y más' },
   { id: 'lotes', icono: '📅', titulo: 'Lotes y Vencimientos', subtitulo: 'Stock por lote y fechas de vencimiento' },
-  { id: 'usuarios', icono: '👥', titulo: 'Equipo — Usuarios y colaboradores', subtitulo: 'Invitá al equipo y asigná roles' },
+  { id: 'usuarios', icono: '👥', titulo: 'Equipo — Usuarios y colaboradores', subtitulo: 'Invitá al equipo y asigná permisos' },
   { id: 'flujo', icono: '💸', titulo: 'Flujo de ventas', subtitulo: 'Configurá el proceso de venta' },
   { id: 'inventario', icono: '📦', titulo: 'Inventario', subtitulo: 'Umbral de stock bajo y alertas' },
   { id: 'ubicaciones', icono: '📍', titulo: 'Ubicaciones', subtitulo: 'Depósitos, locales y stands' },
@@ -155,11 +162,14 @@ export function ConfiguracionPage() {
   const [guardando, setGuardando] = useState(false)
   const [invitar, setInvitar] = useState(false)
   const [emailInv, setEmailInv] = useState('')
-  const [rolInv, setRolInv] = useState<RolAsignable>('operario')
+  const [accesoInv, setAccesoInv] = useState<AccesoColaborador>(() => accesoSoloPedidos())
+  const [presetInv, setPresetInv] = useState<PresetPermiso>('pedidos')
   const [enviandoInv, setEnviandoInv] = useState(false)
   const [linkInv, setLinkInv] = useState<{ url: string; texto: string } | null>(null)
   const [editUser, setEditUser] = useState<UsuarioEmpresa | null>(null)
-  const [rolEdit, setRolEdit] = useState<RolAsignable>('operario')
+  const [accesoEdit, setAccesoEdit] = useState<AccesoColaborador>(() => accesoSoloPedidos())
+  const [presetEdit, setPresetEdit] = useState<PresetPermiso>('personalizado')
+  const [guardandoPerm, setGuardandoPerm] = useState(false)
   const [suscripcion, setSuscripcion] = useState<SuscripcionActiva | null>(null)
   const [modalPlanes, setModalPlanes] = useState(false)
   const [categorias, setCategorias] = useState<CategoriaFila[]>([])
@@ -222,7 +232,7 @@ export function ConfiguracionPage() {
   }
 
   useEffect(() => {
-    if (!perfil || !puedeConfigurar(perfil.usuario.rol)) return
+    if (!perfil || !esDueno(perfil.usuario.rol)) return
     void (async () => {
       const { config, error: loadError } = await obtenerConfiguracion(
         requireSupabase(),
@@ -265,8 +275,8 @@ export function ConfiguracionPage() {
   }, [perfil, tab])
 
   if (!perfil) return null
-  if (!puedeConfigurar(perfil.usuario.rol)) return <Navigate to="/inicio" replace />
-  const mosaicoVisible = MOSAICO.filter((c) => c.id !== 'plan' || puedeFacturacion(perfil.usuario.rol))
+  if (!esDueno(perfil.usuario.rol)) return <Navigate to="/inicio" replace />
+  const mosaicoVisible = MOSAICO.filter((c) => c.id !== 'plan' || esDueno(perfil.usuario.rol))
 
   const creditoActivo = medios.includes('credito')
 
@@ -412,15 +422,17 @@ export function ConfiguracionPage() {
     await cargarUsuarios()
   }
 
-  async function onGuardarRol() {
+  async function onGuardarPermisos() {
     if (!editUser) return
     setError(null)
-    const fallo = await actualizarRolUsuario(requireSupabase(), editUser, rolEdit)
+    setGuardandoPerm(true)
+    const fallo = await guardarPermisosColaborador(requireSupabase(), editUser, accesoEdit)
+    setGuardandoPerm(false)
     if (fallo) {
       setError(fallo)
       return
     }
-    setOk('Rol actualizado')
+    setOk('Permisos actualizados')
     setEditUser(null)
     await cargarUsuarios()
   }
@@ -436,24 +448,22 @@ export function ConfiguracionPage() {
     setEnviandoInv(true)
     const fallo = await invitarColaborador(requireSupabase(), {
       email: emailInv.trim(),
-      rol: rolInv,
+      acceso: accesoInv,
     })
     setEnviandoInv(false)
     if (fallo) {
       setError(fallo)
       return
     }
-    const rolAsignado = rolInv
-    setOk(
-      `Invitación enviada a ${emailInv.trim()} — cuando se registre tendrá acceso como ${etiquetaRol(rolAsignado)}`,
-    )
+    setOk(`Invitación enviada a ${emailInv.trim()}`)
     setLinkInv({
-      url: linkInvitacionColaborador(perfil.empresa.id, rolAsignado),
-      texto: textoLinkInvitacion(perfil.empresa.id, rolAsignado),
+      url: linkInvitacionColaborador(perfil.empresa.id),
+      texto: textoLinkInvitacion(perfil.empresa.id),
     })
     setInvitar(false)
     setEmailInv('')
-    setRolInv('operario')
+    setAccesoInv(accesoSoloPedidos())
+    setPresetInv('pedidos')
     await cargarUsuarios()
   }
 
@@ -950,7 +960,13 @@ export function ConfiguracionPage() {
                       className="h-9 rounded-lg bg-[#6366F1] px-3 text-xs font-semibold text-white hover:bg-[#4F46E5]"
                       type="button"
                       onClick={() => {
-                        setInvitar((v) => !v)
+                        setInvitar((v) => {
+                          if (!v) {
+                            setAccesoInv(accesoSoloPedidos())
+                            setPresetInv('pedidos')
+                          }
+                          return !v
+                        })
                         setError(null)
                         setOk(null)
                       }}
@@ -970,34 +986,19 @@ export function ConfiguracionPage() {
                           onChange={(ev) => setEmailInv(ev.target.value)}
                         />
                       </label>
-                      <p className="text-sm font-medium text-[#94A3B8]">Rol asignado</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {(['administrador', 'operario'] as const).map((rol) => (
-                          <button
-                            key={rol}
-                            type="button"
-                            className={`rounded-md border px-3 py-2 text-sm ${
-                              rolInv === rol
-                                ? 'border-[#6366F1] bg-[rgba(99,102,241,0.2)] font-semibold text-[#F1F5F9]'
-                                : 'border-[rgba(99,102,241,0.15)] text-[#94A3B8]'
-                            }`}
-                            onClick={() => setRolInv(rol)}
-                          >
-                            {etiquetaRol(rol)}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-xs text-[#94A3B8]">
-                        Dueño: acceso total (no se puede eliminar). Administrador: todo excepto facturación.
-                        Operario: pedidos, ventas y picking.
-                      </p>
+                      <PermisosChecklist
+                        acceso={accesoInv}
+                        onChange={setAccesoInv}
+                        preset={presetInv}
+                        onPreset={setPresetInv}
+                      />
                       <button
                         className="h-10 w-full rounded-lg bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
                         type="button"
                         disabled={enviandoInv}
                         onClick={() => void onInvitarColaborador()}
                       >
-                        {enviandoInv ? 'ENVIANDO…' : 'Enviar invitación'}
+                        {enviandoInv ? 'ENVIANDO…' : 'Invitar'}
                       </button>
                     </div>
                   ) : null}
@@ -1008,7 +1009,6 @@ export function ConfiguracionPage() {
                         <tr className="text-[11px] uppercase tracking-wide text-[#94A3B8]">
                           <th className="py-2 pr-3">Nombre</th>
                           <th className="py-2 pr-3">Email</th>
-                          <th className="py-2 pr-3">Rol</th>
                           <th className="py-2 pr-3">Estado</th>
                           <th className="py-2">Acciones</th>
                         </tr>
@@ -1018,7 +1018,6 @@ export function ConfiguracionPage() {
                           <tr key={u.id} className="border-t border-[rgba(99,102,241,0.15)]">
                             <td className="py-2.5 pr-3 font-medium text-[#F1F5F9]">{u.nombre}</td>
                             <td className="py-2.5 pr-3 text-[#CBD5E1]">{u.email}</td>
-                            <td className="py-2.5 pr-3 text-[#CBD5E1]">{etiquetaRol(u.rol)}</td>
                             <td className="py-2.5 pr-3 text-[#CBD5E1]">
                               {u.invitacionPendiente || u.esInvitacion
                                 ? 'Invitación pendiente'
@@ -1028,7 +1027,7 @@ export function ConfiguracionPage() {
                             </td>
                             <td className="py-2.5">
                               {u.rol === 'dueno' ? (
-                                <span className="text-xs text-[#94A3B8]">—</span>
+                                <span className="text-xs text-[#94A3B8]">Acceso total</span>
                               ) : (
                                 <div className="flex flex-wrap gap-2">
                                   <button
@@ -1036,10 +1035,11 @@ export function ConfiguracionPage() {
                                     type="button"
                                     onClick={() => {
                                       setEditUser(u)
-                                      setRolEdit(u.rol === 'administrador' ? 'administrador' : 'operario')
+                                      setAccesoEdit(u.acceso)
+                                      setPresetEdit(detectarPreset(u.acceso))
                                     }}
                                   >
-                                    Editar
+                                    Editar permisos
                                   </button>
                                   {u.activo || u.esInvitacion ? (
                                     <button
@@ -1124,7 +1124,7 @@ export function ConfiguracionPage() {
                             .filter((u) => u.activo && !u.esInvitacion)
                             .map((u) => (
                               <option key={u.id} value={u.id}>
-                                {u.nombre || u.email} · {etiquetaRol(u.rol)}
+                                {u.nombre || u.email}
                               </option>
                             ))}
                         </select>
@@ -1145,9 +1145,6 @@ export function ConfiguracionPage() {
                               >
                                 <span className="text-sm text-[#F1F5F9]">
                                   {u.nombre || u.email}
-                                  <span className="mt-0.5 block text-xs text-[#94A3B8]">
-                                    {etiquetaRol(u.rol)}
-                                  </span>
                                 </span>
                                 <Toggle
                                   on={on}
@@ -1461,7 +1458,7 @@ export function ConfiguracionPage() {
                 </div>
               ) : null}
 
-              {tab === 'plan' && puedeFacturacion(perfil.usuario.rol) ? (
+              {tab === 'plan' && esDueno(perfil.usuario.rol) ? (
                 <div className="mt-6 space-y-3 text-sm">
                   <div className="rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-3">
                     <p className="text-xs font-medium text-[#94A3B8]">Plan actual</p>
@@ -1559,26 +1556,31 @@ export function ConfiguracionPage() {
       ) : null}
       {editUser ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 md:items-center">
-          <div className="w-full max-w-md rounded-lg bg-white p-5 text-[#1A2F4A] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
-            <h3 className="text-lg font-bold">Editar colaborador</h3>
-            <p className="mt-1 text-sm text-[#4A5568]">{editUser.email}</p>
-            <label className="mt-3 block text-sm font-medium">
-              Rol
-              <select
-                className="mt-1 h-11 w-full rounded-lg border border-[#E2E8F0] px-3"
-                value={rolEdit}
-                onChange={(ev) => setRolEdit(ev.target.value as RolAsignable)}
-              >
-                <option value="administrador">Administrador</option>
-                <option value="operario">Operario</option>
-              </select>
-            </label>
+          <div
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg p-5 shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+            style={{ background: '#1A2F4A' }}
+          >
+            <h3 className="text-lg font-bold text-[#F1F5F9]">Editar permisos</h3>
+            <p className="mt-1 text-sm text-[#94A3B8]">{editUser.email}</p>
+            <div className="mt-4">
+              <PermisosChecklist
+                acceso={accesoEdit}
+                onChange={setAccesoEdit}
+                preset={presetEdit}
+                onPreset={setPresetEdit}
+              />
+            </div>
             <div className="mt-4 flex gap-2">
-              <button className={btnPrimary} type="button" onClick={() => void onGuardarRol()}>
-                Guardar
+              <button
+                className={btnPrimary}
+                type="button"
+                disabled={guardandoPerm}
+                onClick={() => void onGuardarPermisos()}
+              >
+                {guardandoPerm ? 'GUARDANDO…' : 'Guardar'}
               </button>
               <button
-                className="h-11 rounded-lg border border-[#E2E8F0] px-4 text-sm font-semibold text-[#4A5568]"
+                className="h-11 rounded-lg border border-[rgba(99,102,241,0.35)] px-4 text-sm font-semibold text-[#A5B4FC]"
                 type="button"
                 onClick={() => setEditUser(null)}
               >

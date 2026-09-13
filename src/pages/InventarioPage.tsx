@@ -178,7 +178,7 @@ export function InventarioPage() {
 
   if (!perfil) return null
 
-  const puedeMover = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'ajustar_stock')
+  const puedeMover = tienePermiso(perfil, 'ajustar_stock')
   const mostrarUbicaciones = ubicaciones.length >= 2
   const columnasCasaStand = mostrarUbicaciones && esCasaStand(ubicaciones)
   const columnasDinamicas = mostrarUbicaciones && !columnasCasaStand

@@ -9,6 +9,8 @@ import {
   crearCliente,
   cumpleanosAFecha,
 } from '../lib/clientes'
+import { AccesoDenegado } from '../components/AccesoDenegado'
+import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
 
@@ -66,6 +68,7 @@ export function ClienteFormPage() {
   }
 
   if (!perfil) return null
+  if (!tienePermiso(perfil, 'gestionar_clientes')) return <AccesoDenegado />
 
   return (
     <div

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { tienePermiso } from '../lib/permisos'
 import { AnularCompraModal } from '../components/AnularCompraModal'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
@@ -101,7 +102,7 @@ export function ComprasPage() {
               placeholder="Buscar por proveedor"
             />
             <div className="hidden flex-wrap gap-2 md:flex">
-              {true ? (
+              {tienePermiso(perfil, 'importar_datos') ? (
                 <button
                   className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
                   type="button"
@@ -145,7 +146,7 @@ export function ComprasPage() {
                 <Th>Productos</Th>
                 <Th>Total</Th>
                 <Th>Notas</Th>
-                {perfil.usuario.rol === 'dueno' ? <Th /> : null}
+                {tienePermiso(perfil, 'anular_ventas') ? <Th /> : null}
               </tr>
             </thead>
             {!cargando && error !== MSG_ERROR_RED ? (
@@ -172,7 +173,7 @@ export function ComprasPage() {
                   <td className="px-3 py-3">{fila.productos || '—'}</td>
                   <td className="px-3 py-3 font-bold text-[#6366F1]">{formatoARS(fila.total)}</td>
                   <td className="px-3 py-3 text-[#94A3B8]">{fila.notas ?? '—'}</td>
-                  {perfil.usuario.rol === 'dueno' ? (
+                  {tienePermiso(perfil, 'anular_ventas') ? (
                     <td className="px-3 py-3">
                       {!fila.anulada ? (
                         <IconBtn label="Anular compra" hoverOnly onClick={() => setAnular(fila)}>
@@ -197,7 +198,7 @@ export function ComprasPage() {
                   </p>
                   <p className="mt-1 text-sm font-medium">{fila.proveedor || 'Sin proveedor'}</p>
                   <p className="mt-1 font-bold text-[#6366F1]">{formatoARS(fila.total)}</p>
-                  {perfil.usuario.rol === 'dueno' && !fila.anulada ? (
+                  {tienePermiso(perfil, 'anular_ventas') && !fila.anulada ? (
                     <button
                       className="mt-2 text-xs text-[#F87171]"
                       type="button"

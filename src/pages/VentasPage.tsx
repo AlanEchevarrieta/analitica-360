@@ -134,7 +134,7 @@ export function VentasPage() {
 
   if (!perfil) return null
 
-  const puedeAnular = perfil.usuario.rol === 'dueno' || perfil.usuario.rol === 'administrador'
+  const puedeAnular = tienePermiso(perfil, 'anular_ventas')
   const nombreEmpresa = perfil.empresa.nombre
 
   const filtrosExport = {
@@ -233,7 +233,7 @@ export function VentasPage() {
                 ) : null}
               </div>
               <div className="hidden flex-wrap gap-2 md:flex">
-                {tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'registrar_ventas') ? (
+                {tienePermiso(perfil, 'importar_datos') ? (
                   <button
                     className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
                     type="button"
@@ -242,9 +242,11 @@ export function VentasPage() {
                     Importar Excel
                   </button>
                 ) : null}
-                <Link className={btnPrimaryDesk} to="/ventas/nueva">
-                  Nueva venta
-                </Link>
+                {tienePermiso(perfil, 'registrar_ventas') ? (
+                  <Link className={btnPrimaryDesk} to="/ventas/nueva">
+                    Nueva venta
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>
@@ -463,7 +465,7 @@ export function VentasPage() {
                 titulo="Todavía no hay ventas"
                 subtitulo="Registrá tu primera venta para empezar a ver tus métricas"
                 accion={
-                  true ? (
+                  tienePermiso(perfil, 'registrar_ventas') ? (
                     <Link className={btnPrimary} to="/ventas/nueva">
                       Nueva venta
                     </Link>
@@ -503,7 +505,7 @@ export function VentasPage() {
             }}
           />
         ) : null}
-        {tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'registrar_ventas') ? (
+        {tienePermiso(perfil, 'registrar_ventas') ? (
           <FabLink to="/ventas/nueva" label="Nueva venta" />
         ) : null}
       </div>

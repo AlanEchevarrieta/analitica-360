@@ -19,6 +19,7 @@ import {
   type ClienteFicha,
 } from '../lib/clientes'
 import { formatoARS } from '../lib/productos'
+import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
 import { formatoFechaVenta } from '../lib/ventas'
 import { theme } from '../theme'
@@ -132,6 +133,7 @@ export function ClienteFichaPage() {
   const { id } = useParams()
   const location = useLocation()
   const { perfil } = useAuth()
+  const puedeGestionar = tienePermiso(perfil, 'gestionar_clientes')
   const [ficha, setFicha] = useState<ClienteFicha | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -257,7 +259,7 @@ export function ClienteFichaPage() {
             <section className="p-5" style={cardShell}>
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  {editando ? (
+                  {editando && puedeGestionar ? (
                     <p className="text-xs font-medium uppercase tracking-wide text-[#94A3B8]">Editar datos</p>
                   ) : (
                     <h1 className="text-[28px] font-semibold text-[#F1F5F9]" style={{ fontFamily: theme.fontDisplay }}>
@@ -266,7 +268,7 @@ export function ClienteFichaPage() {
                   )}
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                  {editando ? (
+                  {editando && puedeGestionar ? (
                     <>
                       <button
                         className="inline-flex h-10 items-center rounded-lg bg-[#6366F1] px-4 text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
@@ -290,6 +292,7 @@ export function ClienteFichaPage() {
                     </>
                   ) : (
                     <>
+                      {puedeGestionar ? (
                       <button
                         className="inline-flex h-10 items-center gap-1.5 rounded-lg px-4 text-sm font-semibold text-[#6366F1]"
                         type="button"
@@ -298,6 +301,7 @@ export function ClienteFichaPage() {
                       >
                         ✏️ Editar datos
                       </button>
+                      ) : null}
                       {wa ? (
                         <a
                           className="inline-flex h-10 items-center rounded-lg bg-[#25D366] px-4 text-sm font-semibold text-white"
@@ -313,7 +317,7 @@ export function ClienteFichaPage() {
                 </div>
               </div>
 
-              {editando ? (
+              {editando && puedeGestionar ? (
                 <div className="space-y-3">
                   <label className="block text-sm text-[#94A3B8]">
                     Nombre

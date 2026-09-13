@@ -218,9 +218,10 @@ export function ProductosPage() {
 
   if (!perfil) return null
 
-  const puedeEditar = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'editar_productos')
-  const puedeVerCostos = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'ver_costos')
-  const puedeAjustar = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'ajustar_stock')
+  const puedeEditar = tienePermiso(perfil, 'editar_productos')
+  const puedeVerCostos = tienePermiso(perfil, 'ver_costos')
+  const puedeAjustar = tienePermiso(perfil, 'ajustar_stock')
+  const puedeImportar = tienePermiso(perfil, 'importar_datos')
   const idsPagina = filas.map((f) => f.id)
   const todosSel = idsPagina.length > 0 && idsPagina.every((id) => seleccion.has(id))
   const seleccionados = filas.filter((f) => seleccion.has(f.id))
@@ -454,9 +455,11 @@ export function ProductosPage() {
                   >
                     Generar códigos
                   </button>
-                  <button className={btnOutline} type="button" onClick={abrirImportarExcel}>
-                    Importar Excel
-                  </button>
+                  {puedeImportar ? (
+                    <button className={btnOutline} type="button" onClick={abrirImportarExcel}>
+                      Importar Excel
+                    </button>
+                  ) : null}
                   <Link className={btnPrimary} to="/productos/nuevo">
                     <span aria-hidden>+</span> Nuevo producto
                   </Link>

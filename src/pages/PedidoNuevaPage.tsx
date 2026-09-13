@@ -11,6 +11,8 @@ import { mostrarToast } from '../lib/consulta'
 import { etiquetaLoteOpcion, lotesDisponiblesProducto, type LoteFila } from '../lib/lotes'
 import { armarDireccionEnvio, crearPedido, METODOS_ENVIO, PROVINCIAS_AR } from '../lib/pedidos'
 import { esBusquedaCodigoBarras, formatoARS, listarProductos, type ProductoFila } from '../lib/productos'
+import { AccesoDenegado } from '../components/AccesoDenegado'
+import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
 import {
   listarUbicaciones,
@@ -425,6 +427,7 @@ export function PedidoNuevaPage() {
   }
 
   if (!perfil) return null
+  if (!tienePermiso(perfil, 'crear_pedidos')) return <AccesoDenegado />
 
   const oscuro = tema === 'dark'
   const btnCantidad = {

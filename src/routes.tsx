@@ -1,6 +1,8 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from './auth'
-import { puedeConfigurar, esOperario } from './lib/roles'
+import { AccesoDenegado } from './components/AccesoDenegado'
+import { esDueno } from './lib/roles'
+import { moduloDeRuta, tieneModulo, type ModuloClave } from './lib/permisos'
 
 export function RequireAuth() {
   const { listo, session, perfil } = useAuth()
@@ -29,29 +31,26 @@ export function RequireDueno() {
   }
   if (!session) return <Navigate to="/login" replace />
   if (!perfil) return <Navigate to="/completar-alta" replace />
-  if (perfil.usuario.rol !== 'dueno') return <Navigate to="/inicio" replace />
+  if (!esDueno(perfil.usuario.rol)) return <AccesoDenegado />
   return <Outlet />
 }
 
-export function RequireConfiguracion() {
+export function RequireModulo({ modulo }: { modulo: ModuloClave }) {
   const { listo, session, perfil } = useAuth()
   if (!listo) {
     return <p className="p-8 text-center text-sm text-[#8a7a63]">Cargando…</p>
   }
   if (!session) return <Navigate to="/login" replace />
   if (!perfil) return <Navigate to="/completar-alta" replace />
-  if (!puedeConfigurar(perfil.usuario.rol)) return <Navigate to="/inicio" replace />
+  if (!tieneModulo(perfil, modulo)) return <AccesoDenegado />
   return <Outlet />
 }
 
-export function RequireNotOperario() {
-  const { listo, session, perfil } = useAuth()
-  if (!listo) {
-    return <p className="p-8 text-center text-sm text-[#8a7a63]">Cargando…</p>
-  }
-  if (!session) return <Navigate to="/login" replace />
-  if (!perfil) return <Navigate to="/completar-alta" replace />
-  if (esOperario(perfil.usuario.rol)) return <Navigate to="/inicio" replace />
+export function GateModulos() {
+  const { perfil } = useAuth()
+  const location = useLocation()
+  const modulo = moduloDeRuta(location.pathname)
+  if (modulo && perfil && !tieneModulo(perfil, modulo)) return <AccesoDenegado />
   return <Outlet />
 }
 

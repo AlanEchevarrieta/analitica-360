@@ -28,7 +28,6 @@ export function RegistroPage() {
   const { registrar } = useAuth()
   const [searchParams] = useSearchParams()
   const empresaInv = searchParams.get('empresa') ?? ''
-  const rolInvRaw = searchParams.get('rol') === 'administrador' ? 'administrador' : 'operario'
   const esInvitacion = Boolean(empresaInv)
   const [nombreEmpresa, setNombreEmpresa] = useState('')
   const [rubro, setRubro] = useState('')
@@ -83,9 +82,7 @@ export function RegistroPage() {
       nombreEmpresa: esInvitacion ? 'Equipo' : nombreEmpresa.trim(),
       rubro: rubro.trim(),
       nombreUsuario: nombreUsuario.trim(),
-      invitacion: esInvitacion
-        ? { empresaId: empresaInv, rol: rolInvRaw }
-        : undefined,
+      invitacion: esInvitacion ? { empresaId: empresaInv } : undefined,
     })
     setEnviando(false)
     if (result.error) setError(result.error)
@@ -99,7 +96,7 @@ export function RegistroPage() {
       <h1 className="text-center text-[22px] font-bold leading-none text-[#1A2F4A]">Analítica 360</h1>
       {esInvitacion ? (
         <p className="mt-4 rounded-lg bg-[#EEF2F6] px-3 py-2 text-sm text-[#1A2F4A]">
-          Te invitaron a unirte al equipo como {rolInvRaw === 'administrador' ? 'Administrador' : 'Operario'}.
+          Te invitaron a unirte al equipo. Vas a ver los módulos que el dueño habilitó para vos.
         </p>
       ) : null}
       <form className="mt-6 flex flex-col" onSubmit={onSubmit}>

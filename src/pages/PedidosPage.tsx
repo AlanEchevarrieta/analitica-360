@@ -36,7 +36,6 @@ import {
 } from '../lib/pedidos'
 import { formatoARS } from '../lib/productos'
 import { tienePermiso } from '../lib/permisos'
-import { esOperario } from '../lib/roles'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
 
@@ -69,7 +68,7 @@ export function PedidosPage() {
     if (!perfil) return
     setCargando(true)
     const client = requireSupabase()
-    const soloMios = asignadoYo || esOperario(perfil.usuario.rol)
+    const soloMios = asignadoYo
     const [{ filas: data, total: n, error: listError }, nNuevos] = await Promise.all([
       listarPedidosPaginado(client, {
         pagina,
@@ -102,7 +101,7 @@ export function PedidosPage() {
   }, [total, nuevos])
 
   if (!perfil) return null
-  const puedeCrear = tienePermiso(perfil.usuario.rol, perfil.usuario.permisos, 'registrar_ventas')
+  const puedeCrear = tienePermiso(perfil, 'crear_pedidos')
 
   return (
     <div

@@ -1,6 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { parsePermisos, permisosPorRol, type Permisos } from './permisos'
-import { etiquetaRol, parseRol, type RolAsignable } from './roles'
+import {
+  accesoSoloPedidos,
+  accesoTotal,
+  parseAcceso,
+  type AccesoColaborador,
+} from './permisos'
+import { parseRol } from './roles'
 import type { Rol } from '../types'
 
 export type UsuarioEmpresa = {
@@ -9,7 +14,7 @@ export type UsuarioEmpresa = {
   email: string
   rol: Rol
   activo: boolean
-  permisos: Permisos
+  acceso: AccesoColaborador
   invitacionPendiente: boolean
   esInvitacion: boolean
 }
@@ -19,25 +24,38 @@ export async function listarUsuariosEmpresa(
 ): Promise<{ filas: UsuarioEmpresa[]; error: string | null }> {
   const { data, error } = await client
     .from('usuarios')
-    .select('id, nombre, email, rol, activo, permisos, invitacion_pendiente')
+    .select('id, nombre, email, rol, activo, invitacion_pendiente')
     .is('deleted_at', null)
     .order('nombre')
 
   if (error) return { filas: [], error: error.message }
-  const filas = ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+  const filas: UsuarioEmpresa[] = ((data ?? []) as Record<string, unknown>[]).map((row) => ({
     id: String(row.id),
     nombre: String(row.nombre ?? ''),
     email: String(row.email ?? ''),
     rol: parseRol(row.rol),
     activo: Boolean(row.activo),
-    permisos: parsePermisos(row.permisos),
+    acceso: accesoSoloPedidos(),
     invitacionPendiente: Boolean(row.invitacion_pendiente),
     esInvitacion: false,
   }))
 
+  const perm = await client.from('colaborador_permisos').select('usuario_id, modulos, acciones')
+  if (!perm.error) {
+    const mapa = new Map<string, AccesoColaborador>()
+    for (const row of (perm.data ?? []) as Record<string, unknown>[]) {
+      mapa.set(String(row.usuario_id), parseAcceso(row.modulos, row.acciones))
+    }
+    for (const u of filas) {
+      const acc = mapa.get(u.id)
+      if (acc) u.acceso = acc
+      else if (u.rol === 'dueno') u.acceso = accesoTotal(true)
+    }
+  }
+
   const inv = await client
     .from('invitaciones_colaboradores')
-    .select('id, email, rol, pendiente')
+    .select('id, email, pendiente, modulos, acciones')
     .eq('pendiente', true)
     .order('created_at', { ascending: false })
 
@@ -49,9 +67,9 @@ export async function listarUsuariosEmpresa(
         id: String(row.id),
         nombre: email.split('@')[0] || 'Invitado',
         email,
-        rol: parseRol(row.rol),
+        rol: 'operario',
         activo: false,
-        permisos: permisosPorRol(parseRol(row.rol) === 'administrador' ? 'administrador' : 'operario'),
+        acceso: parseAcceso(row.modulos, row.acciones),
         invitacionPendiente: true,
         esInvitacion: true,
       })
@@ -88,49 +106,59 @@ export async function desactivarUsuario(
   return error ? error.message : null
 }
 
-export async function actualizarRolUsuario(
+export async function guardarPermisosColaborador(
   client: SupabaseClient,
   usuario: UsuarioEmpresa,
-  rol: RolAsignable,
+  acceso: AccesoColaborador,
 ): Promise<string | null> {
-  if (usuario.rol === 'dueno') return 'El dueño no se puede editar'
+  if (usuario.rol === 'dueno') return 'El dueño tiene acceso total'
   if (usuario.esInvitacion) {
     const { error } = await client
       .from('invitaciones_colaboradores')
-      .update({ rol })
+      .update({ modulos: acceso.modulos, acciones: acceso.acciones })
       .eq('id', usuario.id)
     return error ? error.message : null
   }
-  const { error } = await client.from('usuarios').update({ rol }).eq('id', usuario.id)
-  return error ? error.message : null
+  const { error } = await client.rpc('guardar_colaborador_permisos', {
+    p_usuario: usuario.id,
+    p_modulos: acceso.modulos,
+    p_acciones: acceso.acciones,
+  })
+  if (!error) return null
+  const msg = error.message
+  if (msg.includes('could not find') || msg.includes('does not exist') || msg.includes('PGRST202')) {
+    return 'Falta el SQL de permisos. Pegá TODO supabase/056_permisos_granulares.sql (rol postgres), dale Run y recargá.'
+  }
+  return msg
 }
 
 export async function invitarColaborador(
   client: SupabaseClient,
-  input: { email: string; rol: RolAsignable },
+  input: { email: string; acceso: AccesoColaborador },
 ): Promise<string | null> {
   const { error } = await client.rpc('invitar_colaborador', {
     p_email: input.email,
-    p_rol: input.rol,
+    p_modulos: input.acceso.modulos,
+    p_acciones: input.acceso.acciones,
   })
   if (!error) return null
   const msg = error.message
   if (msg.includes('EMAIL_YA_REGISTRADO')) return 'Ese email ya tiene una cuenta en el equipo'
   if (msg.includes('EMAIL_INVALIDO')) return 'El email no es válido'
-  if (msg.includes('NO_AUTORIZADO')) return 'Solo el dueño o un administrador pueden invitar'
+  if (msg.includes('NO_AUTORIZADO')) return 'Solo el dueño puede invitar'
   if (msg.includes('could not find') || msg.includes('does not exist') || msg.includes('PGRST202')) {
-    return 'Falta el SQL de equipo. Pegá TODO supabase/054_equipo_roles.sql (rol postgres), dale Run y recargá.'
+    return 'Falta el SQL de permisos. Pegá TODO supabase/056_permisos_granulares.sql (rol postgres), dale Run y recargá.'
   }
   return msg
 }
 
 export async function aceptarInvitacionColaborador(
   client: SupabaseClient,
-  input: { empresaId: string; rol: RolAsignable; nombre: string },
+  input: { empresaId: string; nombre: string },
 ): Promise<string | null> {
   const { error } = await client.rpc('aceptar_invitacion_colaborador', {
     p_empresa: input.empresaId,
-    p_rol: input.rol,
+    p_rol: 'operario',
     p_nombre: input.nombre,
   })
   if (!error) return null
@@ -140,38 +168,7 @@ export async function aceptarInvitacionColaborador(
   }
   if (msg.includes('YA_TIENE_EMPRESA')) return 'Esta cuenta ya pertenece a una empresa'
   if (msg.includes('could not find') || msg.includes('does not exist') || msg.includes('PGRST202')) {
-    return 'Falta el SQL de equipo. Pegá TODO supabase/054_equipo_roles.sql (rol postgres), dale Run y recargá.'
+    return 'Falta el SQL de equipo. Pegá TODO supabase/054_equipo_roles.sql y supabase/056_permisos_granulares.sql (rol postgres), dale Run y recargá.'
   }
   return msg
 }
-
-export async function crearUsuarioEmpresa(
-  client: SupabaseClient,
-  input: {
-    nombre: string
-    email: string
-    password: string
-    rol: 'operador' | 'visor'
-    permisos: Permisos
-  },
-): Promise<string | null> {
-  const { error } = await client.rpc('crear_usuario_empresa', {
-    p_nombre: input.nombre,
-    p_email: input.email,
-    p_password: input.password,
-    p_rol: input.rol,
-    p_permisos: input.permisos,
-  })
-  if (!error) return null
-  const msg = error.message
-  if (msg.includes('EMAIL_YA_REGISTRADO')) return 'Ese email ya tiene una cuenta'
-  if (msg.includes('EMAIL_INVALIDO')) return 'El email no es válido'
-  if (msg.includes('PASSWORD_INVALIDA')) return 'La contraseña es demasiado corta'
-  if (msg.includes('NO_AUTORIZADO')) return 'Solo el dueño puede crear usuarios'
-  if (msg.includes('could not find') || msg.includes('does not exist') || msg.includes('PGRST202')) {
-    return 'No se pudo crear el usuario. Corré supabase/011_crear_usuario_empresa.sql en el SQL Editor.'
-  }
-  return msg
-}
-
-export { etiquetaRol }
