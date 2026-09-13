@@ -70,6 +70,7 @@ type TabId =
   | 'ubicaciones'
   | 'variantes'
   | 'lotes'
+  | 'remitente'
   | 'plan'
 
 const MOSAICO: {
@@ -87,6 +88,7 @@ const MOSAICO: {
   { id: 'flujo', icono: '💸', titulo: 'Flujo de ventas', subtitulo: 'Configurá el proceso de venta' },
   { id: 'inventario', icono: '📦', titulo: 'Inventario', subtitulo: 'Umbral de stock bajo y alertas' },
   { id: 'ubicaciones', icono: '📍', titulo: 'Ubicaciones', subtitulo: 'Depósitos, locales y stands' },
+  { id: 'remitente', icono: '📬', titulo: 'Datos del remitente', subtitulo: 'Quién figura en el remito' },
   { id: 'plan', icono: '⭐', titulo: 'Mi Plan', subtitulo: 'Plan actual y facturación' },
 ]
 
@@ -177,6 +179,10 @@ export function ConfiguracionPage() {
   const [tipoUbic, setTipoUbic] = useState<TipoUbicacion>('otro')
   const [activoUbic, setActivoUbic] = useState(true)
   const [ubicacionVentaDefault, setUbicacionVentaDefault] = useState('')
+  const [remitenteNombre, setRemitenteNombre] = useState('')
+  const [remitenteDireccion, setRemitenteDireccion] = useState('')
+  const [remitenteTelefono, setRemitenteTelefono] = useState('')
+  const [remitenteEmail, setRemitenteEmail] = useState('')
 
   async function recargarCategorias() {
     const seed = await sembrarCategoriasDefault(requireSupabase())
@@ -229,6 +235,10 @@ export function ConfiguracionPage() {
       setUsaVariantes(Boolean(config.usaVariantes))
       setUsaLotes(Boolean(config.usaLotes))
       setUbicacionVentaDefault(config.ubicacionVentaDefault)
+      setRemitenteNombre(config.remitenteNombre)
+      setRemitenteDireccion(config.remitenteDireccion)
+      setRemitenteTelefono(config.remitenteTelefono)
+      setRemitenteEmail(config.remitenteEmail)
       if (config.usaVariantes) {
         const atr = await listarAtributos(requireSupabase())
         if (!atr.error) setAtributos(atr.filas)
@@ -300,6 +310,10 @@ export function ConfiguracionPage() {
       usaVariantes,
       usaLotes,
       ubicacionVentaDefault,
+      remitenteNombre,
+      remitenteDireccion,
+      remitenteTelefono,
+      remitenteEmail,
     })
     setGuardando(false)
     if (fallo) {
@@ -1292,6 +1306,49 @@ export function ConfiguracionPage() {
                 </div>
               ) : null}
 
+              {tab === 'remitente' ? (
+                <div className="mt-6 space-y-3">
+                  <p className="text-sm font-medium text-[#F1F5F9]">Datos del remitente</p>
+                  <p className="text-xs text-[#94A3B8]">
+                    Figuran en el remito PDF y en el texto de email al despachar.
+                  </p>
+                  <label className="block text-sm font-medium text-[#94A3B8]">
+                    Nombre completo
+                    <input
+                      className={`${inputClass} mt-1`}
+                      value={remitenteNombre}
+                      placeholder='Ej: "Sergio Echevarrieta"'
+                      onChange={(ev) => setRemitenteNombre(ev.target.value)}
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#94A3B8]">
+                    Dirección
+                    <input
+                      className={`${inputClass} mt-1`}
+                      value={remitenteDireccion}
+                      placeholder='Ej: "Garibaldi y San Martín"'
+                      onChange={(ev) => setRemitenteDireccion(ev.target.value)}
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#94A3B8]">
+                    Teléfono
+                    <input
+                      className={`${inputClass} mt-1`}
+                      value={remitenteTelefono}
+                      onChange={(ev) => setRemitenteTelefono(ev.target.value)}
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#94A3B8]">
+                    Email
+                    <input
+                      className={`${inputClass} mt-1`}
+                      value={remitenteEmail}
+                      onChange={(ev) => setRemitenteEmail(ev.target.value)}
+                    />
+                  </label>
+                </div>
+              ) : null}
+
               {tab === 'plan' ? (
                 <div className="mt-6 space-y-3 text-sm">
                   <div className="rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-3">
@@ -1337,7 +1394,7 @@ export function ConfiguracionPage() {
                 <p className="mt-6 rounded-xl bg-green-950/50 px-3 py-2 text-sm text-green-200">{ok}</p>
               ) : null}
 
-              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' || tab === 'inventario' || tab === 'variantes' || tab === 'lotes' || tab === 'ubicaciones' ? (
+              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' || tab === 'inventario' || tab === 'variantes' || tab === 'lotes' || tab === 'ubicaciones' || tab === 'remitente' ? (
                 <button
                   className={`${btnPrimary} mt-6 w-full`}
                   type="button"

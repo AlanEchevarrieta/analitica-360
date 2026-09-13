@@ -9,7 +9,7 @@ import { crearCliente, listarClientes, type ClienteFila } from '../lib/clientes'
 import { obtenerConfiguracion, type ConfiguracionEmpresa } from '../lib/configuracion'
 import { mostrarToast } from '../lib/consulta'
 import { etiquetaLoteOpcion, lotesDisponiblesProducto, type LoteFila } from '../lib/lotes'
-import { crearPedido, METODOS_ENVIO, PROVINCIAS_AR } from '../lib/pedidos'
+import { armarDireccionEnvio, crearPedido, METODOS_ENVIO, PROVINCIAS_AR } from '../lib/pedidos'
 import { esBusquedaCodigoBarras, formatoARS, listarProductos, type ProductoFila } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
 import {
@@ -30,6 +30,7 @@ import {
   type VarianteFila,
 } from '../lib/variantes'
 import { theme } from '../theme'
+import { useTema } from '../lib/tema'
 
 type Linea = {
   uid: string
@@ -48,6 +49,7 @@ const inputClass =
 
 export function PedidoNuevaPage() {
   const { perfil } = useAuth()
+  const { tema } = useTema()
   const navigate = useNavigate()
   const [paso, setPaso] = useState<1 | 2 | 3>(1)
   const [catalogo, setCatalogo] = useState<ProductoFila[]>([])
@@ -62,7 +64,10 @@ export function PedidoNuevaPage() {
   const [nuevoTel, setNuevoTel] = useState('')
   const [nombreAlta, setNombreAlta] = useState('')
   const [creandoCliente, setCreandoCliente] = useState(false)
-  const [direccion, setDireccion] = useState('')
+  const [calle, setCalle] = useState('')
+  const [altura, setAltura] = useState('')
+  const [entreCalles, setEntreCalles] = useState('')
+  const [pisoDepto, setPisoDepto] = useState('')
   const [codigoPostal, setCodigoPostal] = useState('')
   const [localidad, setLocalidad] = useState('')
   const [provincia, setProvincia] = useState('')
@@ -346,6 +351,45 @@ export function PedidoNuevaPage() {
     setPaso(2)
   }
 
+  function irPaso3() {
+    if (!calle.trim()) {
+      setError('Ingresá la calle')
+      return
+    }
+    if (!altura.trim()) {
+      setError('Ingresá la altura')
+      return
+    }
+    if (!codigoPostal.trim()) {
+      setError('Ingresá el código postal')
+      return
+    }
+    if (!localidad.trim()) {
+      setError('Ingresá la localidad')
+      return
+    }
+    if (!provincia.trim()) {
+      setError('Elegí la provincia')
+      return
+    }
+    if (!metodoEnvio) {
+      setError('Elegí el método de envío')
+      return
+    }
+    setError(null)
+    setPaso(3)
+  }
+
+  const direccionCompleta = armarDireccionEnvio({
+    calle,
+    altura,
+    entreCalles,
+    piso: pisoDepto,
+    codigoPostal,
+    localidad,
+    provincia,
+  })
+
   async function confirmar() {
     if (!perfil) return
     setError(null)
@@ -356,7 +400,7 @@ export function PedidoNuevaPage() {
       clienteNombre: cliente.trim() || busquedaCliente.trim(),
       clienteEmail: '',
       clienteTelefono: nuevoTel.trim(),
-      direccionEnvio: direccion,
+      direccionEnvio: direccionCompleta,
       codigoPostal,
       localidad,
       provincia,
@@ -381,6 +425,17 @@ export function PedidoNuevaPage() {
   }
 
   if (!perfil) return null
+
+  const oscuro = tema === 'dark'
+  const btnCantidad = {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    border: oscuro ? '1px solid rgba(99,102,241,0.5)' : '1px solid #6366F1',
+    background: oscuro ? '#1E2A3A' : '#FFFFFF',
+    color: oscuro ? '#F1F5F9' : '#111827',
+  } as const
+  const numCantidad = { color: oscuro ? '#F1F5F9' : '#111827' } as const
 
   return (
     <div
@@ -521,21 +576,36 @@ export function PedidoNuevaPage() {
                           </div>
                           <div className="mt-2 flex items-center gap-2">
                             <button
-                              className="flex h-11 w-11 items-center justify-center rounded-md border border-[#E2E8F0] text-lg font-bold"
+                              className="flex items-center justify-center text-2xl font-bold"
+                              style={btnCantidad}
                               type="button"
                               onClick={() => cambiarCantidad(linea.uid, -1)}
                             >
                               −
                             </button>
-                            <span className="min-w-8 text-center font-semibold">{linea.cantidad}</span>
+                            <span
+                              className="flex items-center justify-center text-lg font-semibold"
+                              style={{
+                                ...numCantidad,
+                                minWidth: 56,
+                                height: 56,
+                                borderRadius: 8,
+                                background: oscuro ? '#1E2A3A' : '#FFFFFF',
+                              }}
+                            >
+                              {linea.cantidad}
+                            </span>
                             <button
-                              className="flex h-11 w-11 items-center justify-center rounded-md border border-[#E2E8F0] text-lg font-bold"
+                              className="flex items-center justify-center text-2xl font-bold"
+                              style={btnCantidad}
                               type="button"
                               onClick={() => cambiarCantidad(linea.uid, 1)}
                             >
                               +
                             </button>
-                            <span className="ml-auto text-sm">{formatoARS(linea.cantidad * linea.precioUnitario)}</span>
+                            <span className="ml-auto text-sm text-[#1A2F4A]">
+                              {formatoARS(linea.cantidad * linea.precioUnitario)}
+                            </span>
                           </div>
                           {config?.usaLotes && linea.lotes.length > 0 ? (
                             <label className="mt-2 block text-xs text-[#4A5568]">
@@ -665,11 +735,39 @@ export function PedidoNuevaPage() {
                     </div>
                   ) : null}
                   <label className="block text-sm font-medium text-[#4A5568]">
-                    Dirección de envío
+                    Calle
                     <input
                       className={`${inputClass} mt-1.5`}
-                      value={direccion}
-                      onChange={(ev) => setDireccion(ev.target.value)}
+                      value={calle}
+                      placeholder='Ej: "San Martín"'
+                      onChange={(ev) => setCalle(ev.target.value)}
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#4A5568]">
+                    Altura
+                    <input
+                      className={`${inputClass} mt-1.5`}
+                      value={altura}
+                      placeholder='Ej: "1234"'
+                      onChange={(ev) => setAltura(ev.target.value)}
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#4A5568]">
+                    Entre calles (opcional)
+                    <input
+                      className={`${inputClass} mt-1.5`}
+                      value={entreCalles}
+                      placeholder='Ej: "Belgrano y Rivadavia"'
+                      onChange={(ev) => setEntreCalles(ev.target.value)}
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#4A5568]">
+                    Piso/Departamento (opcional)
+                    <input
+                      className={`${inputClass} mt-1.5`}
+                      value={pisoDepto}
+                      placeholder='Ej: "3° B"'
+                      onChange={(ev) => setPisoDepto(ev.target.value)}
                     />
                   </label>
                   <label className="block text-sm font-medium text-[#4A5568]">
@@ -733,7 +831,7 @@ export function PedidoNuevaPage() {
                     {cliente.trim() || busquedaCliente.trim() ? (
                       <p>Cliente: {cliente.trim() || busquedaCliente.trim()}</p>
                     ) : null}
-                    {direccion.trim() ? <p>{direccion}</p> : null}
+                    {direccionCompleta ? <p>{direccionCompleta}</p> : null}
                     <p>{metodoEnvio}</p>
                   </div>
                   <label className="mt-4 block text-sm font-medium text-[#4A5568]">
@@ -777,10 +875,7 @@ export function PedidoNuevaPage() {
                   <button
                     className="h-12 flex-1 rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"
                     type="button"
-                    onClick={() => {
-                      setError(null)
-                      setPaso(3)
-                    }}
+                    onClick={irPaso3}
                   >
                     Siguiente
                   </button>

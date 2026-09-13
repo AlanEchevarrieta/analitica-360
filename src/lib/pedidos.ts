@@ -7,6 +7,7 @@ export type EstadoPedido =
   | 'en_preparacion'
   | 'listo_despacho'
   | 'despachado'
+  | 'con_transportista'
   | 'entregado'
   | 'cancelado'
 
@@ -28,6 +29,8 @@ export type PedidoItemFicha = {
   varianteId: string | null
   loteId: string | null
   nombre: string
+  codigoBarra: string
+  sku: string
   varianteEtiqueta: string
   numeroLote: string
   cantidad: number
@@ -63,6 +66,7 @@ export const ESTADOS_PEDIDO: { id: EstadoPedido; label: string }[] = [
   { id: 'en_preparacion', label: 'En preparación' },
   { id: 'listo_despacho', label: 'Listo para despacho' },
   { id: 'despachado', label: 'Despachado' },
+  { id: 'con_transportista', label: 'Con transportista' },
   { id: 'entregado', label: 'Entregado' },
   { id: 'cancelado', label: 'Cancelado' },
 ]
@@ -115,6 +119,7 @@ const ESTADO_STYLE: Record<EstadoPedido, { bg: string; fg: string }> = {
   en_preparacion: { bg: 'rgba(252,211,77,0.18)', fg: '#FCD34D' },
   listo_despacho: { bg: 'rgba(245,158,11,0.18)', fg: '#F59E0B' },
   despachado: { bg: 'rgba(59,130,246,0.18)', fg: '#3B82F6' },
+  con_transportista: { bg: 'rgba(14,165,233,0.18)', fg: '#0EA5E9' },
   entregado: { bg: 'rgba(74,222,128,0.16)', fg: '#4ADE80' },
   cancelado: { bg: 'rgba(248,113,113,0.18)', fg: '#F87171' },
 }
@@ -131,6 +136,18 @@ export function estiloEstadoPedido(estado: EstadoPedido) {
   return ESTADO_STYLE[estado] ?? ESTADO_STYLE.nuevo
 }
 
+export function itemPorCodigoBarras(items: PedidoItemFicha[], codigo: string) {
+  const q = codigo.trim().toLowerCase()
+  if (!q) return null
+  return (
+    items.find((i) => {
+      const barra = i.codigoBarra.trim().toLowerCase()
+      const sku = i.sku.trim().toLowerCase()
+      return barra === q || sku === q
+    }) ?? null
+  )
+}
+
 export function formatoFechaPedido(iso: string) {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
@@ -141,6 +158,78 @@ export function formatoFechaPedido(iso: string) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+export function formatoFechaRemito(iso: string) {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+export function armarDireccionEnvio(input: {
+  calle: string
+  altura: string
+  entreCalles: string
+  piso: string
+  codigoPostal: string
+  localidad: string
+  provincia: string
+}) {
+  const partes: string[] = []
+  const calleAltura = [input.calle.trim(), input.altura.trim()].filter(Boolean).join(' ')
+  if (calleAltura) partes.push(calleAltura)
+  if (input.entreCalles.trim()) partes.push(`entre ${input.entreCalles.trim()}`)
+  if (input.piso.trim()) partes.push(input.piso.trim())
+  const loc = [input.codigoPostal.trim() ? `(${input.codigoPostal.trim()})` : '', input.localidad.trim()]
+    .filter(Boolean)
+    .join(' ')
+  if (loc) partes.push(loc)
+  if (input.provincia.trim()) partes.push(input.provincia.trim())
+  return partes.join(', ')
+}
+
+export function urlSeguimiento(transportista: string, numero: string) {
+  const n = numero.trim()
+  if (!n) return null
+  const t = transportista.trim().toLowerCase()
+  if (t.includes('andreani')) return `https://www.andreani.com/#!/informacionEnvio/${encodeURIComponent(n)}`
+  if (t === 'oca' || t.includes('oca')) return `https://www.oca.com.ar/seguimiento/?numero=${encodeURIComponent(n)}`
+  if (t.includes('correo')) {
+    return `https://www.correoargentino.com.ar/formularios/one?id=${encodeURIComponent(n)}`
+  }
+  return null
+}
+
+export function redactarEmailDespacho(input: {
+  ficha: PedidoFicha
+  empresa: string
+  remitenteNombre: string
+  remitenteDireccion: string
+}) {
+  const ficha = input.ficha
+  const link = urlSeguimiento(ficha.transportista || ficha.metodoEnvio, ficha.numeroSeguimiento)
+  const detalle = ficha.items
+    .map((it) => {
+      const desc = [it.nombre, it.varianteEtiqueta].filter(Boolean).join(' ')
+      return `- ${it.cantidad}x ${desc} — ${formatoARS(it.cantidad * it.precioUnitario)}`
+    })
+    .join('\n')
+  const firma = [input.empresa, input.remitenteDireccion].filter(Boolean).join(' — ') || input.empresa
+  const asunto = `Tu pedido ${ficha.numeroPedido} fue despachado 📦`
+  const cuerpo = `Hola ${ficha.clienteNombre || ''},
+
+Tu pedido está en camino 🚚
+
+Transportista: ${ficha.transportista || ficha.metodoEnvio || '—'}
+N° de seguimiento: ${ficha.numeroSeguimiento || '—'}
+${link ? `Seguí tu envío: ${link}` : ''}
+
+Detalle del pedido:
+${detalle}
+
+¡Gracias por tu compra!
+${firma}`.replace(/\n{3,}/g, '\n\n')
+  return { asunto, cuerpo }
 }
 
 function msgSql(msg: string) {
@@ -310,16 +399,22 @@ export async function obtenerFichaPedido(
   const { data: itemsRaw, error: itemsError } = await client
     .from('pedidos_items')
     .select(
-      'id, producto_id, variante_id, lote_id, cantidad, precio_unitario, cantidad_preparada, preparado, productos(nombre), producto_variantes(atributos), lotes(numero_lote)',
+      'id, producto_id, variante_id, lote_id, cantidad, precio_unitario, cantidad_preparada, preparado, productos(nombre, codigo_barra), producto_variantes(atributos, sku), lotes(numero_lote)',
     )
     .eq('pedido_id', id)
   if (itemsError) return { ficha: null, error: msgSql(itemsError.message) }
 
   const items: PedidoItemFicha[] = ((itemsRaw ?? []) as Record<string, unknown>[]).map((it) => {
-    const prod = it.productos as { nombre?: string } | { nombre?: string }[] | null
-    const nombreProd = Array.isArray(prod) ? prod[0]?.nombre : prod?.nombre
-    const vari = it.producto_variantes as { atributos?: unknown } | { atributos?: unknown }[] | null
-    const attrs = Array.isArray(vari) ? vari[0]?.atributos : vari?.atributos
+    const prod = it.productos as
+      | { nombre?: string; codigo_barra?: string }
+      | { nombre?: string; codigo_barra?: string }[]
+      | null
+    const prodRow = Array.isArray(prod) ? prod[0] : prod
+    const vari = it.producto_variantes as
+      | { atributos?: unknown; sku?: string }
+      | { atributos?: unknown; sku?: string }[]
+      | null
+    const variRow = Array.isArray(vari) ? vari[0] : vari
     const lote = it.lotes as { numero_lote?: string } | { numero_lote?: string }[] | null
     const nLote = Array.isArray(lote) ? lote[0]?.numero_lote : lote?.numero_lote
     return {
@@ -327,8 +422,10 @@ export async function obtenerFichaPedido(
       productoId: String(it.producto_id),
       varianteId: it.variante_id == null ? null : String(it.variante_id),
       loteId: it.lote_id == null ? null : String(it.lote_id),
-      nombre: String(nombreProd ?? 'Producto'),
-      varianteEtiqueta: etiquetaCombo(attrsVariante(attrs)),
+      nombre: String(prodRow?.nombre ?? 'Producto'),
+      codigoBarra: String(prodRow?.codigo_barra ?? ''),
+      sku: String(variRow?.sku ?? ''),
+      varianteEtiqueta: etiquetaCombo(attrsVariante(variRow?.atributos)),
       numeroLote: String(nLote ?? ''),
       cantidad: Number(it.cantidad ?? 0),
       precioUnitario: Number(it.precio_unitario ?? 0),
@@ -396,7 +493,12 @@ export async function sincronizarEstadoPicking(
   ficha: PedidoFicha,
   items: PedidoItemFicha[],
 ): Promise<{ estado: EstadoPedido; error: string | null }> {
-  if (ficha.estado === 'despachado' || ficha.estado === 'entregado' || ficha.estado === 'cancelado') {
+  if (
+    ficha.estado === 'despachado' ||
+    ficha.estado === 'con_transportista' ||
+    ficha.estado === 'entregado' ||
+    ficha.estado === 'cancelado'
+  ) {
     return { estado: ficha.estado, error: null }
   }
   const todos = items.length > 0 && items.every((i) => i.preparado)
@@ -465,75 +567,125 @@ export async function registrarDespacho(
   return null
 }
 
-export async function marcarEntregado(client: SupabaseClient, id: string): Promise<string | null> {
+export async function marcarConTransportista(client: SupabaseClient, id: string): Promise<string | null> {
   const { error } = await client
     .from('pedidos')
-    .update({ estado: 'entregado' })
+    .update({ estado: 'con_transportista' })
     .eq('id', id)
     .eq('estado', 'despachado')
   return error ? msgSql(error.message) : null
 }
 
-export async function generarRemitoPdf(input: { empresa: string; ficha: PedidoFicha }) {
+export async function marcarEntregado(client: SupabaseClient, id: string): Promise<string | null> {
+  const { error } = await client
+    .from('pedidos')
+    .update({ estado: 'entregado' })
+    .eq('id', id)
+    .eq('estado', 'con_transportista')
+  return error ? msgSql(error.message) : null
+}
+
+export async function generarRemitoPdf(input: {
+  empresa: string
+  ficha: PedidoFicha
+  remitenteNombre: string
+  remitenteDireccion: string
+  remitenteTelefono: string
+  remitenteEmail: string
+}) {
   const { jsPDF } = await import('jspdf')
   const autoTable = (await import('jspdf-autotable')).default
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   const { ficha, empresa } = input
+  const pageW = doc.internal.pageSize.getWidth()
 
-  doc.setFontSize(16)
-  doc.setTextColor(26, 47, 74)
-  doc.text(empresa, 40, 40)
-  doc.setFontSize(22)
-  doc.setTextColor(99, 102, 241)
-  doc.text('REMITO', 40, 70)
-  doc.setFontSize(11)
-  doc.setTextColor(74, 85, 104)
-  doc.text(`N° remito: ${ficha.numeroPedido}`, 40, 90)
-  doc.text(`Fecha: ${formatoFechaPedido(ficha.createdAt)}`, 40, 106)
-
-  doc.setFontSize(12)
-  doc.setTextColor(26, 47, 74)
-  doc.text('Destinatario', 40, 132)
+  doc.setFillColor(99, 102, 241)
+  doc.rect(40, 28, pageW - 80, 64, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(18)
+  doc.text(`REMITO N° ${ficha.numeroPedido}`, 52, 54)
   doc.setFontSize(10)
-  doc.setTextColor(74, 85, 104)
-  const dest = [
-    ficha.clienteNombre || '—',
-    ficha.direccionEnvio,
-    [ficha.codigoPostal, ficha.localidad, ficha.provincia].filter(Boolean).join(' · '),
-  ].filter(Boolean)
-  dest.forEach((linea, i) => {
-    doc.text(linea, 40, 148 + i * 14)
-  })
+  doc.text(`Fecha: ${formatoFechaRemito(ficha.createdAt)}`, 52, 74)
+  doc.setFontSize(11)
+  doc.text(empresa, pageW - 52, 54, { align: 'right' })
+
+  const colW = (pageW - 80 - 12) / 2
+  const boxY = 108
+  const boxH = 92
+  doc.setDrawColor(226, 232, 240)
+  doc.setFillColor(248, 250, 252)
+  doc.roundedRect(40, boxY, colW, boxH, 4, 4, 'FD')
+  doc.roundedRect(40 + colW + 12, boxY, colW, boxH, 4, 4, 'FD')
+
+  doc.setFontSize(9)
+  doc.setTextColor(99, 102, 241)
+  doc.text('REMITENTE', 52, boxY + 16)
+  doc.text('DESTINATARIO', 52 + colW + 12, boxY + 16)
+  doc.setFontSize(9)
+  doc.setTextColor(26, 47, 74)
+  const remitenteLineas = doc.splitTextToSize(
+    [
+      input.remitenteNombre || empresa,
+      input.remitenteDireccion,
+      input.remitenteTelefono ? `Tel: ${input.remitenteTelefono}` : '',
+      input.remitenteEmail,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    colW - 24,
+  )
+  const destLineas = doc.splitTextToSize(
+    [
+      ficha.clienteNombre || '—',
+      ficha.direccionEnvio,
+      [ficha.codigoPostal ? `(${ficha.codigoPostal})` : '', ficha.localidad].filter(Boolean).join(' '),
+      ficha.provincia,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    colW - 24,
+  )
+  doc.text(remitenteLineas, 52, boxY + 32)
+  doc.text(destLineas, 52 + colW + 12, boxY + 32)
 
   autoTable(doc, {
-    startY: 148 + dest.length * 14 + 16,
-    head: [['Cantidad', 'Descripción', 'Precio unit', 'Subtotal']],
-    body: ficha.items.map((it) => {
+    startY: boxY + boxH + 20,
+    head: [['#', 'Descripción', 'Cant', 'Precio']],
+    body: ficha.items.map((it, i) => {
       const desc = [it.nombre, it.varianteEtiqueta, it.numeroLote ? `Lote ${it.numeroLote}` : '']
         .filter(Boolean)
-        .join(' — ')
-      return [
-        String(it.cantidad),
-        desc,
-        formatoARS(it.precioUnitario),
-        formatoARS(it.cantidad * it.precioUnitario),
-      ]
+        .join('\n')
+      return [String(i + 1), desc, String(it.cantidad), formatoARS(it.precioUnitario)]
     }),
-    styles: { fontSize: 9, cellPadding: 5 },
-    headStyles: { fillColor: [99, 102, 241], textColor: 255 },
+    styles: { fontSize: 9, cellPadding: 6, textColor: [26, 47, 74] },
+    headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: 28 },
+      2: { cellWidth: 48, halign: 'right' },
+      3: { cellWidth: 80, halign: 'right' },
+    },
     margin: { left: 40, right: 40 },
   })
 
-  const y = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 200
+  const y = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 240
+  const link = urlSeguimiento(ficha.transportista || ficha.metodoEnvio, ficha.numeroSeguimiento)
   doc.setFontSize(12)
   doc.setTextColor(26, 47, 74)
-  doc.text(`Total: ${formatoARS(ficha.total)}`, 40, y + 24)
-  doc.setFontSize(9)
-  doc.setTextColor(148, 163, 184)
-  doc.text('Este documento no tiene validez fiscal', 40, y + 44)
+  doc.text(`Total: ${formatoARS(ficha.total)}`, 40, y + 28)
+  doc.setFontSize(10)
+  doc.setTextColor(74, 85, 104)
+  doc.text(`Método de envío: ${ficha.metodoEnvio || ficha.transportista || '—'}`, 40, y + 48)
   if (ficha.numeroSeguimiento) {
-    doc.text(`N° de seguimiento: ${ficha.numeroSeguimiento}`, 40, y + 60)
+    doc.text(`N° seguimiento: ${ficha.numeroSeguimiento}`, 40, y + 64)
   }
+  if (link) {
+    doc.setTextColor(99, 102, 241)
+    doc.textWithLink(`Link seguimiento: ${link}`, 40, y + 80, { url: link })
+  }
+  doc.setFontSize(8)
+  doc.setTextColor(148, 163, 184)
+  doc.text('Este documento no tiene validez fiscal', 40, y + 108)
+  doc.text('Analítica 360 — analitica360.app', 40, y + 122)
 
   doc.save(`remito_${ficha.numeroPedido || 'pedido'}.pdf`)
 }

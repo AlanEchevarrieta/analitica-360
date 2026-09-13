@@ -32,7 +32,9 @@ export function mensajeCargaTabla(error: AuthLike | string | null) {
   return msg
 }
 
-type ToastListener = (mensaje: string) => void
+export type ToastTipo = 'info' | 'ok' | 'warn' | 'error'
+
+type ToastListener = (mensaje: string, tipo: ToastTipo) => void
 const toastListeners = new Set<ToastListener>()
 
 export function suscribirToast(listener: ToastListener) {
@@ -42,8 +44,8 @@ export function suscribirToast(listener: ToastListener) {
   }
 }
 
-export function mostrarToast(mensaje: string) {
-  for (const listener of toastListeners) listener(mensaje)
+export function mostrarToast(mensaje: string, tipo: ToastTipo = 'info') {
+  for (const listener of toastListeners) listener(mensaje, tipo)
 }
 
 let sesionExpiradaEnCurso = false

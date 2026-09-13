@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.pedidos (
   estado TEXT DEFAULT 'nuevo'
     CHECK (estado IN (
       'nuevo', 'en_preparacion', 'listo_despacho',
-      'despachado', 'entregado', 'cancelado'
+      'despachado', 'con_transportista', 'entregado', 'cancelado'
     )),
   direccion_envio TEXT,
   codigo_postal TEXT,

@@ -26,6 +26,10 @@ export type ConfiguracionEmpresa = {
   usaVariantes: boolean
   usaLotes: boolean
   ubicacionVentaDefault: string
+  remitenteNombre: string
+  remitenteDireccion: string
+  remitenteTelefono: string
+  remitenteEmail: string
 }
 
 export const MEDIOS_PAGO = [
@@ -123,6 +127,10 @@ export const CONFIG_DEFAULT: Omit<ConfiguracionEmpresa, 'empresaId'> = {
   usaVariantes: false,
   usaLotes: false,
   ubicacionVentaDefault: '',
+  remitenteNombre: '',
+  remitenteDireccion: '',
+  remitenteTelefono: '',
+  remitenteEmail: '',
 }
 
 function normalizarFlujo(raw: unknown): FlujoVentas {
@@ -159,10 +167,20 @@ export async function obtenerConfiguracion(
   let conFlujo = await client
     .from('configuracion_empresa')
     .select(
-      'empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes, usa_lotes, ubicacion_venta_default',
+      'empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes, usa_lotes, ubicacion_venta_default, remitente_nombre, remitente_direccion, remitente_telefono, remitente_email',
     )
     .eq('empresa_id', empresaId)
     .maybeSingle()
+
+  if (conFlujo.error && /remitente_nombre/i.test(conFlujo.error.message)) {
+    conFlujo = await client
+      .from('configuracion_empresa')
+      .select(
+        'empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes, usa_lotes, ubicacion_venta_default',
+      )
+      .eq('empresa_id', empresaId)
+      .maybeSingle()
+  }
 
   if (conFlujo.error && /ubicacion_venta_default/i.test(conFlujo.error.message)) {
     conFlujo = await client
@@ -223,6 +241,18 @@ export async function obtenerConfiguracion(
           inv?.ubicacion_venta_default ??
           '',
       ).trim(),
+      remitenteNombre: String(
+        (fila as { remitente_nombre?: unknown }).remitente_nombre ?? inv?.remitente_nombre ?? '',
+      ).trim(),
+      remitenteDireccion: String(
+        (fila as { remitente_direccion?: unknown }).remitente_direccion ?? inv?.remitente_direccion ?? '',
+      ).trim(),
+      remitenteTelefono: String(
+        (fila as { remitente_telefono?: unknown }).remitente_telefono ?? inv?.remitente_telefono ?? '',
+      ).trim(),
+      remitenteEmail: String(
+        (fila as { remitente_email?: unknown }).remitente_email ?? inv?.remitente_email ?? '',
+      ).trim(),
     },
     error: null,
   }
@@ -273,7 +303,9 @@ export async function guardarConfiguracion(
   if (vari) return vari
   const lotes = await guardarUsaLotes(client, input)
   if (lotes) return lotes
-  return guardarUbicacionVentaDefault(client, input)
+  const ubi = await guardarUbicacionVentaDefault(client, input)
+  if (ubi) return ubi
+  return guardarRemitente(client, input)
 }
 
 async function guardarUsaVariantes(client: SupabaseClient, input: ConfiguracionEmpresa) {
@@ -335,6 +367,10 @@ async function guardarInventario(client: SupabaseClient, input: ConfiguracionEmp
       inventario: {
         umbral_stock_bajo: umbral,
         ubicacion_venta_default: input.ubicacionVentaDefault.trim() || null,
+        remitente_nombre: input.remitenteNombre.trim() || null,
+        remitente_direccion: input.remitenteDireccion.trim() || null,
+        remitente_telefono: input.remitenteTelefono.trim() || null,
+        remitente_email: input.remitenteEmail.trim() || null,
       },
       updated_at: new Date().toISOString(),
     })
@@ -344,6 +380,25 @@ async function guardarInventario(client: SupabaseClient, input: ConfiguracionEmp
   if (t.includes('inventario') || t.includes('schema cache') || t.includes('does not exist')) {
     if (umbral === 5 && !input.ubicacionVentaDefault.trim()) return null
     return 'Falta la columna de inventario. Pegá supabase/026_inventario_alertas.sql (rol postgres) y recargá.'
+  }
+  return error.message
+}
+
+async function guardarRemitente(client: SupabaseClient, input: ConfiguracionEmpresa) {
+  const { error } = await client
+    .from('configuracion_empresa')
+    .update({
+      remitente_nombre: input.remitenteNombre.trim() || null,
+      remitente_direccion: input.remitenteDireccion.trim() || null,
+      remitente_telefono: input.remitenteTelefono.trim() || null,
+      remitente_email: input.remitenteEmail.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('empresa_id', input.empresaId)
+  if (!error) return null
+  const t = error.message.toLowerCase()
+  if (t.includes('remitente_') || t.includes('schema cache') || t.includes('does not exist')) {
+    return null
   }
   return error.message
 }
