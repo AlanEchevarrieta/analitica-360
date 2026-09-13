@@ -112,6 +112,28 @@ async function hidratarVentas(
   return { filas, error: null }
 }
 
+export async function rangoHistorialVentas(
+  client: SupabaseClient,
+): Promise<{ desde: string; hasta: string } | null> {
+  const { data, error } = await client
+    .from('ventas')
+    .select('fecha')
+    .is('deleted_at', null)
+    .order('fecha', { ascending: true })
+    .limit(1)
+  if (error || !data?.[0]?.fecha) return null
+  const maxRes = await client
+    .from('ventas')
+    .select('fecha')
+    .is('deleted_at', null)
+    .order('fecha', { ascending: false })
+    .limit(1)
+  const desde = String(data[0].fecha).slice(0, 10)
+  const hasta = String(maxRes.data?.[0]?.fecha ?? data[0].fecha).slice(0, 10)
+  if (!desde || !hasta) return null
+  return { desde, hasta }
+}
+
 export async function listarVentasPaginado(
   client: SupabaseClient,
   input: FiltrosVentas & { pagina: number; pageSize: number },

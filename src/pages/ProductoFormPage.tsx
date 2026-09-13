@@ -57,9 +57,9 @@ export function ProductoFormPage() {
   const titulo = useMemo(() => (esNuevo ? 'Nuevo producto' : 'Editar producto'), [esNuevo])
 
   useEffect(() => {
-    if (categoriaId || !categoria) return
+    if (!categoria) return
     const hit = categorias.find((c) => c.nombre.trim().toLowerCase() === categoria.trim().toLowerCase())
-    if (hit) setCategoriaId(hit.id)
+    if (hit && hit.id !== categoriaId) setCategoriaId(hit.id)
   }, [categorias, categoria, categoriaId])
 
   function numOpcional(s: string): number | null {
@@ -84,7 +84,7 @@ export function ProductoFormPage() {
     void obtenerConfiguracion(requireSupabase(), perfil.empresa.id).then(({ config }) => {
       setUsaVariantes(Boolean(config.usaVariantes))
     })
-    void listarCategorias(requireSupabase(), true).then((res) => {
+    void listarCategorias(requireSupabase(), true, perfil.empresa.id).then((res) => {
       if (!res.error) setCategorias(res.filas)
     })
   }, [perfil])
@@ -158,7 +158,8 @@ export function ProductoFormPage() {
 
     const catElegida = categorias.find((c) => c.id === categoriaId)
     const categoriaNombre = catElegida?.nombre ?? categoria.trim()
-    const categoriaIdGuardar = catElegida?.id ?? null
+    const categoriaIdGuardar =
+      catElegida && !catElegida.id.startsWith('nombre:') ? catElegida.id : null
     const client = requireSupabase()
 
     if (esNuevo && !forzarCrear) {

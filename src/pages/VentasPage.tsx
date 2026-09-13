@@ -40,13 +40,14 @@ import {
   formatoFechaVenta,
   listarVentasExport,
   listarVentasPaginado,
+  rangoHistorialVentas,
   resumenVentasHoy,
   type VentaFila,
 } from '../lib/ventas'
 import { theme } from '../theme'
 
-function rangoMes() {
-  return rangoPreset('mes')
+function rangoAnio() {
+  return rangoPreset('anio')
 }
 
 export function VentasPage() {
@@ -58,7 +59,7 @@ export function VentasPage() {
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const [hoy, setHoy] = useState({ cantidad: 0, total: 0 })
-  const inicial = rangoMes()
+  const inicial = rangoAnio()
   const [desde, setDesde] = useState(inicial.desde)
   const [hasta, setHasta] = useState(inicial.hasta)
   const [productoId, setProductoId] = useState('')
@@ -72,6 +73,7 @@ export function VentasPage() {
   const [menuExportar, setMenuExportar] = useState(false)
   const [exportando, setExportando] = useState(false)
   const exportRef = useRef<HTMLDivElement>(null)
+  const autoRangoRef = useRef(true)
   const closeMenu = useCallback(() => setMenu(null), [])
 
   const cargar = useCallback(async () => {
@@ -91,9 +93,9 @@ export function VentasPage() {
       }),
       resumenVentasHoy(client),
     ])
-    setCargando(false)
     setHoy(resumen)
     if (listError) {
+      setCargando(false)
       const msg = mensajeCargaTabla(listError)
       if (msg) {
         setError(
@@ -104,6 +106,25 @@ export function VentasPage() {
       }
       return
     }
+    if (
+      autoRangoRef.current &&
+      n === 0 &&
+      !forma &&
+      !cliente.trim() &&
+      !productoId &&
+      !numeroVenta.trim()
+    ) {
+      autoRangoRef.current = false
+      const historial = await rangoHistorialVentas(client)
+      if (historial && (historial.desde !== desde || historial.hasta !== hasta)) {
+        setDesde(historial.desde)
+        setHasta(historial.hasta)
+        setPagina(1)
+        return
+      }
+    }
+    autoRangoRef.current = false
+    setCargando(false)
     setError(null)
     setFilas(data)
     setTotal(n)

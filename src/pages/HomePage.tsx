@@ -215,7 +215,20 @@ const GraficoStock = memo(function GraficoStock({
       >
         <CartesianGrid stroke={g.grilla} horizontal={false} />
         <XAxis type="number" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-        <YAxis type="category" dataKey="nombre" reversed width={110} tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
+        <YAxis
+          type="category"
+          dataKey="nombre"
+          reversed
+          width={110}
+          interval={0}
+          tick={{ fill: g.eje, fontSize: 11 }}
+          tickFormatter={(v: string) => {
+            const t = String(v ?? '')
+            return t.length > 12 ? `${t.slice(0, 12)}…` : t
+          }}
+          axisLine={false}
+          tickLine={false}
+        />
         <Tooltip
           cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
           content={({ active, payload }) => {

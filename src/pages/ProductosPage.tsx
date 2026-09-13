@@ -34,7 +34,6 @@ import {
   formatoARS,
   guardarCodigoBarra,
   listarProductos,
-  listarProductosConStock,
   listarProductosPaginado,
   type ProductoFila,
 } from '../lib/productos'
@@ -118,7 +117,7 @@ export function ProductosPage() {
 
   const cargar = useCallback(async () => {
     setCargando(true)
-    const { filas: data, total: n, activos: nActivos, categorias: cats, error: listError } =
+    const { filas: data, total: n, activos: nActivos, categorias: cats, packed, error: listError } =
       await listarProductosPaginado(requireSupabase(), {
         pagina,
         pageSize: PAGE_PRODUCTOS,
@@ -156,9 +155,8 @@ export function ProductosPage() {
       const umb = await leerUmbralStock(requireSupabase(), perfil.empresa.id)
       setUmbralStock(umb)
       if (usa && data.length > 0) {
-        const packed = await listarProductosConStock(requireSupabase())
-        if (!packed.error) {
-          const porId = new Map(packed.filas.map((p) => [p.id, p]))
+        if (packed.length > 0) {
+          const porId = new Map(packed.map((p) => [p.id, p]))
           const conteo = new Map<string, number>()
           const map = new Map<string, { etiqueta: string; stock: number }[]>()
           for (const fila of data) {

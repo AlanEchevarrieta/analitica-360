@@ -514,6 +514,41 @@ function granularidadParaRpc(g: GranularidadEje): Exclude<GranularidadEje, 'anio
   return g === 'anio' ? 'dia' : g
 }
 
+async function costoItemsPeriodo(
+  client: SupabaseClient,
+  desde: string,
+  hasta: string,
+  empresaId?: string | null,
+): Promise<number> {
+  let q = client
+    .from('ventas')
+    .select('id')
+    .is('deleted_at', null)
+    .gte('fecha', `${desde}T00:00:00.000-03:00`)
+    .lte('fecha', `${hasta}T23:59:59.999-03:00`)
+  if (empresaId) q = q.eq('empresa_id', empresaId)
+  const { data: ventas, error } = await q
+  if (error || !ventas?.length) return 0
+  const ids = ventas.map((v) => String(v.id))
+  let costo = 0
+  const PAGE = 100
+  for (let i = 0; i < ids.length; i += PAGE) {
+    const { data } = await client
+      .from('ventas_items')
+      .select('cantidad, costo_unitario, productos(costo)')
+      .in('venta_id', ids.slice(i, i + PAGE))
+    for (const row of (data ?? []) as Record<string, unknown>[]) {
+      const prod = row.productos as Record<string, unknown> | null
+      const unit =
+        row.costo_unitario != null && row.costo_unitario !== ''
+          ? num(row.costo_unitario)
+          : num(prod?.costo)
+      costo += num(row.cantidad) * unit
+    }
+  }
+  return costo
+}
+
 export async function cargarAnalyticsEvolucion(
   client: SupabaseClient,
   desde: string,
@@ -558,7 +593,7 @@ export async function cargarAnalyticsPeriodo(
     for (let i = 0; i < ventaIds.length; i += PAGE) {
       const { data, error } = await client
         .from('ventas_items')
-        .select('venta_id, cantidad, precio_unitario, costo_unitario, producto_id, productos(nombre)')
+        .select('venta_id, cantidad, precio_unitario, costo_unitario, producto_id, productos(nombre, costo)')
         .in('venta_id', ventaIds.slice(i, i + PAGE))
       if (error) return { data: VACIO, error: error.message }
       for (const row of (data ?? []) as Record<string, unknown>[]) {
@@ -569,12 +604,15 @@ export async function cargarAnalyticsPeriodo(
             : String(row.producto_id ?? 'Producto')
         const cantidad = num(row.cantidad)
         const precio = num(row.precio_unitario)
+        const prodCosto = prod && typeof prod === 'object' ? num(prod.costo) : 0
+        const unitCosto =
+          row.costo_unitario != null && row.costo_unitario !== '' ? num(row.costo_unitario) : prodCosto
         items.push({
           venta_id: String(row.venta_id),
           nombre,
           unidades: cantidad,
           total: cantidad * precio,
-          costo: cantidad * num(row.costo_unitario),
+          costo: cantidad * unitCosto,
         })
       }
     }
@@ -583,10 +621,15 @@ export async function cargarAnalyticsPeriodo(
     for (let i = 0; i < antIds.length; i += PAGE) {
       const { data } = await client
         .from('ventas_items')
-        .select('cantidad, costo_unitario')
+        .select('cantidad, costo_unitario, productos(costo)')
         .in('venta_id', antIds.slice(i, i + PAGE))
       for (const row of (data ?? []) as Record<string, unknown>[]) {
-        costoAnt += num(row.cantidad) * num(row.costo_unitario)
+        const prod = row.productos as Record<string, unknown> | null
+        const unit =
+          row.costo_unitario != null && row.costo_unitario !== ''
+            ? num(row.costo_unitario)
+            : num(prod?.costo)
+        costoAnt += num(row.cantidad) * unit
       }
     }
     return {
@@ -651,6 +694,10 @@ export async function cargarAnalyticsPeriodo(
 
   if (periodoRes.error || periodoRes.data == null) return { data: VACIO, error: errorTexto }
   const row = periodoRes.data as Record<string, unknown>
+  let costo = num(row.costo)
+  if (costo === 0 && num(row.cantidad) > 0) {
+    costo = await costoItemsPeriodo(client, desde, hasta, empresaId)
+  }
   const productos = Array.isArray(row.productos) ? row.productos : []
   const evolucionDiaria =
     Array.isArray(row.evolucion) && row.evolucion.length > 0
@@ -660,7 +707,7 @@ export async function cargarAnalyticsPeriodo(
     data: {
       total: num(row.total ?? row.total_ventas),
       cantidad: num(row.cantidad),
-      costo: num(row.costo),
+      costo,
       totalAnt: num(row.total_ant),
       cantidadAnt: num(row.cantidad_ant),
       costoAnt: num(row.costo_ant),

@@ -27,15 +27,36 @@ function mapFila(row: Record<string, unknown>): CategoriaFila {
 export async function listarCategorias(
   client: SupabaseClient,
   soloActivas = false,
+  empresaId?: string,
 ): Promise<{ filas: CategoriaFila[]; error: string | null }> {
   let q = client
     .from('categorias')
     .select('id, nombre, descripcion, activo')
     .order('nombre', { ascending: true })
+  if (empresaId) q = q.eq('empresa_id', empresaId)
   if (soloActivas) q = q.eq('activo', true)
   const { data, error } = await q
   if (error) return { filas: [], error: msgSql(error.message) }
-  return { filas: ((data ?? []) as Record<string, unknown>[]).map(mapFila), error: null }
+  let filas = ((data ?? []) as Record<string, unknown>[]).map(mapFila)
+  if (filas.length === 0) {
+    let prod = client.from('productos').select('categoria').is('deleted_at', null)
+    if (empresaId) prod = prod.eq('empresa_id', empresaId)
+    const catsRes = await prod
+    const nombres = [
+      ...new Set(
+        (catsRes.data ?? [])
+          .map((r) => (r.categoria == null ? '' : String(r.categoria).trim()))
+          .filter(Boolean),
+      ),
+    ].sort((a, b) => a.localeCompare(b, 'es'))
+    filas = nombres.map((nombre) => ({
+      id: `nombre:${nombre.toLowerCase()}`,
+      nombre,
+      descripcion: '',
+      activo: true,
+    }))
+  }
+  return { filas, error: null }
 }
 
 export async function sembrarCategoriasDefault(client: SupabaseClient): Promise<string | null> {

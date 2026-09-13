@@ -195,9 +195,10 @@ export function ConfiguracionPage() {
   const [rotacionIds, setRotacionIds] = useState<string[]>([])
 
   async function recargarCategorias() {
+    if (!perfil) return
     const seed = await sembrarCategoriasDefault(requireSupabase())
     if (seed) setError(seed)
-    const res = await listarCategorias(requireSupabase())
+    const res = await listarCategorias(requireSupabase(), false, perfil.empresa.id)
     if (res.error) setError(res.error)
     else setCategorias(res.filas)
   }
@@ -211,7 +212,11 @@ export function ConfiguracionPage() {
   }
 
   async function recargarUbicaciones() {
-    const res = await listarUbicaciones(requireSupabase(), { soloActivas: false })
+    if (!perfil) return
+    const res = await listarUbicaciones(requireSupabase(), {
+      soloActivas: false,
+      empresaId: perfil.empresa.id,
+    })
     if (res.error) setError(res.error)
     else setUbicacionesCfg(res.filas)
   }

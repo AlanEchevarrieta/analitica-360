@@ -48,35 +48,40 @@ function mapFila(row: Record<string, unknown>): UbicacionFila {
 
 export async function listarUbicaciones(
   client: SupabaseClient,
-  input?: { soloActivas?: boolean },
+  input?: { soloActivas?: boolean; empresaId?: string },
 ): Promise<{ filas: UbicacionFila[]; error: string | null }> {
-  let q = client
-    .from('ubicaciones')
-    .select('id, nombre, descripcion, tipo, activo')
-    .order('created_at', { ascending: true })
-    .order('nombre', { ascending: true })
-  if (input?.soloActivas !== false) q = q.eq('activo', true)
-  const { data, error } = await q
-  if (error) {
-    const t = error.message.toLowerCase()
-    if (t.includes('tipo')) {
-      let q2 = client.from('ubicaciones').select('id, nombre, descripcion, activo').order('nombre')
-      if (input?.soloActivas !== false) q2 = q2.eq('activo', true)
-      const retry = await q2
-      if (retry.error) {
-        if (retry.error.message.toLowerCase().includes('ubicaciones') || retry.error.message.toLowerCase().includes('schema cache')) {
-          return { filas: [], error: null }
-        }
-        return { filas: [], error: msgSql(retry.error.message) }
-      }
-      return { filas: ((retry.data ?? []) as Record<string, unknown>[]).map(mapFila), error: null }
-    }
-    if (t.includes('ubicaciones') || t.includes('schema cache') || t.includes('does not exist')) {
-      return { filas: [], error: null }
-    }
-    return { filas: [], error: msgSql(error.message) }
+  const rpc = await client.rpc('listar_ubicaciones_empresa')
+  if (!rpc.error && rpc.data != null) {
+    const arr = Array.isArray(rpc.data) ? rpc.data : []
+    let filas = (arr as unknown as Record<string, unknown>[]).map(mapFila)
+    if (input?.soloActivas !== false) filas = filas.filter((u) => u.activo)
+    return { filas, error: null }
   }
-  return { filas: ((data ?? []) as Record<string, unknown>[]).map(mapFila), error: null }
+
+  const seleccionar = async (cols: string) => {
+    let q = client.from('ubicaciones').select(cols).order('nombre', { ascending: true })
+    if (input?.empresaId) q = q.eq('empresa_id', input.empresaId)
+    if (input?.soloActivas !== false) q = q.eq('activo', true)
+    return q
+  }
+
+  let res = await seleccionar('id, nombre, descripcion, tipo, activo')
+  if (res.error) {
+    const t = res.error.message.toLowerCase()
+    if (t.includes('tipo')) {
+      res = await seleccionar('id, nombre, descripcion, activo')
+    } else if (t.includes('created_at')) {
+      res = await seleccionar('id, nombre, descripcion, tipo, activo')
+    }
+  }
+  if (res.error) {
+    const t = res.error.message.toLowerCase()
+    if (t.includes('ubicaciones') || t.includes('schema cache') || t.includes('does not exist')) {
+      return { filas: [], error: msgSql(res.error.message) }
+    }
+    return { filas: [], error: msgSql(res.error.message) }
+  }
+  return { filas: ((res.data ?? []) as unknown as Record<string, unknown>[]).map(mapFila), error: null }
 }
 
 export async function guardarUbicacion(

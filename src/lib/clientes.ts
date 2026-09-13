@@ -116,16 +116,24 @@ export async function obtenerFichaCliente(
         primera: txt(stats.primera),
         ultima: txt(stats.ultima),
       },
-      ventas: ventas.map((item) => {
-        const v = item as Record<string, unknown>
-        return {
-          id: String(v.id),
-          fecha: String(v.fecha ?? ''),
-          productos: String(v.productos ?? ''),
-          total: Number(v.total ?? 0),
-          forma_pago: String(v.forma_pago ?? ''),
+      ventas: (() => {
+        const seen = new Set<string>()
+        const unique: ClienteFicha['ventas'] = []
+        for (const item of ventas) {
+          const v = item as Record<string, unknown>
+          const id = String(v.id ?? '')
+          if (!id || seen.has(id)) continue
+          seen.add(id)
+          unique.push({
+            id,
+            fecha: String(v.fecha ?? ''),
+            productos: String(v.productos ?? ''),
+            total: Number(v.total ?? 0),
+            forma_pago: String(v.forma_pago ?? ''),
+          })
         }
-      }),
+        return unique
+      })(),
       interacciones: notas.map((item) => {
         const n = item as Record<string, unknown>
         return {
