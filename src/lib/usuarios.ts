@@ -38,58 +38,17 @@ function accesoDePermisos(modulos: unknown, acciones: unknown, rol: Rol): Acceso
   return accesoSoloPedidos()
 }
 
-async function listarUsuariosEmpresaFallback(
+export async function listarUsuariosEmpresa(
   client: SupabaseClient,
 ): Promise<{ filas: UsuarioEmpresa[]; error: string | null }> {
-  const { data: authData } = await client.auth.getUser()
-  const yo = authData.user?.id
-  if (!yo) return { filas: [], error: 'NO_AUTENTICADO' }
-
-  const { data, error } = await client
-    .from('usuarios')
-    .select(
-      'id, nombre, email, rol, activo, invitacion_pendiente, empresa_id, colaborador_permisos(modulos, acciones, empresa_id)',
-    )
-    .is('deleted_at', null)
-    .neq('id', yo)
-    .order('nombre')
-
+  const { data, error } = await client.rpc('listar_equipo')
+  console.log('[equipo debug]', { data, error })
   if (error) return { filas: [], error: error.message }
 
   const filas: UsuarioEmpresa[] = ((data ?? []) as Record<string, unknown>[]).map((row) => {
     const rol = parseRol(row.rol)
-    const nested = row.colaborador_permisos
-    const lista = Array.isArray(nested) ? nested : nested ? [nested] : []
-    const empresaId = String(row.empresa_id ?? '')
-    const cp = (lista as Record<string, unknown>[]).find(
-      (p) => !p.empresa_id || String(p.empresa_id) === empresaId,
-    )
-    return filaDesdeRow(row, accesoDePermisos(cp?.modulos, cp?.acciones, rol))
+    return filaDesdeRow(row, accesoDePermisos(row.modulos, row.acciones, rol))
   })
-  return { filas, error: null }
-}
-
-export async function listarUsuariosEmpresa(
-  client: SupabaseClient,
-): Promise<{ filas: UsuarioEmpresa[]; error: string | null }> {
-  const rpc = await client.rpc('listar_equipo')
-  let filas: UsuarioEmpresa[] = []
-
-  if (!rpc.error) {
-    filas = ((rpc.data ?? []) as Record<string, unknown>[]).map((row) => {
-      const rol = parseRol(row.rol)
-      return filaDesdeRow(row, accesoDePermisos(row.modulos, row.acciones, rol))
-    })
-  } else {
-    const msg = rpc.error.message ?? ''
-    if (msg.includes('could not find') || msg.includes('does not exist') || msg.includes('PGRST202')) {
-      const fallback = await listarUsuariosEmpresaFallback(client)
-      if (fallback.error) return fallback
-      filas = fallback.filas
-    } else {
-      return { filas: [], error: rpc.error.message }
-    }
-  }
 
   const inv = await client
     .from('invitaciones_colaboradores')

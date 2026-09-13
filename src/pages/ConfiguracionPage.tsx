@@ -226,9 +226,16 @@ export function ConfiguracionPage() {
   }
 
   async function cargarUsuarios() {
-    const { filas, error: listError } = await listarUsuariosEmpresa(requireSupabase())
+    const supabase = requireSupabase()
+    const { data, error } = await supabase.rpc('listar_equipo')
+    console.log('[equipo debug]', { data, error })
+    if (error) {
+      setError(error.message)
+      setUsuarios([])
+    }
+    const { filas, error: listError } = await listarUsuariosEmpresa(supabase)
     if (listError) setError(listError)
-    else setUsuarios(filas)
+    else if (!error) setUsuarios(filas)
   }
 
   useEffect(() => {
@@ -1001,6 +1008,10 @@ export function ConfiguracionPage() {
                         {enviandoInv ? 'ENVIANDO…' : 'Invitar'}
                       </button>
                     </div>
+                  ) : null}
+
+                  {error ? (
+                    <p className="mt-3 rounded-xl bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p>
                   ) : null}
 
                   <div className="mt-4 overflow-x-auto">
