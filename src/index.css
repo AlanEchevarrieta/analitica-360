@@ -1670,6 +1670,24 @@ select option:checked:hover {
   .escaner-linea::after {
     animation: none;
   }
+
+  .picking-en-progreso {
+    animation: none;
+  }
+}
+
+@keyframes picking-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.9);
+  }
+}
+
+.picking-en-progreso {
+  animation: picking-pulse 1.4s ease-in-out infinite;
 }
 
 @media (min-width: 768px) and (max-width: 1023.98px) {

@@ -136,16 +136,47 @@ export function estiloEstadoPedido(estado: EstadoPedido) {
   return ESTADO_STYLE[estado] ?? ESTADO_STYLE.nuevo
 }
 
-export function itemPorCodigoBarras(items: PedidoItemFicha[], codigo: string) {
+export function etiquetaItemPedido(item: PedidoItemFicha) {
+  return [item.nombre, item.varianteEtiqueta].filter(Boolean).join(' ')
+}
+
+export function itemPickingCompleto(item: PedidoItemFicha) {
+  return item.cantidadPreparada === item.cantidad && item.cantidad > 0
+}
+
+export function itemsPorCodigoBarras(items: PedidoItemFicha[], codigo: string) {
   const q = codigo.trim().toLowerCase()
-  if (!q) return null
-  return (
-    items.find((i) => {
-      const barra = i.codigoBarra.trim().toLowerCase()
-      const sku = i.sku.trim().toLowerCase()
-      return barra === q || sku === q
-    }) ?? null
-  )
+  if (!q) return []
+  return items.filter((i) => {
+    const barra = i.codigoBarra.trim().toLowerCase()
+    const sku = i.sku.trim().toLowerCase()
+    return barra === q || sku === q
+  })
+}
+
+export function itemPorCodigoBarras(items: PedidoItemFicha[], codigo: string) {
+  return itemsPorCodigoBarras(items, codigo)[0] ?? null
+}
+
+export function resumenPicking(items: PedidoItemFicha[]) {
+  const itemsListos = items.filter(itemPickingCompleto).length
+  const unidadesPrep = items.reduce((acc, i) => acc + Math.max(0, i.cantidadPreparada), 0)
+  const unidadesTot = items.reduce((acc, i) => acc + i.cantidad, 0)
+  return {
+    itemsListos,
+    itemsTot: items.length,
+    unidadesPrep,
+    unidadesTot,
+    incompletos: items.filter((i) => i.cantidadPreparada !== i.cantidad),
+  }
+}
+
+export function textoIncompletosPicking(items: PedidoItemFicha[]) {
+  const faltan = resumenPicking(items).incompletos
+  if (faltan.length === 0) return null
+  return `Faltan preparar:\n${faltan
+    .map((i) => `  · ${etiquetaItemPedido(i)}: ${i.cantidadPreparada}/${i.cantidad} unidades`)
+    .join('\n')}`
 }
 
 export function formatoFechaPedido(iso: string) {
@@ -501,13 +532,42 @@ export async function sincronizarEstadoPicking(
   ) {
     return { estado: ficha.estado, error: null }
   }
-  const todos = items.length > 0 && items.every((i) => i.preparado)
-  const alguno = items.some((i) => i.preparado)
-  const siguiente: EstadoPedido = todos ? 'listo_despacho' : alguno ? 'en_preparacion' : 'nuevo'
+  const todos = items.length > 0 && items.every(itemPickingCompleto)
+  const alguno = items.some((i) => i.cantidadPreparada > 0 || i.preparado)
+  let siguiente: EstadoPedido
+  if (ficha.estado === 'listo_despacho') {
+    siguiente = todos ? 'listo_despacho' : alguno ? 'en_preparacion' : 'nuevo'
+  } else {
+    siguiente = alguno ? 'en_preparacion' : 'nuevo'
+  }
   if (siguiente === ficha.estado) return { estado: ficha.estado, error: null }
   const { error } = await client.from('pedidos').update({ estado: siguiente }).eq('id', ficha.id)
   if (error) return { estado: ficha.estado, error: msgSql(error.message) }
   return { estado: siguiente, error: null }
+}
+
+export async function confirmarListoDespacho(
+  client: SupabaseClient,
+  ficha: PedidoFicha,
+  items: PedidoItemFicha[],
+): Promise<string | null> {
+  const faltan = textoIncompletosPicking(items)
+  if (faltan) return faltan
+  for (const item of items) {
+    if (!item.preparado) {
+      const fallo = await guardarItemPreparacion(client, {
+        id: item.id,
+        preparado: true,
+        cantidadPreparada: item.cantidad,
+      })
+      if (fallo) return fallo
+    }
+  }
+  const { error } = await client
+    .from('pedidos')
+    .update({ estado: 'listo_despacho' })
+    .eq('id', ficha.id)
+  return error ? msgSql(error.message) : null
 }
 
 export async function registrarDespacho(

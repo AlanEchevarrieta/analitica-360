@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
@@ -8,19 +8,24 @@ import { EscanerCodigoBarras, dispararPedidoCamara } from '../components/Escaner
 import { mostrarToast } from '../lib/consulta'
 import { obtenerConfiguracion } from '../lib/configuracion'
 import {
+  confirmarListoDespacho,
   estiloEstadoPedido,
   etiquetaEstadoPedido,
+  etiquetaItemPedido,
   formatoFechaPedido,
   generarRemitoPdf,
   guardarItemPreparacion,
-  itemPorCodigoBarras,
+  itemPickingCompleto,
+  itemsPorCodigoBarras,
   marcarConTransportista,
   marcarEntregado,
   marcarTodoPreparado,
   obtenerFichaPedido,
   redactarEmailDespacho,
   registrarDespacho,
+  resumenPicking,
   sincronizarEstadoPicking,
+  textoIncompletosPicking,
   TRANSPORTISTAS,
   urlSeguimiento,
   type PedidoFicha,
@@ -45,6 +50,49 @@ function BadgeEstado({ estado }: { estado: PedidoFicha['estado'] }) {
 const inputDark =
   'mt-1.5 h-11 w-full rounded-lg border border-[rgba(99,102,241,0.3)] bg-white/5 px-3 text-sm text-[#F1F5F9] outline-none focus:border-[#6366F1]'
 
+function vibrarPicking() {
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(50)
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function normalizarPicking(lista: PedidoItemFicha[]) {
+  return lista.map((i) => {
+    const cantidadPreparada = Math.max(0, Math.min(i.cantidad, i.cantidadPreparada))
+    return {
+      ...i,
+      cantidadPreparada,
+      preparado: cantidadPreparada === i.cantidad && i.preparado,
+    }
+  })
+}
+
+function aplicarEscaneoItem(hit: PedidoItemFicha, lista: PedidoItemFicha[]) {
+  const etiqueta = etiquetaItemPedido(hit)
+  const actual = lista.find((x) => x.id === hit.id) ?? hit
+  if (actual.cantidadPreparada >= actual.cantidad) {
+    mostrarToast(
+      `⚠️ Ya preparaste todas las unidades de [${etiqueta}] (${actual.cantidad}/${actual.cantidad})`,
+      'warn',
+    )
+    return lista
+  }
+  const cantidadPreparada = actual.cantidadPreparada + 1
+  const completo = cantidadPreparada === actual.cantidad
+  const preparado = completo ? true : actual.preparado
+  if (completo) {
+    mostrarToast(`🎉 [${etiqueta}] completado! (${cantidadPreparada}/${actual.cantidad})`, 'ok')
+  } else {
+    mostrarToast(`✅ [${etiqueta}] escaneado (${cantidadPreparada}/${actual.cantidad})`, 'ok')
+  }
+  vibrarPicking()
+  return lista.map((x) => (x.id === actual.id ? { ...x, cantidadPreparada, preparado } : x))
+}
+
 export function PedidoFichaPage() {
   const { id } = useParams()
   const { perfil } = useAuth()
@@ -58,6 +106,11 @@ export function PedidoFichaPage() {
   const [seguimiento, setSeguimiento] = useState('')
   const [escaner, setEscaner] = useState(false)
   const [emailModal, setEmailModal] = useState<{ asunto: string; cuerpo: string } | null>(null)
+  const [modalDespacho, setModalDespacho] = useState(false)
+  const [variantesScan, setVariantesScan] = useState<PedidoItemFicha[] | null>(null)
+  const [erroresCantidad, setErroresCantidad] = useState<Record<string, string>>({})
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const estabaCompleto = useRef(false)
 
   const cargar = useCallback(async () => {
     if (!id) return
@@ -75,12 +128,14 @@ export function PedidoFichaPage() {
     void cargar()
   }, [cargar])
 
-  async function persistirPicking(next: PedidoItemFicha[]) {
+  async function persistirPicking(nextRaw: PedidoItemFicha[]) {
     if (!ficha) return
+    const prev = items
+    const next = normalizarPicking(nextRaw)
     setItems(next)
     setGuardando(true)
     for (const it of next) {
-      const orig = ficha.items.find((x) => x.id === it.id)
+      const orig = prev.find((x) => x.id === it.id)
       if (
         orig &&
         orig.preparado === it.preparado &&
@@ -131,25 +186,56 @@ export function PedidoFichaPage() {
     }
     setItems(next)
     setFicha({ ...ficha, estado: sync.estado, items: next })
-    mostrarToast(`Pedido ${ficha.numeroPedido} · ${etiquetaEstadoPedido(sync.estado)}`)
+    setModalDespacho(true)
   }
 
   async function onCodigoDetectado(codigo: string) {
     if (!ficha) return
-    const hit = itemPorCodigoBarras(items, codigo)
-    if (!hit) {
-      mostrarToast('❌ Producto no pertenece a este pedido', 'error')
+    const hits = itemsPorCodigoBarras(items, codigo)
+    if (hits.length === 0) {
+      mostrarToast(
+        '❌ Este producto no pertenece al pedido — verificá que estás tomando el producto correcto',
+        'error',
+      )
       return
     }
-    if (hit.preparado || hit.cantidadPreparada >= hit.cantidad) {
-      mostrarToast(`⚠️ ${hit.nombre} ya completada (${hit.cantidad}/${hit.cantidad})`, 'warn')
+    if (hits.length > 1) {
+      setEscaner(false)
+      setVariantesScan(hits)
       return
     }
-    const cantidadPreparada = Math.min(hit.cantidad, hit.cantidadPreparada + 1)
-    const preparado = cantidadPreparada >= hit.cantidad
-    const next = items.map((x) => (x.id === hit.id ? { ...x, cantidadPreparada, preparado } : x))
-    mostrarToast(`✅ ${hit.nombre} escaneada (${cantidadPreparada}/${hit.cantidad})`, 'ok')
-    await persistirPicking(next)
+    await persistirPicking(aplicarEscaneoItem(hits[0], items))
+  }
+
+  async function onConfirmarDespacho() {
+    if (!ficha) return
+    const faltan = textoIncompletosPicking(items)
+    if (faltan) {
+      setError(faltan)
+      setModalDespacho(false)
+      return
+    }
+    setGuardando(true)
+    const fallo = await confirmarListoDespacho(requireSupabase(), ficha, items)
+    setGuardando(false)
+    if (fallo) {
+      setError(fallo)
+      return
+    }
+    const next = items.map((i) => ({ ...i, preparado: true, cantidadPreparada: i.cantidad }))
+    setItems(next)
+    setFicha({ ...ficha, estado: 'listo_despacho', items: next })
+    setModalDespacho(false)
+    mostrarToast(`Pedido ${ficha.numeroPedido} · Listo para despacho`, 'ok')
+  }
+
+  function intentarMarcarListo() {
+    const faltan = textoIncompletosPicking(items)
+    if (faltan) {
+      setError(faltan)
+      return
+    }
+    setModalDespacho(true)
   }
 
   async function onDespachar() {
@@ -232,18 +318,32 @@ export function PedidoFichaPage() {
     }
   }
 
-  if (!perfil) return null
-
   const pickingBloqueado =
     ficha?.estado === 'despachado' ||
     ficha?.estado === 'con_transportista' ||
     ficha?.estado === 'entregado' ||
     ficha?.estado === 'cancelado'
-  const listo = items.length > 0 && items.every((i) => i.preparado)
+  const picking = resumenPicking(items)
+  const todosCantidades =
+    items.length > 0 && items.every((i) => i.cantidadPreparada === i.cantidad)
+  const pctItems = picking.itemsTot === 0 ? 0 : Math.round((picking.itemsListos / picking.itemsTot) * 100)
   const linkSeguimiento = urlSeguimiento(
     transportista || ficha?.transportista || ficha?.metodoEnvio || '',
     seguimiento || ficha?.numeroSeguimiento || '',
   )
+
+  useEffect(() => {
+    if (pickingBloqueado || !ficha || ficha.estado === 'listo_despacho') {
+      estabaCompleto.current = todosCantidades
+      return
+    }
+    if (todosCantidades && !estabaCompleto.current) {
+      setModalDespacho(true)
+    }
+    estabaCompleto.current = todosCantidades
+  }, [todosCantidades, pickingBloqueado, ficha])
+
+  if (!perfil) return null
 
   return (
     <div
@@ -269,7 +369,7 @@ export function PedidoFichaPage() {
         />
         {cargando ? <PageSkeleton /> : null}
         {!cargando && error && !ficha ? (
-          <p className="rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p>
+          <p className="whitespace-pre-wrap rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p>
         ) : null}
         {ficha ? (
           <>
@@ -279,7 +379,9 @@ export function PedidoFichaPage() {
               accion={<BadgeEstado estado={ficha.estado} />}
             />
             {error ? (
-              <p className="mb-4 rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p>
+              <p className="mb-4 whitespace-pre-wrap rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-200">
+                {error}
+              </p>
             ) : null}
 
             <div className="mb-4 flex flex-wrap gap-2">
@@ -304,92 +406,203 @@ export function PedidoFichaPage() {
                   </button>
                 ) : null}
               </div>
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-[640px] text-left text-sm">
-                  <thead>
-                    <tr className="text-[11px] uppercase tracking-wide text-[#94A3B8]">
-                      <th className="py-2 pr-3">Producto</th>
-                      <th className="py-2 pr-3">Cantidad</th>
-                      <th className="py-2 pr-3">Preparada</th>
-                      <th className="py-2">Preparado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((it) => (
-                      <tr key={it.id} className="border-t border-[rgba(99,102,241,0.15)]">
-                        <td className="py-2.5 pr-3 text-[#F1F5F9]">
-                          <p className="font-medium">{it.nombre}</p>
+
+              <div className="mt-4">
+                <p className="text-sm font-medium text-[#E2E8F0]">
+                  Preparados: {picking.itemsListos} de {picking.itemsTot} items
+                </p>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-[#6366F1] transition-[width]"
+                    style={{ width: `${pctItems}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {items.map((it) => {
+                  const completo = itemPickingCompleto(it) && it.preparado
+                  const enProgreso =
+                    it.cantidadPreparada > 0 && (!it.preparado || it.cantidadPreparada < it.cantidad)
+                  const pctUnidades = it.cantidad === 0 ? 0 : Math.min(100, (it.cantidadPreparada / it.cantidad) * 100)
+                  const err = erroresCantidad[it.id]
+                  const exacto = it.cantidadPreparada === it.cantidad
+                  return (
+                    <div
+                      key={it.id}
+                      className={`rounded-lg border p-3 ${enProgreso && !completo ? 'picking-en-progreso border-[#6366F1]' : 'border-[rgba(99,102,241,0.2)]'}`}
+                      style={{
+                        background: completo ? 'rgba(22, 163, 74, 0.14)' : 'rgba(255,255,255,0.03)',
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        {completo ? (
+                          <span className="text-3xl leading-none text-[#4ADE80]" aria-hidden>
+                            ✓
+                          </span>
+                        ) : (
+                          <span className="mt-1 h-7 w-7 shrink-0 rounded-full border border-white/20" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-[#F1F5F9]">{it.nombre}</p>
                           <p className="text-xs text-[#94A3B8]">
                             {[it.varianteEtiqueta, it.numeroLote ? `Lote ${it.numeroLote}` : '']
                               .filter(Boolean)
                               .join(' · ') || '—'}
                           </p>
-                        </td>
-                        <td className="py-2.5 pr-3 text-[#CBD5E1]">{it.cantidad}</td>
-                        <td className="py-2.5 pr-3">
-                          <input
-                            className="h-10 w-20 rounded-md border border-[rgba(99,102,241,0.3)] bg-white/5 px-2 text-sm text-[#F1F5F9]"
-                            inputMode="decimal"
-                            disabled={pickingBloqueado || guardando}
-                            defaultValue={it.cantidadPreparada}
-                            key={`${it.id}-${it.cantidadPreparada}-${it.preparado}`}
-                            onBlur={(ev) => {
-                              const n = Number(ev.target.value.replace(',', '.'))
-                              const cantidadPreparada = Number.isFinite(n) ? n : 0
-                              void persistirPicking(
-                                items.map((x) =>
-                                  x.id === it.id
-                                    ? {
-                                        ...x,
-                                        cantidadPreparada,
-                                        preparado: cantidadPreparada >= x.cantidad,
-                                      }
-                                    : x,
-                                ),
-                              )
-                            }}
-                          />
-                        </td>
-                        <td className="py-2.5">
-                          <label className="inline-flex items-center gap-2 text-sm text-[#CBD5E1]">
-                            <input
-                              type="checkbox"
-                              disabled={pickingBloqueado || guardando}
-                              checked={it.preparado}
-                              onChange={(ev) => {
-                                const on = ev.target.checked
-                                void persistirPicking(
-                                  items.map((x) =>
-                                    x.id === it.id
-                                      ? {
-                                          ...x,
-                                          preparado: on,
-                                          cantidadPreparada: on ? x.cantidad : x.cantidadPreparada,
-                                        }
-                                      : x,
-                                  ),
-                                )
-                              }}
+                          <p className="mt-2 text-xs font-medium text-[#CBD5E1]">
+                            {it.cantidadPreparada} / {it.cantidad} unidades
+                          </p>
+                          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
+                            <div
+                              className="h-full rounded-full bg-[#6366F1]"
+                              style={{ width: `${pctUnidades}%` }}
                             />
-                            ✓ Preparado
-                          </label>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-end gap-3">
+                            <label className="text-xs text-[#94A3B8]">
+                              Cantidad preparada
+                              <input
+                                className="mt-1 block h-10 w-24 rounded-md border border-[rgba(99,102,241,0.3)] bg-white/5 px-2 text-sm text-[#F1F5F9]"
+                                inputMode="decimal"
+                                disabled={pickingBloqueado || guardando}
+                                value={drafts[it.id] ?? String(it.cantidadPreparada)}
+                                onChange={(ev) => {
+                                  const raw = ev.target.value
+                                  setDrafts((d) => ({ ...d, [it.id]: raw }))
+                                  if (raw === '' || raw === '-') return
+                                  const n = Number(raw.replace(',', '.'))
+                                  if (!Number.isFinite(n) || n < 0) {
+                                    setErroresCantidad((e) => ({
+                                      ...e,
+                                      [it.id]: 'No se aceptan valores negativos',
+                                    }))
+                                    return
+                                  }
+                                  if (n > it.cantidad) {
+                                    setErroresCantidad((e) => ({
+                                      ...e,
+                                      [it.id]: `Máximo: ${it.cantidad} unidades pedidas`,
+                                    }))
+                                    setDrafts((d) => ({ ...d, [it.id]: String(it.cantidadPreparada) }))
+                                    return
+                                  }
+                                  setErroresCantidad((e) => {
+                                    const nerr = { ...e }
+                                    delete nerr[it.id]
+                                    return nerr
+                                  })
+                                }}
+                                onBlur={(ev) => {
+                                  const n = Number(ev.target.value.replace(',', '.'))
+                                  setDrafts((d) => {
+                                    const nx = { ...d }
+                                    delete nx[it.id]
+                                    return nx
+                                  })
+                                  if (!Number.isFinite(n) || n < 0) {
+                                    setErroresCantidad((e) => ({
+                                      ...e,
+                                      [it.id]: 'No se aceptan valores negativos',
+                                    }))
+                                    return
+                                  }
+                                  if (n > it.cantidad) {
+                                    setErroresCantidad((e) => ({
+                                      ...e,
+                                      [it.id]: `Máximo: ${it.cantidad} unidades pedidas`,
+                                    }))
+                                    return
+                                  }
+                                  void persistirPicking(
+                                    items.map((x) =>
+                                      x.id === it.id
+                                        ? {
+                                            ...x,
+                                            cantidadPreparada: n,
+                                            preparado: n === x.cantidad ? x.preparado : false,
+                                          }
+                                        : x,
+                                    ),
+                                  )
+                                }}
+                              />
+                            </label>
+                            <label
+                              className="inline-flex items-center gap-2 text-sm text-[#CBD5E1]"
+                              onClick={() => {
+                                if (pickingBloqueado) return
+                                if (!exacto) {
+                                  setErroresCantidad((e) => ({
+                                    ...e,
+                                    [it.id]: `Faltan ${it.cantidad - it.cantidadPreparada} unidades por preparar`,
+                                  }))
+                                }
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                disabled={pickingBloqueado || guardando || !exacto}
+                                checked={it.preparado && exacto}
+                                onChange={(ev) => {
+                                  const on = ev.target.checked
+                                  if (on && it.cantidadPreparada !== it.cantidad) {
+                                    setErroresCantidad((e) => ({
+                                      ...e,
+                                      [it.id]: `Faltan ${it.cantidad - it.cantidadPreparada} unidades por preparar`,
+                                    }))
+                                    return
+                                  }
+                                  void persistirPicking(
+                                    items.map((x) =>
+                                      x.id === it.id
+                                        ? {
+                                            ...x,
+                                            preparado: on,
+                                            cantidadPreparada: on ? x.cantidad : x.cantidadPreparada,
+                                          }
+                                        : x,
+                                    ),
+                                  )
+                                }}
+                              />
+                              ✓ Preparado
+                            </label>
+                          </div>
+                          {err ? <p className="mt-1 text-xs font-medium text-red-400">{err}</p> : null}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-              {!pickingBloqueado ? (
-                <button
-                  className="mt-4 h-11 rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC]"
-                  type="button"
-                  disabled={guardando || items.length === 0}
-                  onClick={() => void onMarcarTodo()}
-                >
-                  Marcar todo como preparado
-                </button>
+
+              <p className="mt-4 text-sm text-[#CBD5E1]">
+                Items preparados: {picking.itemsListos}/{picking.itemsTot} · Unidades: {picking.unidadesPrep}/
+                {picking.unidadesTot}
+              </p>
+
+              {!pickingBloqueado && ficha.estado !== 'listo_despacho' ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    className="h-11 rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC]"
+                    type="button"
+                    disabled={guardando || items.length === 0}
+                    onClick={() => void onMarcarTodo()}
+                  >
+                    Marcar todo como preparado
+                  </button>
+                  <button
+                    className={btnPrimary}
+                    type="button"
+                    disabled={guardando || items.length === 0}
+                    onClick={intentarMarcarListo}
+                  >
+                    Continuar al despacho
+                  </button>
+                </div>
               ) : null}
-              {listo && ficha.estado === 'listo_despacho' ? (
+              {ficha.estado === 'listo_despacho' ? (
                 <p className="mt-4 rounded-lg bg-green-950/50 px-3 py-3 text-sm text-green-200">
                   ✅ Pedido listo para despachar
                 </p>
@@ -492,6 +705,61 @@ export function PedidoFichaPage() {
               Volver al listado
             </button>
           </>
+        ) : null}
+        {modalDespacho && ficha ? (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 md:items-center">
+            <div className="w-full max-w-md rounded-lg bg-white p-5 text-[#1A2F4A] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+              <h3 className="text-lg font-bold">✅ Pedido {ficha.numeroPedido} completamente preparado</h3>
+              <p className="mt-2 text-sm text-[#4A5568]">Todos los items fueron verificados</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  className={btnPrimary}
+                  type="button"
+                  disabled={guardando}
+                  onClick={() => void onConfirmarDespacho()}
+                >
+                  Continuar al despacho
+                </button>
+                <button
+                  className="h-11 rounded-lg border border-[#E2E8F0] px-4 text-sm font-semibold text-[#4A5568]"
+                  type="button"
+                  onClick={() => setModalDespacho(false)}
+                >
+                  Seguir revisando
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+        {variantesScan ? (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 md:items-center">
+            <div className="w-full max-w-md rounded-lg bg-white p-5 text-[#1A2F4A] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+              <h3 className="text-lg font-bold">¿Cuál variante escaneaste?</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {variantesScan.map((hit) => (
+                  <button
+                    key={hit.id}
+                    className="rounded-full border border-[#E2E8F0] px-3 py-2 text-sm font-semibold text-[#1A2F4A] hover:border-[#6366F1] hover:text-[#4F46E5]"
+                    type="button"
+                    onClick={() => {
+                      const elegido = hit
+                      setVariantesScan(null)
+                      void persistirPicking(aplicarEscaneoItem(elegido, items))
+                    }}
+                  >
+                    [{hit.varianteEtiqueta || 'Sin variante'}]
+                  </button>
+                ))}
+              </div>
+              <button
+                className="mt-4 text-sm font-medium text-[#4A5568]"
+                type="button"
+                onClick={() => setVariantesScan(null)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
         ) : null}
         {emailModal ? (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 md:items-center">
