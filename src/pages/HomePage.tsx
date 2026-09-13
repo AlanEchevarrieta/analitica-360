@@ -443,6 +443,7 @@ export function HomePage() {
       ])
       setSuscripcion(sub)
       setDash(dashData)
+      console.log('[stock home]', dashData.stock.slice(0, 3))
       setSerieHome(serie.length > 0 ? serie : dashData.ultimos7)
       setCargandoDash(false)
       const banner = await bannerTicketsHome(client)

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { fechaHoyAR, lunesIso, sumarDiasIso, truncarEtiqueta } from './analytics'
 import type { CumpleProximo } from './clientes'
+import { listarProductosConStock } from './productos'
 
 export type DashboardDia = {
   fecha: string
@@ -90,15 +91,34 @@ export function procesarTopProductos(top: DashboardInicio['top5'] | undefined) {
   return (top ?? []).map((p) => ({ ...p, etiqueta: truncarEtiqueta(p.nombre) }))
 }
 
+function stockDesdeProductos(filas: { activo: boolean; nombre: string; stock_actual: number }[]): DashboardStock[] {
+  return filas
+    .filter((p) => p.activo)
+    .map((p) => ({ nombre: p.nombre, stock: p.stock_actual }))
+    .sort((a, b) => a.stock - b.stock || a.nombre.localeCompare(b.nombre, 'es'))
+}
+
 export async function cargarDashboardInicio(client: SupabaseClient): Promise<DashboardInicio> {
-  const { data, error } = await client.rpc('dashboard_inicio')
-  if (error || data == null) return VACIO
+  const [{ data, error }, packed] = await Promise.all([
+    client.rpc('dashboard_inicio'),
+    listarProductosConStock(client),
+  ])
+  if (error || data == null) {
+    if (packed.error || packed.filas.length === 0) return VACIO
+    const stockSolo = stockDesdeProductos(packed.filas)
+    return { ...VACIO, stock: stockSolo, alertasStock: stockSolo.filter((p) => p.stock <= 5) }
+  }
   const row = asRecord(data)
   const hoy = asRecord(row.ventas_hoy ?? row.hoy)
   const topHoy = asRecord(row.top_hoy)
   const ultimos7 = asArray(row.ventas_7dias ?? row.ultimos_7)
   const top5 = mapProductos(row.top_productos ?? row.top_5)
-  const stock = asArray(row.stock)
+  const stockHome = packed.error
+    ? asArray(row.stock).map((item) => {
+        const p = asRecord(item)
+        return { nombre: String(p.nombre ?? ''), stock: num(p.stock) }
+      })
+    : stockDesdeProductos(packed.filas)
   const cumples = asArray(row.cumpleanos_proximos).map((item) => {
     const c = asRecord(item)
     return {
@@ -126,14 +146,13 @@ export async function cargarDashboardInicio(client: SupabaseClient): Promise<Das
       }
     }),
     top5,
-    stock: stock.map((item) => {
-      const p = asRecord(item)
-      return { nombre: String(p.nombre ?? ''), stock: num(p.stock) }
-    }),
-    alertasStock: asArray(row.alertas_stock).map((item) => {
-      const p = asRecord(item)
-      return { nombre: String(p.nombre ?? ''), stock: num(p.stock) }
-    }),
+    stock: stockHome,
+    alertasStock: packed.error
+      ? asArray(row.alertas_stock).map((item) => {
+          const p = asRecord(item)
+          return { nombre: String(p.nombre ?? ''), stock: num(p.stock) }
+        })
+      : stockHome.filter((p) => p.stock <= 5),
     cumples,
   }
 }
