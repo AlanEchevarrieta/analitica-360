@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const client = requireSupabase()
     const { data, error: qError } = await client
       .from('usuarios')
-      .select('id, empresa_id, nombre, email, rol, activo, permisos, empresas (id, nombre, rubro, plan_actual, activo)')
+      .select('id, empresa_id, nombre, email, rol, activo, permisos')
       .eq('id', userId)
       .maybeSingle()
 
@@ -123,8 +123,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const empresas = data.empresas as Empresa | Empresa[] | null
-    const empresa = Array.isArray(empresas) ? empresas[0] : empresas
+    const empresaId = String(data.empresa_id ?? '')
+    const { data: empresaRow, error: empError } = await client
+      .from('empresas')
+      .select('id, nombre, rubro, plan_actual, activo')
+      .eq('id', empresaId)
+      .maybeSingle()
+
+    if (empError && !esErrorAuth(empError)) {
+      setError('No se pudo leer tu empresa. ¿Corriste el SQL en Supabase?')
+      setPerfil(null)
+      return
+    }
+
+    const empresa = empresaRow as Empresa | null
     if (!empresa) {
       setPerfil(null)
       return

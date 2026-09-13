@@ -457,8 +457,8 @@ export function ConfiguracionPage() {
     }
     setOk(`Invitación enviada a ${emailInv.trim()}`)
     setLinkInv({
-      url: linkInvitacionColaborador(perfil.empresa.id),
-      texto: textoLinkInvitacion(perfil.empresa.id),
+      url: linkInvitacionColaborador(perfil.usuario.empresa_id),
+      texto: textoLinkInvitacion(perfil.usuario.empresa_id),
     })
     setInvitar(false)
     setEmailInv('')
