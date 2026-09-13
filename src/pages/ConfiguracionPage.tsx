@@ -19,9 +19,9 @@ import {
 import { requireSupabase } from '../lib/supabase'
 import {
   desactivarUsuario,
+  filasDesdeListarEquipo,
   guardarPermisosColaborador,
   invitarColaborador,
-  listarUsuariosEmpresa,
   type UsuarioEmpresa,
 } from '../lib/usuarios'
 import { esDueno, linkInvitacionColaborador, textoLinkInvitacion } from '../lib/roles'
@@ -228,14 +228,13 @@ export function ConfiguracionPage() {
   async function cargarUsuarios() {
     const supabase = requireSupabase()
     const { data, error } = await supabase.rpc('listar_equipo')
-    console.log('[equipo debug]', { data, error })
     if (error) {
-      setError(error.message)
-      setUsuarios([])
+      console.error('[equipo error]', error)
+      setError('Error al cargar el equipo: ' + error.message)
+      return
     }
-    const { filas, error: listError } = await listarUsuariosEmpresa(supabase)
-    if (listError) setError(listError)
-    else if (!error) setUsuarios(filas)
+    console.log('[equipo debug]', data)
+    setUsuarios(filasDesdeListarEquipo(data || []))
   }
 
   useEffect(() => {

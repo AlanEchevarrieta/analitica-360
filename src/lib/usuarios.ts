@@ -38,43 +38,19 @@ function accesoDePermisos(modulos: unknown, acciones: unknown, rol: Rol): Acceso
   return accesoSoloPedidos()
 }
 
+export function filasDesdeListarEquipo(data: unknown): UsuarioEmpresa[] {
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => {
+    const rol = parseRol(row.rol)
+    return filaDesdeRow(row, accesoDePermisos(row.modulos, row.acciones, rol))
+  })
+}
+
 export async function listarUsuariosEmpresa(
   client: SupabaseClient,
 ): Promise<{ filas: UsuarioEmpresa[]; error: string | null }> {
   const { data, error } = await client.rpc('listar_equipo')
-  console.log('[equipo debug]', { data, error })
   if (error) return { filas: [], error: error.message }
-
-  const filas: UsuarioEmpresa[] = ((data ?? []) as Record<string, unknown>[]).map((row) => {
-    const rol = parseRol(row.rol)
-    return filaDesdeRow(row, accesoDePermisos(row.modulos, row.acciones, rol))
-  })
-
-  const inv = await client
-    .from('invitaciones_colaboradores')
-    .select('id, email, pendiente, modulos, acciones')
-    .eq('pendiente', true)
-    .order('created_at', { ascending: false })
-
-  if (!inv.error) {
-    for (const row of (inv.data ?? []) as Record<string, unknown>[]) {
-      const email = String(row.email ?? '')
-      if (filas.some((u) => u.email.toLowerCase() === email.toLowerCase())) continue
-      filas.push({
-        id: String(row.id),
-        nombre: email.split('@')[0] || 'Invitado',
-        email,
-        rol: 'operario',
-        activo: false,
-        acceso: parseAcceso(row.modulos, row.acciones),
-        invitacionPendiente: true,
-        esInvitacion: true,
-      })
-    }
-  }
-
-  filas.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-  return { filas, error: null }
+  return { filas: filasDesdeListarEquipo(data), error: null }
 }
 
 export async function listarColaboradoresActivos(
