@@ -437,6 +437,7 @@ export function ListCard({ children, to }: { children: ReactNode; to?: string })
 }
 
 export const PAGE_VENTAS = 50
+export const PAGE_PEDIDOS = 50
 export const PAGE_COMPRAS = 50
 export const PAGE_PRODUCTOS = 100
 export const PAGE_PROVEEDORES = 50

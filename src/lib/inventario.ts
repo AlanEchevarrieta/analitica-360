@@ -64,6 +64,9 @@ export function estiloTipoMovimiento(tipo: string, signo: number) {
   if (t === 'venta') {
     return { icono: '💸', texto: 'Venta', clase: 'text-[#F87171]', ...BADGE_SALIDA }
   }
+  if (t === 'pedido') {
+    return { icono: '📦', texto: 'Pedido', clase: 'text-[#F87171]', ...BADGE_SALIDA }
+  }
   if (t === 'devolucion_cliente' || t === 'devolucion') {
     return { icono: '↩️', texto: 'Devolución cliente', clase: 'text-[#93C5FD]', fondo: '#1E3A5F', color: '#93C5FD' }
   }

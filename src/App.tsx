@@ -51,6 +51,13 @@ const VentasPage = loadComponent(() => import('./pages/VentasPage').then((m) => 
 const VentaNuevaPage = loadComponent(() =>
   import('./pages/VentaNuevaPage').then((m) => ({ default: m.VentaNuevaPage })),
 )
+const PedidosPage = loadComponent(() => import('./pages/PedidosPage').then((m) => ({ default: m.PedidosPage })))
+const PedidoNuevaPage = loadComponent(() =>
+  import('./pages/PedidoNuevaPage').then((m) => ({ default: m.PedidoNuevaPage })),
+)
+const PedidoFichaPage = loadComponent(() =>
+  import('./pages/PedidoFichaPage').then((m) => ({ default: m.PedidoFichaPage })),
+)
 const ComprasPage = loadComponent(() => import('./pages/ComprasPage').then((m) => ({ default: m.ComprasPage })))
 const CompraNuevaPage = loadComponent(() =>
   import('./pages/CompraNuevaPage').then((m) => ({ default: m.CompraNuevaPage })),
@@ -228,6 +235,9 @@ function AppRoutes() {
         <Route path="/soporte/:id" element={<SoporteFichaPage />} />
         <Route path="/ventas" element={<VentasPage />} />
         <Route path="/ventas/nueva" element={<VentaNuevaPage />} />
+        <Route path="/pedidos" element={<PedidosPage />} />
+        <Route path="/pedidos/nueva" element={<PedidoNuevaPage />} />
+        <Route path="/pedidos/:id" element={<PedidoFichaPage />} />
         <Route path="/compras" element={<ComprasPage />} />
         <Route path="/compras/nueva" element={<CompraNuevaPage />} />
         <Route path="/proveedores" element={<ProveedoresPage />} />

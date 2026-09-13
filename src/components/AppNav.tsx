@@ -59,6 +59,7 @@ export function AppNav() {
   const sinAnalytics = Boolean(perfil && !planTieneAnalytics(perfil.empresa.plan_actual))
   const sinInsights = Boolean(perfil && !planTieneInsights(perfil.empresa.plan_actual))
   const masActivo = [
+    '/pedidos',
     '/compras',
     '/proveedores',
     '/analytics',
@@ -141,6 +142,9 @@ export function AppNav() {
           <NavLink className={linkClass} to="/compras">
             Compras
           </NavLink>
+          <NavLink className={linkClass} to="/pedidos">
+            Pedidos
+          </NavLink>
           <NavLink className={linkClass} to="/proveedores">
             Proveedores
           </NavLink>
@@ -188,6 +192,9 @@ export function AppNav() {
           </NavLink>
           <NavLink className={sideClass} to="/compras">
             🛒 Compras
+          </NavLink>
+          <NavLink className={sideClass} to="/pedidos">
+            📤 Pedidos
           </NavLink>
           <NavLink className={sideClass} to="/proveedores">
             🏭 Proveedores
@@ -256,6 +263,9 @@ export function AppNav() {
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" />
             <NavLink className={sheetClass} to="/compras" onClick={() => setMas(false)}>
               🛒 Compras
+            </NavLink>
+            <NavLink className={sheetClass} to="/pedidos" onClick={() => setMas(false)}>
+              📤 Pedidos
             </NavLink>
             <NavLink className={sheetClass} to="/proveedores" onClick={() => setMas(false)}>
               🏭 Proveedores
