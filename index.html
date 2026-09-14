@@ -21,8 +21,8 @@
       #root {
         margin: 0;
         min-height: 100%;
-        background: #0f1b2d;
-        color: #f1f5f9;
+        background: var(--canvas-from, #0f1b2d);
+        color: var(--text, #f1f5f9);
       }
       @keyframes spin {
         from {
@@ -37,9 +37,9 @@
     <link rel="dns-prefetch" href="https://noawemhzmlnjrbkmztjs.supabase.co" />
     <script>
       try {
-        if (localStorage.getItem('analitica-tema') === 'light') {
-          document.documentElement.setAttribute('data-theme', 'light')
-        }
+        var tema = localStorage.getItem('analitica-tema') === 'light' ? 'light' : 'dark'
+        document.documentElement.setAttribute('data-theme', tema)
+        document.documentElement.classList.toggle('dark', tema === 'dark')
       } catch (e) {}
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />

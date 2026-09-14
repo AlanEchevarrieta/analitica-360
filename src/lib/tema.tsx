@@ -1,6 +1,7 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 export const TEMA_STORAGE_KEY = 'analitica-tema'
+export const TEMA_EVENTO = 'analitica-tema'
 
 export type Tema = 'dark' | 'light'
 
@@ -22,8 +23,14 @@ export function leerTemaGuardado(): Tema {
 
 export function aplicarTema(tema: Tema) {
   const root = document.documentElement
-  if (tema === 'light') root.setAttribute('data-theme', 'light')
-  else root.removeAttribute('data-theme')
+  root.setAttribute('data-theme', tema)
+  root.classList.toggle('dark', tema === 'dark')
+  try {
+    localStorage.setItem(TEMA_STORAGE_KEY, tema)
+  } catch {
+    /* ignore */
+  }
+  window.dispatchEvent(new Event(TEMA_EVENTO))
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -33,27 +40,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return inicial
   })
 
+  useEffect(() => {
+    aplicarTema(tema)
+  }, [tema])
+
   const value = useMemo<TemaCtx>(
     () => ({
       tema,
-      setTema: (t: Tema) => {
-        setTemaState(t)
-        aplicarTema(t)
-        try {
-          localStorage.setItem(TEMA_STORAGE_KEY, t)
-        } catch {
-          /* ignore */
-        }
+      setTema: (nuevoTema: Tema) => {
+        aplicarTema(nuevoTema)
+        setTemaState(nuevoTema)
       },
       toggleTema: () => {
-        const next: Tema = tema === 'light' ? 'dark' : 'light'
-        setTemaState(next)
-        aplicarTema(next)
-        try {
-          localStorage.setItem(TEMA_STORAGE_KEY, next)
-        } catch {
-          /* ignore */
-        }
+        const nuevoTema: Tema = tema === 'light' ? 'dark' : 'light'
+        aplicarTema(nuevoTema)
+        setTemaState(nuevoTema)
       },
     }),
     [tema],

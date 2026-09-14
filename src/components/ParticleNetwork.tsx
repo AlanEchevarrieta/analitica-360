@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { TEMA_EVENTO } from '../lib/tema'
 
 type Particle = {
   x: number
@@ -224,6 +225,12 @@ export function ParticleNetwork({
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseleave', onLeave)
     document.addEventListener('visibilitychange', onVisibility)
+    function onTema() {
+      colors = leerColores()
+    }
+    window.addEventListener(TEMA_EVENTO, onTema)
+    const temaObs = new MutationObserver(onTema)
+    temaObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] })
 
     let observer: IntersectionObserver | null = null
     function bindObserver() {
@@ -269,6 +276,8 @@ export function ParticleNetwork({
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseleave', onLeave)
       document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener(TEMA_EVENTO, onTema)
+      temaObs.disconnect()
     }
   }, [contained, enableMobile, mobileCount, desktopCount, startWhenIdle, pauseOffscreen])
 

@@ -44,7 +44,8 @@
   --text-tremor-metric: 1.875rem;
 }
 
-:root {
+:root,
+:root[data-theme='dark'] {
   color-scheme: dark;
   --canvas-from: #0f1b2d;
   --canvas-to: #1a2f4a;
@@ -156,6 +157,7 @@ html,
 body,
 #root {
   min-height: 100%;
+  background: var(--canvas-from);
 }
 
 body {
