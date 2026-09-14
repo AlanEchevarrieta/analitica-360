@@ -8,6 +8,7 @@ export type CompraFila = {
   total: number
   notas: string | null
   anulada: boolean
+  ordenCompraId: string | null
 }
 
 function mensajeErrorCompras(msg: string) {
@@ -33,7 +34,7 @@ export async function listarComprasPaginado(
 
   let q = client
     .from('compras')
-    .select('id, fecha, proveedor, total, notas, deleted_at, compras_items(producto_nombre, cantidad)', { count: 'exact' })
+    .select('id, fecha, proveedor, total, notas, deleted_at, orden_compra_id, compras_items(producto_nombre, cantidad)', { count: 'exact' })
     .order('fecha', { ascending: false })
 
   q = input.mostrarAnuladas ? q.not('deleted_at', 'is', null) : q.is('deleted_at', null)
@@ -42,10 +43,28 @@ export async function listarComprasPaginado(
 
   const tabla = await q.range(from, to)
   if (tabla.error) {
+    const t = tabla.error.message.toLowerCase()
+    if (t.includes('orden_compra_id')) {
+      let q2 = client
+        .from('compras')
+        .select('id, fecha, proveedor, total, notas, deleted_at, compras_items(producto_nombre, cantidad)', {
+          count: 'exact',
+        })
+        .order('fecha', { ascending: false })
+      q2 = input.mostrarAnuladas ? q2.not('deleted_at', 'is', null) : q2.is('deleted_at', null)
+      if (qProveedor) q2 = q2.ilike('proveedor', `%${qProveedor}%`)
+      const retry = await q2.range(from, to)
+      if (retry.error) return { filas: [], total: 0, error: mensajeErrorCompras(retry.error.message) }
+      return { filas: mapCompras(retry.data as Record<string, unknown>[]), total: retry.count ?? 0, error: null }
+    }
     return { filas: [], total: 0, error: mensajeErrorCompras(tabla.error.message) }
   }
 
-  const filas = (tabla.data as Record<string, unknown>[]).map((row) => {
+  return { filas: mapCompras(tabla.data as Record<string, unknown>[]), total: tabla.count ?? 0, error: null }
+}
+
+function mapCompras(rows: Record<string, unknown>[]): CompraFila[] {
+  return rows.map((row) => {
     const items = Array.isArray(row.compras_items) ? row.compras_items : []
     const productos = items
       .map((item) => {
@@ -62,10 +81,9 @@ export async function listarComprasPaginado(
       total: Number(row.total ?? 0),
       notas: row.notas == null || row.notas === '' ? null : String(row.notas),
       anulada: row.deleted_at != null,
+      ordenCompraId: row.orden_compra_id == null || row.orden_compra_id === '' ? null : String(row.orden_compra_id),
     }
   })
-
-  return { filas, total: tabla.count ?? 0, error: null }
 }
 
 export async function confirmarCompra(

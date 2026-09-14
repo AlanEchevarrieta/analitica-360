@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { tienePermiso } from '../lib/permisos'
 import { AnularCompraModal } from '../components/AnularCompraModal'
@@ -25,7 +25,9 @@ import {
   theadStyle,
 } from '../components/listado'
 import { ImportarComprasModal } from '../components/ImportarComprasModal'
+import { OrdenesCompraTab } from '../components/OrdenesCompraTab'
 import { formatoFechaCompra, listarComprasPaginado, type CompraFila } from '../lib/compras'
+import { notasDesdeOc } from '../lib/ordenesCompra'
 import { MSG_ERROR_RED, mensajeCargaTabla } from '../lib/consulta'
 import { formatoARS, listarProductosNombres } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
@@ -33,6 +35,8 @@ import { theme } from '../theme'
 
 export function ComprasPage() {
   const { perfil } = useAuth()
+  const [params, setParams] = useSearchParams()
+  const tab = params.get('tab') === 'oc' ? 'oc' : 'compras'
   const [filas, setFilas] = useState<CompraFila[]>([])
   const [total, setTotal] = useState(0)
   const [pagina, setPagina] = useState(1)
@@ -88,8 +92,41 @@ export function ComprasPage() {
         <AppNav />
         <PageTitle
           titulo="Compras"
-          subtitulo={`${total} ${total === 1 ? 'compra registrada' : 'compras registradas'}`}
+          subtitulo={
+            tab === 'oc'
+              ? 'Órdenes de compra a proveedores'
+              : `${total} ${total === 1 ? 'compra registrada' : 'compras registradas'}`
+          }
         />
+
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === 'compras' ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'}`}
+            onClick={() => {
+              const next = new URLSearchParams(params)
+              next.delete('tab')
+              setParams(next)
+            }}
+          >
+            Compras
+          </button>
+          <button
+            type="button"
+            className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === 'oc' ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'}`}
+            onClick={() => {
+              const next = new URLSearchParams(params)
+              next.set('tab', 'oc')
+              setParams(next)
+            }}
+          >
+            Órdenes de compra
+          </button>
+        </div>
+
+        {tab === 'oc' ? <OrdenesCompraTab /> : null}
+        {tab === 'compras' ? (
+        <>
 
         <div className="mb-6 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -172,7 +209,21 @@ export function ComprasPage() {
                   </td>
                   <td className="px-3 py-3">{fila.productos || '—'}</td>
                   <td className="px-3 py-3 font-bold text-[#6366F1]">{formatoARS(fila.total)}</td>
-                  <td className="px-3 py-3 text-[#94A3B8]">{fila.notas ?? '—'}</td>
+                  <td className="px-3 py-3 text-[#94A3B8]">
+                    {(() => {
+                      const oc = notasDesdeOc(fila.notas)
+                      if (oc) {
+                        return fila.ordenCompraId ? (
+                          <Link className="font-semibold text-[#A5B4FC] hover:underline" to={`/compras/oc/${fila.ordenCompraId}`}>
+                            📋 Desde {oc}
+                          </Link>
+                        ) : (
+                          <span>📋 Desde {oc}</span>
+                        )
+                      }
+                      return fila.notas ?? '—'
+                    })()}
+                  </td>
                   {tienePermiso(perfil, 'anular_ventas') ? (
                     <td className="px-3 py-3">
                       {!fila.anulada ? (
@@ -198,6 +249,9 @@ export function ComprasPage() {
                   </p>
                   <p className="mt-1 text-sm font-medium">{fila.proveedor || 'Sin proveedor'}</p>
                   <p className="mt-1 font-bold text-[#6366F1]">{formatoARS(fila.total)}</p>
+                  {notasDesdeOc(fila.notas) ? (
+                    <p className="mt-1 text-xs text-[#A5B4FC]">📋 Desde {notasDesdeOc(fila.notas)}</p>
+                  ) : null}
                   {tienePermiso(perfil, 'anular_ventas') && !fila.anulada ? (
                     <button
                       className="mt-2 text-xs text-[#F87171]"
@@ -247,6 +301,8 @@ export function ComprasPage() {
               void cargar()
             }}
           />
+        ) : null}
+        </>
         ) : null}
       </div>
     </div>

@@ -62,6 +62,12 @@ const ComprasPage = loadComponent(() => import('./pages/ComprasPage').then((m) =
 const CompraNuevaPage = loadComponent(() =>
   import('./pages/CompraNuevaPage').then((m) => ({ default: m.CompraNuevaPage })),
 )
+const OrdenCompraNuevaPage = loadComponent(() =>
+  import('./pages/OrdenCompraNuevaPage').then((m) => ({ default: m.OrdenCompraNuevaPage })),
+)
+const OrdenCompraFichaPage = loadComponent(() =>
+  import('./pages/OrdenCompraFichaPage').then((m) => ({ default: m.OrdenCompraFichaPage })),
+)
 const ProveedoresPage = loadComponent(() =>
   import('./pages/ProveedoresPage').then((m) => ({ default: m.ProveedoresPage })),
 )
@@ -242,6 +248,9 @@ function AppRoutes() {
         <Route path="/soporte/:id" element={<SoporteFichaPage />} />
         <Route path="/compras" element={<ComprasPage />} />
         <Route path="/compras/nueva" element={<CompraNuevaPage />} />
+        <Route path="/compras/oc/nueva" element={<OrdenCompraNuevaPage />} />
+        <Route path="/compras/oc/:id/editar" element={<OrdenCompraNuevaPage />} />
+        <Route path="/compras/oc/:id" element={<OrdenCompraFichaPage />} />
         <Route path="/proveedores" element={<ProveedoresPage />} />
         <Route path="/proveedores/nuevo" element={<ProveedorFormPage />} />
         <Route path="/proveedores/:id/editar" element={<ProveedorFormPage />} />
