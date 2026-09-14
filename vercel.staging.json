@@ -1,0 +1,8 @@
+{
+  "name": "analitica-360-staging",
+  "env": {
+    "VITE_SUPABASE_URL": "MISMA_URL_DE_SUPABASE",
+    "VITE_SUPABASE_ANON_KEY": "MISMA_KEY",
+    "VITE_ENV": "staging"
+  }
+}

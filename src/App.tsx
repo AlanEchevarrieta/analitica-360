@@ -268,11 +268,53 @@ function AppRoutes() {
   )
 }
 
+function StagingBanner() {
+  const esStaging = import.meta.env.VITE_ENV === 'staging'
+
+  useEffect(() => {
+    if (!esStaging) return
+    const previo = document.body.style.paddingTop
+    document.body.style.paddingTop = '32px'
+    return () => {
+      document.body.style.paddingTop = previo
+    }
+  }, [esStaging])
+
+  if (!esStaging) return null
+
+  return (
+    <div
+      role="status"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 32,
+        background: '#F59E0B',
+        zIndex: 99999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: 12,
+        fontWeight: 600,
+        color: '#1A2F4A',
+        textAlign: 'center',
+        padding: '0 8px',
+      }}
+    >
+      ⚠️ AMBIENTE DE PRUEBAS — Los datos aquí no afectan producción
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
+          <StagingBanner />
           <RecoveryGate />
           <TitleGate />
           <InactivityWatch />
