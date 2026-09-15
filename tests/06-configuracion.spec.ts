@@ -29,5 +29,5 @@ test('ubicaciones muestra lista', async ({ page }) => {
   await loginComoAdmin(page)
   await page.goto('/configuracion?tab=ubicaciones')
   await expect(page.getByText('Ubicaciones').first()).toBeVisible({ timeout: 15000 })
-  await expect(page.locator('ul li').first()).toBeVisible()
+  await expect(page.getByText('Casa').or(page.getByText('Stand')).first()).toBeVisible()
 })

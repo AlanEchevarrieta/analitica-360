@@ -17,7 +17,7 @@ test('login con contraseña vacía muestra error', async ({ page }) => {
   await page.fill('input[type="email"]', TEST_USER.email || 'prueba@example.com')
   await page.fill('input[type="password"]', '')
   await page.click('button[type="submit"]')
-  await expect(page.getByText(/contraseña/i)).toBeVisible()
+  await expect(page.getByText('La contraseña debe tener al menos')).toBeVisible()
 })
 
 test('cerrar sesión redirige a /login', async ({ page }) => {

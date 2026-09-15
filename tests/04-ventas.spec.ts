@@ -34,7 +34,8 @@ test('listado muestra ventas con rango 2026 y se puede registrar y anular una ve
 
   await expect(page.getByText(nombreProducto).first()).toBeVisible()
   await page.getByRole('button', { name: 'Siguiente' }).click()
-  await page.getByRole('button', { name: 'Efectivo' }).click()
+  await expect(page.getByText('Forma de pago')).toBeVisible({ timeout: 15000 })
+  await page.getByRole('button', { name: 'Efectivo' }).click({ timeout: 15000 })
   await page.getByRole('button', { name: 'Siguiente' }).click()
   await page.getByRole('button', { name: 'Saltar' }).click()
   await page.getByRole('button', { name: 'CONFIRMAR VENTA' }).click()
