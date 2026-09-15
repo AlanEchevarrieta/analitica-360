@@ -10,6 +10,7 @@ export type ModuloClave =
   | 'pedidos'
   | 'inventario'
   | 'analytics'
+  | 'contabilidad'
   | 'insights'
   | 'configuracion'
 
@@ -39,6 +40,7 @@ export const MODULOS_EQUIPO: { id: ModuloClave; icono: string; label: string; so
   { id: 'pedidos', icono: '📋', label: 'Pedidos' },
   { id: 'inventario', icono: '🏗️', label: 'Inventario' },
   { id: 'analytics', icono: '📊', label: 'Analytics' },
+  { id: 'contabilidad', icono: '📒', label: 'Contabilidad' },
   { id: 'insights', icono: '💡', label: 'Insights' },
   { id: 'configuracion', icono: '⚙️', label: 'Configuración', soloDueno: true },
 ]
@@ -173,6 +175,7 @@ export const RUTA_MODULO: { prefix: string; modulo: ModuloClave }[] = [
   { prefix: '/pedidos', modulo: 'pedidos' },
   { prefix: '/inventario', modulo: 'inventario' },
   { prefix: '/analytics', modulo: 'analytics' },
+  { prefix: '/contabilidad', modulo: 'contabilidad' },
   { prefix: '/insights', modulo: 'insights' },
   { prefix: '/configuracion', modulo: 'configuracion' },
   { prefix: '/inicio', modulo: 'inicio' },

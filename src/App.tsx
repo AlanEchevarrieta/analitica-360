@@ -95,6 +95,9 @@ const AnalyticsPage = loadComponent(() =>
 const InsightsPage = loadComponent(() =>
   import('./pages/InsightsPage').then((m) => ({ default: m.InsightsPage })),
 )
+const ContabilidadPage = loadComponent(() =>
+  import('./pages/ContabilidadPage').then((m) => ({ default: m.ContabilidadPage })),
+)
 const SoportePage = loadComponent(() =>
   import('./pages/SoportePage').then((m) => ({ default: m.SoportePage })),
 )
@@ -259,6 +262,7 @@ function AppRoutes() {
         <Route path="/clientes/nuevo" element={<ClienteFormPage />} />
         <Route path="/clientes/:id" element={<ClienteFichaPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/contabilidad" element={<ContabilidadPage />} />
         <Route path="/insights" element={<InsightsPage />} />
         <Route path="/configuracion" element={<ConfiguracionPage />} />
         </Route>

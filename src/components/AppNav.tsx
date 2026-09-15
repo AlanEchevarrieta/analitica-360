@@ -68,6 +68,7 @@ export function AppNav() {
     '/compras',
     '/proveedores',
     '/analytics',
+    '/contabilidad',
     '/insights',
     '/configuracion',
     '/inventario',
@@ -174,10 +175,15 @@ export function AppNav() {
               Inventario
             </NavLink>
           ) : null}
-          {(ver('analytics') || ver('insights')) ? <NavSep /> : null}
+          {(ver('analytics') || ver('contabilidad') || ver('insights')) ? <NavSep /> : null}
           {ver('analytics') ? (
             <NavLink className={linkClass} to="/analytics">
               {analyticsLabel}
+            </NavLink>
+          ) : null}
+          {ver('contabilidad') ? (
+            <NavLink className={linkClass} to="/contabilidad">
+              Contabilidad
             </NavLink>
           ) : null}
           {ver('insights') ? (
@@ -253,6 +259,11 @@ export function AppNav() {
           {ver('analytics') ? (
             <NavLink className={sideClass} to="/analytics">
               📊 {analyticsLabel}
+            </NavLink>
+          ) : null}
+          {ver('contabilidad') ? (
+            <NavLink className={sideClass} to="/contabilidad">
+              📒 Contabilidad
             </NavLink>
           ) : null}
           {ver('insights') ? (
@@ -344,6 +355,11 @@ export function AppNav() {
             {ver('analytics') ? (
               <NavLink className={sheetClass} to="/analytics" onClick={() => setMas(false)}>
                 📊 {analyticsLabel}
+              </NavLink>
+            ) : null}
+            {ver('contabilidad') ? (
+              <NavLink className={sheetClass} to="/contabilidad" onClick={() => setMas(false)}>
+                📒 Contabilidad
               </NavLink>
             ) : null}
             {ver('insights') ? (

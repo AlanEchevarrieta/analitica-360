@@ -62,6 +62,7 @@ import {
   type UbicacionFila,
 } from '../lib/ubicaciones'
 import { btnPrimary, cardShell } from '../components/listado'
+import { FISCAL_DEFAULT, PAISES_FISCAL, presetDePais, type PaisFiscal } from '../lib/fiscal'
 
 const inputClass =
   'h-10 w-full rounded-lg border border-[rgba(99,102,241,0.3)] bg-white/5 px-3 text-sm text-[#F1F5F9] outline-none focus:border-[#6366F1]'
@@ -77,6 +78,7 @@ type TabId =
   | 'variantes'
   | 'lotes'
   | 'remitente'
+  | 'fiscal'
   | 'plan'
 
 const MOSAICO: {
@@ -95,6 +97,7 @@ const MOSAICO: {
   { id: 'inventario', icono: '📦', titulo: 'Inventario', subtitulo: 'Umbral de stock bajo y alertas' },
   { id: 'ubicaciones', icono: '📍', titulo: 'Ubicaciones', subtitulo: 'Depósitos, locales y stands' },
   { id: 'remitente', icono: '📬', titulo: 'Datos del remitente', subtitulo: 'Quién figura en el remito' },
+  { id: 'fiscal', icono: '🌎', titulo: 'Configuración fiscal', subtitulo: 'País, moneda e IVA en ventas' },
   { id: 'plan', icono: '⭐', titulo: 'Mi Plan', subtitulo: 'Plan actual y facturación' },
 ]
 
@@ -201,6 +204,12 @@ export function ConfiguracionPage() {
   const [modoAsignacion, setModoAsignacion] = useState<ModoAsignacion>('manual')
   const [asignacionFija, setAsignacionFija] = useState('')
   const [rotacionIds, setRotacionIds] = useState<string[]>([])
+  const [paisFiscal, setPaisFiscal] = useState<PaisFiscal>(FISCAL_DEFAULT.pais)
+  const [monedaFiscal, setMonedaFiscal] = useState(FISCAL_DEFAULT.moneda)
+  const [simboloFiscal, setSimboloFiscal] = useState(FISCAL_DEFAULT.simboloMoneda)
+  const [alicuotaFiscal, setAlicuotaFiscal] = useState(String(FISCAL_DEFAULT.alicuotaIva))
+  const [nombreIvaFiscal, setNombreIvaFiscal] = useState(FISCAL_DEFAULT.nombreIva)
+  const [mostrarIvaVentas, setMostrarIvaVentas] = useState(false)
 
   async function recargarCategorias() {
     if (!perfil) return
@@ -271,6 +280,12 @@ export function ConfiguracionPage() {
       setModoAsignacion(config.modoAsignacion)
       setAsignacionFija(config.asignacionFijaUsuarioId)
       setRotacionIds(config.asignacionRotacionIds)
+      setPaisFiscal(config.pais)
+      setMonedaFiscal(config.moneda)
+      setSimboloFiscal(config.simboloMoneda)
+      setAlicuotaFiscal(String(config.alicuotaIva))
+      setNombreIvaFiscal(config.nombreIva)
+      setMostrarIvaVentas(Boolean(config.mostrarIvaVentas))
       if (config.usaVariantes) {
         const atr = await listarAtributos(requireSupabase())
         if (!atr.error) setAtributos(atr.filas)
@@ -354,6 +369,12 @@ export function ConfiguracionPage() {
       modoAsignacion,
       asignacionFijaUsuarioId: asignacionFija,
       asignacionRotacionIds: rotacionIds,
+      pais: paisFiscal,
+      moneda: monedaFiscal,
+      simboloMoneda: simboloFiscal,
+      alicuotaIva: Number.parseFloat(alicuotaFiscal.replace(',', '.')),
+      nombreIva: nombreIvaFiscal,
+      mostrarIvaVentas,
     })
     setGuardando(false)
     if (fallo) {
@@ -1519,6 +1540,83 @@ export function ConfiguracionPage() {
                 </div>
               ) : null}
 
+              {tab === 'fiscal' ? (
+                <div className="mt-6 space-y-4">
+                  <p className="text-sm font-medium text-[#F1F5F9]">Configuración fiscal</p>
+                  <p className="text-xs text-[#94A3B8]">
+                    Al cambiar el país se pre-cargan moneda, símbolo, alícuota y el nombre local del impuesto.
+                  </p>
+                  <label className="block text-sm font-medium text-[#94A3B8]">
+                    País
+                    <select
+                      className={`${inputClass} mt-1`}
+                      value={paisFiscal}
+                      onChange={(ev) => {
+                        const pais = ev.target.value as PaisFiscal
+                        const next = presetDePais(pais)
+                        setPaisFiscal(pais)
+                        setMonedaFiscal(next.moneda)
+                        setSimboloFiscal(next.simboloMoneda)
+                        setAlicuotaFiscal(String(next.alicuotaIva))
+                        setNombreIvaFiscal(next.nombreIva)
+                        setOk(null)
+                      }}
+                    >
+                      {PAISES_FISCAL.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.bandera} {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium text-[#94A3B8]">
+                    Alícuota (%)
+                    <input
+                      className={`${inputClass} mt-1`}
+                      inputMode="decimal"
+                      value={alicuotaFiscal}
+                      onChange={(ev) => {
+                        setAlicuotaFiscal(ev.target.value)
+                        setOk(null)
+                      }}
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#94A3B8]">
+                    Nombre del impuesto
+                    <input
+                      className={`${inputClass} mt-1`}
+                      value={nombreIvaFiscal}
+                      onChange={(ev) => {
+                        setNombreIvaFiscal(ev.target.value)
+                        setOk(null)
+                      }}
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#94A3B8]">
+                    Símbolo de moneda
+                    <input
+                      className={`${inputClass} mt-1`}
+                      value={simboloFiscal}
+                      onChange={(ev) => {
+                        setSimboloFiscal(ev.target.value)
+                        setOk(null)
+                      }}
+                    />
+                  </label>
+                  <p className="text-xs text-[#94A3B8]">Moneda: {monedaFiscal}</p>
+                  <div className="flex items-start justify-between gap-3 rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-[#F1F5F9]">Mostrar IVA en ventas</p>
+                      <p className="mt-0.5 text-xs text-[#94A3B8]">
+                        En el resumen de la venta se muestra el subtotal sin impuesto, el {nombreIvaFiscal || 'IVA'} y
+                        el total.
+                      </p>
+                    </div>
+                    <Toggle on={mostrarIvaVentas} onChange={() => setMostrarIvaVentas((v) => !v)} />
+                  </div>
+                </div>
+              ) : null}
+
               {tab === 'plan' && esDueno(perfil.usuario.rol) ? (
                 <div className="mt-6 space-y-3 text-sm">
                   <div className="rounded-xl border border-[rgba(99,102,241,0.15)] px-3 py-3">
@@ -1564,7 +1662,7 @@ export function ConfiguracionPage() {
                 <p className="mt-6 rounded-xl bg-green-950/50 px-3 py-2 text-sm text-green-200">{ok}</p>
               ) : null}
 
-              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' || tab === 'inventario' || tab === 'variantes' || tab === 'lotes' || tab === 'ubicaciones' || tab === 'remitente' || tab === 'usuarios' ? (
+              {tab === 'medios' || tab === 'cuotas' || tab === 'flujo' || tab === 'inventario' || tab === 'variantes' || tab === 'lotes' || tab === 'ubicaciones' || tab === 'remitente' || tab === 'usuarios' || tab === 'fiscal' ? (
                 <button
                   className={`${btnPrimary} mt-6 w-full`}
                   type="button"

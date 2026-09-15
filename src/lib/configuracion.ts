@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { FISCAL_DEFAULT, normalizarPais, type ConfigFiscal, type PaisFiscal } from './fiscal'
 
 export type MedioPagoId = 'efectivo' | 'transferencia' | 'debito' | 'credito' | 'mp_qr'
 
@@ -35,6 +36,12 @@ export type ConfiguracionEmpresa = {
   modoAsignacion: ModoAsignacion
   asignacionFijaUsuarioId: string
   asignacionRotacionIds: string[]
+  pais: PaisFiscal
+  moneda: string
+  simboloMoneda: string
+  alicuotaIva: number
+  nombreIva: string
+  mostrarIvaVentas: boolean
 }
 
 export const MEDIOS_PAGO = [
@@ -139,6 +146,7 @@ export const CONFIG_DEFAULT: Omit<ConfiguracionEmpresa, 'empresaId'> = {
   modoAsignacion: 'manual',
   asignacionFijaUsuarioId: '',
   asignacionRotacionIds: [],
+  ...FISCAL_DEFAULT,
 }
 
 function normalizarFlujo(raw: unknown): FlujoVentas {
@@ -186,10 +194,20 @@ export async function obtenerConfiguracion(
   let conFlujo = await client
     .from('configuracion_empresa')
     .select(
-      'empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes, usa_lotes, ubicacion_venta_default, remitente_nombre, remitente_direccion, remitente_telefono, remitente_email, modo_asignacion, asignacion_fija_usuario_id, asignacion_rotacion_ids',
+      'empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes, usa_lotes, ubicacion_venta_default, remitente_nombre, remitente_direccion, remitente_telefono, remitente_email, modo_asignacion, asignacion_fija_usuario_id, asignacion_rotacion_ids, pais, moneda, simbolo_moneda, alicuota_iva, nombre_iva, mostrar_iva_ventas',
     )
     .eq('empresa_id', empresaId)
     .maybeSingle()
+
+  if (conFlujo.error && /pais|moneda|simbolo_moneda|alicuota_iva|nombre_iva|mostrar_iva_ventas/i.test(conFlujo.error.message)) {
+    conFlujo = await client
+      .from('configuracion_empresa')
+      .select(
+        'empresa_id, medios_pago, tasas_cuotas, flujo_ventas, inventario, usa_variantes, usa_lotes, ubicacion_venta_default, remitente_nombre, remitente_direccion, remitente_telefono, remitente_email, modo_asignacion, asignacion_fija_usuario_id, asignacion_rotacion_ids',
+      )
+      .eq('empresa_id', empresaId)
+      .maybeSingle()
+  }
 
   if (conFlujo.error && /modo_asignacion|asignacion_fija|asignacion_rotacion/i.test(conFlujo.error.message)) {
     conFlujo = await client
@@ -287,8 +305,21 @@ export async function obtenerConfiguracion(
         (fila as { asignacion_fija_usuario_id?: unknown }).asignacion_fija_usuario_id ?? '',
       ).trim(),
       asignacionRotacionIds: normalizarIds((fila as { asignacion_rotacion_ids?: unknown }).asignacion_rotacion_ids),
+      ...fiscalDesdeFila(fila as Record<string, unknown>),
     },
     error: null,
+  }
+}
+
+function fiscalDesdeFila(fila: Record<string, unknown>): ConfigFiscal {
+  const alicuota = Number(fila.alicuota_iva)
+  return {
+    pais: normalizarPais(fila.pais),
+    moneda: String(fila.moneda ?? FISCAL_DEFAULT.moneda).trim() || FISCAL_DEFAULT.moneda,
+    simboloMoneda: String(fila.simbolo_moneda ?? FISCAL_DEFAULT.simboloMoneda).trim() || FISCAL_DEFAULT.simboloMoneda,
+    alicuotaIva: Number.isFinite(alicuota) ? alicuota : FISCAL_DEFAULT.alicuotaIva,
+    nombreIva: String(fila.nombre_iva ?? FISCAL_DEFAULT.nombreIva).trim() || FISCAL_DEFAULT.nombreIva,
+    mostrarIvaVentas: Boolean(fila.mostrar_iva_ventas),
   }
 }
 
@@ -341,7 +372,36 @@ export async function guardarConfiguracion(
   if (ubi) return ubi
   const remitente = await guardarRemitente(client, input)
   if (remitente) return remitente
-  return guardarAsignacionPedidos(client, input)
+  const asign = await guardarAsignacionPedidos(client, input)
+  if (asign) return asign
+  return guardarFiscal(client, input)
+}
+
+async function guardarFiscal(client: SupabaseClient, input: ConfiguracionEmpresa) {
+  const { error } = await client
+    .from('configuracion_empresa')
+    .update({
+      pais: input.pais,
+      moneda: input.moneda.trim() || 'ARS',
+      simbolo_moneda: input.simboloMoneda.trim() || '$',
+      alicuota_iva: Number.isFinite(input.alicuotaIva) ? input.alicuotaIva : 21,
+      nombre_iva: input.nombreIva.trim() || 'IVA',
+      mostrar_iva_ventas: Boolean(input.mostrarIvaVentas),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('empresa_id', input.empresaId)
+  if (!error) return null
+  const t = error.message.toLowerCase()
+  if (t.includes('pais') || t.includes('alicuota') || t.includes('mostrar_iva') || t.includes('simbolo_moneda') || t.includes('nombre_iva') || t.includes('schema cache') || t.includes('does not exist')) {
+    const igualDefault =
+      input.pais === FISCAL_DEFAULT.pais &&
+      !input.mostrarIvaVentas &&
+      (input.moneda || 'ARS') === FISCAL_DEFAULT.moneda &&
+      Number(input.alicuotaIva) === FISCAL_DEFAULT.alicuotaIva
+    if (igualDefault) return null
+    return 'Falta la configuración fiscal. Pegá TODO supabase/061_contabilidad.sql (rol postgres), dale Run y recargá.'
+  }
+  return error.message
 }
 
 async function guardarUsaVariantes(client: SupabaseClient, input: ConfiguracionEmpresa) {

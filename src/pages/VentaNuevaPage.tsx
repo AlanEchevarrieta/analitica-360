@@ -17,6 +17,7 @@ import {
 import { crearCliente, listarClientes, type ClienteFila } from '../lib/clientes'
 import { EscanerCodigoBarras, dispararPedidoCamara } from '../components/EscanerCodigoBarras'
 import { formatoARS, esBusquedaCodigoBarras, listarProductos, type ProductoFila } from '../lib/productos'
+import { desgloseIva, formatoMoneda } from '../lib/fiscal'
 import { mostrarToast } from '../lib/consulta'
 import { AccesoDenegado } from '../components/AccesoDenegado'
 import { tienePermiso } from '../lib/permisos'
@@ -203,6 +204,11 @@ export function VentaNuevaPage() {
   const credito = formaPago === 'credito'
   const totalesCredito = calcularTotalesCredito(total, coefNum, cuotaElegida?.cuotas ?? 1)
   const totalACobrar = credito ? Number(totalesCredito.totalConInteres.toFixed(2)) : total
+  const ivaVenta =
+    config?.mostrarIvaVentas && config.alicuotaIva > 0
+      ? desgloseIva(totalACobrar, config.alicuotaIva)
+      : null
+  const moneyVenta = (n: number) => formatoMoneda(n, config)
 
   useEffect(() => {
     if (mediosActivos.length === 0) return
@@ -804,7 +810,17 @@ export function VentaNuevaPage() {
                         <p>Interés: {formatoARS(totalesCredito.interes)}</p>
                       </>
                     ) : null}
-                    <p className="mt-2 font-semibold">Total final {formatoARS(totalACobrar)}</p>
+                    {ivaVenta ? (
+                      <>
+                        <p className="mt-2">Subtotal sin {config?.nombreIva ?? 'IVA'}: {moneyVenta(ivaVenta.subtotal)}</p>
+                        <p>
+                          {config?.nombreIva ?? 'IVA'} ({config?.alicuotaIva}%): {moneyVenta(ivaVenta.iva)}
+                        </p>
+                        <p className="mt-2 font-semibold">Total con {config?.nombreIva ?? 'IVA'} {moneyVenta(ivaVenta.total)}</p>
+                      </>
+                    ) : (
+                      <p className="mt-2 font-semibold">Total final {formatoARS(totalACobrar)}</p>
+                    )}
                     <p className="mt-1 text-[#4A5568]">{etiquetaMedioPago(formaPago)}</p>
                   </div>
                 </div>
@@ -929,7 +945,17 @@ export function VentaNuevaPage() {
                         {l.nombre} × {l.cantidad}
                       </p>
                     ))}
-                    <p className="mt-2 font-semibold">Total {formatoARS(totalACobrar)}</p>
+                    {ivaVenta ? (
+                      <>
+                        <p className="mt-2">Subtotal sin {config?.nombreIva ?? 'IVA'}: {moneyVenta(ivaVenta.subtotal)}</p>
+                        <p>
+                          {config?.nombreIva ?? 'IVA'} ({config?.alicuotaIva}%): {moneyVenta(ivaVenta.iva)}
+                        </p>
+                        <p className="mt-2 font-semibold">Total con {config?.nombreIva ?? 'IVA'} {moneyVenta(ivaVenta.total)}</p>
+                      </>
+                    ) : (
+                      <p className="mt-2 font-semibold">Total {formatoARS(totalACobrar)}</p>
+                    )}
                     <p>{etiquetaMedioPago(formaPago)}</p>
                     {mostrarCampoCliente && cliente.trim() ? <p>Cliente: {cliente.trim()}</p> : null}
                   </div>
