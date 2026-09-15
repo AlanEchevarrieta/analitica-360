@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { formatoFechaHora } from './fechas'
 
 export const CATEGORIAS_TICKET = [
   { id: 'consulta', label: 'Consulta general' },
@@ -98,9 +99,8 @@ export function etiquetaEstado(id: string) {
 }
 
 export function formatoFechaTicket(iso: string) {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+  if (!iso) return '—'
+  return formatoFechaHora(iso)
 }
 
 function parseCategoria(v: unknown): CategoriaTicket {

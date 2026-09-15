@@ -12,7 +12,7 @@ import { EscanerCodigoBarras, dispararPedidoCamara } from '../components/Escaner
 import { CodigoBarrasPreview } from '../components/CodigoBarrasPreview'
 import { ean13DesdeEntidad } from '../lib/codigoBarras'
 import { obtenerConfiguracion } from '../lib/configuracion'
-import { estiloTipoMovimiento } from '../lib/inventario'
+import { estiloTipoMovimiento, formatoFechaMov } from '../lib/inventario'
 import { listarMovimientosProducto, type MovimientoFila } from '../lib/stock'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
@@ -565,7 +565,7 @@ export function ProductoFormPage() {
             <ul className="mt-3 overflow-hidden rounded-md">
               {movimientos.map((m) => {
                 const e = estiloTipoMovimiento(m.tipo, m.signo)
-                const fecha = m.fecha ? new Date(m.fecha).toLocaleString('es-AR') : ''
+                const fecha = m.fecha ? formatoFechaMov(m.fecha) : ''
                 const entrada = m.signo >= 0
                 return (
                   <li

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { confirmarCompra, hoyCompraISO } from './compras'
+import { formatoFechaDia } from './fechas'
 import { formatoARS } from './productos'
 
 export const ESTADOS_OC = [
@@ -414,12 +415,5 @@ export async function generarOcPdf(input: {
 
 export function formatoFechaOc(iso: string | null) {
   if (!iso) return '—'
-  const raw = String(iso).slice(0, 10)
-  const [y, m, d] = raw.split('-').map(Number)
-  if (!y || !m || !d) return iso
-  return new Date(y, m - 1, d).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
+  return formatoFechaDia(iso)
 }

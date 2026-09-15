@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { formatoFechaHora } from './fechas'
 import { etiquetaCombo } from './variantes'
 
 export { listarUbicaciones, type UbicacionFila } from './ubicaciones'
@@ -103,9 +104,7 @@ export function estiloTipoMovimiento(tipo: string, signo: number) {
 }
 
 export function formatoFechaMov(iso: string) {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+  return formatoFechaHora(iso)
 }
 
 export function textoKardexConLote(m: {

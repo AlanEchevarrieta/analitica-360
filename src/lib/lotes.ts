@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { fechaHoyAR, sumarDiasIso } from './analytics'
+import { formatoFechaDia } from './fechas'
 
 export type EstadoLote = 'vencido' | 'por_vencer' | 'vigente' | 'sin_vencimiento'
 
@@ -57,9 +58,7 @@ export function etiquetaEstadoLote(estado: EstadoLote) {
 
 export function formatoFechaLote(iso: string | null) {
   if (!iso) return '—'
-  const [y, m, d] = iso.slice(0, 10).split('-')
-  if (!y || !m || !d) return iso
-  return `${d}/${m}/${y}`
+  return formatoFechaDia(iso)
 }
 
 function msgSql(msg: string) {

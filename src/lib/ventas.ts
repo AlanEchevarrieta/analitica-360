@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { formatoFechaHora } from './fechas'
 
 export type VentaFila = {
   id: string
@@ -335,13 +336,5 @@ export async function anularVenta(
 }
 
 export function formatoFechaVenta(iso: string) {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatoFechaHora(iso)
 }

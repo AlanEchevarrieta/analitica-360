@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { formatoFechaDia } from './fechas'
 
 export type CompraFila = {
   id: string
@@ -167,14 +168,7 @@ export async function crearProductoParaCompra(
 }
 
 export function formatoFechaCompra(iso: string) {
-  const raw = String(iso).slice(0, 10)
-  const [y, m, d] = raw.split('-').map(Number)
-  if (!y || !m || !d) return iso
-  return new Date(y, m - 1, d).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
+  return formatoFechaDia(iso)
 }
 
 export function hoyCompraISO() {

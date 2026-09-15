@@ -1,4 +1,5 @@
 import Papa from 'papaparse'
+import { formatoFechaDia } from './fechas'
 
 export function claveNombre(nombre: string) {
   return nombre.trim().toLowerCase()
@@ -107,9 +108,7 @@ export function fechaATimestamptzAR(isoDate: string) {
 }
 
 export function formatoFechaCorta(isoDate: string) {
-  const [y, m, d] = isoDate.split('-').map(Number)
-  if (!y || !m || !d) return isoDate
-  return `${pad2(d)}/${pad2(m)}/${y}`
+  return formatoFechaDia(isoDate)
 }
 
 export type ErrorFila = { fila: number; motivo: string }

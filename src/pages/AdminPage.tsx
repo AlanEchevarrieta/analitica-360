@@ -16,6 +16,7 @@ import { claseBadgePlan, clavePlan, etiquetaPlan } from '../lib/planes'
 import { listarPagosAdmin, registrarPagoAdmin, cargarAdminCapacidad, LIMITE_FREE_REGISTROS, type AdminPagoFila, type AdminCapacidad } from '../lib/adminSaaS'
 import { requireSupabase } from '../lib/supabase'
 import { formatoARS } from '../lib/productos'
+import { formatoFechaHora } from '../lib/fechas'
 import { listarTicketsAdmin } from '../lib/tickets'
 import { AdminSoportePanel } from './AdminSoportePanel'
 
@@ -595,9 +596,7 @@ export function AdminPage() {
                       <td className="px-3 py-3">{etiquetaEstadoPago(p.estado)}</td>
                       <td className="px-3 py-3">{etiquetaPeriodoPago(p.periodo)}</td>
                       <td className="px-3 py-3">
-                        {p.created_at
-                          ? new Date(p.created_at).toLocaleDateString('es-AR')
-                          : '—'}
+                        {p.created_at ? formatoFechaHora(p.created_at) : '—'}
                       </td>
                       <td className="max-w-[220px] px-3 py-3 text-[#4A5568]">{p.notas || '—'}</td>
                     </tr>

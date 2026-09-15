@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { formatoFechaDia, formatoFechaHora } from './fechas'
 import { obtenerConfiguracion } from './configuracion'
 import { formatoARS } from './productos'
 import { listarColaboradoresActivos } from './usuarios'
@@ -184,21 +185,11 @@ export function textoIncompletosPicking(items: PedidoItemFicha[]) {
 }
 
 export function formatoFechaPedido(iso: string) {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatoFechaHora(iso)
 }
 
 export function formatoFechaRemito(iso: string) {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return formatoFechaDia(iso)
 }
 
 export function armarDireccionEnvio(input: {

@@ -21,6 +21,7 @@ import {
 } from '../components/listado'
 import { COLOR_ETIQUETA, listarClientes, type ClienteFila } from '../lib/clientes'
 import { MSG_ERROR_RED, mensajeCargaTabla } from '../lib/consulta'
+import { formatoFechaDia } from '../lib/fechas'
 import { formatoARS } from '../lib/productos'
 import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
@@ -28,10 +29,7 @@ import { theme } from '../theme'
 
 function formatoDia(iso: string | null) {
   if (!iso) return '—'
-  const raw = String(iso).slice(0, 10)
-  const [y, m, d] = raw.split('-').map(Number)
-  if (!y || !m || !d) return iso
-  return new Date(y, m - 1, d).toLocaleDateString('es-AR')
+  return formatoFechaDia(iso)
 }
 
 export function ClientesPage() {
