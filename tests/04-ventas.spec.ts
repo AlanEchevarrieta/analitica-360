@@ -32,6 +32,9 @@ test('listado muestra ventas con rango 2026 y se puede registrar y anular una ve
   }
 
   await page.getByRole('button', { name: 'Siguiente' }).click({ force: true })
+  console.log('URL actual:', page.url())
+  console.log('Título:', await page.title())
+  await page.screenshot({ path: 'debug-ventas.png' })
   await page.keyboard.press('Escape')
   await page.waitForTimeout(1000)
   await page.waitForLoadState('networkidle')

@@ -43,6 +43,9 @@ test('crear producto TEST_PLAYWRIGHT_DELETE, verlo en el listado y desactivarlo'
 
   await page.keyboard.press('Escape')
   await page.waitForTimeout(500)
+  console.log('URL actual:', page.url())
+  console.log('Título:', await page.title())
+  await page.screenshot({ path: 'debug-productos.png' })
   await page.getByRole('link', { name: /Nuevo producto/ }).first().click({ force: true })
   await page.waitForURL('**/productos/nuevo')
   await page.locator('label', { hasText: 'Nombre' }).locator('input').fill(NOMBRE_TEST)

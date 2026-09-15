@@ -17,6 +17,8 @@ dist-ssr
 tests/.env.test
 test-results/
 playwright-report/
+debug-productos.png
+debug-ventas.png
 
 # Editor directories and files
 .vscode/*
