@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { ThemeToggle } from '../lib/tema'
-import { planTieneAnalytics, planTieneInsights } from '../lib/planes'
+import { tieneAcceso } from '../lib/planes'
 import { requireSupabase, supabase } from '../lib/supabase'
 import { contarTicketsNoLeidos, EVENTO_SOPORTE_NOTIF } from '../lib/tickets'
 import { tieneModulo } from '../lib/permisos'
+import { estaEnTrial } from '../lib/suscripcion'
 import { theme } from '../theme'
 
 function linkClass({ isActive }: { isActive: boolean }) {
@@ -18,19 +19,6 @@ function sideClass({ isActive }: { isActive: boolean }) {
 
 function sheetClass({ isActive }: { isActive: boolean }) {
   return `app-sheet-link${isActive ? ' active' : ''}`
-}
-
-function Candado({ mostrar }: { mostrar: boolean }) {
-  if (!mostrar) return null
-  return (
-    <svg className="h-3.5 w-3.5 opacity-80" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-      <path
-        fillRule="evenodd"
-        d="M10 2a4 4 0 00-4 4v2H5a1 1 0 00-1 1v7a1 1 0 001 1h10a1 1 0 001-1V9a1 1 0 00-1-1h-1V6a4 4 0 00-4-4zm2 6V6a2 2 0 10-4 0v2h4z"
-        clipRule="evenodd"
-      />
-    </svg>
-  )
 }
 
 function BadgeNotif({ n }: { n: number }) {
@@ -56,13 +44,14 @@ function LabelSoporte({ n, emoji }: { n: number; emoji?: boolean }) {
 }
 
 export function AppNav() {
-  const { perfil, cerrarSesion } = useAuth()
-  const ver = (m: Parameters<typeof tieneModulo>[1]) => tieneModulo(perfil, m)
+  const { perfil, suscripcion, cerrarSesion } = useAuth()
+  const enTrial = estaEnTrial(suscripcion)
+  const planOk = (modulo: string) =>
+    Boolean(perfil && tieneAcceso(perfil.empresa.plan_actual, modulo, enTrial))
+  const ver = (m: Parameters<typeof tieneModulo>[1]) => tieneModulo(perfil, m) && planOk(m)
   const location = useLocation()
   const [mas, setMas] = useState(false)
   const [soporteNuevos, setSoporteNuevos] = useState(0)
-  const sinAnalytics = Boolean(perfil && !planTieneAnalytics(perfil.empresa.plan_actual))
-  const sinInsights = Boolean(perfil && !planTieneInsights(perfil.empresa.plan_actual))
   const masActivo = [
     '/pedidos',
     '/compras',
@@ -73,6 +62,7 @@ export function AppNav() {
     '/configuracion',
     '/inventario',
     '/soporte',
+    '/planes',
   ].some((p) => location.pathname.startsWith(p))
 
   useEffect(() => {
@@ -110,20 +100,6 @@ export function AppNav() {
       window.removeEventListener(EVENTO_SOPORTE_NOTIF, onEvt)
     }
   }, [perfil])
-
-  const analyticsLabel = (
-    <span className="inline-flex items-center gap-1">
-      Analytics
-      <Candado mostrar={sinAnalytics} />
-    </span>
-  )
-
-  const insightsLabel = (
-    <span className="inline-flex items-center gap-1">
-      Insights
-      <Candado mostrar={sinInsights} />
-    </span>
-  )
 
   return (
     <>
@@ -178,7 +154,7 @@ export function AppNav() {
           {(ver('analytics') || ver('contabilidad') || ver('insights')) ? <NavSep /> : null}
           {ver('analytics') ? (
             <NavLink className={linkClass} to="/analytics">
-              {analyticsLabel}
+              Analytics
             </NavLink>
           ) : null}
           {ver('contabilidad') ? (
@@ -188,12 +164,17 @@ export function AppNav() {
           ) : null}
           {ver('insights') ? (
             <NavLink className={linkClass} to="/insights">
-              {insightsLabel}
+              Insights
             </NavLink>
           ) : null}
           <NavSep />
-          <NavLink className={linkClass} to="/soporte">
-            <LabelSoporte n={soporteNuevos} />
+          {planOk('soporte') ? (
+            <NavLink className={linkClass} to="/soporte">
+              <LabelSoporte n={soporteNuevos} />
+            </NavLink>
+          ) : null}
+          <NavLink className={linkClass} to="/planes">
+            Planes
           </NavLink>
           {ver('configuracion') ? (
             <NavLink className={linkClass} to="/configuracion">
@@ -253,12 +234,14 @@ export function AppNav() {
               📋 Inventario
             </NavLink>
           ) : null}
-          <NavLink className={sideClass} to="/soporte">
-            <LabelSoporte n={soporteNuevos} emoji />
-          </NavLink>
+          {planOk('soporte') ? (
+            <NavLink className={sideClass} to="/soporte">
+              <LabelSoporte n={soporteNuevos} emoji />
+            </NavLink>
+          ) : null}
           {ver('analytics') ? (
             <NavLink className={sideClass} to="/analytics">
-              📊 {analyticsLabel}
+              📊 Analytics
             </NavLink>
           ) : null}
           {ver('contabilidad') ? (
@@ -268,9 +251,12 @@ export function AppNav() {
           ) : null}
           {ver('insights') ? (
             <NavLink className={sideClass} to="/insights">
-              ✨ {insightsLabel}
+              ✨ Insights
             </NavLink>
           ) : null}
+          <NavLink className={sideClass} to="/planes">
+            ⭐ Planes
+          </NavLink>
           {ver('configuracion') ? (
             <NavLink className={sideClass} to="/configuracion">
               ⚙️ Configuración
@@ -349,12 +335,14 @@ export function AppNav() {
                 📋 Inventario
               </NavLink>
             ) : null}
-            <NavLink className={sheetClass} to="/soporte" onClick={() => setMas(false)}>
-              <LabelSoporte n={soporteNuevos} emoji />
-            </NavLink>
+            {planOk('soporte') ? (
+              <NavLink className={sheetClass} to="/soporte" onClick={() => setMas(false)}>
+                <LabelSoporte n={soporteNuevos} emoji />
+              </NavLink>
+            ) : null}
             {ver('analytics') ? (
               <NavLink className={sheetClass} to="/analytics" onClick={() => setMas(false)}>
-                📊 {analyticsLabel}
+                📊 Analytics
               </NavLink>
             ) : null}
             {ver('contabilidad') ? (
@@ -364,9 +352,12 @@ export function AppNav() {
             ) : null}
             {ver('insights') ? (
               <NavLink className={sheetClass} to="/insights" onClick={() => setMas(false)}>
-                ✨ {insightsLabel}
+                ✨ Insights
               </NavLink>
             ) : null}
+            <NavLink className={sheetClass} to="/planes" onClick={() => setMas(false)}>
+              ⭐ Planes
+            </NavLink>
             {ver('configuracion') ? (
               <NavLink className={sheetClass} to="/configuracion" onClick={() => setMas(false)}>
                 ⚙️ Configuración

@@ -98,6 +98,7 @@ const InsightsPage = loadComponent(() =>
 const ContabilidadPage = loadComponent(() =>
   import('./pages/ContabilidadPage').then((m) => ({ default: m.ContabilidadPage })),
 )
+const PlanesPage = loadComponent(() => import('./pages/PlanesPage').then((m) => ({ default: m.PlanesPage })))
 const SoportePage = loadComponent(() =>
   import('./pages/SoportePage').then((m) => ({ default: m.SoportePage })),
 )
@@ -236,6 +237,7 @@ function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<GateModulos />}>
         <Route path="/inicio" element={<HomePage />} />
+        <Route path="/planes" element={<PlanesPage />} />
         <Route path="/ventas" element={<VentasPage />} />
         <Route path="/ventas/nueva" element={<VentaNuevaPage />} />
         <Route path="/pedidos" element={<PedidosPage />} />

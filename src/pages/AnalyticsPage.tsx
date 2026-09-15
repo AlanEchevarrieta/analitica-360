@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Card, Text } from '@tremor/react'
 import {
   Area,
@@ -25,7 +26,6 @@ import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { GraficoExpandible, SelectorChips } from '../components/GraficoExpandible'
 import { ParticleNetwork } from '../components/ParticleNetwork'
-import { PlanesModal } from '../components/PlanesModal'
 import {
   COLOR_CUADRANTE,
   agruparEvolucion,
@@ -58,6 +58,7 @@ import {
 } from '../lib/analytics'
 import { exportarAnalyticsPdf } from '../lib/exportarReportes'
 import { planTieneAnalytics } from '../lib/planes'
+import { estaEnTrial } from '../lib/suscripcion'
 import { formatoARS, listarProductos } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
 import { listarUbicaciones, type UbicacionFila } from '../lib/ubicaciones'
@@ -313,7 +314,7 @@ const VentasVsComprasChart = memo(function VentasVsComprasChart({
 })
 
 export function AnalyticsPage() {
-  const { perfil } = useAuth()
+  const { perfil, suscripcion } = useAuth()
   const { tema } = useTema()
   const g = useMemo(() => coloresGrafico(tema), [tema])
   const [preset, setPreset] = useState<PresetPeriodo>('mes')
@@ -330,7 +331,6 @@ export function AnalyticsPage() {
     col: 'total',
     dir: 'desc',
   })
-  const [modalPlanes, setModalPlanes] = useState(false)
   const [usaVariantes, setUsaVariantes] = useState(false)
   const [dataVar, setDataVar] = useState<AnalyticsVariantes | null>(null)
   const [rangosMargen, setRangosMargen] = useState<Map<string, { min: number; max: number }>>(
@@ -345,7 +345,7 @@ export function AnalyticsPage() {
   const diasHover = useIndiceBarraActiva()
 
   useEffect(() => {
-    if (!perfil || !planTieneAnalytics(perfil.empresa.plan_actual)) {
+    if (!perfil || !planTieneAnalytics(perfil.empresa.plan_actual, estaEnTrial(suscripcion))) {
       setCargando(false)
       return
     }
@@ -417,7 +417,7 @@ export function AnalyticsPage() {
         setCargando(false)
       }
     })()
-  }, [perfil, desde, hasta, ubicacion])
+  }, [perfil, suscripcion, desde, hasta, ubicacion])
 
   const diasPeriodo = diasIncluidosPeriodo(desde, hasta)
   const dataPeriodoAnterior = useMemo(
@@ -542,7 +542,7 @@ export function AnalyticsPage() {
 
   if (!perfil) return null
 
-  const desbloqueado = planTieneAnalytics(perfil.empresa.plan_actual)
+  const desbloqueado = planTieneAnalytics(perfil.empresa.plan_actual, estaEnTrial(suscripcion))
 
   function aplicarFiltro() {
     const r = rangoPreset(preset, desdeDraft, hastaDraft)
@@ -636,13 +636,12 @@ export function AnalyticsPage() {
             <p className="mt-2 text-sm text-[#94A3B8]">
               Actualizá tu plan para acceder a análisis avanzados.
             </p>
-            <button
-              className="mt-6 h-11 rounded-md bg-[#6366F1] px-5 text-sm font-semibold text-white hover:bg-[#4F46E5]"
-              type="button"
-              onClick={() => setModalPlanes(true)}
+            <Link
+              className="mt-6 inline-flex h-11 items-center justify-center rounded-md bg-[#6366F1] px-5 text-sm font-semibold text-white hover:bg-[#4F46E5]"
+              to="/planes"
             >
               Ver planes
-            </button>
+            </Link>
           </div>
         ) : (
           <>
@@ -1293,7 +1292,6 @@ export function AnalyticsPage() {
           </>
         )}
       </div>
-      <PlanesModal abierto={modalPlanes} onCerrar={() => setModalPlanes(false)} />
     </div>
   )
 }

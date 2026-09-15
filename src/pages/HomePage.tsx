@@ -34,10 +34,11 @@ import { obtenerConfiguracion } from '../lib/configuracion'
 import {
   esAdminEmail,
   diasRestantes,
-  iniciarPeriodoPrueba,
-  leerSuscripcionActiva,
-  type SuscripcionActiva,
+  estaEnTrial,
+  trialVencido,
 } from '../lib/suscripcion'
+import { etiquetaPlan, formatoPrecioPlan, MESES_DESCUENTO_LANZAMIENTO, planEsIlimitado, precioLanzamiento } from '../lib/planes'
+import { LimitePlanModal } from '../components/LimitePlanModal'
 import { theme } from '../theme'
 import { coloresGrafico, useTema } from '../lib/tema'
 import {
@@ -413,35 +414,26 @@ function formatoKPI(valor: number) {
 }
 
 export function HomePage() {
-  const { perfil, session, error } = useAuth()
+  const { perfil, session, error, suscripcion } = useAuth()
   const { tema } = useTema()
   const cumpleFg = tema === 'light' ? '#92400E' : '#FCD34D'
-  const [suscripcion, setSuscripcion] = useState<SuscripcionActiva | null>(null)
   const [dash, setDash] = useState<DashboardInicio>(DASH_VACIO)
   const [serieHome, setSerieHome] = useState<DashboardInicio['ultimos7']>([])
   const [rangoHome, setRangoHome] = useState<RangoHome>(7)
   const [cargandoDash, setCargandoDash] = useState(true)
   const [bannerTicket, setBannerTicket] = useState<BannerTicketHome | null>(null)
   const [alertasLotes, setAlertasLotes] = useState({ vencidos: 0, porVencer: 0 })
+  const [modalVencido, setModalVencido] = useState(false)
 
   useEffect(() => {
     if (!perfil) return
     const client = requireSupabase()
     void (async () => {
       setCargandoDash(true)
-      const [sub, dashData, serie] = await Promise.all([
-        (async () => {
-          let actual = await leerSuscripcionActiva(client, perfil.empresa.id)
-          if (!actual) {
-            await iniciarPeriodoPrueba(client, perfil.empresa.id, perfil.usuario.id)
-            actual = await leerSuscripcionActiva(client, perfil.empresa.id)
-          }
-          return actual
-        })(),
+      const [dashData, serie] = await Promise.all([
         cargarDashboardInicio(client),
         cargarSerieVentasHome(client),
       ])
-      setSuscripcion(sub)
       setDash(dashData)
       console.log('[stock home]', dashData.stock.slice(0, 3))
       setSerieHome(serie.length > 0 ? serie : dashData.ultimos7)
@@ -475,11 +467,20 @@ export function HomePage() {
     }
   }, [dash.stock])
 
+  const dias = diasRestantes(suscripcion?.fecha_vencimiento ?? null)
+  const trialActivo = estaEnTrial(suscripcion)
+  const vencido = trialVencido(suscripcion)
+  const precioLaunch = formatoPrecioPlan(precioLanzamiento('premium', 'mensual'))
+
+  useEffect(() => {
+    if (vencido) setModalVencido(true)
+  }, [vencido])
+
   if (!perfil) return null
 
-  const dias = diasRestantes(suscripcion?.fecha_vencimiento ?? null)
   const mostrarAdmin = esAdminEmail(session?.user.email ?? perfil.usuario.email)
   const verReportes = tienePermiso(perfil, 'ver_reportes')
+  const nombrePlan = etiquetaPlan(perfil.empresa.plan_actual)
 
   return (
     <div
@@ -500,19 +501,42 @@ export function HomePage() {
             {perfil.empresa.nombre}
           </h1>
           <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-            Hola, {perfil.usuario.nombre} · Plan {perfil.empresa.plan_actual}
+            Hola, {perfil.usuario.nombre}
           </p>
         </header>
 
-        {suscripcion?.estado === 'periodo_prueba' ? (
-          <p className="mb-4 rounded-lg bg-amber-100 px-3 py-3 text-sm text-amber-950">
-            Estás en período de prueba gratuito — te quedan {dias} {dias === 1 ? 'día' : 'días'}
+        {trialActivo && dias > 4 ? (
+          <p className="mb-4 rounded-lg bg-indigo-500/15 px-3 py-2 text-sm font-semibold text-indigo-200">
+            ⭐ Trial Premium — {dias} {dias === 1 ? 'día restante' : 'días restantes'}
           </p>
         ) : null}
 
-        {suscripcion?.estado === 'pendiente_pago' || suscripcion?.estado === 'vencida' ? (
+        {trialActivo && dias > 1 && dias <= 4 ? (
+          <div className="mb-4 rounded-lg bg-amber-100 px-3 py-3 text-sm text-amber-950">
+            <p>
+              ⏳ Tu trial vence en {dias} {dias === 1 ? 'día' : 'días'}
+              <br />
+              Activá tu plan ahora con 40% OFF los primeros {MESES_DESCUENTO_LANZAMIENTO} meses
+            </p>
+            <Link className="mt-2 inline-flex font-semibold text-[#4F46E5]" to="/planes">
+              Ver planes
+            </Link>
+          </div>
+        ) : null}
+
+        {trialActivo && dias === 1 ? (
+          <div className="mb-4 rounded-lg bg-red-100 px-3 py-3 text-sm text-red-900">
+            🔴 Tu trial vence mañana — último día para el 40% OFF
+            <Link className="mt-2 block font-semibold" to="/planes">
+              Ver planes
+            </Link>
+          </div>
+        ) : null}
+
+        {vencido ? (
           <p className="mb-4 rounded-lg bg-red-100 px-3 py-3 text-sm text-red-900">
-            Tu período de prueba venció — escribinos para continuar
+            Tu período de prueba venció — activá un plan para seguir usando Analytics, Insights y el resto de módulos
+            premium.
           </p>
         ) : null}
 
@@ -572,6 +596,19 @@ export function HomePage() {
 
         {verReportes && !cargandoDash ? (
           <section className="mt-6">
+            <p className="mb-3 text-sm" style={{ color: 'var(--text-muted)' }}>
+              Plan {nombrePlan}
+              {trialActivo ? ` · ${dias} ${dias === 1 ? 'día' : 'días'} de trial restantes` : null}
+              {!planEsIlimitado(perfil.empresa.plan_actual) ? (
+                <>
+                  {' '}
+                  ·{' '}
+                  <Link className="font-semibold text-[#A5B4FC] hover:underline" to="/planes">
+                    Actualizar plan
+                  </Link>
+                </>
+              ) : null}
+            </p>
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
               <KpiCard
                 label="Ventas hoy"
@@ -727,6 +764,12 @@ export function HomePage() {
           </p>
         ) : null}
       </div>
+      <LimitePlanModal
+        abierto={modalVencido}
+        titulo="Tu trial venció"
+        texto={`Los módulos premium quedaron bloqueados. Activá un plan desde ${precioLaunch}/mes los primeros ${MESES_DESCUENTO_LANZAMIENTO} meses.`}
+        onCerrar={() => setModalVencido(false)}
+      />
     </div>
   )
 }

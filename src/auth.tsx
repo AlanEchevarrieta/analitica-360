@@ -15,7 +15,7 @@ import {
 } from './lib/altaPendiente'
 import { requireSupabase, supabase, supabaseConfigured } from './lib/supabase'
 import { esErrorAuth } from './lib/consulta'
-import { iniciarPeriodoPrueba, registrarAceptacionTerminos } from './lib/suscripcion'
+import { iniciarPeriodoPrueba, leerSuscripcionActiva, registrarAceptacionTerminos, type SuscripcionActiva } from './lib/suscripcion'
 import { leerAccesoColaborador } from './lib/permisos'
 import { parseRol } from './lib/roles'
 import { aceptarInvitacionColaborador } from './lib/usuarios'
@@ -54,6 +54,7 @@ type AuthContextValue = {
   configurado: boolean
   session: Session | null
   perfil: Perfil | null
+  suscripcion: SuscripcionActiva | null
   error: string | null
   ingresar: (email: string, password: string) => Promise<string | null>
   registrar: (input: {
@@ -101,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [listo, setListo] = useState(!supabaseConfigured)
   const [session, setSession] = useState<Session | null>(null)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
+  const [suscripcion, setSuscripcion] = useState<SuscripcionActiva | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const cargarPerfil = useCallback(async (userId: string) => {
@@ -115,11 +117,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (esErrorAuth(qError)) return
       setError('No se pudo leer tu empresa. ¿Corriste el SQL en Supabase?')
       setPerfil(null)
+      setSuscripcion(null)
       return
     }
 
     if (!data) {
       setPerfil(null)
+      setSuscripcion(null)
       return
     }
 
@@ -133,12 +137,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (empError && !esErrorAuth(empError)) {
       setError('No se pudo leer tu empresa. ¿Corriste el SQL en Supabase?')
       setPerfil(null)
+      setSuscripcion(null)
       return
     }
 
     const empresa = empresaRow as Empresa | null
     if (!empresa) {
       setPerfil(null)
+      setSuscripcion(null)
       return
     }
 
@@ -155,6 +161,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setPerfil({ usuario, empresa })
     setError(null)
+    let sub = await leerSuscripcionActiva(client, empresa.id)
+    if (!sub) {
+      await iniciarPeriodoPrueba(client, empresa.id, usuario.id)
+      sub = await leerSuscripcionActiva(client, empresa.id)
+    }
+    setSuscripcion(sub)
   }, [])
 
   const intentarUnirseEquipo = useCallback(async () => {
@@ -216,6 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(next)
       if (!next?.user) {
         setPerfil(null)
+        setSuscripcion(null)
         setListo(true)
         return
       }
@@ -393,6 +406,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
     setSession(null)
     setPerfil(null)
+    setSuscripcion(null)
     setError(null)
   }, [])
 
@@ -422,6 +436,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       configurado: supabaseConfigured,
       session,
       perfil,
+      suscripcion,
       error,
       ingresar,
       registrar,
@@ -435,6 +450,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       listo,
       session,
       perfil,
+      suscripcion,
       error,
       ingresar,
       registrar,

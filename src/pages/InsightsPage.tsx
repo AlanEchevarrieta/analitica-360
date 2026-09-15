@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import {
   Area,
   Bar,
@@ -22,7 +22,6 @@ import { AppNav } from '../components/AppNav'
 import { GraficoExpandible, SelectorChips } from '../components/GraficoExpandible'
 import { InflacionVsPreciosPanel } from '../components/InflacionVsPreciosPanel'
 import { ParticleNetwork } from '../components/ParticleNetwork'
-import { PlanesModal } from '../components/PlanesModal'
 import { ChartTooltipBox } from '../components/CustomTooltip'
 import { formatoEjeCompacto, fechaHoyAR, guardarPeriodoAnalytics, limpiarPeriodoAnalytics, rangoPreset, type PresetPeriodo } from '../lib/analytics'
 import { obtenerConfiguracion } from '../lib/configuracion'
@@ -39,6 +38,7 @@ import {
   type InsightsPayload,
 } from '../lib/insights'
 import { planTieneInsights } from '../lib/planes'
+import { estaEnTrial } from '../lib/suscripcion'
 import { formatoARS } from '../lib/productos'
 import { requireSupabase } from '../lib/supabase'
 import {
@@ -363,9 +363,8 @@ const PRESETS_INFLACION: { id: PresetPeriodo | 'todo'; label: string }[] = [
 ]
 
 export function InsightsPage() {
-  const { perfil } = useAuth()
+  const { perfil, suscripcion } = useAuth()
   const [searchParams] = useSearchParams()
-  const [modalPlanes, setModalPlanes] = useState(false)
   const [cargando, setCargando] = useState(true)
   const [data, setData] = useState<InsightsPayload | null>(null)
   const [granularidad, setGranularidad] = useState<GranularidadForecast>('semana')
@@ -386,7 +385,7 @@ export function InsightsPage() {
   const [nProductos, setNProductos] = useState(0)
   const [modalCombo, setModalCombo] = useState(false)
 
-  const premium = Boolean(perfil && planTieneInsights(perfil.empresa.plan_actual))
+  const premium = Boolean(perfil && planTieneInsights(perfil.empresa.plan_actual, estaEnTrial(suscripcion)))
 
   useEffect(() => {
     const q = searchParams.toString()
@@ -399,7 +398,7 @@ export function InsightsPage() {
   }, [searchParams])
 
   useEffect(() => {
-    if (!perfil || !planTieneInsights(perfil.empresa.plan_actual)) {
+    if (!perfil || !planTieneInsights(perfil.empresa.plan_actual, estaEnTrial(suscripcion))) {
       setCargando(false)
       return
     }
@@ -442,7 +441,7 @@ export function InsightsPage() {
   }, [perfil])
 
   useEffect(() => {
-    if (!perfil || !planTieneInsights(perfil.empresa.plan_actual)) return
+    if (!perfil || !planTieneInsights(perfil.empresa.plan_actual, estaEnTrial(suscripcion))) return
     if (tamanoCombo !== '3' || combos3Listo) return
     let cancel = false
     setCargandoCombos3(true)
@@ -461,7 +460,7 @@ export function InsightsPage() {
   }, [perfil, tamanoCombo, combos3Listo])
 
   useEffect(() => {
-    if (!perfil || !planTieneInsights(perfil.empresa.plan_actual)) return
+    if (!perfil || !planTieneInsights(perfil.empresa.plan_actual, estaEnTrial(suscripcion))) return
     let cancel = false
     void (async () => {
       try {
@@ -551,13 +550,12 @@ export function InsightsPage() {
             <p className="mt-4 text-lg font-semibold">
               Disponible en Plan Premium — Analizá tu negocio con inteligencia de datos
             </p>
-            <button
-              className="mt-6 h-11 rounded-md bg-[#6366F1] px-5 text-sm font-semibold text-white hover:bg-[#4F46E5]"
-              type="button"
-              onClick={() => setModalPlanes(true)}
+            <Link
+              className="mt-6 inline-flex h-11 items-center justify-center rounded-md bg-[#6366F1] px-5 text-sm font-semibold text-white hover:bg-[#4F46E5]"
+              to="/planes"
             >
               Ver planes
-            </button>
+            </Link>
           </div>
         ) : cargando ? (
           <SkeletonInsights />
@@ -991,7 +989,6 @@ export function InsightsPage() {
           </>
         ) : null}
       </div>
-      <PlanesModal abierto={modalPlanes} onCerrar={() => setModalPlanes(false)} />
       {modalCombo ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"

@@ -130,6 +130,17 @@ export function diasRestantes(fechaVencimiento: string | null): number {
   return Math.max(0, Math.ceil((fin.getTime() - hoy.getTime()) / 86_400_000))
 }
 
+export function estaEnTrial(sub: SuscripcionActiva | null | undefined): boolean {
+  if (!sub || sub.estado !== 'periodo_prueba') return false
+  return diasRestantes(sub.fecha_vencimiento) > 0
+}
+
+export function trialVencido(sub: SuscripcionActiva | null | undefined): boolean {
+  if (!sub) return false
+  if (sub.estado === 'vencida' || sub.estado === 'pendiente_pago' || sub.estado === 'cancelada') return true
+  return sub.estado === 'periodo_prueba' && diasRestantes(sub.fecha_vencimiento) <= 0
+}
+
 export function esAdminEmail(email: string | undefined | null): boolean {
   const esperado = import.meta.env.VITE_ADMIN_EMAIL?.trim().toLowerCase()
   if (!esperado || !email) return false

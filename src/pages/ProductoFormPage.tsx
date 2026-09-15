@@ -15,6 +15,9 @@ import { obtenerConfiguracion } from '../lib/configuracion'
 import { estiloTipoMovimiento, formatoFechaMov } from '../lib/inventario'
 import { listarMovimientosProducto, type MovimientoFila } from '../lib/stock'
 import { requireSupabase } from '../lib/supabase'
+import { LimitePlanModal } from '../components/LimitePlanModal'
+import { defPlan, formatoPrecioPlan, precioLanzamiento } from '../lib/planes'
+import { estaEnTrial } from '../lib/suscripcion'
 import { theme } from '../theme'
 
 const inputClass =
@@ -24,7 +27,7 @@ export function ProductoFormPage() {
   const { id } = useParams()
   const esNuevo = !id || id === 'nuevo'
   const navigate = useNavigate()
-  const { perfil } = useAuth()
+  const { perfil, suscripcion } = useAuth()
   const [nombre, setNombre] = useState('')
   const [categoria, setCategoria] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
@@ -38,6 +41,7 @@ export function ProductoFormPage() {
   const [enviando, setEnviando] = useState(false)
   const [cargando, setCargando] = useState(!esNuevo)
   const [duplicado, setDuplicado] = useState<ProductoFila | null>(null)
+  const [limitePlan, setLimitePlan] = useState(false)
   const [movimientos, setMovimientos] = useState<MovimientoFila[]>([])
   const [usaVariantes, setUsaVariantes] = useState(false)
   const [dimOpen, setDimOpen] = useState(false)
@@ -130,6 +134,7 @@ export function ProductoFormPage() {
   }, [esNuevo, id])
 
   async function guardar(forzarCrear: boolean) {
+    if (!perfil) return
     setError(null)
     if (!nombre.trim()) {
       setError('El nombre es obligatorio')
@@ -166,6 +171,11 @@ export function ProductoFormPage() {
       const { filas, error: listError } = await listarProductos(client)
       if (listError) {
         setError(listError)
+        return
+      }
+      const maxProd = estaEnTrial(suscripcion) ? null : defPlan(perfil.empresa.plan_actual).max_productos
+      if (maxProd != null && filas.length >= maxProd) {
+        setLimitePlan(true)
         return
       }
       const nombreNorm = nombre.trim().toLowerCase()
@@ -601,6 +611,12 @@ export function ProductoFormPage() {
           </div>
         ) : null}
       </div>
+      <LimitePlanModal
+        abierto={limitePlan}
+        titulo="Llegaste al límite de productos"
+        texto={`Llegaste al límite de ${defPlan(perfil.empresa.plan_actual).max_productos} productos\ndel plan ${defPlan(perfil.empresa.plan_actual).nombre}. El plan Básico incluye\nproductos ilimitados desde ${formatoPrecioPlan(precioLanzamiento('basico', 'mensual'))}/mes`}
+        onCerrar={() => setLimitePlan(false)}
+      />
     </div>
   )
 }

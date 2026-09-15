@@ -3,7 +3,6 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
-import { PlanesModal } from '../components/PlanesModal'
 import {
   FLUJO_VENTAS_DEFAULT,
   guardarConfiguracion,
@@ -34,8 +33,8 @@ import {
   type AccesoColaborador,
   type PresetPermiso,
 } from '../lib/permisos'
-import { etiquetaEstadoSuscripcion, etiquetaPlan } from '../lib/planes'
-import { diasRestantes, leerSuscripcionActiva, type SuscripcionActiva } from '../lib/suscripcion'
+import { etiquetaEstadoSuscripcion, etiquetaPlan, defPlan, formatoPrecioPlan, precioLanzamiento } from '../lib/planes'
+import { diasRestantes, estaEnTrial, leerSuscripcionActiva, type SuscripcionActiva } from '../lib/suscripcion'
 import { theme } from '../theme'
 import {
   atributoTieneVariantesActivas,
@@ -61,6 +60,7 @@ import {
   type TipoUbicacion,
   type UbicacionFila,
 } from '../lib/ubicaciones'
+import { LimitePlanModal } from '../components/LimitePlanModal'
 import { btnPrimary, cardShell } from '../components/listado'
 import { FISCAL_DEFAULT, PAISES_FISCAL, presetDePais, type PaisFiscal } from '../lib/fiscal'
 
@@ -182,7 +182,6 @@ export function ConfiguracionPage() {
   const [presetEdit, setPresetEdit] = useState<PresetPermiso>('personalizado')
   const [guardandoPerm, setGuardandoPerm] = useState(false)
   const [suscripcion, setSuscripcion] = useState<SuscripcionActiva | null>(null)
-  const [modalPlanes, setModalPlanes] = useState(false)
   const [categorias, setCategorias] = useState<CategoriaFila[]>([])
   const [altaCat, setAltaCat] = useState(false)
   const [editCat, setEditCat] = useState<CategoriaFila | null>(null)
@@ -204,6 +203,7 @@ export function ConfiguracionPage() {
   const [modoAsignacion, setModoAsignacion] = useState<ModoAsignacion>('manual')
   const [asignacionFija, setAsignacionFija] = useState('')
   const [rotacionIds, setRotacionIds] = useState<string[]>([])
+  const [limiteUsuarios, setLimiteUsuarios] = useState(false)
   const [paisFiscal, setPaisFiscal] = useState<PaisFiscal>(FISCAL_DEFAULT.pais)
   const [monedaFiscal, setMonedaFiscal] = useState(FISCAL_DEFAULT.moneda)
   const [simboloFiscal, setSimboloFiscal] = useState(FISCAL_DEFAULT.simboloMoneda)
@@ -500,6 +500,11 @@ export function ConfiguracionPage() {
 
   async function onInvitarColaborador() {
     if (!perfil) return
+    const maxU = estaEnTrial(suscripcion) ? null : defPlan(perfil.empresa.plan_actual).max_usuarios
+    if (maxU != null && usuarios.length >= maxU) {
+      setLimiteUsuarios(true)
+      return
+    }
     setError(null)
     setOk(null)
     if (!emailInv.trim()) {
@@ -1022,6 +1027,13 @@ export function ConfiguracionPage() {
                       className="h-9 rounded-lg bg-[#6366F1] px-3 text-xs font-semibold text-white hover:bg-[#4F46E5]"
                       type="button"
                       onClick={() => {
+                        const maxU = estaEnTrial(suscripcion)
+                          ? null
+                          : defPlan(perfil.empresa.plan_actual).max_usuarios
+                        if (maxU != null && usuarios.length >= maxU) {
+                          setLimiteUsuarios(true)
+                          return
+                        }
                         setInvitar((v) => {
                           if (!v) {
                             setAccesoInv(accesoSoloPedidos())
@@ -1645,13 +1657,9 @@ export function ConfiguracionPage() {
                       </p>
                     </div>
                   ) : null}
-                  <button
-                    className={`${btnPrimary} mt-2 w-full`}
-                    type="button"
-                    onClick={() => setModalPlanes(true)}
-                  >
+                  <Link className={`${btnPrimary} mt-2 w-full`} to="/planes">
                     Ver planes disponibles
-                  </button>
+                  </Link>
                 </div>
               ) : null}
 
@@ -1680,7 +1688,12 @@ export function ConfiguracionPage() {
           </Link>
         </div>
       </div>
-      <PlanesModal abierto={modalPlanes} onCerrar={() => setModalPlanes(false)} />
+      <LimitePlanModal
+        abierto={limiteUsuarios}
+        titulo="Llegaste al límite de usuarios"
+        texto={`Llegaste al límite de ${defPlan(perfil.empresa.plan_actual).max_usuarios} usuarios del plan ${defPlan(perfil.empresa.plan_actual).nombre}. Actualizá para invitar a más personas desde ${formatoPrecioPlan(precioLanzamiento('basico', 'mensual'))}/mes.`}
+        onCerrar={() => setLimiteUsuarios(false)}
+      />
       {linkInv && perfil ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 md:items-center">
           <div className="w-full max-w-md rounded-lg bg-white p-5 text-[#1A2F4A] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
