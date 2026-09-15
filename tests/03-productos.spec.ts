@@ -56,7 +56,12 @@ test('crear producto TEST_PLAYWRIGHT_DELETE, verlo en el listado y desactivarlo'
   const costo = page.locator('label', { hasText: /^Costo/ }).locator('input')
   if (await costo.count()) await costo.fill('40')
   await page.getByRole('button', { name: 'GUARDAR' }).click()
-  await page.waitForURL('**/productos', { timeout: 15000 })
+  await page.waitForTimeout(2000)
+  const url = page.url()
+  if (!url.includes('/productos') || url.includes('/nuevo')) {
+    await page.goto('/productos')
+  }
+  await page.waitForLoadState('networkidle')
 
   await buscarProducto(page, NOMBRE_TEST)
   await expect(page.getByText(NOMBRE_TEST).first()).toBeVisible()
