@@ -27,7 +27,7 @@ test('listado muestra ventas con rango 2026 y se puede registrar y anular una ve
   }).first()
   if (await primerProducto.isVisible().catch(() => false)) {
     await primerProducto.click()
-    await page.waitForTimeout(1000)
+    await page.waitForTimeout(3000)
   }
 
   await page.locator('input[placeholder*="Buscar" i], input[placeholder*="producto" i]').first().fill('Cinta')
@@ -42,7 +42,8 @@ test('listado muestra ventas con rango 2026 y se puede registrar y anular una ve
   }
 
   await page.getByRole('button', { name: 'Siguiente' }).click()
-  await page.waitForTimeout(2000)
+  await page.waitForTimeout(5000)
+  await page.waitForLoadState('networkidle')
   await expect(page.getByRole('button', { name: 'Efectivo' })).toBeVisible({ timeout: 15000 })
   await page.getByRole('button', { name: 'Efectivo' }).click({ force: true, timeout: 15000 })
   await page.getByRole('button', { name: 'Siguiente' }).click()

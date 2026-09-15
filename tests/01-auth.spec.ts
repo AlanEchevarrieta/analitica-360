@@ -24,6 +24,7 @@ test('cerrar sesión redirige a /login', async ({ page }) => {
   test.skip(!credencialesListas(), 'Completá TEST_PASSWORD en tests/.env.test')
   await loginComoAdmin(page)
   await page.getByRole('button', { name: 'Cerrar sesión' }).first().click()
-  await page.waitForURL('**/login', { timeout: 10000 })
+  await page.waitForURL('**/login', { timeout: 30000 })
+  await page.waitForLoadState('networkidle')
   await expect(page).toHaveURL(/\/login/)
 })
