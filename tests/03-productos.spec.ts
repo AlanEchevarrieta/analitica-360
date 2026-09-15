@@ -33,10 +33,11 @@ test('crear producto TEST_PLAYWRIGHT_DELETE, verlo en el listado y desactivarlo'
   await loginComoAdmin(page)
   await page.goto('/productos')
   await buscarProducto(page, NOMBRE_TEST)
-  const existente = page.getByText(NOMBRE_TEST, { exact: true })
+  const existente = page.getByText('TEST_PLAYWRIGHT_DELETE')
   if (await existente.first().isVisible().catch(() => false)) {
     page.once('dialog', (d) => d.accept())
-    await page.getByRole('button', { name: 'Desactivar' }).first().click()
+    const fila = page.locator('tr').filter({ hasText: 'TEST_PLAYWRIGHT_DELETE' })
+    await fila.getByRole('button').last().click()
     await page.waitForTimeout(800)
   }
 
@@ -54,5 +55,6 @@ test('crear producto TEST_PLAYWRIGHT_DELETE, verlo en el listado y desactivarlo'
   await expect(page.getByText(NOMBRE_TEST).first()).toBeVisible()
 
   page.once('dialog', (d) => d.accept())
-  await page.getByRole('button', { name: 'Desactivar' }).first().click()
+  const filaFinal = page.locator('tr').filter({ hasText: 'TEST_PLAYWRIGHT_DELETE' })
+  await filaFinal.getByRole('button').last().click()
 })

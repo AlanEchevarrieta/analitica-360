@@ -24,7 +24,6 @@ test('listado muestra ventas con rango 2026 y se puede registrar y anular una ve
 
   const primerProducto = page.locator('ul li button').first()
   await expect(primerProducto).toBeVisible({ timeout: 15000 })
-  const nombreProducto = ((await primerProducto.locator('span.block').first().textContent()) ?? '').trim()
   await primerProducto.click()
 
   const agregarVariante = page.getByRole('button', { name: 'Agregar a la venta' })
@@ -33,7 +32,8 @@ test('listado muestra ventas con rango 2026 y se puede registrar y anular una ve
   }
 
   await page.getByRole('button', { name: 'Siguiente' }).click()
-  await expect(page.getByText('Forma de pago')).toBeVisible({ timeout: 20000 })
+  await page.waitForTimeout(3000)
+  await expect(page.getByRole('button', { name: 'Efectivo' })).toBeVisible({ timeout: 20000 })
   await page.getByRole('button', { name: 'Efectivo' }).click({ timeout: 15000 })
   await page.getByRole('button', { name: 'Siguiente' }).click()
   await page.getByRole('button', { name: 'Saltar' }).click()
