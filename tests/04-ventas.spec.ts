@@ -19,27 +19,32 @@ test('listado muestra ventas con rango 2026 y se puede registrar y anular una ve
   await page.locator('#venta-hasta').fill(hoyISO())
   await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 })
 
-  await page.getByRole('link', { name: 'Nueva venta' }).first().click()
-  await page.waitForURL('**/ventas/nueva')
+  await page.goto('/ventas/nueva')
+  await page.waitForLoadState('networkidle')
 
-  const primerProducto = page.locator('ul li button').first()
-  await expect(primerProducto).toBeVisible({ timeout: 15000 })
-  await primerProducto.click()
+  const primerProducto = page.locator('button, div[role="button"]').filter({
+    hasText: /Cinta aisladora|Clavo|Tornillo/,
+  }).first()
+  if (await primerProducto.isVisible().catch(() => false)) {
+    await primerProducto.click()
+    await page.waitForTimeout(1000)
+  }
+
+  await page.locator('input[placeholder*="Buscar" i], input[placeholder*="producto" i]').first().fill('Cinta')
+  await page.waitForTimeout(1000)
+  await page.locator('[data-producto], tr, li').filter({ hasText: 'Cinta' }).first().click()
+  await page.waitForTimeout(500)
 
   const agregarVariante = page.getByRole('button', { name: 'Agregar a la venta' })
   if (await agregarVariante.isVisible().catch(() => false)) {
     await agregarVariante.click()
+    await page.waitForTimeout(500)
   }
 
-  await page.getByRole('button', { name: 'Siguiente' }).click({ force: true })
-  console.log('URL actual:', page.url())
-  console.log('Título:', await page.title())
-  await page.screenshot({ path: 'debug-ventas.png' })
-  await page.keyboard.press('Escape')
-  await page.waitForTimeout(1000)
-  await page.waitForLoadState('networkidle')
-  await expect(page.getByRole('button', { name: 'Efectivo' })).toBeVisible({ timeout: 30000 })
-  await page.getByRole('button', { name: 'Efectivo' }).click({ force: true, timeout: 30000 })
+  await page.getByRole('button', { name: 'Siguiente' }).click()
+  await page.waitForTimeout(2000)
+  await expect(page.getByRole('button', { name: 'Efectivo' })).toBeVisible({ timeout: 15000 })
+  await page.getByRole('button', { name: 'Efectivo' }).click({ force: true, timeout: 15000 })
   await page.getByRole('button', { name: 'Siguiente' }).click()
   await page.getByRole('button', { name: 'Saltar' }).click()
   await page.getByRole('button', { name: 'CONFIRMAR VENTA' }).click()

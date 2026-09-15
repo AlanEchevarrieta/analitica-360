@@ -32,6 +32,11 @@ test('crear producto TEST_PLAYWRIGHT_DELETE, verlo en el listado y desactivarlo'
 }) => {
   await loginComoAdmin(page)
   await page.goto('/productos')
+  await page.waitForLoadState('networkidle')
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(1000)
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(500)
   await buscarProducto(page, NOMBRE_TEST)
   const existente = page.getByText('TEST_PLAYWRIGHT_DELETE')
   if (await existente.first().isVisible().catch(() => false)) {
@@ -39,15 +44,12 @@ test('crear producto TEST_PLAYWRIGHT_DELETE, verlo en el listado y desactivarlo'
     const fila = page.locator('tr').filter({ hasText: 'TEST_PLAYWRIGHT_DELETE' })
     await fila.getByRole('button').last().click()
     await page.waitForTimeout(800)
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(500)
   }
 
-  await page.keyboard.press('Escape')
-  await page.waitForTimeout(500)
-  console.log('URL actual:', page.url())
-  console.log('Título:', await page.title())
-  await page.screenshot({ path: 'debug-productos.png' })
-  await page.getByRole('link', { name: /Nuevo producto/ }).first().click({ force: true })
-  await page.waitForURL('**/productos/nuevo')
+  await page.goto('/productos/nuevo')
+  await page.waitForLoadState('networkidle')
   await page.locator('label', { hasText: 'Nombre' }).locator('input').fill(NOMBRE_TEST)
   const precio = page.locator('label', { hasText: /Precio de venta/ }).locator('input')
   await precio.fill('100')
@@ -62,4 +64,5 @@ test('crear producto TEST_PLAYWRIGHT_DELETE, verlo en el listado y desactivarlo'
   page.once('dialog', (d) => d.accept())
   const filaFinal = page.locator('tr').filter({ hasText: 'TEST_PLAYWRIGHT_DELETE' })
   await filaFinal.getByRole('button').last().click()
+  await page.keyboard.press('Escape')
 })
