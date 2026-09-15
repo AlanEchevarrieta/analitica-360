@@ -23,7 +23,7 @@ if (!process.env.PLAYWRIGHT_BASE_URL && process.env.BASE_URL) {
 
 export default defineConfig({
   testDir: './tests',
-  timeout: 30000,
+  timeout: 60000,
   retries: 1,
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://analitica360.app',

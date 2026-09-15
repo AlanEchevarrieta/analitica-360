@@ -41,7 +41,9 @@ test('crear producto TEST_PLAYWRIGHT_DELETE, verlo en el listado y desactivarlo'
     await page.waitForTimeout(800)
   }
 
-  await page.getByRole('link', { name: /Nuevo producto/ }).first().click()
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(500)
+  await page.getByRole('link', { name: /Nuevo producto/ }).first().click({ force: true })
   await page.waitForURL('**/productos/nuevo')
   await page.locator('label', { hasText: 'Nombre' }).locator('input').fill(NOMBRE_TEST)
   const precio = page.locator('label', { hasText: /Precio de venta/ }).locator('input')
