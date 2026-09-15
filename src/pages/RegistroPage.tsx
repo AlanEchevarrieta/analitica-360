@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import {
   evaluarPassword,
@@ -7,6 +7,9 @@ import {
   passwordValida,
   requisitosCumplidos,
 } from '../lib/password'
+import { requireSupabase } from '../lib/supabase'
+import { emailTieneCuenta, nombreEmpresaInvitacion } from '../lib/usuarios'
+import { guardarInvitacionPendiente } from '../lib/invitacionPendiente'
 import {
   AuthLayout,
   BuildingIcon,
@@ -41,6 +44,28 @@ export function RegistroPage() {
   const [aceptaTerminos, setAceptaTerminos] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [bloqueo, setBloqueo] = useState(false)
+  const [nombreInvEmpresa, setNombreInvEmpresa] = useState('')
+  const [cuentaExistente, setCuentaExistente] = useState(false)
+
+  useEffect(() => {
+    if (!esInvitacion) return
+    guardarInvitacionPendiente({ empresaId: empresaInv, nombreUsuario })
+    void nombreEmpresaInvitacion(requireSupabase(), empresaInv).then((n) => {
+      setNombreInvEmpresa(n)
+      setNombreEmpresa(n)
+    })
+  }, [esInvitacion, empresaInv, nombreUsuario])
+
+  useEffect(() => {
+    if (!esInvitacion || !email.includes('@')) {
+      setCuentaExistente(false)
+      return
+    }
+    const t = window.setTimeout(() => {
+      void emailTieneCuenta(requireSupabase(), email).then(setCuentaExistente)
+    }, 400)
+    return () => window.clearTimeout(t)
+  }, [email, esInvitacion])
 
   const check = evaluarPassword(password)
   const listaOk = passwordValida(check)
@@ -79,7 +104,7 @@ export function RegistroPage() {
     const result = await registrar({
       email: email.trim(),
       password,
-      nombreEmpresa: esInvitacion ? 'Equipo' : nombreEmpresa.trim(),
+      nombreEmpresa: esInvitacion ? nombreInvEmpresa || nombreEmpresa.trim() || 'Equipo' : nombreEmpresa.trim(),
       rubro: rubro.trim(),
       nombreUsuario: nombreUsuario.trim(),
       invitacion: esInvitacion ? { empresaId: empresaInv } : undefined,
@@ -94,13 +119,42 @@ export function RegistroPage() {
   return (
     <AuthLayout tabs>
       <h1 className="text-center text-[22px] font-bold leading-none text-[#1A2F4A]">Analítica 360</h1>
+      {esInvitacion && cuentaExistente ? (
+        <div className="mt-8 flex flex-1 flex-col items-center justify-center text-center">
+          <p className="text-4xl" aria-hidden>
+            👋
+          </p>
+          <h2 className="mt-4 text-xl font-bold text-[#1A2F4A]">¡Ya tenés una cuenta!</h2>
+          <p className="mt-3 text-sm leading-relaxed text-[#4A5568]">
+            Iniciá sesión para unirte a {nombreInvEmpresa || 'la empresa'}
+          </p>
+          <Link
+            className="mt-8 flex h-11 w-full items-center justify-center rounded-md bg-[#6366F1] text-sm font-semibold tracking-wide text-white hover:bg-[#4F46E5]"
+            to={`/login?empresa=${encodeURIComponent(empresaInv)}&email=${encodeURIComponent(email.trim())}`}
+          >
+            Iniciar sesión
+          </Link>
+        </div>
+      ) : (
+      <>
       {esInvitacion ? (
         <p className="mt-4 rounded-lg bg-[#EEF2F6] px-3 py-2 text-sm text-[#1A2F4A]">
-          Te invitaron a unirte al equipo. Vas a ver los módulos que el dueño habilitó para vos.
+          Te invitaron a unirte a {nombreInvEmpresa || 'el equipo'}. Completá tu cuenta y vas a ver los
+          módulos que el dueño habilitó para vos.
         </p>
       ) : null}
       <form className="mt-6 flex flex-col" onSubmit={onSubmit}>
-        {esInvitacion ? null : (
+        {esInvitacion ? (
+        <label className="text-left text-sm font-medium text-[#4A5568]">
+          Empresa
+          <span className="relative mt-1.5 block">
+            <span className="input-icon">
+              <BuildingIcon />
+            </span>
+            <input className={authInputWithIconClass} value={nombreInvEmpresa} readOnly />
+          </span>
+        </label>
+        ) : (
           <>
         <label className="text-left text-sm font-medium text-[#4A5568]">
           Nombre de la empresa
@@ -318,9 +372,11 @@ export function RegistroPage() {
           type="submit"
           disabled={enviando || bloqueo || !puedeCrear || !aceptaTerminos}
         >
-          {enviando ? 'CREANDO…' : 'CREAR EMPRESA'}
+          {enviando ? 'CREANDO…' : esInvitacion ? 'UNIRME AL EQUIPO' : 'CREAR EMPRESA'}
         </button>
       </form>
+      </>
+      )}
     </AuthLayout>
   )
 }

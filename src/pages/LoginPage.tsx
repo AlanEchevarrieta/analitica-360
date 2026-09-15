@@ -1,6 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { guardarInvitacionPendiente } from '../lib/invitacionPendiente'
+import { requireSupabase } from '../lib/supabase'
+import { nombreEmpresaInvitacion } from '../lib/usuarios'
 import {
   AuthLayout,
   LockIcon,
@@ -12,7 +15,9 @@ import {
 export function LoginPage() {
   const { ingresar, recuperarPassword } = useAuth()
   const [params] = useSearchParams()
-  const [email, setEmail] = useState('')
+  const empresaInv = params.get('empresa') ?? ''
+  const emailParam = params.get('email') ?? ''
+  const [email, setEmail] = useState(emailParam)
   const [password, setPassword] = useState('')
   const [mostrarClave, setMostrarClave] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -21,6 +26,17 @@ export function LoginPage() {
   const [pedirEmail, setPedirEmail] = useState(false)
   const [emailRecupero, setEmailRecupero] = useState('')
   const [enviandoRecupero, setEnviandoRecupero] = useState(false)
+  const [nombreInvEmpresa, setNombreInvEmpresa] = useState('')
+
+  useEffect(() => {
+    if (!empresaInv) return
+    guardarInvitacionPendiente({ empresaId: empresaInv, nombreUsuario: '' })
+    void nombreEmpresaInvitacion(requireSupabase(), empresaInv).then(setNombreInvEmpresa)
+  }, [empresaInv])
+
+  useEffect(() => {
+    if (emailParam) setEmail(emailParam)
+  }, [emailParam])
 
   useEffect(() => {
     const desc = params.get('error_description') || params.get('error')
@@ -90,6 +106,15 @@ export function LoginPage() {
           Analítica 360
         </h1>
         <p className="mt-2 mb-6 text-center text-sm text-[#4A5568]">Ingresá a tu empresa</p>
+        {empresaInv ? (
+          <div
+            className="mb-5 rounded-lg px-3 py-3 text-sm leading-relaxed text-[#1A2F4A]"
+            style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid #6366F1' }}
+          >
+            Te invitaron a unirte a {nombreInvEmpresa || 'la empresa'}. Iniciá sesión para aceptar la
+            invitación.
+          </div>
+        ) : null}
         <form className="flex flex-col" onSubmit={onSubmit}>
           <label className="text-left text-sm font-medium text-[#4A5568]">
             Email

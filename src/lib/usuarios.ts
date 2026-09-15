@@ -17,6 +17,7 @@ export type UsuarioEmpresa = {
   acceso: AccesoColaborador
   invitacionPendiente: boolean
   esInvitacion: boolean
+  ultimoAcceso: string | null
 }
 
 function filaDesdeRow(row: Record<string, unknown>, acceso: AccesoColaborador): UsuarioEmpresa {
@@ -28,7 +29,8 @@ function filaDesdeRow(row: Record<string, unknown>, acceso: AccesoColaborador): 
     activo: Boolean(row.activo),
     acceso,
     invitacionPendiente: Boolean(row.invitacion_pendiente),
-    esInvitacion: false,
+    esInvitacion: Boolean(row.es_invitacion),
+    ultimoAcceso: row.ultimo_acceso ? String(row.ultimo_acceso) : null,
   }
 }
 
@@ -143,9 +145,58 @@ export async function aceptarInvitacionColaborador(
   if (msg.includes('INVITACION_INVALIDA')) {
     return 'No hay una invitación pendiente para este email. Pedile al dueño que te invite de nuevo.'
   }
+  if (msg.includes('YA_ES_DUENO')) {
+    return 'Esta cuenta es dueña de otra empresa. Usá otro email para unirte al equipo.'
+  }
   if (msg.includes('YA_TIENE_EMPRESA')) return 'Esta cuenta ya pertenece a una empresa'
   if (msg.includes('could not find') || msg.includes('does not exist') || msg.includes('PGRST202')) {
-    return 'Falta el SQL de equipo. Pegá TODO supabase/054_equipo_roles.sql y supabase/056_permisos_granulares.sql (rol postgres), dale Run y recargá.'
+    return 'Falta el SQL de invitaciones. Pegá TODO supabase/060_invitaciones_flujo.sql (rol postgres), dale Run y recargá.'
+  }
+  return msg
+}
+
+export async function nombreEmpresaInvitacion(
+  client: SupabaseClient,
+  empresaId: string,
+): Promise<string> {
+  const { data } = await client.rpc('info_invitacion_empresa', { p_empresa: empresaId })
+  if (typeof data === 'string' && data.trim()) return data.trim()
+  return 'la empresa'
+}
+
+export async function emailTieneCuenta(client: SupabaseClient, email: string): Promise<boolean> {
+  const mail = email.trim().toLowerCase()
+  if (!mail.includes('@')) return false
+  const { data: fila } = await client.from('usuarios').select('id').eq('email', mail).maybeSingle()
+  if (fila?.id) return true
+  const { data } = await client.rpc('email_tiene_cuenta', { p_email: mail })
+  return Boolean(data)
+}
+
+export async function eliminarColaborador(
+  client: SupabaseClient,
+  usuario: UsuarioEmpresa,
+): Promise<string | null> {
+  if (usuario.rol === 'dueno' && !usuario.esInvitacion) {
+    return 'El dueño no se puede eliminar'
+  }
+  const { error } = await client.rpc('eliminar_colaborador', { p_usuario: usuario.id })
+  if (!error) return null
+  const msg = error.message
+  if (msg.includes('NO_AUTORIZADO')) return 'Solo el dueño puede eliminar colaboradores'
+  if (msg.includes('could not find') || msg.includes('does not exist') || msg.includes('PGRST202')) {
+    if (usuario.esInvitacion) {
+      const { error: e2 } = await client
+        .from('invitaciones_colaboradores')
+        .update({ pendiente: false })
+        .eq('id', usuario.id)
+      return e2 ? e2.message : null
+    }
+    const { error: e2 } = await client
+      .from('usuarios')
+      .update({ activo: false, deleted_at: new Date().toISOString() })
+      .eq('id', usuario.id)
+    return e2 ? e2.message : null
   }
   return msg
 }

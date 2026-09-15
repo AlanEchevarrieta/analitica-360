@@ -18,12 +18,14 @@ import {
 } from '../lib/configuracion'
 import { requireSupabase } from '../lib/supabase'
 import {
-  desactivarUsuario,
+  emailTieneCuenta,
+  eliminarColaborador,
   filasDesdeListarEquipo,
   guardarPermisosColaborador,
   invitarColaborador,
   type UsuarioEmpresa,
 } from '../lib/usuarios'
+import { formatoFechaHora } from '../lib/fechas'
 import { esDueno, linkInvitacionColaborador, textoLinkInvitacion } from '../lib/roles'
 import { PermisosChecklist } from '../components/PermisosChecklist'
 import {
@@ -165,7 +167,13 @@ export function ConfiguracionPage() {
   const [accesoInv, setAccesoInv] = useState<AccesoColaborador>(() => accesoSoloPedidos())
   const [presetInv, setPresetInv] = useState<PresetPermiso>('pedidos')
   const [enviandoInv, setEnviandoInv] = useState(false)
-  const [linkInv, setLinkInv] = useState<{ url: string; texto: string } | null>(null)
+  const [linkInv, setLinkInv] = useState<{
+    url: string
+    texto: string
+    email: string
+    nombre: string
+    yaTieneCuenta: boolean
+  } | null>(null)
   const [editUser, setEditUser] = useState<UsuarioEmpresa | null>(null)
   const [accesoEdit, setAccesoEdit] = useState<AccesoColaborador>(() => accesoSoloPedidos())
   const [presetEdit, setPresetEdit] = useState<PresetPermiso>('personalizado')
@@ -422,15 +430,36 @@ export function ConfiguracionPage() {
   }
 
   async function onDesactivar(u: UsuarioEmpresa) {
+    if (!perfil) return
+    const etiqueta = u.nombre || u.email
+    const okEliminar = window.confirm(
+      `¿Estás seguro? ${etiqueta} perderá acceso a ${perfil.empresa.nombre}`,
+    )
+    if (!okEliminar) return
     setError(null)
     setOk(null)
-    const fallo = await desactivarUsuario(requireSupabase(), u)
+    const fallo = await eliminarColaborador(requireSupabase(), u)
     if (fallo) {
       setError(fallo)
       return
     }
-    setOk(u.esInvitacion ? 'Invitación cancelada' : 'Usuario desactivado')
+    setOk(u.esInvitacion || u.invitacionPendiente ? 'Invitación cancelada' : 'Colaborador eliminado')
     await cargarUsuarios()
+  }
+
+  function abrirLinkInv(input: {
+    email: string
+    yaTieneCuenta: boolean
+  }) {
+    if (!perfil) return
+    const nombre = input.email.split('@')[0] || input.email
+    setLinkInv({
+      url: linkInvitacionColaborador(perfil.usuario.empresa_id),
+      texto: textoLinkInvitacion(perfil.usuario.empresa_id),
+      email: input.email,
+      nombre,
+      yaTieneCuenta: input.yaTieneCuenta,
+    })
   }
 
   async function onGuardarPermisos() {
@@ -466,10 +495,11 @@ export function ConfiguracionPage() {
       setError(fallo)
       return
     }
-    setOk(`Invitación enviada a ${emailInv.trim()}`)
-    setLinkInv({
-      url: linkInvitacionColaborador(perfil.usuario.empresa_id),
-      texto: textoLinkInvitacion(perfil.usuario.empresa_id),
+    const mail = emailInv.trim()
+    setOk(`Invitación lista para ${mail}`)
+    abrirLinkInv({
+      email: mail,
+      yaTieneCuenta: await emailTieneCuenta(requireSupabase(), mail),
     })
     setInvitar(false)
     setEmailInv('')
@@ -1019,12 +1049,13 @@ export function ConfiguracionPage() {
                   ) : null}
 
                   <div className="mt-4 overflow-x-auto">
-                    <table className="w-full min-w-[520px] text-left text-sm">
+                    <table className="w-full min-w-[720px] text-left text-sm">
                       <thead>
                         <tr className="text-[11px] uppercase tracking-wide text-[#94A3B8]">
                           <th className="py-2 pr-3">Nombre</th>
                           <th className="py-2 pr-3">Email</th>
                           <th className="py-2 pr-3">Estado</th>
+                          <th className="py-2 pr-3">Último acceso</th>
                           <th className="py-2">Acciones</th>
                         </tr>
                       </thead>
@@ -1040,31 +1071,46 @@ export function ConfiguracionPage() {
                                   ? 'Activo'
                                   : 'Inactivo'}
                             </td>
+                            <td className="py-2.5 pr-3 whitespace-nowrap text-[#CBD5E1]">
+                              {u.ultimoAcceso ? formatoFechaHora(u.ultimoAcceso) : '—'}
+                            </td>
                             <td className="py-2.5">
                               {u.id === perfil.usuario.id ? (
                                 <span className="text-xs text-[#94A3B8]">Acceso total</span>
                               ) : (
                                 <div className="flex flex-wrap gap-2">
-                                  <button
-                                    className="text-xs font-semibold text-[#A5B4FC]"
-                                    type="button"
-                                    onClick={() => {
-                                      setEditUser(u)
-                                      setAccesoEdit(u.acceso)
-                                      setPresetEdit(detectarPreset(u.acceso))
-                                    }}
-                                  >
-                                    Editar permisos
-                                  </button>
-                                  {u.activo || u.esInvitacion ? (
+                                  {u.invitacionPendiente || u.esInvitacion ? (
                                     <button
-                                      className="text-xs font-semibold text-[#DC2626]"
+                                      className="text-xs font-semibold text-[#A5B4FC]"
                                       type="button"
-                                      onClick={() => void onDesactivar(u)}
+                                      onClick={() => {
+                                        void emailTieneCuenta(requireSupabase(), u.email).then((ya) =>
+                                          abrirLinkInv({ email: u.email, yaTieneCuenta: ya }),
+                                        )
+                                      }}
                                     >
-                                      Desactivar
+                                      Reenviar invitación
                                     </button>
-                                  ) : null}
+                                  ) : (
+                                    <button
+                                      className="text-xs font-semibold text-[#A5B4FC]"
+                                      type="button"
+                                      onClick={() => {
+                                        setEditUser(u)
+                                        setAccesoEdit(u.acceso)
+                                        setPresetEdit(detectarPreset(u.acceso))
+                                      }}
+                                    >
+                                      Editar permisos
+                                    </button>
+                                  )}
+                                  <button
+                                    className="text-xs font-semibold text-[#DC2626]"
+                                    type="button"
+                                    onClick={() => void onDesactivar(u)}
+                                  >
+                                    Eliminar colaborador
+                                  </button>
                                 </div>
                               )}
                             </td>
@@ -1540,11 +1586,27 @@ export function ConfiguracionPage() {
       {linkInv && perfil ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 md:items-center">
           <div className="w-full max-w-md rounded-lg bg-white p-5 text-[#1A2F4A] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
-            <h3 className="text-lg font-bold">Compartí este link con tu colaborador</h3>
+            <h3 className="text-lg font-bold">
+              {linkInv.yaTieneCuenta ? `${linkInv.nombre} ya tiene cuenta` : 'Compartí este link'}
+            </h3>
+            {linkInv.yaTieneCuenta ? (
+              <p className="mt-3 text-sm leading-relaxed text-[#4A5568]">
+                {linkInv.nombre} ya tiene una cuenta en Analítica 360. Compartile este link para que se
+                una a {perfil.empresa.nombre}:
+              </p>
+            ) : (
+              <p className="mt-3 text-sm leading-relaxed text-[#4A5568]">
+                Compartí este link con {linkInv.nombre}. Cuando entre, podrá crear su cuenta y unirse
+                automáticamente a {perfil.empresa.nombre}.
+              </p>
+            )}
             <p className="mt-3 break-all rounded-md bg-[#EEF2F6] px-3 py-2 text-sm">
               {linkInv.texto}
             </p>
             <p className="mt-2 text-xs text-[#4A5568]">{linkInv.url}</p>
+            {linkInv.yaTieneCuenta ? (
+              <p className="mt-3 text-sm text-[#4A5568]">Solo tiene que iniciar sesión.</p>
+            ) : null}
             <div className="mt-4 flex gap-2">
               <button
                 className={btnPrimary}

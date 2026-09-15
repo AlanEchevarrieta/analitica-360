@@ -162,18 +162,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!pendiente) return
     const client = requireSupabase()
     const { data: userData } = await client.auth.getUser()
-    const userId = userData.user?.id
-    if (!userId) return
-    const { data: existente } = await client.from('usuarios').select('id').eq('id', userId).maybeSingle()
-    if (existente) {
-      limpiarInvitacionPendiente()
-      return
-    }
+    if (!userData.user?.id) return
     const fallo = await aceptarInvitacionColaborador(client, {
       empresaId: pendiente.empresaId,
       nombre: pendiente.nombreUsuario,
     })
-    if (!fallo) limpiarInvitacionPendiente()
+    if (fallo) {
+      if (fallo.includes('INVITACION_INVALIDA')) {
+        limpiarInvitacionPendiente()
+        return
+      }
+      setError(fallo)
+      return
+    }
+    limpiarInvitacionPendiente()
   }, [])
 
   const intentarAltaPendiente = useCallback(async () => {
@@ -295,7 +297,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: input.email,
         password: input.password,
       })
-      if (authError) return { error: mensajeAuth(authError), esperaConfirmacion: false }
+      if (authError) {
+        const yaRegistrado =
+          authError.message.toLowerCase().includes('already registered') ||
+          authError.message.toLowerCase().includes('already been registered')
+        if (yaRegistrado && input.invitacion) {
+          return {
+            error: 'Ya tenés una cuenta. Iniciá sesión para unirte al equipo.',
+            esperaConfirmacion: false,
+          }
+        }
+        return { error: mensajeAuth(authError), esperaConfirmacion: false }
+      }
 
       if (!data.session) {
         return {
