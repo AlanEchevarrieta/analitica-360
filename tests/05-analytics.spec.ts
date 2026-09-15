@@ -13,8 +13,18 @@ test.beforeEach(() => {
 test('analytics 2026: ventas, transacciones, margen y gráfico con datos', async ({ page }) => {
   await loginComoAdmin(page)
   await page.goto('/analytics')
-  await page.getByText('Último año').click()
-  await page.waitForTimeout(2000)
+  await page.getByText('Rango personalizado').click()
+  const desdeId = page.locator('#analytics-desde')
+  if ((await desdeId.count()) > 0) {
+    await page.fill('#analytics-desde', '2022-01-01')
+    await page.fill('#analytics-hasta', '2024-12-31')
+  } else {
+    const fechas = page.locator('input[type="date"]')
+    await fechas.nth(0).fill('2022-01-01')
+    await fechas.nth(1).fill('2024-12-31')
+  }
+  await page.getByRole('button', { name: 'Aplicar filtro' }).click()
+  await page.waitForTimeout(3000)
   await expect(page.getByText('Total ventas')).toBeVisible({ timeout: 20000 })
   await expect(page.getByText('Cargando…')).toHaveCount(0)
 

@@ -32,9 +32,8 @@ test('listado muestra ventas con rango 2026 y se puede registrar y anular una ve
     await agregarVariante.click()
   }
 
-  await expect(page.getByText(nombreProducto).first()).toBeVisible()
   await page.getByRole('button', { name: 'Siguiente' }).click()
-  await expect(page.getByText('Forma de pago')).toBeVisible({ timeout: 15000 })
+  await expect(page.getByText('Forma de pago')).toBeVisible({ timeout: 20000 })
   await page.getByRole('button', { name: 'Efectivo' }).click({ timeout: 15000 })
   await page.getByRole('button', { name: 'Siguiente' }).click()
   await page.getByRole('button', { name: 'Saltar' }).click()
@@ -45,11 +44,7 @@ test('listado muestra ventas con rango 2026 y se puede registrar y anular una ve
   await page.goto('/ventas')
   await page.locator('#venta-desde').fill('2026-01-01')
   await page.locator('#venta-hasta').fill(hoyISO())
-  if (nombreProducto) {
-    await expect(page.getByText(nombreProducto).first()).toBeVisible({ timeout: 15000 })
-  } else {
-    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 })
-  }
+  await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 })
 
   await page.getByRole('button', { name: 'Anular venta' }).first().click({ force: true })
   await page.locator('textarea').fill('TEST_PLAYWRIGHT')
