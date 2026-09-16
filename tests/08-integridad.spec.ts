@@ -123,10 +123,16 @@ async function anularUltimaVenta(page: Page, nombreProducto: string) {
     await page.waitForTimeout(500)
   }
 
-  const confirmar = page.getByRole('button', { name: /confirmar|sí|si/i }).first()
-  if (await confirmar.isVisible().catch(() => false)) {
-    await confirmar.click()
-    await page.waitForTimeout(2000)
+  const confirmar = page.getByRole('button', {
+    name: /confirmar|sí|si|aceptar|anular|ok/i,
+  }).first()
+    .or(page.locator('button.btn-danger, button.btn-red'))
+    .first()
+
+  if (await confirmar.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await confirmar.click({ force: true })
+    await page.waitForTimeout(3000)
+    await page.waitForLoadState('networkidle')
   }
 
   console.log('[stock test] URL después de anular:', page.url())
