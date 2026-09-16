@@ -5,6 +5,8 @@ import { ThemeToggle } from '../lib/tema'
 import { tieneAcceso } from '../lib/planes'
 import { requireSupabase, supabase } from '../lib/supabase'
 import { contarTicketsNoLeidos, EVENTO_SOPORTE_NOTIF } from '../lib/tickets'
+import { useNotificaciones } from '../lib/notificaciones'
+import { NotificacionesCampana } from './NotificacionesCampana'
 import { tieneModulo } from '../lib/permisos'
 import { estaEnTrial } from '../lib/suscripcion'
 import { theme } from '../theme'
@@ -52,6 +54,7 @@ export function AppNav() {
   const location = useLocation()
   const [mas, setMas] = useState(false)
   const [soporteNuevos, setSoporteNuevos] = useState(0)
+  const notif = useNotificaciones(location.pathname)
   const masActivo = [
     '/pedidos',
     '/compras',
@@ -184,6 +187,12 @@ export function AppNav() {
         </div>
         <div className="app-nav-actions">
           <ThemeToggle />
+          <NotificacionesCampana
+            items={notif.items}
+            total={notif.total}
+            marcar={notif.marcar}
+            marcarTodas={notif.marcarTodas}
+          />
           <button className="btn-sesion" type="button" onClick={() => void cerrarSesion()}>
             Cerrar sesión
           </button>
@@ -264,7 +273,16 @@ export function AppNav() {
           ) : null}
         </div>
         <div className="mt-auto flex flex-col gap-2 border-t border-[rgba(99,102,241,0.2)] pt-3">
-          <ThemeToggle />
+          <div className="flex items-center justify-between gap-2">
+            <ThemeToggle />
+            <NotificacionesCampana
+              items={notif.items}
+              total={notif.total}
+              abrirArriba
+              marcar={notif.marcar}
+              marcarTodas={notif.marcarTodas}
+            />
+          </div>
           <button className="btn-sesion w-full" type="button" onClick={() => void cerrarSesion()}>
             Cerrar sesión
           </button>
@@ -304,7 +322,7 @@ export function AppNav() {
         >
           <span className="relative inline-block" aria-hidden>
             ☰
-            <BadgeNotif n={soporteNuevos} />
+            <BadgeNotif n={Math.max(soporteNuevos, notif.total)} />
           </span>
           Más
         </button>
@@ -367,7 +385,16 @@ export function AppNav() {
               <span className="text-sm" style={{ color: '#94A3B8' }}>
                 Tema
               </span>
-              <ThemeToggle />
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <NotificacionesCampana
+                  items={notif.items}
+                  total={notif.total}
+                  abrirArriba
+                  marcar={notif.marcar}
+                  marcarTodas={notif.marcarTodas}
+                />
+              </div>
             </div>
             <button
               className="btn-sesion mt-3 w-full"
