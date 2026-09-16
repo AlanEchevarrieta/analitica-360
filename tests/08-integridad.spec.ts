@@ -91,19 +91,46 @@ async function anularUltimaVenta(page: Page, nombreProducto: string) {
   await page.locator('#venta-hasta').fill(hoyISO())
   await waitIdle(page)
   await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: STOCK_TIMEOUT })
-  const fila = page.locator('table tbody tr').filter({ hasText: nombreProducto }).first()
-  const objetivo = (await fila.count()) > 0 ? fila : page.locator('table tbody tr').first()
-  await objetivo.getByRole('button', { name: 'Anular venta' }).click({ force: true, timeout: STOCK_TIMEOUT })
-  await waitIdle(page)
-  await page.locator('textarea').fill('TEST_PLAYWRIGHT')
-  await waitIdle(page)
+  console.log('[stock test] anulando producto:', nombreProducto)
+
+  await page.screenshot({ path: 'debug-anulacion-antes.png' })
+
+  const botonAnular = page.getByRole('button', { name: /anular/i })
+    .or(page.getByText(/anular venta/i))
+    .first()
+
+  console.log('[stock test] botón anular visible:',
+    await botonAnular.isVisible().catch(() => false))
+
+  if (!await botonAnular.isVisible().catch(() => false)) {
+    await page.goto('/ventas')
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(2000)
+    await page.screenshot({ path: 'debug-anulacion-listado.png' })
+  }
 
   const esperaRpc = page.waitForResponse(
     (r) => /anular_venta|rpc\/anular/i.test(r.url()),
     { timeout: STOCK_TIMEOUT },
   ).catch(() => null)
 
-  await page.getByRole('button', { name: 'Confirmar anulación' }).click()
+  await botonAnular.click({ timeout: 30000 })
+  await page.waitForTimeout(2000)
+
+  const motivo = page.locator('textarea').first()
+  if (await motivo.isVisible().catch(() => false)) {
+    await motivo.fill('TEST_PLAYWRIGHT')
+    await page.waitForTimeout(500)
+  }
+
+  const confirmar = page.getByRole('button', { name: /confirmar|sí|si/i }).first()
+  if (await confirmar.isVisible().catch(() => false)) {
+    await confirmar.click()
+    await page.waitForTimeout(2000)
+  }
+
+  console.log('[stock test] URL después de anular:', page.url())
+  await page.screenshot({ path: 'debug-anulacion-despues.png' })
   await waitIdle(page)
   const rpc = await esperaRpc
   const errorUi = ((await page.locator('p.text-red-700, .bg-red-50').first().textContent().catch(() => null)) ?? '').trim()

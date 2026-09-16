@@ -21,6 +21,7 @@ playwright-report/
 debug-productos.png
 debug-ventas.png
 debug-stock-*.png
+debug-anulacion-*.png
 
 # Editor directories and files
 .vscode/*
