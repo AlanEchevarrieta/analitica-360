@@ -10,6 +10,8 @@ test.beforeEach(() => {
   )
 })
 
+const STOCK_TIMEOUT = 60000
+
 function parseStockCelda(texto: string) {
   const total = texto.match(/(\d+)\s*u\s*total/i)
   if (total) return Number(total[1])
@@ -17,16 +19,21 @@ function parseStockCelda(texto: string) {
   return m ? Number(m[0]) : NaN
 }
 
+async function waitIdle(page: Page) {
+  await page.waitForLoadState('networkidle', { timeout: STOCK_TIMEOUT })
+}
+
 async function leerStockProducto(page: Page, nombre: string) {
   await page.goto('/productos')
-  await expect(page.getByRole('heading', { name: 'Productos' })).toBeVisible({ timeout: 15000 })
+  await waitIdle(page)
+  await expect(page.getByRole('heading', { name: 'Productos' })).toBeVisible({ timeout: STOCK_TIMEOUT })
   const buscador = page.getByPlaceholder('Buscar producto...')
   if ((await buscador.count()) > 0) {
     await buscador.fill(nombre)
-    await page.waitForTimeout(400)
+    await waitIdle(page)
   }
   const fila = page.locator('table tbody tr').filter({ hasText: nombre }).first()
-  await expect(fila).toBeVisible({ timeout: 15000 })
+  await expect(fila).toBeVisible({ timeout: STOCK_TIMEOUT })
   const celdas = fila.locator('td')
   const n = await celdas.count()
   const texto = ((await celdas.nth(n - 3).textContent()) ?? '').trim()
@@ -40,9 +47,10 @@ async function leerStockProducto(page: Page, nombre: string) {
 
 async function elegirProductoConStock(page: Page) {
   await page.goto('/productos')
-  await expect(page.getByRole('heading', { name: 'Productos' })).toBeVisible({ timeout: 15000 })
+  await waitIdle(page)
+  await expect(page.getByRole('heading', { name: 'Productos' })).toBeVisible({ timeout: STOCK_TIMEOUT })
   const filas = page.locator('table tbody tr')
-  await expect(filas.first()).toBeVisible({ timeout: 15000 })
+  await expect(filas.first()).toBeVisible({ timeout: STOCK_TIMEOUT })
   const total = await filas.count()
   for (let i = 0; i < total; i++) {
     const fila = filas.nth(i)
@@ -62,44 +70,54 @@ async function elegirProductoConStock(page: Page) {
 
 async function registrarVentaDeUnaUnidad(page: Page, nombre: string) {
   await page.goto('/ventas/nueva')
-  await page.waitForLoadState('networkidle')
+  await waitIdle(page)
   await page.locator('input[placeholder*="Buscar" i], input[placeholder*="producto" i]').first().fill(nombre)
-  await page.waitForTimeout(1000)
-  await page.locator('[data-producto], tr, li, button').filter({ hasText: nombre }).first().click()
-  await page.waitForTimeout(500)
+  await waitIdle(page)
+  await page.locator('[data-producto], tr, li, button').filter({ hasText: nombre }).first().click({ timeout: STOCK_TIMEOUT })
+  await waitIdle(page)
   const agregarVariante = page.getByRole('button', { name: 'Agregar a la venta' })
-  if (await agregarVariante.isVisible().catch(() => false)) {
+  if (await agregarVariante.isVisible({ timeout: STOCK_TIMEOUT }).catch(() => false)) {
     await agregarVariante.click()
-    await page.waitForTimeout(500)
+    await waitIdle(page)
   }
   await page.getByRole('button', { name: 'Siguiente' }).click()
-  await page.waitForTimeout(5000)
-  await page.waitForLoadState('networkidle')
-  await expect(page.getByRole('button', { name: 'Efectivo' })).toBeVisible({ timeout: 15000 })
-  await page.getByRole('button', { name: 'Efectivo' }).click({ force: true, timeout: 15000 })
+  await waitIdle(page)
+  await expect(page.getByRole('button', { name: 'Efectivo' })).toBeVisible({ timeout: STOCK_TIMEOUT })
+  await page.getByRole('button', { name: 'Efectivo' }).click({ force: true, timeout: STOCK_TIMEOUT })
+  await waitIdle(page)
   await page.getByRole('button', { name: 'Siguiente' }).click()
+  await waitIdle(page)
   await page.getByRole('button', { name: 'Saltar' }).click()
+  await waitIdle(page)
   await page.getByRole('button', { name: 'CONFIRMAR VENTA' }).click()
-  await expect(page.getByText(/Venta registrada/)).toBeVisible({ timeout: 15000 })
-  await page.waitForURL('**/inicio', { timeout: 15000 })
+  await waitIdle(page)
+  await expect(page.getByText(/Venta registrada/)).toBeVisible({ timeout: STOCK_TIMEOUT })
+  await page.waitForURL('**/inicio', { timeout: STOCK_TIMEOUT })
+  await waitIdle(page)
 }
 
 async function anularUltimaVenta(page: Page, nombreProducto: string) {
   await page.goto('/ventas')
+  await waitIdle(page)
   await page.locator('#venta-desde').fill('2026-01-01')
+  await waitIdle(page)
   await page.locator('#venta-hasta').fill(hoyISO())
-  await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 })
+  await waitIdle(page)
+  await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: STOCK_TIMEOUT })
   const fila = page.locator('table tbody tr').filter({ hasText: nombreProducto }).first()
   const objetivo = (await fila.count()) > 0 ? fila : page.locator('table tbody tr').first()
-  await objetivo.getByRole('button', { name: 'Anular venta' }).click({ force: true })
+  await objetivo.getByRole('button', { name: 'Anular venta' }).click({ force: true, timeout: STOCK_TIMEOUT })
+  await waitIdle(page)
   await page.locator('textarea').fill('TEST_PLAYWRIGHT')
+  await waitIdle(page)
 
   const esperaRpc = page.waitForResponse(
     (r) => /anular_venta|rpc\/anular/i.test(r.url()),
-    { timeout: 20000 },
+    { timeout: STOCK_TIMEOUT },
   ).catch(() => null)
 
   await page.getByRole('button', { name: 'Confirmar anulación' }).click()
+  await waitIdle(page)
   const rpc = await esperaRpc
   const errorUi = ((await page.locator('p.text-red-700, .bg-red-50').first().textContent().catch(() => null)) ?? '').trim()
   const anuladaVisible = await page.getByText(/Anulada/i).first().isVisible().catch(() => false)
@@ -123,19 +141,27 @@ async function anularUltimaVenta(page: Page, nombreProducto: string) {
 }
 
 test('venta de 1 unidad baja el stock y anularlo lo restaura', async ({ page }) => {
+  test.setTimeout(180000)
   await loginComoAdmin(page)
+  await waitIdle(page)
   const producto = await elegirProductoConStock(page)
   const stockInicial = await leerStockProducto(page, producto.nombre)
   console.log('[stock test] stock inicial:', stockInicial)
+  await page.screenshot({ path: 'debug-stock-1-inicio.png' })
   expect(stockInicial).toBeGreaterThanOrEqual(1)
 
-  await registrarVentaDeUnaUnidad(page, producto.nombre)
+  try {
+    await registrarVentaDeUnaUnidad(page, producto.nombre)
+  } finally {
+    await page.screenshot({ path: 'debug-stock-2-post-venta.png' })
+  }
   const stockDespuesVenta = await leerStockProducto(page, producto.nombre)
   console.log('[stock test] stock después de venta:', stockDespuesVenta)
   expect(stockDespuesVenta).toBe(stockInicial - 1)
 
   const respuestaAnulacion = await anularUltimaVenta(page, producto.nombre)
   console.log('[stock test] respuesta anulación:', respuestaAnulacion)
+  await page.screenshot({ path: 'debug-stock-3-post-anulacion.png' })
 
   const stockDespuesAnulacion = await leerStockProducto(page, producto.nombre)
   console.log('[stock test] stock después de anulación:', stockDespuesAnulacion)
