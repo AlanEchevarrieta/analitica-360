@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { fechaHoyAR, fechaIsoDe, inicioMesIso, sumarDiasIso } from './analytics'
 import { listarGastos, type GastoFila } from './gastos'
-import { listarProductos } from './productos'
+import { listarProductos, type ProductoFila } from './productos'
 
 export type PresetContabilidad = 'mes' | 'mes_ant' | 'trimestre' | 'anio' | 'personalizado'
 
@@ -11,6 +11,26 @@ export type TotalesPeriodo = {
   gastos: number
   neto: number
   cantidadVentas: number
+}
+
+export type ValorStock = {
+  invertido: number
+  valorVenta: number
+  gananciaPotencial: number
+}
+
+export const VALOR_STOCK_VACIO: ValorStock = { invertido: 0, valorVenta: 0, gananciaPotencial: 0 }
+
+export function calcularValorStock(filas: ProductoFila[]): ValorStock {
+  let invertido = 0
+  let valorVenta = 0
+  for (const p of filas) {
+    const qty = p.stock_actual
+    if (qty <= 0) continue
+    invertido += qty * p.costo
+    valorVenta += qty * p.precio_venta
+  }
+  return { invertido, valorVenta, gananciaPotencial: valorVenta - invertido }
 }
 
 export type PuntoMes = {
@@ -190,6 +210,7 @@ export async function cargarContabilidad(
   serie6: PuntoMes[]
   gastosPeriodo: GastoFila[]
   valorInventario: number
+  valorStock: ValorStock
   error: string | null
 }> {
   const hoy = fechaHoyAR()
@@ -202,7 +223,8 @@ export async function cargarContabilidad(
     listarProductos(client),
   ])
   const error = ventasRes.error || gastosHist.error || productos.error
-  const valorInventario = productos.filas.reduce((a, p) => a + p.stock_actual * p.costo, 0)
+  const valorStock = calcularValorStock(productos.filas)
+  const valorInventario = valorStock.invertido
   const serie6 = serieMensual(claves6, ventasRes.ventas, ventasRes.items, gastosHist.filas)
   const totales = sumarPeriodo(
     ventasRes.ventas,
@@ -212,7 +234,7 @@ export async function cargarContabilidad(
     periodo.hasta,
   )
   const gastosPeriodo = gastosHist.filas.filter((g) => g.fecha >= periodo.desde && g.fecha <= periodo.hasta)
-  return { totales, serie6, gastosPeriodo, valorInventario, error }
+  return { totales, serie6, gastosPeriodo, valorInventario, valorStock, error }
 }
 
 export function ratiosFinancieros(input: {

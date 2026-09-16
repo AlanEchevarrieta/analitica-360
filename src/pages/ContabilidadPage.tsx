@@ -27,6 +27,8 @@ import {
   type PresetContabilidad,
   type PuntoMes,
   type TotalesPeriodo,
+  type ValorStock,
+  VALOR_STOCK_VACIO,
 } from '../lib/contabilidad'
 import { fechaHoyAR, formatoEjeCompacto } from '../lib/analytics'
 import { FISCAL_DEFAULT, formatoMoneda, type ConfigFiscal } from '../lib/fiscal'
@@ -100,6 +102,7 @@ export function ContabilidadPage() {
   })
   const [serie6, setSerie6] = useState<PuntoMes[]>([])
   const [valorInv, setValorInv] = useState(0)
+  const [valorStock, setValorStock] = useState<ValorStock>(VALOR_STOCK_VACIO)
   const [fiscal, setFiscal] = useState<ConfigFiscal>(FISCAL_DEFAULT)
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -133,6 +136,7 @@ export function ContabilidadPage() {
     setTotales(pack.totales)
     setSerie6(pack.serie6)
     setValorInv(pack.valorInventario)
+    setValorStock(pack.valorStock)
     const lista = await listarGastos(client, {
       empresaId: perfil.empresa.id,
       desde: rango.desde,
@@ -433,6 +437,28 @@ export function ContabilidadPage() {
                 color={totales.neto >= 0 ? COLOR_NET : COLOR_NEG}
               />
             </div>
+            <section className="rounded-lg p-5" style={CARD}>
+              <h2 className="text-lg font-semibold">Valor del stock</h2>
+              <p className="mt-1 text-xs text-[#94A3B8]">Stock actual con cantidad mayor a cero, al costo y precio de venta.</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <Kpi
+                  titulo="💰 Invertido en stock"
+                  hint="Suma de stock × costo"
+                  valor={money(valorStock.invertido, fiscal)}
+                />
+                <Kpi
+                  titulo="📦 Valor de venta"
+                  hint="Suma de stock × precio de venta"
+                  valor={money(valorStock.valorVenta, fiscal)}
+                />
+                <Kpi
+                  titulo="✅ Ganancia potencial"
+                  hint="Valor de venta − invertido"
+                  valor={money(valorStock.gananciaPotencial, fiscal)}
+                  color={valorStock.gananciaPotencial >= 0 ? COLOR_NET : COLOR_NEG}
+                />
+              </div>
+            </section>
             <section className="rounded-lg p-5" style={CARD}>
               <h2 className="text-lg font-semibold">Ingresos vs COGS vs Gastos (últimos 6 meses)</h2>
               <div className="mt-4 h-72">
