@@ -45,43 +45,30 @@ async function leerStockProducto(page: Page, nombre: string) {
   return stock
 }
 
-async function elegirProductoConStock(page: Page) {
-  await page.goto('/productos')
-  await waitIdle(page)
-  await expect(page.getByRole('heading', { name: 'Productos' })).toBeVisible({ timeout: STOCK_TIMEOUT })
-  const filas = page.locator('table tbody tr')
-  await expect(filas.first()).toBeVisible({ timeout: STOCK_TIMEOUT })
-  const total = await filas.count()
-  for (let i = 0; i < total; i++) {
-    const fila = filas.nth(i)
-    const textoFila = ((await fila.textContent()) ?? '').trim()
-    if (/TEST_PLAYWRIGHT/i.test(textoFila)) continue
-    const nombre = ((await fila.locator('td').nth(1).locator('p').first().textContent()) ?? '')
-      .replace('📷', '')
-      .trim()
-    if (!nombre) continue
-    const celdas = fila.locator('td')
-    const n = await celdas.count()
-    const stock = parseStockCelda(((await celdas.nth(n - 3).textContent()) ?? '').trim())
-    if (Number.isFinite(stock) && stock >= 1) return { nombre, stock }
-  }
-  throw new Error('No hay un producto con stock ≥ 1 para el test de integridad')
-}
-
-async function registrarVentaDeUnaUnidad(page: Page, nombre: string) {
+async function registrarVentaDeUnaUnidad(page: Page) {
   await page.goto('/ventas/nueva')
-  await waitIdle(page)
-  await page.locator('input[placeholder*="Buscar" i], input[placeholder*="producto" i]').first().fill(nombre)
-  await waitIdle(page)
-  await page.locator('[data-producto], tr, li, button').filter({ hasText: nombre }).first().click({ timeout: STOCK_TIMEOUT })
-  await waitIdle(page)
-  const agregarVariante = page.getByRole('button', { name: 'Agregar a la venta' })
-  if (await agregarVariante.isVisible({ timeout: STOCK_TIMEOUT }).catch(() => false)) {
-    await agregarVariante.click()
-    await waitIdle(page)
-  }
-  await page.getByRole('button', { name: 'Siguiente' }).click()
-  await waitIdle(page)
+  await page.waitForLoadState('networkidle')
+  await page.waitForTimeout(2000)
+
+  const inputBusqueda = page.locator('input[placeholder*="roducto"], input[placeholder*="uscar"]').first()
+  await inputBusqueda.fill('Cinta')
+  await page.waitForTimeout(2000)
+
+  const primerResultado = page.locator('tr, li, div[role="option"]')
+    .filter({ hasText: 'Cinta' })
+    .first()
+  await primerResultado.click({ timeout: 15000 })
+  await page.waitForTimeout(2000)
+
+  const total = await page.locator('text=/Total.*\\$/').first().textContent()
+  console.log('[stock test] total antes de siguiente:', total)
+
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(500)
+  await page.getByRole('button', { name: 'Siguiente' }).click({ force: true })
+  await page.waitForLoadState('networkidle')
+  await page.waitForTimeout(5000)
+
   await expect(page.getByRole('button', { name: 'Efectivo' })).toBeVisible({ timeout: STOCK_TIMEOUT })
   await page.getByRole('button', { name: 'Efectivo' }).click({ force: true, timeout: STOCK_TIMEOUT })
   await waitIdle(page)
@@ -144,26 +131,26 @@ test('venta de 1 unidad baja el stock y anularlo lo restaura', async ({ page }) 
   test.setTimeout(180000)
   await loginComoAdmin(page)
   await waitIdle(page)
-  const producto = await elegirProductoConStock(page)
-  const stockInicial = await leerStockProducto(page, producto.nombre)
+  const productoNombre = 'Cinta'
+  const stockInicial = await leerStockProducto(page, productoNombre)
   console.log('[stock test] stock inicial:', stockInicial)
   await page.screenshot({ path: 'debug-stock-1-inicio.png' })
   expect(stockInicial).toBeGreaterThanOrEqual(1)
 
   try {
-    await registrarVentaDeUnaUnidad(page, producto.nombre)
+    await registrarVentaDeUnaUnidad(page)
   } finally {
     await page.screenshot({ path: 'debug-stock-2-post-venta.png' })
   }
-  const stockDespuesVenta = await leerStockProducto(page, producto.nombre)
+  const stockDespuesVenta = await leerStockProducto(page, productoNombre)
   console.log('[stock test] stock después de venta:', stockDespuesVenta)
   expect(stockDespuesVenta).toBe(stockInicial - 1)
 
-  const respuestaAnulacion = await anularUltimaVenta(page, producto.nombre)
+  const respuestaAnulacion = await anularUltimaVenta(page, productoNombre)
   console.log('[stock test] respuesta anulación:', respuestaAnulacion)
   await page.screenshot({ path: 'debug-stock-3-post-anulacion.png' })
 
-  const stockDespuesAnulacion = await leerStockProducto(page, producto.nombre)
+  const stockDespuesAnulacion = await leerStockProducto(page, productoNombre)
   console.log('[stock test] stock después de anulación:', stockDespuesAnulacion)
   expect(stockDespuesAnulacion).toBe(stockInicial)
 })
