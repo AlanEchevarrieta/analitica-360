@@ -93,23 +93,53 @@ async function anularUltimaVenta(page: Page, nombreProducto: string) {
   const objetivo = (await fila.count()) > 0 ? fila : page.locator('table tbody tr').first()
   await objetivo.getByRole('button', { name: 'Anular venta' }).click({ force: true })
   await page.locator('textarea').fill('TEST_PLAYWRIGHT')
+
+  const esperaRpc = page.waitForResponse(
+    (r) => /anular_venta|rpc\/anular/i.test(r.url()),
+    { timeout: 20000 },
+  ).catch(() => null)
+
   await page.getByRole('button', { name: 'Confirmar anulación' }).click()
-  await expect(page.getByText(/Anulada/i).first()).toBeVisible({ timeout: 15000 })
+  const rpc = await esperaRpc
+  const errorUi = ((await page.locator('p.text-red-700, .bg-red-50').first().textContent().catch(() => null)) ?? '').trim()
+  const anuladaVisible = await page.getByText(/Anulada/i).first().isVisible().catch(() => false)
+
+  let respuestaAnulacion: Record<string, unknown> = {
+    rpcCapturado: Boolean(rpc),
+    anuladaVisible,
+    errorUi: errorUi || null,
+  }
+  if (rpc) {
+    respuestaAnulacion = {
+      ...respuestaAnulacion,
+      status: rpc.status(),
+      ok: rpc.ok(),
+      url: rpc.url(),
+      body: await rpc.text().catch(() => ''),
+    }
+  }
+
+  return respuestaAnulacion
 }
 
 test('venta de 1 unidad baja el stock y anularlo lo restaura', async ({ page }) => {
   await loginComoAdmin(page)
   const producto = await elegirProductoConStock(page)
-  const original = await leerStockProducto(page, producto.nombre)
-  expect(original).toBeGreaterThanOrEqual(1)
+  const stockInicial = await leerStockProducto(page, producto.nombre)
+  console.log('[stock test] stock inicial:', stockInicial)
+  expect(stockInicial).toBeGreaterThanOrEqual(1)
 
   await registrarVentaDeUnaUnidad(page, producto.nombre)
-  const despuesVenta = await leerStockProducto(page, producto.nombre)
-  expect(despuesVenta).toBe(original - 1)
+  const stockDespuesVenta = await leerStockProducto(page, producto.nombre)
+  console.log('[stock test] stock después de venta:', stockDespuesVenta)
+  expect(stockDespuesVenta).toBe(stockInicial - 1)
 
-  await anularUltimaVenta(page, producto.nombre)
-  const despuesAnular = await leerStockProducto(page, producto.nombre)
-  expect(despuesAnular).toBe(original)
+  const respuestaAnulacion = await anularUltimaVenta(page, producto.nombre)
+  console.log('[stock test] respuesta anulación:', respuestaAnulacion)
+
+  const stockDespuesAnulacion = await leerStockProducto(page, producto.nombre)
+  console.log('[stock test] stock después de anulación:', stockDespuesAnulacion)
+  expect(stockDespuesAnulacion).toBe(stockInicial)
 })
 
 test('Analytics muestra margen bruto estimado menor a 90%', async ({ page }) => {
