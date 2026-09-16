@@ -3,6 +3,8 @@ export const TEST_USER = {
   password: process.env.TEST_PASSWORD || '',
 }
 
+export const BASE_URL = process.env.TEST_BASE_URL || 'https://analitica360.app'
+
 export const TEST_ACACIA = {
   email: process.env.TEST_ACACIA_EMAIL || '',
   password: process.env.TEST_ACACIA_PASSWORD || '',

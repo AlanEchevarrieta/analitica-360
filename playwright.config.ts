@@ -17,8 +17,11 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-if (!process.env.PLAYWRIGHT_BASE_URL && process.env.BASE_URL) {
-  process.env.PLAYWRIGHT_BASE_URL = process.env.BASE_URL
+if (!process.env.TEST_BASE_URL && process.env.BASE_URL) {
+  process.env.TEST_BASE_URL = process.env.BASE_URL
+}
+if (!process.env.PLAYWRIGHT_BASE_URL && process.env.TEST_BASE_URL) {
+  process.env.PLAYWRIGHT_BASE_URL = process.env.TEST_BASE_URL
 }
 
 export default defineConfig({
@@ -26,7 +29,7 @@ export default defineConfig({
   timeout: 60000,
   retries: 1,
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://analitica360.app',
+    baseURL: process.env.TEST_BASE_URL || 'https://analitica360.app',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
