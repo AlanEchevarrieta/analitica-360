@@ -330,7 +330,7 @@ export async function anularVenta(
   if (msg.includes('VENTA_INVALIDA')) return 'Esa venta ya no se puede anular'
   const t = msg.toLowerCase()
   if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
-    return 'Falta actualizar la anulación en Supabase. Pegá TODO supabase/024_anular_ventas.sql (rol postgres), dale Run y recargá.'
+    return 'Falta actualizar la anulación en Supabase. Pegá TODO supabase/063_fix_anulacion_stock.sql (rol postgres), dale Run y recargá.'
   }
   return `No se pudo anular la venta: ${msg}`
 }
