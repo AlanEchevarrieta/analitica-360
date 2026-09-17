@@ -1,8 +1,8 @@
 export const theme = {
   name: 'Analítica 360',
-  font: 'Inter, system-ui, sans-serif',
-  fontDisplay: 'Fraunces, ui-serif, Georgia, serif',
-  fontSubtitle: 'Karla, Inter, sans-serif',
+  font: "Inter, -apple-system, sans-serif",
+  fontDisplay: "Inter, sans-serif",
+  fontSubtitle: "Inter, sans-serif",
   canvasFrom: 'var(--canvas-from)',
   canvasTo: 'var(--canvas-to)',
   card: 'rgba(255,255,255,0.95)',

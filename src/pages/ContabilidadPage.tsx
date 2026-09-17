@@ -6,11 +6,11 @@ import {
   Legend,
   Line,
   LineChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
+import { ChartResponsive, propsEjeX } from '../components/ChartResponsive'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
@@ -462,10 +462,10 @@ export function ContabilidadPage() {
             <section className="rounded-lg p-5" style={CARD}>
               <h2 className="text-lg font-semibold">Ingresos vs COGS vs Gastos (últimos 6 meses)</h2>
               <div className="mt-4 h-72">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartResponsive>
                   <BarChart data={serie6}>
                     <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fill: '#F1F5F9', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="label" {...propsEjeX('#F1F5F9')} />
                     <YAxis
                       tick={{ fill: '#94A3B8', fontSize: 11 }}
                       axisLine={false}
@@ -491,7 +491,7 @@ export function ContabilidadPage() {
                     <Bar dataKey="cogs" name="COGS" stackId="a" fill={COLOR_COGS} />
                     <Bar dataKey="gastos" name="Gastos" stackId="a" fill={COLOR_GAS} radius={[4, 4, 0, 0]} />
                   </BarChart>
-                </ResponsiveContainer>
+                </ChartResponsive>
               </div>
             </section>
           </div>
@@ -580,10 +580,10 @@ export function ContabilidadPage() {
                 promedio de los últimos 3 meses.
               </p>
               <div className="mt-4 h-72">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartResponsive>
                   <LineChart data={chartFlujo}>
                     <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fill: '#F1F5F9', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <XAxis dataKey="label" {...propsEjeX('#F1F5F9')} />
                     <YAxis
                       tick={{ fill: '#94A3B8', fontSize: 11 }}
                       axisLine={false}
@@ -615,7 +615,7 @@ export function ContabilidadPage() {
                       connectNulls
                     />
                   </LineChart>
-                </ResponsiveContainer>
+                </ChartResponsive>
               </div>
             </section>
           </div>

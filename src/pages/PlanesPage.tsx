@@ -6,10 +6,12 @@ import { PlanesModal } from '../components/PlanesModal'
 import { PageTitle, btnPrimary } from '../components/listado'
 import {
   DESCUENTO_ANUAL,
+  DESCUENTO_LANZAMIENTO,
   MESES_DESCUENTO_LANZAMIENTO,
   MODULOS_COMPARATIVA,
   PLANES,
   PLANES_PAGOS,
+  desgloseAnualPlan,
   etiquetaPlan,
   formatoPrecioPlan,
   mesesAhorroAnual,
@@ -66,6 +68,9 @@ export function PlanesPage() {
             const plan = PLANES[id]
             const lista = precioLista(id, ciclo)
             const lanz = precioLanzamiento(id, ciclo)
+            const anual = desgloseAnualPlan(id)
+            const precioVigente = ciclo === 'anual' ? anual.mes1a3 : lanz
+            const precioListaMostrar = ciclo === 'anual' ? anual.listaMes : lista
             return (
               <article
                 key={id}
@@ -84,18 +89,27 @@ export function PlanesPage() {
                   {id === 'premium' ? '⭐ ' : ''}
                   {plan.nombre}
                 </h2>
-                <p className="mt-3 text-sm text-[#94A3B8] line-through">{formatoPrecioPlan(lista)}</p>
-                <p className="text-2xl font-semibold text-[#F1F5F9]">
-                  {formatoPrecioPlan(lanz)}
-                  <span className="text-sm font-normal text-[#94A3B8]">/mes</span>
+                <p className="precio-tachado mt-3 font-metric">{formatoPrecioPlan(precioListaMostrar)}</p>
+                <p className="font-metric text-2xl text-[#F1F5F9]">
+                  {formatoPrecioPlan(precioVigente)}
+                  <span className="text-sm font-normal text-[#94A3B8]"> +IVA /mes</span>
                 </p>
-                <p className="mt-1 text-xs text-amber-200">
-                  🔥 Precio de lanzamiento — primeros {MESES_DESCUENTO_LANZAMIENTO} meses
-                </p>
+                <span className="badge-descuento mt-2 w-fit">
+                  🔥 -{Math.round(DESCUENTO_LANZAMIENTO * 100)}% primeros {MESES_DESCUENTO_LANZAMIENTO} meses
+                </span>
                 {ciclo === 'anual' ? (
-                  <p className="mt-1 text-xs text-[#A5B4FC]">
-                    Ahorrás {mesesAhorroAnual()} meses pagando el año
-                  </p>
+                  <div className="mt-3 space-y-1 text-xs text-[#A5B4FC]">
+                    <p>
+                      Los primeros {MESES_DESCUENTO_LANZAMIENTO} meses con {Math.round(DESCUENTO_LANZAMIENTO * 100)}% OFF,
+                      los 9 meses restantes con {Math.round(DESCUENTO_ANUAL * 100)}% OFF. Los descuentos NO son acumulables.
+                    </p>
+                    <p>Meses 1-3: {formatoPrecioPlan(anual.mes1a3)}/mes (40% OFF)</p>
+                    <p>Meses 4-12: {formatoPrecioPlan(anual.mes4a12)}/mes (20% OFF)</p>
+                    <p className="font-metric font-semibold text-[#F1F5F9]">
+                      Total año: {formatoPrecioPlan(anual.totalAnio)} + IVA
+                    </p>
+                    <p>Ahorrás {mesesAhorroAnual()} meses vs. pagar el precio de lista todo el año</p>
+                  </div>
                 ) : null}
                 <ul className="mt-4 flex-1 space-y-1.5 text-sm">
                   {MODULOS_COMPARATIVA.map((mod) => {
@@ -123,6 +137,10 @@ export function PlanesPage() {
             Plan actual: {etiquetaPlan(perfil.empresa.plan_actual)}
           </p>
         ) : null}
+        <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-[#94A3B8]">
+          * Precios expresados sin IVA (21%). El IVA es recuperable para responsables inscriptos. Descuento de
+          lanzamiento 40% válido los primeros 3 meses para nuevas suscripciones.
+        </p>
       </div>
       <PlanesModal
         abierto={Boolean(elegido)}

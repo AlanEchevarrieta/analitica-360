@@ -100,7 +100,7 @@ export function GraficoExpandible({
         >
           <div className="flex h-full flex-col px-4 py-4" onClick={(ev) => ev.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h3 style={{ fontFamily: theme.fontDisplay, fontSize: 22, color: '#F1F5F9', fontWeight: 600 }}>
+              <h3 style={{ fontFamily: theme.fontDisplay, fontSize: 22, color: '#F1F5F9', fontWeight: 700, letterSpacing: '-0.02em' }}>
                 {titulo}
               </h3>
               <button

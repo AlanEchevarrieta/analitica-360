@@ -15,13 +15,13 @@ import {
   PieChart,
   Rectangle,
   ReferenceLine,
-  ResponsiveContainer,
   Scatter,
   ScatterChart,
   Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
 } from 'recharts'
+import { ChartResponsive, propsEjeX } from '../components/ChartResponsive'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { GraficoExpandible, SelectorChips } from '../components/GraficoExpandible'
@@ -262,10 +262,10 @@ const VentasVsComprasChart = memo(function VentasVsComprasChart({
   grilla: string
 }) {
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ChartResponsive>
       <ComposedChart data={datos} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
         <CartesianGrid stroke={grilla} vertical={false} />
-        <XAxis dataKey="fecha" tick={{ fill: eje, fontSize: 11 }} axisLine={false} tickLine={false} />
+        <XAxis dataKey="fecha" {...propsEjeX(eje, datos.length)} />
         <YAxis
           yAxisId="monto"
           tick={{ fill: eje, fontSize: 11 }}
@@ -304,12 +304,10 @@ const VentasVsComprasChart = memo(function VentasVsComprasChart({
           name="Ventas"
           fill="#6366F1"
           radius={[4, 4, 0, 0]}
-          maxBarSize={48}
-          minPointSize={4}
           isAnimationActive={false}
         />
       </ComposedChart>
-    </ResponsiveContainer>
+    </ChartResponsive>
   )
 })
 
@@ -780,14 +778,12 @@ export function AnalyticsPage() {
                       />
                     }
                   >
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ChartResponsive>
                       <ComposedChart data={evolucionVista} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
                         <CartesianGrid stroke={g.grilla} vertical={false} />
                         <XAxis
                           dataKey="fecha"
-                          tick={{ fill: g.eje, fontSize: 11 }}
-                          axisLine={false}
-                          tickLine={false}
+                          {...propsEjeX(g.eje, evolucionVista.length)}
                         />
                         <YAxis
                           tick={{ fill: g.eje, fontSize: 11 }}
@@ -827,7 +823,7 @@ export function AnalyticsPage() {
                           isAnimationActive={false}
                         />
                       </ComposedChart>
-                    </ResponsiveContainer>
+                    </ChartResponsive>
                   </GraficoExpandible>
                   <p className="mt-2 text-xs leading-relaxed text-[#94A3B8]">
                     Muestra cómo variaron tus ingresos día a día. Los picos indican tus mejores momentos de venta.
@@ -888,7 +884,7 @@ export function AnalyticsPage() {
                         </p>
                       ) : (
                         <div className="relative h-full">
-                          <ResponsiveContainer width="100%" height="100%">
+                          <ChartResponsive>
                             <PieChart>
                               <Pie
                                 data={donutData}
@@ -905,7 +901,7 @@ export function AnalyticsPage() {
                               </Pie>
                               <RechartsTooltip content={asRechartsTooltip(TooltipFormaPago)} />
                             </PieChart>
-                          </ResponsiveContainer>
+                          </ChartResponsive>
                           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                             <p className="max-w-[40%] text-center text-xs font-semibold text-white">
                               {formatoARS(totalPagos)}
@@ -941,7 +937,7 @@ export function AnalyticsPage() {
                     {data.top10.length === 0 ? (
                       <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">Sin ventas en el período</p>
                     ) : (
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ChartResponsive>
                           <ComposedChart
                             layout="vertical"
                             data={top10Data}
@@ -987,7 +983,6 @@ export function AnalyticsPage() {
                               dataKey="unidades"
                               name="Unidades"
                               radius={[0, 4, 4, 0]}
-                              maxBarSize={18}
                               background={{ fill: CHART_BAR_BG }}
                               activeBar={<Rectangle fill={CHART_ACTIVE_BAR} />}
                             >
@@ -1010,7 +1005,7 @@ export function AnalyticsPage() {
                               dot={<PuntoMargen />}
                             />
                           </ComposedChart>
-                        </ResponsiveContainer>
+                        </ChartResponsive>
                     )}
                     </GraficoExpandible>
                     <p className="mt-2 text-xs leading-relaxed text-[#94A3B8]">
@@ -1073,7 +1068,7 @@ export function AnalyticsPage() {
                   {matriz.puntos.length === 0 ? (
                     <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">Sin ventas en el período</p>
                   ) : (
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ChartResponsive>
                           <ScatterChart margin={{ top: 16, right: 24, left: 8, bottom: 8 }}>
                             <CartesianGrid stroke={g.grilla} />
                             <XAxis
@@ -1136,7 +1131,7 @@ export function AnalyticsPage() {
                               <LabelList dataKey="etiqueta" position="top" fill={g.eje} fontSize={10} />
                             </Scatter>
                           </ScatterChart>
-                        </ResponsiveContainer>
+                        </ChartResponsive>
                   )}
                   </GraficoExpandible>
                   {matriz.puntos.length > 0 ? (
@@ -1153,7 +1148,7 @@ export function AnalyticsPage() {
 
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
                   <GraficoExpandible titulo="¿Qué días vendés más?" compactoClass="h-[280px]">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ChartResponsive>
                       <BarChart
                         data={diasSemana}
                         margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
@@ -1161,7 +1156,7 @@ export function AnalyticsPage() {
                         onMouseLeave={diasHover.onMouseLeave}
                       >
                         <CartesianGrid stroke={g.grilla} vertical={false} />
-                        <XAxis dataKey="dia" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <XAxis dataKey="dia" {...propsEjeX(g.eje)} />
                         <YAxis
                           tick={{ fill: g.eje, fontSize: 11 }}
                           axisLine={false}
@@ -1176,7 +1171,6 @@ export function AnalyticsPage() {
                         <Bar
                           dataKey="total"
                           radius={[4, 4, 0, 0]}
-                          maxBarSize={36}
                           background={{ fill: CHART_BAR_BG }}
                           activeBar={<Rectangle fill={CHART_ACTIVE_BAR} radius={4} />}
                         >
@@ -1197,7 +1191,7 @@ export function AnalyticsPage() {
                           ))}
                         </Bar>
                       </BarChart>
-                    </ResponsiveContainer>
+                    </ChartResponsive>
                   </GraficoExpandible>
                 </Card>
 
@@ -1214,27 +1208,27 @@ export function AnalyticsPage() {
                     <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
                       <div style={{ height: 240 }}>
                         <p className="mb-2 text-xs text-[#94A3B8]">Ventas por color</p>
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ChartResponsive>
                           <BarChart data={dataVar.porColor} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                             <CartesianGrid stroke={g.grilla} vertical={false} />
-                            <XAxis dataKey="name" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
+                            <XAxis dataKey="name" {...propsEjeX(g.eje)} />
                             <YAxis tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                             <RechartsTooltip cursor={<Rectangle fill={CHART_CURSOR_FILL} />} content={asRechartsTooltip(TooltipUnidades)} />
-                            <Bar dataKey="unidades" fill="#6366F1" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                            <Bar dataKey="unidades" fill="#6366F1" radius={[4, 4, 0, 0]} />
                           </BarChart>
-                        </ResponsiveContainer>
+                        </ChartResponsive>
                       </div>
                       <div style={{ height: 240 }}>
                         <p className="mb-2 text-xs text-[#94A3B8]">Ventas por talle</p>
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ChartResponsive>
                           <BarChart data={dataVar.porTalle} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                             <CartesianGrid stroke={g.grilla} vertical={false} />
-                            <XAxis dataKey="name" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
+                            <XAxis dataKey="name" {...propsEjeX(g.eje)} />
                             <YAxis tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                             <RechartsTooltip cursor={<Rectangle fill={CHART_CURSOR_FILL} />} content={asRechartsTooltip(TooltipUnidades)} />
-                            <Bar dataKey="unidades" fill="#8B5CF6" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                            <Bar dataKey="unidades" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
                           </BarChart>
-                        </ResponsiveContainer>
+                        </ChartResponsive>
                       </div>
                     </div>
                     {dataVar.combinaciones.length > 0 ? (

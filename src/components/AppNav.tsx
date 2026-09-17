@@ -293,25 +293,25 @@ export function AppNav() {
       <nav className="app-nav-bottom md:hidden" aria-label="Navegación principal">
         {ver('inicio') ? (
           <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/inicio" end>
-            <span aria-hidden>🏠</span>
+            <span className="app-nav-bottom-icon" aria-hidden>🏠</span>
             Inicio
           </NavLink>
         ) : null}
         {ver('ventas') ? (
           <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/ventas">
-            <span aria-hidden>💸</span>
+            <span className="app-nav-bottom-icon" aria-hidden>💸</span>
             Ventas
           </NavLink>
         ) : null}
         {ver('productos') ? (
           <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/productos">
-            <span aria-hidden>📦</span>
+            <span className="app-nav-bottom-icon" aria-hidden>📦</span>
             Productos
           </NavLink>
         ) : null}
         {ver('clientes') ? (
           <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/clientes">
-            <span aria-hidden>👥</span>
+            <span className="app-nav-bottom-icon" aria-hidden>👥</span>
             Clientes
           </NavLink>
         ) : null}
@@ -320,7 +320,7 @@ export function AppNav() {
           type="button"
           onClick={() => setMas(true)}
         >
-          <span className="relative inline-block" aria-hidden>
+          <span className="relative inline-block app-nav-bottom-icon" aria-hidden>
             ☰
             <BadgeNotif n={Math.max(soporteNuevos, notif.total)} />
           </span>

@@ -25,21 +25,21 @@ export function PageTitle({
   accion?: ReactNode
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+    <div className="mb-4 flex flex-col gap-2 md:mb-6 md:flex-row md:items-start md:justify-between">
       <div>
         <h1
-          className="text-[28px] font-semibold leading-tight"
-          style={{ fontFamily: theme.fontDisplay, color: 'var(--text)' }}
+          className="text-xl font-bold leading-tight md:text-[28px]"
+          style={{ fontFamily: "Inter, sans-serif", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text)" }}
         >
           {titulo}
         </h1>
         {subtitulo ? (
-          <p className="mt-1 text-[13px]" style={{ fontFamily: theme.fontSubtitle, color: 'var(--text-muted)' }}>
+          <p className="mt-1 text-[13px] font-semibold" style={{ fontFamily: theme.fontSubtitle, color: 'var(--text-muted)' }}>
             {subtitulo}
           </p>
         ) : null}
       </div>
-      {accion}
+      {accion ? <div className="flex flex-wrap gap-2">{accion}</div> : null}
     </div>
   )
 }

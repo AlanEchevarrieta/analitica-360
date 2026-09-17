@@ -340,23 +340,22 @@ export function ProductosPage() {
       <ParticleNetwork />
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-8">
         <AppNav />
-        <div className="mb-6 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <h1
-                className="text-[28px] font-semibold leading-tight"
-                style={{ fontFamily: theme.fontDisplay, color: 'var(--text)' }}
-              >
-                Productos
-              </h1>
-              <span
-                className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                style={{ background: 'rgba(99,102,241,0.15)', color: '#6366F1' }}
-              >
-                {activos} activos
-              </span>
-            </div>
-            <div className="flex items-center gap-2 md:hidden">
+        <div className="mb-4 flex flex-col gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <h1
+              className="text-xl font-bold leading-tight md:text-[28px]"
+              style={{ fontFamily: "Inter, sans-serif", letterSpacing: "-0.02em", fontWeight: 700, color: "var(--text)" }}
+            >
+              Productos
+            </h1>
+            <span
+              className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+              style={{ background: 'rgba(99,102,241,0.15)', color: '#6366F1' }}
+            >
+              {activos} activos
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2 md:hidden">
               {puedeEditar ? (
                 <Link className={btnPrimary} to="/productos/nuevo">
                   <span aria-hidden>+</span> Nuevo producto
@@ -465,7 +464,6 @@ export function ProductosPage() {
               ) : null}
             </div>
           </div>
-        </div>
         <div className="mb-4">
           <FilterCollapse
             soloMobile

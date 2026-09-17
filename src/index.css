@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @source "../node_modules/@tremor/react/dist";
@@ -6,9 +7,9 @@
 @source inline("dark:{bg,text,border,fill,stroke,ring}-dark-tremor-{brand,background,border,ring,content}{,-faint,-muted,-subtle,-emphasis,-strong,-inverted}");
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
-  --font-subtitle: "Karla", "Inter", ui-sans-serif, sans-serif;
+  --font-sans: "Inter", -apple-system, sans-serif;
+  --font-display: "Inter", sans-serif;
+  --font-subtitle: "Inter", sans-serif;
   --color-canvas: #0f1b2d;
   --color-canvas-to: #1a2f4a;
   --color-card: rgb(255 255 255 / 0.95);
@@ -42,6 +43,55 @@
   --text-tremor-default: 0.875rem;
   --text-tremor-title: 1.125rem;
   --text-tremor-metric: 1.875rem;
+}
+
+:root {
+  font-family: "Inter", -apple-system, sans-serif;
+}
+
+html,
+body {
+  font-family: "Inter", -apple-system, sans-serif;
+  font-weight: 400;
+}
+
+h1,
+h2,
+h3 {
+  font-family: "Inter", sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+label {
+  font-weight: 600;
+}
+
+.font-metric {
+  font-family: "Inter", sans-serif;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge-descuento {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #ef4444;
+  padding: 4px 10px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.precio-tachado {
+  color: #94a3b8;
+  font-size: 1.125rem;
+  font-weight: 600;
+  text-decoration: line-through;
+  text-decoration-color: #ef4444;
+  text-decoration-thickness: 2px;
 }
 
 :root,
@@ -921,15 +971,17 @@ select option:checked:hover {
   left: 0;
   z-index: 40;
   display: none;
-  height: 64px;
+  min-height: 68px;
   align-items: center;
   border-top: 1px solid rgba(99, 102, 241, 0.2);
-  background: #0f1729;
-  padding: 0 4px env(safe-area-inset-bottom);
+  background: rgba(15, 23, 41, 0.88);
+  padding: 8px 4px calc(4px + env(safe-area-inset-bottom));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 :root[data-theme='light'] .app-nav-bottom {
-  background: #e0deff;
+  background: rgba(224, 222, 255, 0.88);
 }
 
 .nav-label-con-badge {
@@ -968,10 +1020,15 @@ select option:checked:hover {
   border: 0;
   background: transparent;
   color: #94a3b8;
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   line-height: 1.2;
   text-decoration: none;
+}
+
+.app-nav-bottom-icon {
+  font-size: 24px;
+  line-height: 1;
 }
 
 .app-nav-bottom-item .nav-notif-badge {
@@ -1015,6 +1072,18 @@ select option:checked:hover {
 
 .app-nav-bottom-item.active {
   color: #6366f1;
+}
+
+.app-nav-bottom-item.active::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #6366f1;
+  transform: translateX(-50%);
 }
 
 .app-nav-drawer-root {
@@ -1197,7 +1266,7 @@ select option:checked:hover {
 }
 
 .landing {
-  font-family: Karla, Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: Inter, -apple-system, sans-serif;
   font-display: swap;
   color: var(--text);
   background: #080c14;
@@ -1211,7 +1280,9 @@ select option:checked:hover {
 }
 
 .landing-display {
-  font-family: Fraunces, ui-serif, Georgia, serif;
+  font-family: Inter, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   font-display: swap;
 }
 
@@ -1764,7 +1835,7 @@ select option:checked:hover {
   }
 
   body.has-app-nav {
-    padding-bottom: 80px;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
   }
 
   .app-nav {

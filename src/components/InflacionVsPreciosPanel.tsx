@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react'
-import { ComposedChart, CartesianGrid, XAxis, YAxis, Bar, Line, Legend, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
+import { ComposedChart, CartesianGrid, XAxis, YAxis, Bar, Line, Legend, Tooltip as RechartsTooltip } from 'recharts'
+import { ChartResponsive, propsEjeX } from './ChartResponsive'
 import { GraficoExpandible } from './GraficoExpandible'
 import { CHART_CURSOR_FILL, TooltipInflacionPrecios, asRechartsTooltip } from './CustomTooltip'
 import { type SerieInflacionPrecios } from '../lib/inflacion'
@@ -70,10 +71,10 @@ export const InflacionVsPreciosPanel = memo(function InflacionVsPreciosPanel({
                 </p>
               ) : null}
             </div>
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartResponsive>
               <ComposedChart data={puntos} margin={{ top: 8, right: 48, left: 8, bottom: 8 }}>
                 <CartesianGrid stroke={g.grilla} vertical={false} />
-                <XAxis dataKey="mes" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="mes" {...propsEjeX(g.eje)} />
                 <YAxis
                   yAxisId="propios"
                   tick={{ fill: g.eje, fontSize: 11 }}
@@ -115,7 +116,7 @@ export const InflacionVsPreciosPanel = memo(function InflacionVsPreciosPanel({
                   isAnimationActive={false}
                 />
               </ComposedChart>
-            </ResponsiveContainer>
+            </ChartResponsive>
           </div>
         )}
       </GraficoExpandible>

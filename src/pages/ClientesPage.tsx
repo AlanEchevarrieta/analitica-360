@@ -11,7 +11,7 @@ import {
   TableSkeleton,
   Th,
   Tr,
-  btnPrimaryDesk,
+  btnPrimary,
   EmptyState,
   FabLink,
   ListCard,
@@ -81,15 +81,17 @@ export function ClientesPage() {
         <PageTitle
           titulo="Clientes"
           subtitulo={`${filas.length} ${filas.length === 1 ? 'cliente' : 'clientes'}`}
+          accion={
+            tienePermiso(perfil, 'gestionar_clientes') ? (
+              <Link className={btnPrimary} to="/clientes/nuevo">
+                Nuevo cliente
+              </Link>
+            ) : undefined
+          }
         />
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre o teléfono" />
-          {tienePermiso(perfil, 'gestionar_clientes') ? (
-            <Link className={btnPrimaryDesk} to="/clientes/nuevo">
-              Nuevo cliente
-            </Link>
-          ) : null}
         </div>
 
         {error && error !== MSG_ERROR_RED ? (

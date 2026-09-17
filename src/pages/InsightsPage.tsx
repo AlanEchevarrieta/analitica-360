@@ -12,11 +12,11 @@ import {
   PolarRadiusAxis,
   Radar,
   RadarChart,
-  ResponsiveContainer,
   Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
 } from 'recharts'
+import { ChartResponsive, propsEjeX } from '../components/ChartResponsive'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { GraficoExpandible, SelectorChips } from '../components/GraficoExpandible'
@@ -206,10 +206,10 @@ function tickRadar(props: {
 
 function GraficoForecast({ data }: { data: InsightForecast }) {
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ChartResponsive>
       <LineChart data={data.puntos} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
         <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-        <XAxis dataKey="label" tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} />
+        <XAxis dataKey="label" {...propsEjeX('#94A3B8')} />
         <YAxis
           tick={{ fill: '#94A3B8', fontSize: 11 }}
           axisLine={false}
@@ -265,13 +265,13 @@ function GraficoForecast({ data }: { data: InsightForecast }) {
           animationDuration={450}
         />
       </LineChart>
-    </ResponsiveContainer>
+    </ChartResponsive>
   )
 }
 
 function GraficoRadar({ ejes }: { ejes: { eje: string; valor: number; fullMark: number }[] }) {
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ChartResponsive>
       <RadarChart data={ejes} cx="50%" cy="50%" outerRadius="72%">
         <PolarGrid stroke="rgba(255,255,255,0.1)" />
         <PolarAngleAxis
@@ -300,7 +300,7 @@ function GraficoRadar({ ejes }: { ejes: { eje: string; valor: number; fullMark: 
           animationDuration={450}
         />
       </RadarChart>
-    </ResponsiveContainer>
+    </ChartResponsive>
   )
 }
 
@@ -310,7 +310,7 @@ function GraficoBarrasAtributo({
   valores: { name: string; pct: number; unidades: number }[]
 }) {
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ChartResponsive>
       <BarChart layout="vertical" data={valores} margin={{ top: 4, right: 36, left: 8, bottom: 0 }}>
         <XAxis type="number" hide domain={[0, 100]} />
         <YAxis
@@ -337,7 +337,7 @@ function GraficoBarrasAtributo({
         />
         <Bar dataKey="pct" fill="#6366F1" radius={[0, 4, 4, 0]} maxBarSize={16} isAnimationActive animationDuration={450} />
       </BarChart>
-    </ResponsiveContainer>
+    </ChartResponsive>
   )
 }
 

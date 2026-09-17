@@ -174,6 +174,18 @@ export function formatoPrecioPlan(valor: number) {
   return formatoARS(valor)
 }
 
+export function desgloseAnualPlan(plan: PlanPagoId) {
+  const listaMes = PRECIOS[plan].mensual
+  const mes1a3 = Math.round(listaMes * (1 - DESCUENTO_LANZAMIENTO))
+  const mes4a12 = Math.round(listaMes * (1 - DESCUENTO_ANUAL))
+  return {
+    listaMes,
+    mes1a3,
+    mes4a12,
+    totalAnio: mes1a3 * 3 + mes4a12 * 9,
+  }
+}
+
 export function mesesAhorroAnual() {
   return Math.round(DESCUENTO_ANUAL * 12)
 }

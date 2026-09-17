@@ -73,6 +73,13 @@ export function ProveedoresPage() {
         <PageTitle
           titulo="Proveedores"
           subtitulo={`${total} ${total === 1 ? 'proveedor' : 'proveedores'}`}
+          accion={
+            puedeEditar ? (
+              <Link className={btnPrimary} to="/proveedores/nuevo">
+                Nuevo proveedor
+              </Link>
+            ) : undefined
+          }
         />
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -84,11 +91,6 @@ export function ProveedoresPage() {
             }}
             placeholder="Buscar por nombre"
           />
-          {puedeEditar ? (
-            <Link className={btnPrimary} to="/proveedores/nuevo">
-              Nuevo proveedor
-            </Link>
-          ) : null}
         </div>
 
         {error && error !== MSG_ERROR_RED ? (

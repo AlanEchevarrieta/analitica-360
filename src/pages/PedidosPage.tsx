@@ -12,7 +12,7 @@ import {
   TableSkeleton,
   Th,
   Tr,
-  btnPrimaryDesk,
+  btnPrimary,
   FabLink,
   FilterCollapse,
   ListCard,
@@ -119,7 +119,7 @@ export function PedidosPage() {
           subtitulo={subtitulo}
           accion={
             puedeCrear ? (
-              <Link className={`${btnPrimaryDesk} relative`} to="/pedidos/nueva">
+              <Link className={`${btnPrimary} relative`} to="/pedidos/nueva">
                 Nuevo pedido
                 {nuevos > 0 ? (
                   <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-[#DC2626] px-1.5 text-[11px] font-bold text-white">
@@ -184,7 +184,7 @@ export function PedidosPage() {
             subtitulo="Creá un pedido manual o esperá los que lleguen de la tienda."
             accion={
               puedeCrear ? (
-                <Link className={btnPrimaryDesk.replace('hidden md:inline-flex', 'inline-flex')} to="/pedidos/nueva">
+                <Link className={btnPrimary} to="/pedidos/nueva">
                   Nuevo pedido
                 </Link>
               ) : undefined

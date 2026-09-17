@@ -18,7 +18,6 @@ import {
   ThFilter,
   Tr,
   btnPrimary,
-  btnPrimaryDesk,
   FabLink,
   FilterCollapse,
   ListCard,
@@ -215,7 +214,7 @@ export function VentasPage() {
         <PageTitle titulo="Ventas" subtitulo={subtitulo} />
 
         <div className="mb-6 space-y-3">
-          <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-end md:justify-between">
             <SearchField
               value={numeroVenta}
               onChange={(v) => {
@@ -253,7 +252,7 @@ export function VentasPage() {
                   </div>
                 ) : null}
               </div>
-              <div className="hidden flex-wrap gap-2 md:flex">
+              <div className="flex flex-wrap gap-2">
                 {tienePermiso(perfil, 'importar_datos') ? (
                   <button
                     className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
@@ -264,7 +263,7 @@ export function VentasPage() {
                   </button>
                 ) : null}
                 {tienePermiso(perfil, 'registrar_ventas') ? (
-                  <Link className={btnPrimaryDesk} to="/ventas/nueva">
+                  <Link className={btnPrimary} to="/ventas/nueva">
                     Nueva venta
                   </Link>
                 ) : null}

@@ -37,7 +37,7 @@ export function UpgradePlanPage({ modulo }: { modulo: string }) {
           <h1 className="mt-3 text-lg font-bold">Esta función es parte del plan {plan.nombre}</h1>
           <p className="mt-2 text-sm text-[#4A5568]">Actualizá para acceder a {etiquetaModuloPlan(modulo)}</p>
           <p className="mt-4 text-base font-semibold text-[#6366F1]">
-            {formatoPrecioPlan(precio)}/mes los primeros {MESES_DESCUENTO_LANZAMIENTO} meses
+            {formatoPrecioPlan(precio)} +IVA /mes los primeros {MESES_DESCUENTO_LANZAMIENTO} meses
           </p>
           <Link className={`${btnPrimary} mt-6 w-full`} to="/planes">
             Ver todos los planes

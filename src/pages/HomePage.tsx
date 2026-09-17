@@ -7,7 +7,6 @@ import {
   Cell,
   LabelList,
   Rectangle,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -15,6 +14,7 @@ import {
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
+import { ChartResponsive, propsEjeX } from '../components/ChartResponsive'
 import { GraficoExpandible, SelectorChips } from '../components/GraficoExpandible'
 import {
   cargarDashboardInicio,
@@ -111,15 +111,15 @@ const Grafico7Dias = memo(function Grafico7Dias({ data }: { data: DashboardInici
   const g = coloresGrafico(tema)
   const { activo, onMouseMove, onMouseLeave } = useIndiceBarraActiva()
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ChartResponsive>
       <BarChart
         data={data}
-        margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+        margin={{ top: 8, right: 8, left: 0, bottom: 28 }}
         onMouseMove={onMouseMove as never}
         onMouseLeave={onMouseLeave}
       >
         <CartesianGrid stroke={g.grilla} vertical={false} />
-        <XAxis dataKey="dia" tick={{ fill: g.eje, fontSize: 12 }} axisLine={false} tickLine={false} />
+        <XAxis dataKey="dia" {...propsEjeX(g.eje, data.length)} />
         <YAxis
           tick={{ fill: g.eje, fontSize: 11 }}
           axisLine={false}
@@ -131,7 +131,6 @@ const Grafico7Dias = memo(function Grafico7Dias({ data }: { data: DashboardInici
         <Bar
           dataKey="total"
           radius={[4, 4, 0, 0]}
-          maxBarSize={36}
           background={{ fill: CHART_BAR_BG }}
           activeBar={<Rectangle fill={CHART_ACTIVE_BAR} radius={4} />}
         >
@@ -144,7 +143,7 @@ const Grafico7Dias = memo(function Grafico7Dias({ data }: { data: DashboardInici
           ))}
         </Bar>
       </BarChart>
-    </ResponsiveContainer>
+    </ChartResponsive>
   )
 })
 
@@ -164,7 +163,7 @@ const GraficoTop5 = memo(function GraficoTop5({
     )
   }
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ChartResponsive>
       <BarChart
         layout="vertical"
         data={data}
@@ -177,14 +176,14 @@ const GraficoTop5 = memo(function GraficoTop5({
         <XAxis type="number" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
         <YAxis type="category" dataKey="etiqueta" width={120} tick={{ fill: g.eje, fontSize: 12 }} axisLine={false} tickLine={false} />
         <Tooltip cursor={<Rectangle fill={CHART_CURSOR_FILL} />} content={asRechartsTooltip(TooltipTopProductos)} />
-        <Bar dataKey="unidades" radius={[0, 4, 4, 0]} maxBarSize={18} background={{ fill: CHART_BAR_BG }} activeBar={<Rectangle fill={CHART_ACTIVE_BAR} />}>
+        <Bar dataKey="unidades" radius={[0, 4, 4, 0]} background={{ fill: CHART_BAR_BG }} activeBar={<Rectangle fill={CHART_ACTIVE_BAR} />}>
           {data.map((fila, i) => (
             <Cell key={`${fila.nombre}-${i}`} fill="#4ADE80" fillOpacity={activo == null || activo === i ? 1 : 0.5} />
           ))}
           <LabelList dataKey="unidades" position="right" fill="#4ADE80" fontSize={11} />
         </Bar>
       </BarChart>
-    </ResponsiveContainer>
+    </ChartResponsive>
   )
 })
 
@@ -206,7 +205,7 @@ const GraficoStock = memo(function GraficoStock({
     )
   }
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ChartResponsive>
       <BarChart
         layout="vertical"
         data={data}
@@ -254,7 +253,7 @@ const GraficoStock = memo(function GraficoStock({
           <LabelList dataKey="stock" position="right" fill={g.eje} fontSize={11} />
         </Bar>
       </BarChart>
-    </ResponsiveContainer>
+    </ChartResponsive>
   )
 })
 
@@ -373,7 +372,7 @@ function KpiCard({
             {label}
           </p>
           <p
-            className={`mt-2 font-bold leading-tight ${
+            className={`mt-2 font-metric leading-tight ${
             wrap ? 'text-base break-words md:text-lg' : 'whitespace-nowrap text-[18px] md:text-[24px]'
             }`}
             style={{ color: 'var(--kpi-value)' }}

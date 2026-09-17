@@ -15,7 +15,7 @@ import {
   TableSkeleton,
   Th,
   Tr,
-  btnPrimaryDesk,
+  btnPrimary,
   FabLink,
   FilterCollapse,
   IconBtn,
@@ -129,7 +129,7 @@ export function ComprasPage() {
         <>
 
         <div className="mb-6 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:justify-between">
             <SearchField
               value={busqueda}
               onChange={(v) => {
@@ -138,7 +138,7 @@ export function ComprasPage() {
               }}
               placeholder="Buscar por proveedor"
             />
-            <div className="hidden flex-wrap gap-2 md:flex">
+            <div className="flex flex-wrap gap-2">
               {tienePermiso(perfil, 'importar_datos') ? (
                 <button
                   className="inline-flex h-11 items-center justify-center rounded-lg border border-[rgba(99,102,241,0.45)] px-4 text-sm font-semibold text-[#A5B4FC] hover:bg-white/5"
@@ -148,7 +148,7 @@ export function ComprasPage() {
                   Importar Excel
                 </button>
               ) : null}
-              <Link className={btnPrimaryDesk} to="/compras/nueva">
+              <Link className={btnPrimary} to="/compras/nueva">
                 Nueva compra
               </Link>
             </div>
