@@ -65,6 +65,7 @@ export function AppNav() {
   const planOk = (modulo: string) =>
     Boolean(perfil && tieneAcceso(perfil.empresa.plan_actual, modulo, enTrial))
   const ver = (m: Parameters<typeof tieneModulo>[1]) => tieneModulo(perfil, m) && planOk(m)
+  const verConfig = tieneModulo(perfil, 'configuracion')
   const location = useLocation()
   const [mas, setMas] = useState(false)
   const [soporteNuevos, setSoporteNuevos] = useState(0)
@@ -212,9 +213,9 @@ export function AppNav() {
           <NavLink className={linkClass} to="/planes">
             Planes
           </NavLink>
-          {ver('configuracion') ? (
+          {verConfig ? (
             <NavLink className={linkClass} to="/configuracion">
-              Configuración
+              ⚙️ Configuración
             </NavLink>
           ) : null}
         </div>
@@ -296,10 +297,11 @@ export function AppNav() {
               ✨ Insights
             </NavLink>
           ) : null}
+          <p className="mt-2 px-2 text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">Sistema</p>
           <NavLink className={sideClass} to="/planes">
             ⭐ Planes
           </NavLink>
-          {ver('configuracion') ? (
+          {verConfig ? (
             <NavLink className={sideClass} to="/configuracion">
               ⚙️ Configuración
             </NavLink>
@@ -413,10 +415,11 @@ export function AppNav() {
                 ✨ Insights
               </NavLink>
             ) : null}
+            <p className="mt-2 px-1 text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">Sistema</p>
             <NavLink className={sheetClass} to="/planes" onClick={() => setMas(false)}>
               ⭐ Planes
             </NavLink>
-            {ver('configuracion') ? (
+            {verConfig ? (
               <NavLink className={sheetClass} to="/configuracion" onClick={() => setMas(false)}>
                 ⚙️ Configuración
               </NavLink>
