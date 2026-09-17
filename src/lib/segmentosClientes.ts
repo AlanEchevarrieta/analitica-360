@@ -100,42 +100,35 @@ export function mensajeSegmento(id: IdSegmento, nombre: string, marca: string) {
   const n = nombre.trim() || 'ahí'
   const empresa = marca.trim() || 'Acacia'
   if (id === 'inactivos') {
-    return [
-      `Hola ${n}! 👋 Hace un tiempo que no sabemos de vos.`,
-      `Te extrañamos en ${empresa} 🧉`,
-      '¿Hay algo en lo que podamos ayudarte?',
-      'Cualquier consulta estamos acá 😊',
-    ].join('\n')
+    return `Hola ${n}! 👋 Hace un tiempo que no sabemos de vos.
+Te extrañamos en ${empresa} 🧉
+¿Hay algo en lo que podamos ayudarte?
+Cualquier consulta estamos acá 😊`
   }
   if (id === 'en_riesgo') {
-    return [
-      `Hola ${n}! ¿Cómo andás? 😊`,
-      `Pasamos a saludarte desde ${empresa} 🧉`,
-      'Tenemos novedades que te pueden interesar.',
-      '¿Querés que te contemos? 💬',
-    ].join('\n')
+    return `Hola ${n}! ¿Cómo andás? 😊
+Pasamos a saludarte desde ${empresa} 🧉
+Tenemos novedades que te pueden interesar.
+¿Querés que te contemos? 💬`
   }
   if (id === 'cumpleanos') {
-    return [
-      `🎂 ¡Feliz cumpleaños ${n}!`,
-      `Todo el equipo de ${empresa} te desea un día increíble 🎉`,
-      'Gracias por elegirnos, sos parte de nuestra comunidad 🧉',
-    ].join('\n')
+    return `🎂 ¡Feliz cumpleaños ${n}!
+Todo el equipo de ${empresa} te desea un día increíble 🎉
+Gracias por elegirnos, sos parte de nuestra comunidad 🧉`
   }
-  return [
-    `Hola ${n}! 💫`,
-    `Queremos agradecerte por tu fidelidad con ${empresa} 🧉`,
-    'Sos uno de nuestros clientes más especiales',
-    'y queremos que lo sepas. ¡Gracias por elegirnos siempre! 😊',
-  ].join('\n')
+  return `Hola ${n}! 💫
+Queremos agradecerte por tu fidelidad con ${empresa} 🧉
+Sos uno de nuestros clientes más especiales
+y queremos que lo sepas. ¡Gracias por elegirnos siempre! 😊`
 }
 
 export function linkWhatsAppSegmento(id: IdSegmento, cliente: ClienteSegmento, marca: string) {
   if (!cliente.telefono) return null
-  const n = cliente.telefono.replace(/\D/g, '')
-  if (n.length < 8) return null
-  const texto = mensajeSegmento(id, cliente.nombre, marca)
-  return `https://wa.me/${n}?text=${encodeURIComponent(texto)}`
+  const telefono = cliente.telefono.replace(/\D/g, '')
+  if (telefono.length < 8) return null
+  const mensaje = mensajeSegmento(id, cliente.nombre, marca)
+  const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`
+  return url
 }
 
 export function detalleSegmento(id: IdSegmento, c: ClienteSegmento) {
