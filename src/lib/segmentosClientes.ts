@@ -96,30 +96,29 @@ export function alertaCrm(conteos: Record<IdSegmento, number>) {
   return (conteos.inactivos ?? 0) + (conteos.en_riesgo ?? 0)
 }
 
+const EMOJIS = {
+  saludo: String.fromCodePoint(0x1f44b),
+  mate: String.fromCodePoint(0x1f9c9),
+  sonrisa: String.fromCodePoint(0x1f60a),
+  burbuja: String.fromCodePoint(0x1f4ac),
+  torta: String.fromCodePoint(0x1f382),
+  fiesta: String.fromCodePoint(0x1f389),
+  estrella: String.fromCodePoint(0x1f4ab),
+}
+
 export function mensajeSegmento(id: IdSegmento, nombre: string, marca: string) {
   const n = nombre.trim() || 'ahí'
   const empresa = marca.trim() || 'Acacia'
   if (id === 'inactivos') {
-    return `Hola ${n}! Hace un tiempo que no sabemos de vos.
-Te extrañamos en ${empresa}.
-¿Hay algo en lo que podamos ayudarte?
-Cualquier consulta estamos acá.`
+    return `Hola ${n}! ${EMOJIS.saludo} Hace un tiempo que no sabemos de vos.\nTe extrañamos en ${empresa} ${EMOJIS.mate}\n¿Hay algo en lo que podamos ayudarte?\nCualquier consulta estamos acá ${EMOJIS.sonrisa}`
   }
   if (id === 'en_riesgo') {
-    return `Hola ${n}! Como andas?
-Pasamos a saludarte desde ${empresa}.
-Tenemos novedades que te pueden interesar.
-¿Queres que te contemos?`
+    return `Hola ${n}! ¿Cómo andás? ${EMOJIS.sonrisa}\nPasamos a saludarte desde ${empresa} ${EMOJIS.mate}\nTenemos novedades que te pueden interesar.\n¿Querés que te contemos? ${EMOJIS.burbuja}`
   }
   if (id === 'cumpleanos') {
-    return `Feliz cumpleaños ${n}!
-Todo el equipo de ${empresa} te desea un dia increible.
-Gracias por elegirnos, sos parte de nuestra comunidad!`
+    return `${EMOJIS.torta} ¡Feliz cumpleaños ${n}!\nTodo el equipo de ${empresa} te desea un día increíble ${EMOJIS.fiesta}\nGracias por elegirnos, sos parte de nuestra comunidad ${EMOJIS.mate}`
   }
-  return `Hola ${n}!
-Queremos agradecerte por tu fidelidad con ${empresa}.
-Sos uno de nuestros clientes mas especiales
-y queremos que lo sepas. Gracias por elegirnos siempre!`
+  return `Hola ${n}! ${EMOJIS.estrella}\nQueremos agradecerte por tu fidelidad con ${empresa} ${EMOJIS.mate}\nSos uno de nuestros clientes más especiales\ny queremos que lo sepas. ¡Gracias por elegirnos siempre! ${EMOJIS.sonrisa}`
 }
 
 export function linkWhatsAppSegmento(id: IdSegmento, cliente: ClienteSegmento, marca: string) {
