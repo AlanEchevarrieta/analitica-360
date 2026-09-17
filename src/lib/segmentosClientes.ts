@@ -128,7 +128,8 @@ export function linkWhatsAppSegmento(id: IdSegmento, cliente: ClienteSegmento, m
   if (telefono.length < 8) return null
   const mensaje = mensajeSegmento(id, cliente.nombre, marca)
   const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`
-  return url
+  console.log('[whatsapp url]', url)
+  return { url, mensaje }
 }
 
 export function detalleSegmento(id: IdSegmento, c: ClienteSegmento) {
