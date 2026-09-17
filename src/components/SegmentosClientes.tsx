@@ -140,16 +140,14 @@ export function ModalSegmento({
                   </Link>
                   <p className="mt-0.5 text-xs text-[#4A5568]">{detalleSegmento(id, c)}</p>
                   {wa ? (
-                    <button
+                    <a
                       className="mt-2 inline-flex h-9 items-center rounded-md bg-[#16A34A] px-3 text-xs font-semibold text-white hover:bg-[#15803D]"
-                      type="button"
-                      onClick={() => {
-                        alert(wa.mensaje)
-                        window.open(wa.url, '_blank', 'noopener,noreferrer')
-                      }}
+                      href={wa.url}
+                      rel="noopener noreferrer"
+                      target="_blank"
                     >
-                      📱 WhatsApp
-                    </button>
+                      WhatsApp
+                    </a>
                   ) : (
                     <p className="mt-2 text-xs text-[#94A3B8]">Sin teléfono</p>
                   )}
