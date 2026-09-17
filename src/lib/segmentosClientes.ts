@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { formatoCumple, linkWhatsApp } from './clientes'
+import { formatoCumple } from './clientes'
 import { formatoARS } from './productos'
 
 export const EVENTO_SEGMENTOS_CRM = 'analitica-segmentos-crm'
@@ -98,21 +98,44 @@ export function alertaCrm(conteos: Record<IdSegmento, number>) {
 
 export function mensajeSegmento(id: IdSegmento, nombre: string, marca: string) {
   const n = nombre.trim() || 'ahí'
-  const shop = marca.trim() || 'Acacia'
+  const empresa = marca.trim() || 'Acacia'
   if (id === 'inactivos') {
-    return `Hola ${n}! 👋 Hace un tiempo que no sabemos de vos.\nTe extrañamos en ${shop} 🧉\n¿Hay algo en lo que podamos ayudarte?\nCualquier consulta estamos acá 😊`
+    return [
+      `Hola ${n}! 👋 Hace un tiempo que no sabemos de vos.`,
+      `Te extrañamos en ${empresa} 🧉`,
+      '¿Hay algo en lo que podamos ayudarte?',
+      'Cualquier consulta estamos acá 😊',
+    ].join('\n')
   }
   if (id === 'en_riesgo') {
-    return `Hola ${n}! ¿Cómo andás? 😊\nPasamos a saludarte desde ${shop} 🧉\nTenemos novedades que te pueden interesar.\n¿Querés que te contemos?`
+    return [
+      `Hola ${n}! ¿Cómo andás? 😊`,
+      `Pasamos a saludarte desde ${empresa} 🧉`,
+      'Tenemos novedades que te pueden interesar.',
+      '¿Querés que te contemos? 💬',
+    ].join('\n')
   }
   if (id === 'cumpleanos') {
-    return `🎂 ¡Feliz cumpleaños ${n}!\nTodo el equipo de ${shop} te desea un día increíble 🎉🧉\nGracias por elegirnos — sos parte de nuestra comunidad!`
+    return [
+      `🎂 ¡Feliz cumpleaños ${n}!`,
+      `Todo el equipo de ${empresa} te desea un día increíble 🎉`,
+      'Gracias por elegirnos, sos parte de nuestra comunidad 🧉',
+    ].join('\n')
   }
-  return `Hola ${n}! 💫\nQueremos agradecerte por tu fidelidad con ${shop} 🧉\nSos uno de nuestros clientes más especiales\ny queremos que lo sepas.\n¡Gracias por elegirnos siempre! 😊`
+  return [
+    `Hola ${n}! 💫`,
+    `Queremos agradecerte por tu fidelidad con ${empresa} 🧉`,
+    'Sos uno de nuestros clientes más especiales',
+    'y queremos que lo sepas. ¡Gracias por elegirnos siempre! 😊',
+  ].join('\n')
 }
 
 export function linkWhatsAppSegmento(id: IdSegmento, cliente: ClienteSegmento, marca: string) {
-  return linkWhatsApp(cliente.telefono, mensajeSegmento(id, cliente.nombre, marca))
+  if (!cliente.telefono) return null
+  const n = cliente.telefono.replace(/\D/g, '')
+  if (n.length < 8) return null
+  const texto = mensajeSegmento(id, cliente.nombre, marca)
+  return `https://wa.me/${n}?text=${encodeURIComponent(texto)}`
 }
 
 export function detalleSegmento(id: IdSegmento, c: ClienteSegmento) {
