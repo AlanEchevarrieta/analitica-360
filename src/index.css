@@ -1008,6 +1008,10 @@ select option:checked:hover {
   pointer-events: none;
 }
 
+.nav-crm-badge {
+  background: #f97316;
+}
+
 .app-nav-bottom-item {
   position: relative;
   display: flex;

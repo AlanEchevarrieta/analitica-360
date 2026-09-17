@@ -9,6 +9,7 @@ import { useNotificaciones } from '../lib/notificaciones'
 import { NotificacionesCampana } from './NotificacionesCampana'
 import { tieneModulo } from '../lib/permisos'
 import { estaEnTrial } from '../lib/suscripcion'
+import { alertaCrm, cargarSegmentosClientes, EVENTO_SEGMENTOS_CRM } from '../lib/segmentosClientes'
 import { theme } from '../theme'
 
 function linkClass({ isActive }: { isActive: boolean }) {
@@ -36,6 +37,19 @@ function NavSep() {
   return <span className="app-nav-sep" role="separator" aria-hidden />
 }
 
+function LabelClientes({ n, emoji }: { n: number; emoji?: boolean }) {
+  return (
+    <span className="nav-label-con-badge">
+      {emoji ? '👥 Clientes' : 'Clientes'}
+      {n > 0 ? (
+        <span className="nav-notif-badge nav-crm-badge" aria-label={`${n} clientes inactivos o en riesgo`}>
+          {n > 9 ? '9+' : n}
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
 function LabelSoporte({ n, emoji }: { n: number; emoji?: boolean }) {
   return (
     <span className="nav-label-con-badge">
@@ -54,6 +68,7 @@ export function AppNav() {
   const location = useLocation()
   const [mas, setMas] = useState(false)
   const [soporteNuevos, setSoporteNuevos] = useState(0)
+  const [alertaClientes, setAlertaClientes] = useState(0)
   const notif = useNotificaciones(location.pathname)
   const masActivo = [
     '/pedidos',
@@ -104,6 +119,24 @@ export function AppNav() {
     }
   }, [perfil])
 
+  useEffect(() => {
+    if (!perfil || !supabase || !ver('clientes')) return
+    let vivo = true
+    async function cargar() {
+      const { data } = await cargarSegmentosClientes(requireSupabase())
+      if (vivo) setAlertaClientes(alertaCrm(data.conteos))
+    }
+    void cargar()
+    const t = window.setInterval(() => void cargar(), 60_000)
+    const onEvt = () => void cargar()
+    window.addEventListener(EVENTO_SEGMENTOS_CRM, onEvt)
+    return () => {
+      vivo = false
+      window.clearInterval(t)
+      window.removeEventListener(EVENTO_SEGMENTOS_CRM, onEvt)
+    }
+  }, [perfil])
+
   return (
     <>
       <nav className="app-nav mb-6 hidden lg:flex" style={{ fontFamily: theme.font }} aria-label="Navegación">
@@ -130,7 +163,7 @@ export function AppNav() {
           ) : null}
           {ver('clientes') ? (
             <NavLink className={linkClass} to="/clientes">
-              Clientes
+              <LabelClientes n={alertaClientes} />
             </NavLink>
           ) : null}
           {(ver('compras') || ver('pedidos') || ver('proveedores') || ver('inventario')) ? <NavSep /> : null}
@@ -220,7 +253,7 @@ export function AppNav() {
           ) : null}
           {ver('clientes') ? (
             <NavLink className={sideClass} to="/clientes">
-              👥 Clientes
+              <LabelClientes n={alertaClientes} emoji />
             </NavLink>
           ) : null}
           {ver('compras') ? (
@@ -311,7 +344,14 @@ export function AppNav() {
         ) : null}
         {ver('clientes') ? (
           <NavLink className={({ isActive }) => `app-nav-bottom-item${isActive ? ' active' : ''}`} to="/clientes">
-            <span className="app-nav-bottom-icon" aria-hidden>👥</span>
+            <span className="relative inline-block app-nav-bottom-icon" aria-hidden>
+              👥
+              {alertaClientes > 0 ? (
+                <span className="nav-notif-badge nav-crm-badge" aria-hidden>
+                  {alertaClientes > 9 ? '9+' : alertaClientes}
+                </span>
+              ) : null}
+            </span>
             Clientes
           </NavLink>
         ) : null}

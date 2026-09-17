@@ -218,10 +218,11 @@ export function formatoCumple(iso: string | null) {
   return dt.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })
 }
 
-export function linkWhatsApp(telefono: string | null) {
+export function linkWhatsApp(telefono: string | null, texto?: string) {
   if (!telefono) return null
   const n = telefono.replace(/\D/g, '')
   if (n.length < 8) return null
+  if (texto) return `https://wa.me/${n}?text=${encodeURIComponent(texto)}`
   return `https://wa.me/${n}`
 }
 

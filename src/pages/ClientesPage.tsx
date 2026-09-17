@@ -25,6 +25,13 @@ import { formatoFechaDia } from '../lib/fechas'
 import { formatoARS } from '../lib/productos'
 import { tienePermiso } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
+import {
+  EVENTO_SEGMENTOS_CRM,
+  cargarSegmentosClientes,
+  type IdSegmento,
+  type SegmentosClientes,
+} from '../lib/segmentosClientes'
+import { ChipsSegmento, ModalSegmento, SegmentosCards } from '../components/SegmentosClientes'
 import { theme } from '../theme'
 
 function formatoDia(iso: string | null) {
@@ -38,11 +45,20 @@ export function ClientesPage() {
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
+  const [segmentos, setSegmentos] = useState<SegmentosClientes | null>(null)
+  const [filtroSeg, setFiltroSeg] = useState<IdSegmento | 'todos'>('todos')
+  const [modalSeg, setModalSeg] = useState<IdSegmento | null>(null)
 
   const cargar = useCallback(async () => {
     setCargando(true)
-    const { filas: data, error: listError } = await listarClientes(requireSupabase())
+    const client = requireSupabase()
+    const [{ filas: data, error: listError }, segs] = await Promise.all([
+      listarClientes(client),
+      cargarSegmentosClientes(client),
+    ])
     setCargando(false)
+    setSegmentos(segs.data)
+    window.dispatchEvent(new Event(EVENTO_SEGMENTOS_CRM))
     if (listError) {
       const msg = mensajeCargaTabla(listError)
       if (msg) setError(msg)
@@ -57,13 +73,18 @@ export function ClientesPage() {
   }, [cargar])
 
   const visibles = useMemo(() => {
+    let list = filas
+    if (filtroSeg !== 'todos' && segmentos) {
+      const ids = new Set(segmentos[filtroSeg].map((c) => c.id))
+      list = list.filter((c) => ids.has(c.id))
+    }
     const q = busqueda.trim().toLowerCase()
-    if (!q) return filas
-    return filas.filter(
+    if (!q) return list
+    return list.filter(
       (c) =>
         c.nombre.toLowerCase().includes(q) || (c.telefono ?? '').replace(/\s/g, '').includes(q.replace(/\s/g, '')),
     )
-  }, [busqueda, filas])
+  }, [busqueda, filas, filtroSeg, segmentos])
 
   if (!perfil) return null
 
@@ -90,9 +111,14 @@ export function ClientesPage() {
           }
         />
 
+        {segmentos ? <SegmentosCards data={segmentos} onAbrir={setModalSeg} /> : null}
+
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre o teléfono" />
         </div>
+        {segmentos ? (
+          <ChipsSegmento activo={filtroSeg} conteos={segmentos.conteos} onChange={setFiltroSeg} />
+        ) : null}
 
         {error && error !== MSG_ERROR_RED ? (
           <p className="mb-6 rounded-xl bg-red-950/60 px-3 py-2 text-sm text-red-200">{error}</p>
@@ -194,11 +220,19 @@ export function ClientesPage() {
               />
             ) : (
               <p className="px-3 py-6 text-center text-sm text-[#94A3B8]">
-                Ningún cliente coincide con la búsqueda.
+                Ningún cliente coincide con {filtroSeg === 'todos' ? 'la búsqueda' : 'ese segmento'}.
               </p>
             )
           ) : null}
         </TableCard>
+        {modalSeg && segmentos ? (
+          <ModalSegmento
+            id={modalSeg}
+            filas={segmentos[modalSeg]}
+            marca={perfil.empresa.nombre}
+            onCerrar={() => setModalSeg(null)}
+          />
+        ) : null}
         {tienePermiso(perfil, 'gestionar_clientes') ? <FabLink to="/clientes/nuevo" label="Nuevo cliente" /> : null}
       </div>
     </div>
