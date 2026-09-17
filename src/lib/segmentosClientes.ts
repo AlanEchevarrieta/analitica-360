@@ -100,26 +100,15 @@ export function mensajeSegmento(id: IdSegmento, nombre: string, marca: string) {
   const n = nombre.trim() || 'ahí'
   const empresa = marca.trim() || 'Acacia'
   if (id === 'inactivos') {
-    return `Hola ${n}! 👋 Hace un tiempo que no sabemos de vos.
-Te extrañamos en ${empresa} 🧉
-¿Hay algo en lo que podamos ayudarte?
-Cualquier consulta estamos acá 😊`
+    return `Hola ${n}! \u{1F44B} Hace un tiempo que no sabemos de vos.\nTe extrañamos en ${empresa} \u{1F9C9}\n¿Hay algo en lo que podamos ayudarte?\nCualquier consulta estamos acá \u{1F60A}`
   }
   if (id === 'en_riesgo') {
-    return `Hola ${n}! ¿Cómo andás? 😊
-Pasamos a saludarte desde ${empresa} 🧉
-Tenemos novedades que te pueden interesar.
-¿Querés que te contemos? 💬`
+    return `Hola ${n}! ¿Cómo andás? \u{1F60A}\nPasamos a saludarte desde ${empresa} \u{1F9C9}\nTenemos novedades que te pueden interesar.\n¿Querés que te contemos? \u{1F4AC}`
   }
   if (id === 'cumpleanos') {
-    return `🎂 ¡Feliz cumpleaños ${n}!
-Todo el equipo de ${empresa} te desea un día increíble 🎉
-Gracias por elegirnos, sos parte de nuestra comunidad 🧉`
+    return `\u{1F382} ¡Feliz cumpleaños ${n}!\nTodo el equipo de ${empresa} te desea un día increíble \u{1F389}\nGracias por elegirnos, sos parte de nuestra comunidad \u{1F9C9}`
   }
-  return `Hola ${n}! 💫
-Queremos agradecerte por tu fidelidad con ${empresa} 🧉
-Sos uno de nuestros clientes más especiales
-y queremos que lo sepas. ¡Gracias por elegirnos siempre! 😊`
+  return `Hola ${n}! \u{1F4AB}\nQueremos agradecerte por tu fidelidad con ${empresa} \u{1F9C9}\nSos uno de nuestros clientes más especiales\ny queremos que lo sepas. ¡Gracias por elegirnos siempre! \u{1F60A}`
 }
 
 export function linkWhatsAppSegmento(id: IdSegmento, cliente: ClienteSegmento, marca: string) {
