@@ -17,6 +17,7 @@ import {
   ReferenceLine,
   Scatter,
   ScatterChart,
+  ResponsiveContainer,
   Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
@@ -1205,31 +1206,17 @@ export function AnalyticsPage() {
                     ) : (
                       <p className="mt-3 text-sm text-[#94A3B8]">Todavía no hay ventas con variantes en el período.</p>
                     )}
-                    <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-                      <div style={{ height: 240 }}>
-                        <p className="mb-2 text-xs text-[#94A3B8]">Ventas por color</p>
-                        <ChartResponsive>
-                          <BarChart data={dataVar.porColor} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                            <CartesianGrid stroke={g.grilla} vertical={false} />
-                            <XAxis dataKey="name" {...propsEjeX(g.eje)} />
-                            <YAxis tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                            <RechartsTooltip cursor={<Rectangle fill={CHART_CURSOR_FILL} />} content={asRechartsTooltip(TooltipUnidades)} />
-                            <Bar dataKey="unidades" fill="#6366F1" radius={[4, 4, 0, 0]} />
-                          </BarChart>
-                        </ChartResponsive>
-                      </div>
-                      <div style={{ height: 240 }}>
-                        <p className="mb-2 text-xs text-[#94A3B8]">Ventas por talle</p>
-                        <ChartResponsive>
-                          <BarChart data={dataVar.porTalle} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                            <CartesianGrid stroke={g.grilla} vertical={false} />
-                            <XAxis dataKey="name" {...propsEjeX(g.eje)} />
-                            <YAxis tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                            <RechartsTooltip cursor={<Rectangle fill={CHART_CURSOR_FILL} />} content={asRechartsTooltip(TooltipUnidades)} />
-                            <Bar dataKey="unidades" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
-                          </BarChart>
-                        </ChartResponsive>
-                      </div>
+                    <div className="mt-6" style={{ height: 280 }}>
+                      <p className="mb-2 text-xs text-[#94A3B8]">Ventas por color</p>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={dataVar.porColor} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                          <CartesianGrid stroke={g.grilla} vertical={false} />
+                          <XAxis dataKey="name" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                          <RechartsTooltip cursor={<Rectangle fill={CHART_CURSOR_FILL} />} content={asRechartsTooltip(TooltipUnidades)} />
+                          <Bar dataKey="unidades" fill="#6366F1" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
                     {dataVar.combinaciones.length > 0 ? (
                       <div className="mt-6 overflow-x-auto">
