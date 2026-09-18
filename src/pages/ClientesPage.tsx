@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
@@ -32,7 +32,16 @@ import {
   type SegmentosClientes,
 } from '../lib/segmentosClientes'
 import { ChipsSegmento, ModalSegmento, SegmentosCards } from '../components/SegmentosClientes'
+import { DifusionClientes } from '../components/DifusionClientes'
+import { cargarCumpleanosMes, type DestinatarioDifusion } from '../lib/difusiones'
 import { theme } from '../theme'
+
+type TabClientes = 'clientes' | 'segmentos' | 'difusion'
+
+function tabDesdeUrl(raw: string | null): TabClientes {
+  if (raw === 'segmentos' || raw === 'difusion') return raw
+  return 'clientes'
+}
 
 function formatoDia(iso: string | null) {
   if (!iso) return '—'
@@ -41,6 +50,8 @@ function formatoDia(iso: string | null) {
 
 export function ClientesPage() {
   const { perfil } = useAuth()
+  const [params, setParams] = useSearchParams()
+  const tab = tabDesdeUrl(params.get('tab'))
   const [filas, setFilas] = useState<ClienteFila[]>([])
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -48,16 +59,26 @@ export function ClientesPage() {
   const [segmentos, setSegmentos] = useState<SegmentosClientes | null>(null)
   const [filtroSeg, setFiltroSeg] = useState<IdSegmento | 'todos'>('todos')
   const [modalSeg, setModalSeg] = useState<IdSegmento | null>(null)
+  const [cumpleMes, setCumpleMes] = useState<DestinatarioDifusion[]>([])
+
+  const irTab = (id: TabClientes) => {
+    const next = new URLSearchParams(params)
+    if (id === 'clientes') next.delete('tab')
+    else next.set('tab', id)
+    setParams(next)
+  }
 
   const cargar = useCallback(async () => {
     setCargando(true)
     const client = requireSupabase()
-    const [{ filas: data, error: listError }, segs] = await Promise.all([
+    const [{ filas: data, error: listError }, segs, cumple] = await Promise.all([
       listarClientes(client),
       cargarSegmentosClientes(client),
+      cargarCumpleanosMes(client),
     ])
     setCargando(false)
     setSegmentos(segs.data)
+    setCumpleMes(cumple)
     window.dispatchEvent(new Event(EVENTO_SEGMENTOS_CRM))
     if (listError) {
       const msg = mensajeCargaTabla(listError)
@@ -101,9 +122,15 @@ export function ClientesPage() {
         <AppNav />
         <PageTitle
           titulo="Clientes"
-          subtitulo={`${filas.length} ${filas.length === 1 ? 'cliente' : 'clientes'}`}
+          subtitulo={
+            tab === 'difusion'
+              ? 'Mensajes de difusión por WhatsApp'
+              : tab === 'segmentos'
+                ? 'Segmentos inteligentes'
+                : `${filas.length} ${filas.length === 1 ? 'cliente' : 'clientes'}`
+          }
           accion={
-            tienePermiso(perfil, 'gestionar_clientes') ? (
+            tab === 'clientes' && tienePermiso(perfil, 'gestionar_clientes') ? (
               <Link className={btnPrimary} to="/clientes/nuevo">
                 Nuevo cliente
               </Link>
@@ -111,8 +138,51 @@ export function ClientesPage() {
           }
         />
 
-        {segmentos ? <SegmentosCards data={segmentos} onAbrir={setModalSeg} /> : null}
+        <div className="mb-6 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === 'clientes' ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'}`}
+            onClick={() => irTab('clientes')}
+          >
+            Clientes
+          </button>
+          <button
+            type="button"
+            className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === 'segmentos' ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'}`}
+            onClick={() => irTab('segmentos')}
+          >
+            Segmentos
+          </button>
+          <button
+            type="button"
+            className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === 'difusion' ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'}`}
+            onClick={() => irTab('difusion')}
+          >
+            Difusión
+          </button>
+        </div>
 
+        {tab === 'difusion' ? (
+          <DifusionClientes
+            clientes={filas}
+            segmentos={segmentos}
+            cumpleMes={cumpleMes}
+            empresaId={perfil.empresa.id}
+            usuarioId={perfil.usuario.id}
+            marca={perfil.empresa.nombre}
+          />
+        ) : null}
+
+        {tab === 'segmentos' ? (
+          segmentos ? (
+            <SegmentosCards data={segmentos} onAbrir={setModalSeg} />
+          ) : (
+            <p className="text-sm text-[#94A3B8]">Cargando segmentos…</p>
+          )
+        ) : null}
+
+        {tab === 'clientes' ? (
+        <>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre o teléfono" />
         </div>
@@ -225,6 +295,10 @@ export function ClientesPage() {
             )
           ) : null}
         </TableCard>
+        {tienePermiso(perfil, 'gestionar_clientes') ? <FabLink to="/clientes/nuevo" label="Nuevo cliente" /> : null}
+        </>
+        ) : null}
+
         {modalSeg && segmentos ? (
           <ModalSegmento
             id={modalSeg}
@@ -233,7 +307,6 @@ export function ClientesPage() {
             onCerrar={() => setModalSeg(null)}
           />
         ) : null}
-        {tienePermiso(perfil, 'gestionar_clientes') ? <FabLink to="/clientes/nuevo" label="Nuevo cliente" /> : null}
       </div>
     </div>
   )

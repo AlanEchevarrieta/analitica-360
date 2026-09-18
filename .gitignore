@@ -33,3 +33,6 @@ debug-anulacion-*.png
 *.njsproj
 *.sln
 *.sw?
+
+.vercel
+.env*
