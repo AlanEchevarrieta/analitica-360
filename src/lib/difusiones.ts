@@ -28,37 +28,70 @@ export type DifusionFila = {
 export const MAX_MENSAJE_DIFUSION = 1000
 
 const EMOJIS = {
+  regalo: String.fromCodePoint(0x1f381),
+  fuego: String.fromCodePoint(0x1f525),
+  circo: String.fromCodePoint(0x1f3aa),
+  caja: String.fromCodePoint(0x1f4e6),
+  alerta: `${String.fromCodePoint(0x26a0)}${String.fromCodePoint(0xfe0f)}`,
   sonrisa: String.fromCodePoint(0x1f60a),
-  mate: String.fromCodePoint(0x1f9c9),
   fiesta: String.fromCodePoint(0x1f389),
+  mate: String.fromCodePoint(0x1f9c9),
 }
+
+export const LINK_TIENDA_FALLBACK = 'https://analitica360.app'
 
 export const VARIABLES_DIFUSION = [
   { id: 'nombre', chip: '{nombre}' },
   { id: 'empresa', chip: '{empresa}' },
   { id: 'fecha', chip: '{fecha}' },
+  { id: 'link_tienda', chip: '{link_tienda}' },
 ] as const
 
 export const PLANTILLAS_DIFUSION: { id: string; label: string; texto: string }[] = [
   {
-    id: 'promocion',
-    label: 'Promoción especial',
-    texto: `Hola {nombre}! Te escribimos desde {empresa}.\nTenemos una oferta especial para vos.\n¿Te interesa que te contemos más detalles? ${EMOJIS.sonrisa}`,
+    id: 'cupon',
+    label: 'Cupón de descuento',
+    texto: `Hola {nombre}! Te tenemos una sorpresa ${EMOJIS.regalo}\nEsta semana tenés un descuento especial esperándote en {empresa}.\n¿Querés que te cuente más?`,
   },
   {
-    id: 'novedad',
-    label: 'Novedad de productos',
-    texto: `Hola {nombre}!\nAcabamos de recibir nuevos productos que\nte pueden interesar.\n¿Querés que te mandemos las novedades? ${EMOJIS.mate}`,
+    id: 'hotsale',
+    label: 'Hot Sale / Liquidación',
+    texto: `Hola {nombre}! ${EMOJIS.fuego} Arrancó nuestra liquidación en {empresa}.\nPrecios increíbles por tiempo limitado.\n¡No te lo pierdas!`,
   },
   {
     id: 'evento',
     label: 'Invitación a evento',
-    texto: `Hola {nombre}! Te invitamos a un evento de {empresa}.\nLa fecha es {fecha}.\n¿Nos confirmás si podés venir? ${EMOJIS.fiesta}`,
+    texto: `Hola {nombre}! Te invitamos a nuestro próximo evento en {empresa} ${EMOJIS.circo}\nVa a haber novedades y ofertas exclusivas.\n¿Te anotamos?`,
   },
   {
-    id: 'saludo',
-    label: 'Saludo personalizado',
-    texto: `Hola {nombre}! Te saludamos desde {empresa}.\nQueríamos saludarte y saber cómo andás.\nCualquier consulta, estamos acá ${EMOJIS.sonrisa}`,
+    id: 'novedad',
+    label: 'Novedad de productos',
+    texto: `Hola {nombre}! ${EMOJIS.caja} Llegó algo nuevo a {empresa} que sabemos que te va a encantar.\n¿Te mandamos las fotos?`,
+  },
+  {
+    id: 'stock',
+    label: 'Stock limitado',
+    texto: `Hola {nombre}! ${EMOJIS.alerta} Quedan pocas unidades de nuestros productos más pedidos en {empresa}.\n¿Separamos uno para vos?`,
+  },
+  {
+    id: 'postcompra',
+    label: 'Seguimiento post-compra',
+    texto: `Hola {nombre}! ¿Cómo andás?\nQueríamos saber si quedaste conforme con tu última compra en {empresa}.\nTu opinión nos importa ${EMOJIS.sonrisa}`,
+  },
+  {
+    id: 'fecha',
+    label: 'Fecha especial',
+    texto: `Hola {nombre}! Se viene una fecha especial ${EMOJIS.regalo}\nEn {empresa} tenemos el regalo perfecto.\n¿Te ayudamos a elegir?`,
+  },
+  {
+    id: 'reactivacion',
+    label: 'Reactivación',
+    texto: `Hola {nombre}! Hace tiempo que no sabemos de vos.\nTe extrañamos en {empresa} ${EMOJIS.mate}\n¿Hay algo en lo que podamos ayudarte?`,
+  },
+  {
+    id: 'bienvenida',
+    label: 'Bienvenida',
+    texto: `Hola {nombre}! Bienvenido/a a {empresa} ${EMOJIS.fiesta}\nGracias por elegirnos — somos un equipo apasionado y estamos acá para lo que necesites.\nPodés ver todos nuestros productos en: {link_tienda}\nCualquier consulta escribinos, con gusto te ayudamos ${EMOJIS.sonrisa}`,
   },
 ]
 
@@ -77,13 +110,42 @@ export function fechaHoyDifusion() {
 
 export function interpolarMensaje(
   plantilla: string,
-  ctx: { nombre: string; empresa: string; fecha: string },
+  ctx: { nombre: string; empresa: string; fecha: string; linkTienda: string },
 ) {
   return plantilla
     .replaceAll('{nombre}', ctx.nombre)
     .replaceAll('{empresa}', ctx.empresa)
     .replaceAll('{fecha}', ctx.fecha)
+    .replaceAll('{link_tienda}', ctx.linkTienda)
     .replaceAll('[empresa]', ctx.empresa)
+}
+
+export function normalizarLinkTienda(raw: unknown) {
+  const t = String(raw ?? '').trim()
+  if (!t) return LINK_TIENDA_FALLBACK
+  if (/^https?:\/\//i.test(t)) return t
+  return `https://${t}`
+}
+
+export async function cargarLinkTienda(
+  client: SupabaseClient,
+  empresaId: string,
+): Promise<string> {
+  const cfg = await client
+    .from('configuracion_empresa')
+    .select('url_tienda')
+    .eq('empresa_id', empresaId)
+    .maybeSingle()
+  if (!cfg.error) {
+    const row = cfg.data as { url_tienda?: unknown } | null
+    if (row?.url_tienda) return normalizarLinkTienda(row.url_tienda)
+  }
+  const emp = await client.from('empresas').select('url_tienda').eq('id', empresaId).maybeSingle()
+  if (!emp.error) {
+    const row = emp.data as { url_tienda?: unknown } | null
+    if (row?.url_tienda) return normalizarLinkTienda(row.url_tienda)
+  }
+  return LINK_TIENDA_FALLBACK
 }
 
 export function telefonoWhatsApp(tel: string | null) {

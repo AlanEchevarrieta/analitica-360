@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ClienteFila } from '../lib/clientes'
 import {
   ETIQUETA_SEGMENTO_DIFUSION,
+  LINK_TIENDA_FALLBACK,
   MAX_MENSAJE_DIFUSION,
   PLANTILLAS_DIFUSION,
   VARIABLES_DIFUSION,
+  cargarLinkTienda,
   conTelefono,
   destinatariosDifusion,
   fechaHoyDifusion,
@@ -66,6 +68,7 @@ export function DifusionClientes({
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
   const [modal, setModal] = useState<{ nombre: string; url: string }[] | null>(null)
   const [guardando, setGuardando] = useState(false)
+  const [linkTienda, setLinkTienda] = useState(LINK_TIENDA_FALLBACK)
   const areaRef = useRef<HTMLTextAreaElement>(null)
 
   const conteos = useMemo(() => {
@@ -97,10 +100,14 @@ export function DifusionClientes({
     nombre: enviables[0]?.nombre.trim() || 'María García',
     empresa,
     fecha,
+    linkTienda,
   })
 
   useEffect(() => {
     let vivo = true
+    void cargarLinkTienda(requireSupabase(), empresaId).then((url) => {
+      if (vivo) setLinkTienda(url)
+    })
     void listarDifusiones(requireSupabase()).then((res) => {
       if (!vivo) return
       setHistorial(res.filas)
@@ -109,7 +116,7 @@ export function DifusionClientes({
     return () => {
       vivo = false
     }
-  }, [])
+  }, [empresaId])
 
   function onChip(chip: string) {
     const el = areaRef.current
@@ -148,7 +155,12 @@ export function DifusionClientes({
     }
     const links = enviables
       .map((c) => {
-        const texto = interpolarMensaje(mensaje, { nombre: c.nombre.trim() || 'ahí', empresa, fecha })
+        const texto = interpolarMensaje(mensaje, {
+          nombre: c.nombre.trim() || 'ahí',
+          empresa,
+          fecha,
+          linkTienda,
+        })
         const url = linkWhatsAppDifusion(c.telefono ?? '', texto)
         if (!url) return null
         return { nombre: c.nombre, url }
