@@ -17,12 +17,18 @@ import {
   ReferenceLine,
   Scatter,
   ScatterChart,
-  ResponsiveContainer,
   Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
 } from 'recharts'
-import { ChartResponsive, propsEjeX } from '../components/ChartResponsive'
+import {
+  ChartResponsive,
+  MARGIN_CHART,
+  propsEjeX,
+  propsEjeY,
+  tamanoTick,
+  useEsMobile,
+} from '../components/ChartResponsive'
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { GraficoExpandible, SelectorChips } from '../components/GraficoExpandible'
@@ -146,7 +152,7 @@ function PuntoMargen(props: {
 }
 
 const cardStyle = { borderColor: 'rgba(99,102,241,0.2)' }
-const cardClass = 'analytics-card !rounded-lg !border !ring-0 !p-5'
+const cardClass = 'analytics-card !rounded-lg !border !ring-0 min-h-[220px] overflow-hidden p-2 md:p-4'
 
 function IconoKpi() {
   return (
@@ -257,28 +263,33 @@ const VentasVsComprasChart = memo(function VentasVsComprasChart({
   datos,
   eje,
   grilla,
+  mobile,
 }: {
   datos: PuntoVentasCompras[]
   eje: string
   grilla: string
+  mobile: boolean
 }) {
+  const fs = tamanoTick(mobile)
   return (
     <ChartResponsive>
-      <ComposedChart data={datos} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+      <ComposedChart data={datos} margin={MARGIN_CHART}>
         <CartesianGrid stroke={grilla} vertical={false} />
-        <XAxis dataKey="fecha" {...propsEjeX(eje, datos.length)} />
+        <XAxis dataKey="fecha" {...propsEjeX(eje, datos.length, mobile)} />
         <YAxis
           yAxisId="monto"
-          tick={{ fill: eje, fontSize: 11 }}
-          axisLine={false}
-          tickLine={false}
+          {...propsEjeY(eje, mobile)}
           tickFormatter={formatoEjeCompacto}
-          width={56}
+          width={mobile ? 44 : 56}
         />
         <YAxis yAxisId="ratio" orientation="right" domain={[0, 'auto']} hide />
         <ReferenceLine yAxisId="ratio" y={1} stroke="rgba(255,255,255,0.2)" strokeDasharray="4 4" />
-        <RechartsTooltip cursor={{ fill: CHART_CURSOR_FILL }} content={asRechartsTooltip(TooltipVentasCompras)} />
-        <Legend wrapperStyle={{ color: eje, fontSize: 12 }} formatter={(value) => String(value)} />
+        <RechartsTooltip
+          trigger={mobile ? 'click' : 'hover'}
+          cursor={{ fill: CHART_CURSOR_FILL }}
+          content={asRechartsTooltip(TooltipVentasCompras)}
+        />
+        <Legend wrapperStyle={{ color: eje, fontSize: fs }} formatter={(value) => String(value)} />
         <Line
           yAxisId="ratio"
           type="monotone"
@@ -315,6 +326,7 @@ const VentasVsComprasChart = memo(function VentasVsComprasChart({
 export function AnalyticsPage() {
   const { perfil, suscripcion } = useAuth()
   const { tema } = useTema()
+  const esMobile = useEsMobile()
   const g = useMemo(() => coloresGrafico(tema), [tema])
   const [preset, setPreset] = useState<PresetPeriodo>('mes')
   const [desdeDraft, setDesdeDraft] = useState(() => leerPeriodoAnalytics()?.desde ?? rangoPreset('mes').desde)
@@ -515,6 +527,15 @@ export function AnalyticsPage() {
         : data.evolucion
     return agruparEvolucion(base, granularidadEvo)
   }, [data.evolucion, data.evolucionDiaria, granularidadEvo])
+
+  useEffect(() => {
+    if (!esMobile || granularidadEvo !== 'dia') return
+    const base =
+      data.evolucionDiaria.some((p) => p.Ventas > 0 || p.Anterior > 0)
+        ? data.evolucionDiaria
+        : data.evolucion
+    if (base.length > 30) setGranularidadEvo('semana')
+  }, [esMobile, granularidadEvo, data.evolucion, data.evolucionDiaria])
   const top10Data = useMemo(() => {
     const porNombre = new Map(data.productos.map((p) => [p.producto, p]))
     return data.top10.map((p) => {
@@ -765,7 +786,7 @@ export function AnalyticsPage() {
                             ? 'Evolución de ventas mensuales'
                             : 'Evolución de ventas anuales'
                     }
-                    compactoClass="h-72"
+                    compactoClass="min-h-[220px] overflow-hidden md:min-h-[320px]"
                     toolbar={
                       <SelectorChips
                         valor={granularidadEvo}
@@ -780,25 +801,24 @@ export function AnalyticsPage() {
                     }
                   >
                     <ChartResponsive>
-                      <ComposedChart data={evolucionVista} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                      <ComposedChart data={evolucionVista} margin={MARGIN_CHART}>
                         <CartesianGrid stroke={g.grilla} vertical={false} />
                         <XAxis
                           dataKey="fecha"
-                          {...propsEjeX(g.eje, evolucionVista.length)}
+                          {...propsEjeX(g.eje, evolucionVista.length, esMobile)}
                         />
                         <YAxis
-                          tick={{ fill: g.eje, fontSize: 11 }}
-                          axisLine={false}
-                          tickLine={false}
+                          {...propsEjeY(g.eje, esMobile)}
                           tickFormatter={formatoEjeCompacto}
-                          width={56}
+                          width={esMobile ? 44 : 56}
                         />
                         <RechartsTooltip
+                          trigger={esMobile ? 'click' : 'hover'}
                           cursor={{ fill: CHART_CURSOR_FILL }}
                           content={asRechartsTooltip(TooltipEvolucion)}
                         />
                         <Legend
-                          wrapperStyle={{ color: g.eje, fontSize: 12 }}
+                          wrapperStyle={{ color: g.eje, fontSize: tamanoTick(esMobile) }}
                           formatter={(value) => String(value)}
                         />
                         <Area
@@ -834,7 +854,7 @@ export function AnalyticsPage() {
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
                   <GraficoExpandible
                     titulo="Ventas vs Compras"
-                    compactoClass="h-72"
+                    compactoClass="min-h-[220px] overflow-hidden md:min-h-[320px]"
                     toolbar={
                       <SelectorChips
                         valor={granularidadVC}
@@ -852,7 +872,12 @@ export function AnalyticsPage() {
                         Sin movimientos en el período
                       </p>
                     ) : (
-                      <VentasVsComprasChart datos={ventasVsCompras} eje={g.eje} grilla={g.grilla} />
+                      <VentasVsComprasChart
+                        datos={ventasVsCompras}
+                        eje={g.eje}
+                        grilla={g.grilla}
+                        mobile={esMobile}
+                      />
                     )}
                   </GraficoExpandible>
                   <p className="mt-2 text-xs leading-relaxed text-[#94A3B8]">
@@ -878,7 +903,7 @@ export function AnalyticsPage() {
 
                 <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
                   <Card className={cardClass} style={cardStyle}>
-                    <GraficoExpandible titulo="Ventas por forma de pago" compactoClass="h-52">
+                    <GraficoExpandible titulo="Ventas por forma de pago" compactoClass="min-h-[220px] overflow-hidden md:min-h-[320px]">
                       {data.formasPago.length === 0 ? (
                         <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">
                           Sin ventas en el período
@@ -886,7 +911,7 @@ export function AnalyticsPage() {
                       ) : (
                         <div className="relative h-full">
                           <ChartResponsive>
-                            <PieChart>
+                            <PieChart margin={MARGIN_CHART}>
                               <Pie
                                 data={donutData}
                                 dataKey="value"
@@ -900,7 +925,10 @@ export function AnalyticsPage() {
                                   <Cell key={f.name} fill={coloresDonut[i]} />
                                 ))}
                               </Pie>
-                              <RechartsTooltip content={asRechartsTooltip(TooltipFormaPago)} />
+                              <RechartsTooltip
+                                trigger={esMobile ? 'click' : 'hover'}
+                                content={asRechartsTooltip(TooltipFormaPago)}
+                              />
                             </PieChart>
                           </ChartResponsive>
                           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -934,7 +962,7 @@ export function AnalyticsPage() {
                     ) : null}
                   </Card>
                   <Card className={cardClass} style={cardStyle}>
-                    <GraficoExpandible titulo="Top 10 productos más vendidos" compactoClass="h-[320px]">
+                    <GraficoExpandible titulo="Top 10 productos más vendidos" compactoClass="min-h-[220px] overflow-hidden md:min-h-[320px]">
                     {data.top10.length === 0 ? (
                       <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">Sin ventas en el período</p>
                     ) : (
@@ -942,7 +970,7 @@ export function AnalyticsPage() {
                           <ComposedChart
                             layout="vertical"
                             data={top10Data}
-                            margin={{ top: 28, right: 48, left: 8, bottom: 0 }}
+                            margin={MARGIN_CHART}
                             barCategoryGap="30%"
                             onMouseMove={top10Hover.onMouseMove as never}
                             onMouseLeave={top10Hover.onMouseLeave}
@@ -951,9 +979,7 @@ export function AnalyticsPage() {
                             <XAxis
                               xAxisId="unidades"
                               type="number"
-                              tick={{ fill: g.eje, fontSize: 11 }}
-                              axisLine={false}
-                              tickLine={false}
+                              {...propsEjeY(g.eje, esMobile)}
                               allowDecimals={false}
                             />
                             <XAxis
@@ -961,7 +987,7 @@ export function AnalyticsPage() {
                               type="number"
                               orientation="top"
                               domain={[0, 100]}
-                              tick={{ fill: g.eje, fontSize: 10 }}
+                              tick={{ fill: g.eje, fontSize: tamanoTick(esMobile) }}
                               axisLine={false}
                               tickLine={false}
                               tickFormatter={(v: number) => `${v}%`}
@@ -969,16 +995,17 @@ export function AnalyticsPage() {
                             <YAxis
                               type="category"
                               dataKey="etiqueta"
-                              width={120}
-                              tick={{ fill: g.eje, fontSize: 12 }}
+                              width={esMobile ? 72 : 120}
+                              tick={{ fill: g.eje, fontSize: tamanoTick(esMobile) }}
                               axisLine={false}
                               tickLine={false}
                             />
                             <RechartsTooltip
+                              trigger={esMobile ? 'click' : 'hover'}
                               cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
                               content={asRechartsTooltip(TooltipTopProductos)}
                             />
-                            <Legend wrapperStyle={{ color: g.eje, fontSize: 12 }} />
+                            <Legend wrapperStyle={{ color: g.eje, fontSize: tamanoTick(esMobile) }} />
                             <Bar
                               xAxisId="unidades"
                               dataKey="unidades"
@@ -1065,36 +1092,45 @@ export function AnalyticsPage() {
                 </Card>
 
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
-                  <GraficoExpandible titulo="Matriz de productos — Rotación vs Rentabilidad" compactoClass="h-[360px]">
+                  <GraficoExpandible titulo="Matriz de productos — Rotación vs Rentabilidad" compactoClass="min-h-[220px] overflow-hidden md:min-h-[320px]">
                   {matriz.puntos.length === 0 ? (
                     <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">Sin ventas en el período</p>
                   ) : (
                       <ChartResponsive>
-                          <ScatterChart margin={{ top: 16, right: 24, left: 8, bottom: 8 }}>
+                          <ScatterChart margin={MARGIN_CHART}>
                             <CartesianGrid stroke={g.grilla} />
                             <XAxis
                               type="number"
                               dataKey="unidades"
                               name="Rotación"
-                              tick={{ fill: g.eje, fontSize: 11 }}
-                              axisLine={false}
-                              tickLine={false}
+                              {...propsEjeY(g.eje, esMobile)}
                               allowDecimals={false}
-                              label={{ value: 'Rotación (unidades)', fill: g.eje, fontSize: 11, position: 'insideBottom', offset: -4 }}
+                              label={{
+                                value: 'Rotación (unidades)',
+                                fill: g.eje,
+                                fontSize: tamanoTick(esMobile),
+                                position: 'insideBottom',
+                                offset: -4,
+                              }}
                             />
                             <YAxis
                               type="number"
                               dataKey="margen_pct"
                               name="Margen"
-                              tick={{ fill: g.eje, fontSize: 11 }}
-                              axisLine={false}
-                              tickLine={false}
+                              {...propsEjeY(g.eje, esMobile)}
                               unit="%"
-                              label={{ value: 'Margen %', fill: g.eje, fontSize: 11, angle: -90, position: 'insideLeft' }}
+                              label={{
+                                value: 'Margen %',
+                                fill: g.eje,
+                                fontSize: tamanoTick(esMobile),
+                                angle: -90,
+                                position: 'insideLeft',
+                              }}
                             />
                             <ReferenceLine x={matriz.avgU} stroke={g.eje} strokeDasharray="4 4" />
                             <ReferenceLine y={matriz.avgM} stroke={g.eje} strokeDasharray="4 4" />
                             <RechartsTooltip
+                              trigger={esMobile ? 'click' : 'hover'}
                               cursor={{ strokeDasharray: '3 3' }}
                               content={({ active, payload }) => {
                                 if (!active || !payload?.length) return null
@@ -1148,24 +1184,23 @@ export function AnalyticsPage() {
                 </Card>
 
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
-                  <GraficoExpandible titulo="¿Qué días vendés más?" compactoClass="h-[280px]">
+                  <GraficoExpandible titulo="¿Qué días vendés más?" compactoClass="min-h-[220px] overflow-hidden md:min-h-[320px]">
                     <ChartResponsive>
                       <BarChart
                         data={diasSemana}
-                        margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
+                        margin={MARGIN_CHART}
                         onMouseMove={diasHover.onMouseMove as never}
                         onMouseLeave={diasHover.onMouseLeave}
                       >
                         <CartesianGrid stroke={g.grilla} vertical={false} />
-                        <XAxis dataKey="dia" {...propsEjeX(g.eje)} />
+                        <XAxis dataKey="dia" {...propsEjeX(g.eje, diasSemana.length, esMobile)} />
                         <YAxis
-                          tick={{ fill: g.eje, fontSize: 11 }}
-                          axisLine={false}
-                          tickLine={false}
+                          {...propsEjeY(g.eje, esMobile)}
                           tickFormatter={formatoEjeCompacto}
-                          width={56}
+                          width={esMobile ? 44 : 56}
                         />
                         <RechartsTooltip
+                          trigger={esMobile ? 'click' : 'hover'}
                           cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
                           content={asRechartsTooltip(TooltipMontoSimple)}
                         />
@@ -1206,17 +1241,21 @@ export function AnalyticsPage() {
                     ) : (
                       <p className="mt-3 text-sm text-[#94A3B8]">Todavía no hay ventas con variantes en el período.</p>
                     )}
-                    <div className="mt-6" style={{ height: 280 }}>
+                    <div className="mt-6 overflow-hidden">
                       <p className="mb-2 text-xs text-[#94A3B8]">Ventas por color</p>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={dataVar.porColor} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                      <ChartResponsive>
+                        <BarChart data={dataVar.porColor} margin={MARGIN_CHART}>
                           <CartesianGrid stroke={g.grilla} vertical={false} />
-                          <XAxis dataKey="name" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                          <RechartsTooltip cursor={<Rectangle fill={CHART_CURSOR_FILL} />} content={asRechartsTooltip(TooltipUnidades)} />
+                          <XAxis dataKey="name" {...propsEjeX(g.eje, dataVar.porColor.length, esMobile)} />
+                          <YAxis {...propsEjeY(g.eje, esMobile)} allowDecimals={false} width={esMobile ? 36 : 44} />
+                          <RechartsTooltip
+                            trigger={esMobile ? 'click' : 'hover'}
+                            cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
+                            content={asRechartsTooltip(TooltipUnidades)}
+                          />
                           <Bar dataKey="unidades" fill="#6366F1" radius={[4, 4, 0, 0]} maxBarSize={36} />
                         </BarChart>
-                      </ResponsiveContainer>
+                      </ChartResponsive>
                     </div>
                     {dataVar.combinaciones.length > 0 ? (
                       <div className="mt-6 overflow-x-auto">

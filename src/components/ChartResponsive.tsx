@@ -1,38 +1,65 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { ResponsiveContainer } from 'recharts'
 
-export function useAltoGrafico() {
-  const [alto, setAlto] = useState(() =>
-    typeof window !== 'undefined' && window.innerWidth < 768 ? 220 : 300,
+export const MARGIN_CHART = { top: 10, right: 20, bottom: 20, left: 10 } as const
+
+export function useEsMobile(breakpoint = 768) {
+  const [mobile, setMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false,
   )
   useEffect(() => {
     function onResize() {
-      setAlto(window.innerWidth < 768 ? 220 : 300)
+      setMobile(window.innerWidth < breakpoint)
     }
     onResize()
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [])
-  return alto
+  }, [breakpoint])
+  return mobile
 }
 
-export function propsEjeX(fill: string, categorias = 8) {
-  const muchas = categorias > 6
+export function useAltoGrafico() {
+  return useEsMobile() ? 220 : 320
+}
+
+export function tamanoTick(mobile: boolean) {
+  return mobile ? 10 : 12
+}
+
+export function intervaloEjeX(categorias: number) {
+  const n = Math.max(1, categorias)
+  if (n <= 8) return 0
+  return Math.max(0, Math.ceil(n / 7) - 1)
+}
+
+export function propsEjeX(fill: string, categorias = 8, mobile = false) {
   return {
-    tick: { fill, fontSize: 11 },
+    tick: { fill, fontSize: tamanoTick(mobile) },
     axisLine: false as const,
     tickLine: false as const,
-    ...(muchas
-      ? { angle: -30, textAnchor: 'end' as const, height: 58, interval: 0 as const }
-      : {}),
+    interval: intervaloEjeX(categorias),
+    minTickGap: 12,
+    angle: -35,
+    textAnchor: 'end' as const,
+    height: 50,
+  }
+}
+
+export function propsEjeY(fill: string, mobile = false) {
+  return {
+    tick: { fill, fontSize: tamanoTick(mobile) },
+    axisLine: false as const,
+    tickLine: false as const,
   }
 }
 
 export function ChartResponsive({ children }: { children: ReactElement }) {
   const alto = useAltoGrafico()
   return (
-    <ResponsiveContainer width="100%" height={alto}>
-      {children}
-    </ResponsiveContainer>
+    <div className="mx-auto w-full overflow-hidden px-1" style={{ minHeight: alto }}>
+      <ResponsiveContainer width="100%" height={alto}>
+        {children}
+      </ResponsiveContainer>
+    </div>
   )
 }
