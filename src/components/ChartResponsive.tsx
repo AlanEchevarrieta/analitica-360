@@ -53,10 +53,19 @@ export function propsEjeY(fill: string, mobile = false) {
   }
 }
 
-export function ChartResponsive({ children }: { children: ReactElement }) {
-  const alto = useAltoGrafico()
+export function ChartResponsive({
+  children,
+  altoMobile,
+  altoDesktop,
+}: {
+  children: ReactElement
+  altoMobile?: number
+  altoDesktop?: number
+}) {
+  const mobile = useEsMobile()
+  const alto = mobile ? (altoMobile ?? 220) : (altoDesktop ?? 320)
   return (
-    <div className="mx-auto w-full overflow-hidden px-1" style={{ minHeight: alto }}>
+    <div className="mx-auto w-full overflow-hidden px-1" style={{ minHeight: alto, width: '100%' }}>
       <ResponsiveContainer width="100%" height={alto}>
         {children}
       </ResponsiveContainer>

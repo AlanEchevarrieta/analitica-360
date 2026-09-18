@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { fechaHoyAR, lunesIso, sumarDiasIso, truncarEtiqueta } from './analytics'
+import { fechaHoyAR, lunesIso, sumarDiasIso } from './analytics'
 import type { CumpleProximo } from './clientes'
 import { listarProductosConStock } from './productos'
 
@@ -84,11 +84,14 @@ function etiquetaDia(valor: string) {
 }
 
 export function procesarDatosGrafico(dias: DashboardInicio['ultimos7'] | undefined) {
-  return dias ?? []
+  return (dias ?? []).map((d) => ({ ...d, dia: etiquetaDia(d.dia || d.fecha) }))
 }
 
 export function procesarTopProductos(top: DashboardInicio['top5'] | undefined) {
-  return (top ?? []).map((p) => ({ ...p, etiqueta: truncarEtiqueta(p.nombre) }))
+  return (top ?? []).map((p) => {
+    const n = p.nombre.trim()
+    return { ...p, etiqueta: n.length <= 12 ? n : `${n.slice(0, 12)}…` }
+  })
 }
 
 function stockDesdeProductos(filas: { activo: boolean; nombre: string; stock_actual: number }[]): DashboardStock[] {

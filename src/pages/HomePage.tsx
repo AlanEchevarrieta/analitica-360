@@ -14,7 +14,7 @@ import {
 import { useAuth } from '../auth'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
-import { ChartResponsive, propsEjeX } from '../components/ChartResponsive'
+import { ChartResponsive, propsEjeX, propsEjeY, useEsMobile } from '../components/ChartResponsive'
 import { GraficoExpandible, SelectorChips } from '../components/GraficoExpandible'
 import {
   cargarDashboardInicio,
@@ -106,39 +106,67 @@ const DASH_VACIO: DashboardInicio = {
   alertasStock: [],
 }
 
+function truncarHome(nombre: string, max: number) {
+  const t = String(nombre ?? '').trim()
+  if (t.length <= max) return t
+  return `${t.slice(0, max)}…`
+}
+
+function formatoEjeHome(v: number) {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return ''
+  const abs = Math.abs(n)
+  if (abs >= 1_000_000) {
+    const m = n / 1_000_000
+    const s = Number.isInteger(m) ? String(m) : m.toFixed(1).replace(/\.0$/, '')
+    return `${s}M`
+  }
+  if (abs >= 1000) return `${Math.round(n / 1000)}k`
+  return String(Math.round(n))
+}
+
+const MARGIN_HOME = { top: 10, right: 10, bottom: 10, left: 10 } as const
+
+const cardGraficoHome = {
+  background: 'rgba(255,255,255,0.08)',
+  border: '1px solid rgba(99,102,241,0.3)',
+} as const
+
 const Grafico7Dias = memo(function Grafico7Dias({ data }: { data: DashboardInicio['ultimos7'] }) {
   const { tema } = useTema()
+  const mobile = useEsMobile()
   const g = coloresGrafico(tema)
   const { activo, onMouseMove, onMouseLeave } = useIndiceBarraActiva()
   return (
-    <ChartResponsive>
+    <ChartResponsive altoMobile={200} altoDesktop={280}>
       <BarChart
         data={data}
-        margin={{ top: 8, right: 8, left: 0, bottom: 28 }}
+        margin={MARGIN_HOME}
         onMouseMove={onMouseMove as never}
         onMouseLeave={onMouseLeave}
       >
         <CartesianGrid stroke={g.grilla} vertical={false} />
-        <XAxis dataKey="dia" {...propsEjeX(g.eje, data.length)} />
+        <XAxis dataKey="dia" {...propsEjeX(g.eje, data.length, mobile)} />
         <YAxis
-          tick={{ fill: g.eje, fontSize: 11 }}
-          axisLine={false}
-          tickLine={false}
-          width={56}
-          tickFormatter={(v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : String(v))}
+          {...propsEjeY(g.eje, mobile)}
+          width={mobile ? 40 : 48}
+          tickFormatter={formatoEjeHome}
         />
-        <Tooltip cursor={<Rectangle fill={CHART_CURSOR_FILL} />} content={asRechartsTooltip(TooltipBarras7Dias)} />
+        <Tooltip
+          cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
+          content={asRechartsTooltip(TooltipBarras7Dias)}
+        />
         <Bar
           dataKey="total"
           radius={[4, 4, 0, 0]}
           background={{ fill: CHART_BAR_BG }}
-          activeBar={<Rectangle fill={CHART_ACTIVE_BAR} radius={4} />}
+          activeBar={<Rectangle fill="#818CF8" radius={4} />}
         >
           {data.map((fila, i) => (
             <Cell
               key={`${fila.fecha}-${i}`}
               fill="#6366F1"
-              fillOpacity={activo == null || activo === i ? 1 : 0.5}
+              fillOpacity={activo == null || activo === i ? 1 : 0.55}
             />
           ))}
         </Bar>
@@ -155,7 +183,8 @@ const GraficoTop5 = memo(function GraficoTop5({
   const { tema } = useTema()
   const g = coloresGrafico(tema)
   const { activo, onMouseMove, onMouseLeave } = useIndiceBarraActiva()
-  if (data.length === 0) {
+  const filas = data.map((p) => ({ ...p, etiqueta: truncarHome(p.nombre, 12) }))
+  if (filas.length === 0) {
     return (
       <p className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
         Todavía no hay ventas
@@ -163,22 +192,30 @@ const GraficoTop5 = memo(function GraficoTop5({
     )
   }
   return (
-    <ChartResponsive>
+    <ChartResponsive altoMobile={200} altoDesktop={280}>
       <BarChart
         layout="vertical"
-        data={data}
-        margin={{ top: 8, right: 40, left: 120, bottom: 0 }}
-        barCategoryGap="30%"
+        data={filas}
+        margin={{ top: 10, right: 36, bottom: 10, left: 10 }}
+        barCategoryGap="28%"
         onMouseMove={onMouseMove as never}
         onMouseLeave={onMouseLeave}
       >
         <CartesianGrid stroke={g.grilla} horizontal={false} />
-        <XAxis type="number" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-        <YAxis type="category" dataKey="etiqueta" width={120} tick={{ fill: g.eje, fontSize: 12 }} axisLine={false} tickLine={false} />
+        <XAxis type="number" hide />
+        <YAxis
+          type="category"
+          dataKey="etiqueta"
+          width={96}
+          interval={0}
+          tick={{ fill: g.eje, fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+        />
         <Tooltip cursor={<Rectangle fill={CHART_CURSOR_FILL} />} content={asRechartsTooltip(TooltipTopProductos)} />
-        <Bar dataKey="unidades" radius={[0, 4, 4, 0]} background={{ fill: CHART_BAR_BG }} activeBar={<Rectangle fill={CHART_ACTIVE_BAR} />}>
-          {data.map((fila, i) => (
-            <Cell key={`${fila.nombre}-${i}`} fill="#4ADE80" fillOpacity={activo == null || activo === i ? 1 : 0.5} />
+        <Bar dataKey="unidades" radius={[0, 4, 4, 0]} background={{ fill: CHART_BAR_BG }} activeBar={<Rectangle fill="#86EFAC" />}>
+          {filas.map((fila, i) => (
+            <Cell key={`${fila.nombre}-${i}`} fill="#4ADE80" fillOpacity={activo == null || activo === i ? 1 : 0.55} />
           ))}
           <LabelList dataKey="unidades" position="right" fill="#4ADE80" fontSize={11} />
         </Bar>
@@ -197,6 +234,15 @@ const GraficoStock = memo(function GraficoStock({
   const { tema } = useTema()
   const g = coloresGrafico(tema)
   const { activo, onMouseMove, onMouseLeave } = useIndiceBarraActiva()
+  const top10 = useMemo(
+    () =>
+      [...data]
+        .sort((a, b) => b.stock - a.stock || a.nombre.localeCompare(b.nombre, 'es'))
+        .slice(0, 10)
+        .map((p) => ({ ...p, etiqueta: truncarHome(p.nombre, 10) })),
+    [data],
+  )
+  const alto = Math.min(Math.max(top10.length, 1) * 32, 400)
   if (!gestionaStock) {
     return (
       <p className="flex h-full items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -205,27 +251,22 @@ const GraficoStock = memo(function GraficoStock({
     )
   }
   return (
-    <ChartResponsive>
+    <ChartResponsive altoMobile={alto} altoDesktop={alto}>
       <BarChart
         layout="vertical"
-        data={data}
-        margin={{ top: 8, right: 36, left: 8, bottom: 0 }}
+        data={top10}
+        margin={{ top: 8, right: 36, left: 8, bottom: 8 }}
         onMouseMove={onMouseMove as never}
         onMouseLeave={onMouseLeave}
       >
         <CartesianGrid stroke={g.grilla} horizontal={false} />
-        <XAxis type="number" tick={{ fill: g.eje, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+        <XAxis type="number" hide />
         <YAxis
           type="category"
-          dataKey="nombre"
-          reversed
-          width={110}
+          dataKey="etiqueta"
+          width={84}
           interval={0}
           tick={{ fill: g.eje, fontSize: 11 }}
-          tickFormatter={(v: string) => {
-            const t = String(v ?? '')
-            return t.length > 12 ? `${t.slice(0, 12)}…` : t
-          }}
           axisLine={false}
           tickLine={false}
         />
@@ -243,11 +284,11 @@ const GraficoStock = memo(function GraficoStock({
           }}
         />
         <Bar dataKey="stock" radius={[0, 4, 4, 0]} maxBarSize={18} background={{ fill: CHART_BAR_BG }} activeBar={<Rectangle fill={CHART_ACTIVE_BAR} />}>
-          {data.map((fila, i) => (
+          {top10.map((fila, i) => (
             <Cell
               key={`${fila.nombre}-${i}`}
               fill={fila.stock <= 0 ? '#F87171' : fila.stock <= 5 ? '#FCD34D' : '#4ADE80'}
-              fillOpacity={activo == null || activo === i ? 1 : 0.5}
+              fillOpacity={activo == null || activo === i ? 1 : 0.55}
             />
           ))}
           <LabelList dataKey="stock" position="right" fill={g.eje} fontSize={11} />
@@ -460,9 +501,10 @@ export function HomePage() {
   }, [dash.alertasStock])
   const stockHome = useMemo(() => {
     const gestiona = dash.stock.some((p) => p.stock !== 0)
+    const n = Math.min(dash.stock.length, 10)
     return {
       gestionaStock: gestiona,
-      alturaStock: Math.min(560, Math.max(220, dash.stock.length * 36)),
+      alturaStock: Math.min(n * 32, 400),
     }
   }, [dash.stock])
 
@@ -693,13 +735,7 @@ export function HomePage() {
             ) : null}
 
             <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-              <div
-                className="rounded-lg p-4"
-                style={{
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                }}
-              >
+              <div className="overflow-hidden rounded-lg p-4" style={cardGraficoHome}>
                 <GraficoExpandible
                   titulo={
                     rangoHome === 7
@@ -708,7 +744,7 @@ export function HomePage() {
                         ? 'Ventas últimos 30 días'
                         : 'Ventas últimos 3 meses'
                   }
-                  compactoClass="h-56"
+                  compactoClass="min-h-[200px] w-full overflow-hidden md:min-h-[280px]"
                   toolbar={
                     <SelectorChips
                       valor={String(rangoHome)}
@@ -725,26 +761,14 @@ export function HomePage() {
                 </GraficoExpandible>
               </div>
 
-              <div
-                className="rounded-lg p-4"
-                style={{
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                }}
-              >
-                <GraficoExpandible titulo="Top 5 productos más vendidos" compactoClass="h-[320px]">
+              <div className="overflow-hidden rounded-lg p-4" style={cardGraficoHome}>
+                <GraficoExpandible titulo="Top 5 productos más vendidos" compactoClass="min-h-[200px] w-full overflow-hidden md:min-h-[280px]">
                   <GraficoTop5 data={datosTopProductos} />
                 </GraficoExpandible>
               </div>
             </div>
 
-            <div
-              className="mt-3 rounded-lg p-4"
-              style={{
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-              }}
-            >
+            <div className="mt-3 overflow-hidden rounded-lg p-4" style={cardGraficoHome}>
               <GraficoExpandible
                 titulo="Estado de stock — productos activos"
                 compactoStyle={{ height: stockHome.gestionaStock ? stockHome.alturaStock : 160 }}
