@@ -96,7 +96,7 @@ export function ContabilidadPage({
 } = {}) {
   const { perfil } = useAuth()
   const periodoExterno = Boolean(desdeExterno && hastaExterno)
-  const [tab, setTab] = useState<TabId>(embebido ? 'resultado' : 'gastos')
+  const [tab, setTab] = useState<TabId>('gastos')
   const [preset, setPreset] = useState<PresetContabilidad>(periodoExterno ? 'personalizado' : 'mes')
   const [desde, setDesde] = useState(() => desdeExterno ?? rangoContabilidad('mes').desde)
   const [hasta, setHasta] = useState(() => hastaExterno ?? rangoContabilidad('mes').hasta)
@@ -274,7 +274,7 @@ export function ContabilidadPage({
         ) : null}
 
         <div className="mb-6 flex flex-wrap gap-2">
-          {(embebido ? TABS.filter((t) => t.id !== 'gastos') : TABS).map((t) => (
+          {TABS.map((t) => (
             <button
               key={t.id}
               type="button"

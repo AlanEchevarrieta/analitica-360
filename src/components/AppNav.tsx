@@ -66,7 +66,6 @@ export function AppNav() {
     Boolean(perfil && tieneAcceso(perfil.empresa.plan_actual, modulo, enTrial))
   const ver = (m: Parameters<typeof tieneModulo>[1]) => tieneModulo(perfil, m) && planOk(m)
   const verConfig = tieneModulo(perfil, 'configuracion')
-  const verContabilidad = tieneModulo(perfil, 'contabilidad')
   const location = useLocation()
   const [mas, setMas] = useState(false)
   const [soporteNuevos, setSoporteNuevos] = useState(0)
@@ -189,20 +188,10 @@ export function AppNav() {
               Inventario
             </NavLink>
           ) : null}
-          {(ver('analytics') || verContabilidad || ver('insights')) ? <NavSep /> : null}
+          {(ver('analytics')) ? <NavSep /> : null}
           {ver('analytics') ? (
             <NavLink className={linkClass} to="/analytics">
               Analytics
-            </NavLink>
-          ) : null}
-          {verContabilidad ? (
-            <NavLink className={linkClass} to="/contabilidad">
-              🧮 Contabilidad
-            </NavLink>
-          ) : null}
-          {ver('insights') ? (
-            <NavLink className={linkClass} to="/insights">
-              Insights
             </NavLink>
           ) : null}
           <NavSep />
@@ -283,22 +272,12 @@ export function AppNav() {
               <LabelSoporte n={soporteNuevos} emoji />
             </NavLink>
           ) : null}
-          {(ver('analytics') || verContabilidad || ver('insights')) ? (
+          {ver('analytics') ? (
             <p className="mt-2 px-2 text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">Inteligencia</p>
           ) : null}
           {ver('analytics') ? (
             <NavLink className={sideClass} to="/analytics">
               📊 Analytics
-            </NavLink>
-          ) : null}
-          {verContabilidad ? (
-            <NavLink className={sideClass} to="/contabilidad">
-              🧮 Contabilidad
-            </NavLink>
-          ) : null}
-          {ver('insights') ? (
-            <NavLink className={sideClass} to="/insights">
-              ✨ Insights
             </NavLink>
           ) : null}
           <p className="mt-2 px-2 text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">Sistema</p>
@@ -404,22 +383,12 @@ export function AppNav() {
                 <LabelSoporte n={soporteNuevos} emoji />
               </NavLink>
             ) : null}
-            {(ver('analytics') || verContabilidad || ver('insights')) ? (
+            {ver('analytics') ? (
               <p className="mt-2 px-1 text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">Inteligencia</p>
             ) : null}
             {ver('analytics') ? (
               <NavLink className={sheetClass} to="/analytics" onClick={() => setMas(false)}>
                 📊 Analytics
-              </NavLink>
-            ) : null}
-            {verContabilidad ? (
-              <NavLink className={sheetClass} to="/contabilidad" onClick={() => setMas(false)}>
-                🧮 Contabilidad
-              </NavLink>
-            ) : null}
-            {ver('insights') ? (
-              <NavLink className={sheetClass} to="/insights" onClick={() => setMas(false)}>
-                ✨ Insights
               </NavLink>
             ) : null}
             <p className="mt-2 px-1 text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">Sistema</p>
