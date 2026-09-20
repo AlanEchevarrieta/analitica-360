@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { AnularVentaModal } from '../components/AnularVentaModal'
 import { AppNav } from '../components/AppNav'
+import { DevolucionesTab } from '../components/DevolucionesTab'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import {
   BadgePago,
@@ -51,6 +52,8 @@ function rangoAnio() {
 
 export function VentasPage() {
   const { perfil } = useAuth()
+  const [params, setParams] = useSearchParams()
+  const tab = params.get('tab') === 'devoluciones' ? 'devoluciones' : 'ventas'
   const [filas, setFilas] = useState<VentaFila[]>([])
   const [total, setTotal] = useState(0)
   const [pagina, setPagina] = useState(1)
@@ -130,8 +133,9 @@ export function VentasPage() {
   }, [pagina, desde, hasta, forma, cliente, productoId, numeroVenta, mostrarAnuladas])
 
   useEffect(() => {
+    if (tab !== 'ventas') return
     void cargar()
-  }, [cargar])
+  }, [cargar, tab])
 
   useEffect(() => {
     void listarProductosNombres(requireSupabase()).then((prods) => {
@@ -211,6 +215,33 @@ export function VentasPage() {
       <ParticleNetwork />
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-8">
         <AppNav />
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === 'ventas' ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'}`}
+            onClick={() => {
+              const next = new URLSearchParams(params)
+              next.delete('tab')
+              setParams(next)
+            }}
+          >
+            Ventas
+          </button>
+          <button
+            type="button"
+            className={`rounded-md px-3 py-2 text-sm font-semibold ${tab === 'devoluciones' ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'}`}
+            onClick={() => {
+              const next = new URLSearchParams(params)
+              next.set('tab', 'devoluciones')
+              setParams(next)
+            }}
+          >
+            Cambios y Devoluciones
+          </button>
+        </div>
+        {tab === 'devoluciones' ? <DevolucionesTab /> : null}
+        {tab === 'ventas' ? (
+        <>
         <PageTitle titulo="Ventas" subtitulo={subtitulo} />
 
         <div className="mb-6 space-y-3">
@@ -527,6 +558,8 @@ export function VentasPage() {
         ) : null}
         {tienePermiso(perfil, 'registrar_ventas') ? (
           <FabLink to="/ventas/nueva" label="Nueva venta" />
+        ) : null}
+        </>
         ) : null}
       </div>
     </div>

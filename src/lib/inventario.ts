@@ -71,6 +71,9 @@ export function estiloTipoMovimiento(tipo: string, signo: number) {
   if (t === 'devolucion_cliente' || t === 'devolucion') {
     return { icono: '↩️', texto: 'Devolución cliente', clase: 'text-[#93C5FD]', fondo: '#1E3A5F', color: '#93C5FD' }
   }
+  if (t === 'cambio') {
+    return { icono: '🔄', texto: 'Cambio', clase: 'text-[#F87171]', ...BADGE_SALIDA }
+  }
   if (t === 'devolucion_proveedor') {
     return { icono: '🏭', texto: 'Devolución proveedor', clase: 'text-[#F87171]', ...BADGE_SALIDA }
   }

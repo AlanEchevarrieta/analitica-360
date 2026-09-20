@@ -51,6 +51,12 @@ const VentasPage = loadComponent(() => import('./pages/VentasPage').then((m) => 
 const VentaNuevaPage = loadComponent(() =>
   import('./pages/VentaNuevaPage').then((m) => ({ default: m.VentaNuevaPage })),
 )
+const DevolucionNuevaPage = loadComponent(() =>
+  import('./pages/DevolucionNuevaPage').then((m) => ({ default: m.DevolucionNuevaPage })),
+)
+const DevolucionFichaPage = loadComponent(() =>
+  import('./pages/DevolucionFichaPage').then((m) => ({ default: m.DevolucionFichaPage })),
+)
 const PedidosPage = loadComponent(() => import('./pages/PedidosPage').then((m) => ({ default: m.PedidosPage })))
 const PedidoNuevaPage = loadComponent(() =>
   import('./pages/PedidoNuevaPage').then((m) => ({ default: m.PedidoNuevaPage })),
@@ -240,6 +246,8 @@ function AppRoutes() {
         <Route path="/planes" element={<PlanesPage />} />
         <Route path="/ventas" element={<VentasPage />} />
         <Route path="/ventas/nueva" element={<VentaNuevaPage />} />
+        <Route path="/ventas/devoluciones/nueva" element={<DevolucionNuevaPage />} />
+        <Route path="/ventas/devoluciones/:id" element={<DevolucionFichaPage />} />
         <Route path="/pedidos" element={<PedidosPage />} />
         <Route path="/pedidos/nueva" element={<PedidoNuevaPage />} />
         <Route path="/pedidos/:id" element={<PedidoFichaPage />} />

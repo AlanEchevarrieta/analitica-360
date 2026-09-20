@@ -20,6 +20,9 @@ function textoReferencia(m: MovimientoKardex) {
     const fecha = m.ventaFecha ? formatoFechaMov(m.ventaFecha) : formatoFechaMov(m.fecha)
     return { to: '/ventas', label: `Venta ${fecha}` }
   }
+  if ((m.tipo === 'devolucion' || m.tipo === 'cambio') && m.referenciaId) {
+    return { to: `/ventas/devoluciones/${m.referenciaId}`, label: m.motivo ?? 'Cambio / devolución' }
+  }
   if (m.tipo === 'compra' && m.motivo) return { to: '/compras', label: m.motivo }
   if (m.tipo === 'transferencia' && (m.ubicacionOrigen || m.ubicacionDestino)) {
     return { to: null, label: `${m.ubicacionOrigen ?? '—'} → ${m.ubicacionDestino ?? '—'}` }

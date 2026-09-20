@@ -29,6 +29,7 @@ export function etiquetaMovimiento(tipo: string) {
   if (tipo === 'venta') return { icono: '💸', texto: 'Venta' }
   if (tipo === 'anulacion') return { icono: '↩️', texto: 'Anulación' }
   if (tipo === 'devolucion_cliente' || tipo === 'devolucion') return { icono: '↩️', texto: 'Devolución' }
+  if (tipo === 'cambio') return { icono: '🔄', texto: 'Cambio' }
   if (tipo === 'devolucion_proveedor') return { icono: '🏭', texto: 'Devolución proveedor' }
   if (tipo === 'consumo_interno') return { icono: '🎁', texto: 'Consumo interno' }
   if (tipo === 'ajuste_positivo') return { icono: '📦', texto: 'Ajuste positivo' }
