@@ -104,6 +104,7 @@ const VACIO: AnalyticsPeriodo = {
   totalAnt: 0,
   cantidadAnt: 0,
   costoAnt: 0,
+  porCobrar: 0,
   evolucion: [],
   evolucionDiaria: [],
   formasPago: [],
@@ -823,6 +824,13 @@ export function AnalyticsPage() {
                       detalle="Cargá el costo de tus productos para ver el margen"
                     />
                   )}
+                </div>
+                <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                  <KpiShell
+                    label="Por cobrar"
+                    valor={formatoARS(data.porCobrar)}
+                    detalle="Saldos pendientes de ventas con seña"
+                  />
                 </div>
 
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>

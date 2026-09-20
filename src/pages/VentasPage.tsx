@@ -37,6 +37,7 @@ import { requireSupabase } from '../lib/supabase'
 import {
   FORMAS_PAGO,
   etiquetaCuotas,
+  etiquetaEstadoCobro,
   formatoFechaVenta,
   listarVentasExport,
   listarVentasPaginado,
@@ -370,13 +371,14 @@ export function VentasPage() {
 
         <TableCard>
           <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[860px] text-left">
+          <table className="w-full min-w-[980px] text-left">
             <thead className={theadClass} style={theadStyle}>
               <tr>
                 <Th>N° Venta</Th>
                 <Th>Fecha</Th>
                 <Th>Productos</Th>
                 <Th>Total</Th>
+                <Th>Saldo pendiente</Th>
                 <ThFilter
                   label="Forma de pago"
                   active={Boolean(forma)}
@@ -437,8 +439,10 @@ export function VentasPage() {
             <tbody>
               {filas.map((fila, index) => (
                 <Tr key={fila.id} index={index}>
-                  <td className="px-3 py-3 whitespace-nowrap font-semibold text-[#A5B4FC]">
-                    {fila.numeroVenta ?? '—'}
+                  <td className="px-3 py-3 whitespace-nowrap font-semibold">
+                    <Link className="text-[#A5B4FC] hover:underline" to={`/ventas/${fila.id}`}>
+                      {fila.numeroVenta ?? '—'}
+                    </Link>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <span className="inline-flex flex-wrap items-center gap-2">
@@ -448,10 +452,25 @@ export function VentasPage() {
                           Anulada
                         </span>
                       ) : null}
+                      {(() => {
+                        const b = etiquetaEstadoCobro(fila.estadoCobro, fila.esSenia)
+                        if (!b) return null
+                        return (
+                          <span
+                            className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                            style={{ color: b.fg, background: b.bg }}
+                          >
+                            {b.texto}
+                          </span>
+                        )
+                      })()}
                     </span>
                   </td>
                   <td className="px-3 py-3">{fila.productos || '—'}</td>
                   <td className="px-3 py-3 font-bold text-[#4ADE80]">{formatoARS(fila.total)}</td>
+                  <td className="px-3 py-3">
+                    {fila.esSenia && fila.saldoPendiente > 0 ? formatoARS(fila.saldoPendiente) : '—'}
+                  </td>
                   <td className="px-3 py-3">
                     <BadgePago forma={fila.forma_pago} />
                   </td>
@@ -481,7 +500,7 @@ export function VentasPage() {
           {!cargando && error !== MSG_ERROR_RED ? (
             <MobileCards>
               {filas.map((fila) => (
-                <ListCard key={fila.id}>
+                <ListCard key={fila.id} to={`/ventas/${fila.id}`}>
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                       {fila.numeroVenta ? `${fila.numeroVenta} · ` : ''}
@@ -492,11 +511,25 @@ export function VentasPage() {
                   </div>
                   <p className="mt-1 text-sm font-medium">{fila.productos || '—'}</p>
                   <p className="mt-1 font-bold text-[#4ADE80]">{formatoARS(fila.total)}</p>
+                  {(() => {
+                    const b = etiquetaEstadoCobro(fila.estadoCobro, fila.esSenia)
+                    if (!b) return null
+                    return (
+                      <p className="mt-1 text-xs font-semibold" style={{ color: b.fg }}>
+                        {b.texto}
+                        {fila.saldoPendiente > 0 ? ` · Pendiente ${formatoARS(fila.saldoPendiente)}` : ''}
+                      </p>
+                    )
+                  })()}
                   {puedeAnular && !fila.anulada ? (
                     <button
                       className="mt-2 text-xs text-[#F87171]"
                       type="button"
-                      onClick={() => setAnular(fila)}
+                      onClick={(ev) => {
+                        ev.preventDefault()
+                        ev.stopPropagation()
+                        setAnular(fila)
+                      }}
                     >
                       Anular
                     </button>

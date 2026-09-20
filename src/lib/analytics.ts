@@ -31,6 +31,7 @@ export type AnalyticsPeriodo = {
   totalAnt: number
   cantidadAnt: number
   costoAnt: number
+  porCobrar: number
   evolucion: AnalyticsPunto[]
   evolucionDiaria: AnalyticsPunto[]
   formasPago: AnalyticsPago[]
@@ -47,6 +48,7 @@ const VACIO: AnalyticsPeriodo = {
   totalAnt: 0,
   cantidadAnt: 0,
   costoAnt: 0,
+  porCobrar: 0,
   evolucion: [],
   evolucionDiaria: [],
   formasPago: [],
@@ -355,32 +357,50 @@ async function ventasPeriodoPorIds(
   hasta: string,
   empresaId?: string | null,
 ): Promise<{
-  filas: { id: string; fecha: string; forma_pago: string; total: number; cliente_id: string | null }[]
+  filas: { id: string; fecha: string; forma_pago: string; total: number; cliente_id: string | null; saldo: number }[]
   error: string | null
 }> {
-  const filas: { id: string; fecha: string; forma_pago: string; total: number; cliente_id: string | null }[] = []
+  const filas: { id: string; fecha: string; forma_pago: string; total: number; cliente_id: string | null; saldo: number }[] = []
   if (ids.length === 0) return { filas, error: null }
   const PAGE = 100
   for (let i = 0; i < ids.length; i += PAGE) {
     let q = client
       .from('ventas')
-      .select('id, fecha, forma_pago, total_con_interes, cliente_id')
+      .select('id, fecha, forma_pago, total_con_interes, cliente_id, saldo_pendiente')
       .in('id', ids.slice(i, i + PAGE))
       .is('deleted_at', null)
       .gte('fecha', `${desde}T00:00:00-03:00`)
       .lt('fecha', `${sumarDiasIso(hasta, 1)}T00:00:00-03:00`)
     if (empresaId) q = q.eq('empresa_id', empresaId)
-    const { data, error } = await q
+    let { data, error } = await q
+    if (error) {
+      const t = error.message.toLowerCase()
+      if (t.includes('saldo_pendiente') || t.includes('schema cache') || t.includes('does not exist')) {
+        let q2 = client
+          .from('ventas')
+          .select('id, fecha, forma_pago, total_con_interes, cliente_id')
+          .in('id', ids.slice(i, i + PAGE))
+          .is('deleted_at', null)
+          .gte('fecha', `${desde}T00:00:00-03:00`)
+          .lt('fecha', `${sumarDiasIso(hasta, 1)}T00:00:00-03:00`)
+        if (empresaId) q2 = q2.eq('empresa_id', empresaId)
+        const retry = await q2
+        data = retry.data as typeof data
+        error = retry.error
+      }
+    }
     if (error) return { filas: [], error: error.message }
     for (const row of (data ?? []) as Record<string, unknown>[]) {
       const iso = fechaIsoDe(row.fecha)
       if (!iso) continue
+      const saldo = num(row.saldo_pendiente)
       filas.push({
         id: String(row.id),
         fecha: iso,
         forma_pago: String(row.forma_pago ?? ''),
-        total: num(row.total_con_interes),
+        total: Math.max(num(row.total_con_interes) - saldo, 0),
         cliente_id: row.cliente_id == null ? null : String(row.cliente_id),
+        saldo,
       })
     }
   }
@@ -388,7 +408,7 @@ async function ventasPeriodoPorIds(
 }
 
 function armarPeriodoDesdeVentas(
-  ventas: { id: string; fecha: string; forma_pago: string; total: number; cliente_id: string | null }[],
+  ventas: { id: string; fecha: string; forma_pago: string; total: number; cliente_id: string | null; saldo?: number }[],
   items: { venta_id: string; nombre: string; unidades: number; total: number; costo: number }[],
   ant: { total: number; cantidad: number; costo: number },
   granularidad: GranularidadEje,
@@ -441,6 +461,7 @@ function armarPeriodoDesdeVentas(
     totalAnt: ant.total,
     cantidadAnt: ant.cantidad,
     costoAnt: ant.costo,
+    porCobrar: ventas.reduce((a, v) => a + (v.saldo ?? 0), 0),
     evolucion: agruparEvolucion(evolucionDiaria, g),
     evolucionDiaria,
     formasPago: [...porPago.entries()].map(([name, value]) => ({ name, value })),
@@ -711,6 +732,7 @@ export async function cargarAnalyticsPeriodo(
       totalAnt: num(row.total_ant),
       cantidadAnt: num(row.cantidad_ant),
       costoAnt: num(row.costo_ant),
+      porCobrar: num(row.por_cobrar),
       evolucion:
         evoRes.error || evoRes.data == null
           ? agruparEvolucion(evolucionDiaria, granularidad === 'anio' ? 'dia' : granularidad)

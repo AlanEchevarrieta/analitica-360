@@ -18,7 +18,7 @@ const TXT_SEC = '#94A3B8'
 function textoReferencia(m: MovimientoKardex) {
   if (m.tipo === 'venta' && m.referenciaId) {
     const fecha = m.ventaFecha ? formatoFechaMov(m.ventaFecha) : formatoFechaMov(m.fecha)
-    return { to: '/ventas', label: `Venta ${fecha}` }
+    return { to: `/ventas/${m.referenciaId}`, label: `Venta ${fecha}` }
   }
   if ((m.tipo === 'devolucion' || m.tipo === 'cambio') && m.referenciaId) {
     return { to: `/ventas/devoluciones/${m.referenciaId}`, label: m.motivo ?? 'Cambio / devolución' }

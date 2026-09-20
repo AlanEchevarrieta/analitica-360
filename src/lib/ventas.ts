@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { formatoFechaHora } from './fechas'
 
+export type EstadoCobro = 'pagado' | 'señado' | 'saldo_pendiente'
+
 export type VentaFila = {
   id: string
   numeroVenta: string | null
@@ -14,6 +16,15 @@ export type VentaFila = {
   descuento: number
   notas: string | null
   anulada: boolean
+  esSenia: boolean
+  montoSenia: number
+  saldoPendiente: number
+  estadoCobro: EstadoCobro
+  fechaCobroSaldo: string | null
+}
+
+export type VentaFicha = VentaFila & {
+  items: { nombre: string; cantidad: number; precioUnitario: number }[]
 }
 
 export type FiltrosVentas = {
@@ -61,10 +72,21 @@ async function hidratarVentas(
 ): Promise<{ filas: VentaFila[]; error: string | null }> {
   if (ids.length === 0) return { filas: [], error: null }
 
-  const ventasRes = await client
+  let ventasRes = await client
     .from('ventas')
-    .select('id, numero_venta, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_sin_interes, total_con_interes, notas, deleted_at')
+    .select(
+      'id, numero_venta, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_sin_interes, total_con_interes, notas, deleted_at, es_senia, monto_senia, saldo_pendiente, estado_cobro, fecha_cobro_saldo',
+    )
     .in('id', ids)
+  if (ventasRes.error) {
+    const t = ventasRes.error.message.toLowerCase()
+    if (t.includes('es_senia') || t.includes('schema cache') || t.includes('does not exist')) {
+      ventasRes = (await client
+        .from('ventas')
+        .select('id, numero_venta, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_sin_interes, total_con_interes, notas, deleted_at')
+        .in('id', ids)) as typeof ventasRes
+    }
+  }
   if (ventasRes.error) return { filas: [], error: ventasRes.error.message }
 
   const itemsRes = await client
@@ -108,6 +130,13 @@ async function hidratarVentas(
       descuento,
       notas: row.notas == null || row.notas === '' ? null : String(row.notas),
       anulada: row.deleted_at != null,
+      esSenia: Boolean(row.es_senia),
+      montoSenia: Number(row.monto_senia ?? 0),
+      saldoPendiente: Number(row.saldo_pendiente ?? 0),
+      estadoCobro: (['pagado', 'señado', 'saldo_pendiente'].includes(String(row.estado_cobro ?? ''))
+        ? row.estado_cobro
+        : 'pagado') as EstadoCobro,
+      fechaCobroSaldo: row.fecha_cobro_saldo ? String(row.fecha_cobro_saldo) : null,
     }
   })
   return { filas, error: null }
@@ -281,6 +310,8 @@ export async function confirmarVenta(
     totalSinInteres?: number
     totalConInteres?: number
     ubicacionOrigen?: string | null
+    esSenia?: boolean
+    montoSenia?: number
   },
 ): Promise<string | null> {
   const args: Record<string, unknown> = {
@@ -295,16 +326,32 @@ export async function confirmarVenta(
     p_total_con_interes: input.totalConInteres ?? null,
   }
   if (input.ubicacionOrigen) args.p_ubicacion_origen = input.ubicacionOrigen
-  let { error } = await client.rpc('confirmar_venta', args)
+  let { data, error } = await client.rpc('confirmar_venta', args)
   if (error && args.p_ubicacion_origen) {
     const t = error.message.toLowerCase()
     if (t.includes('p_ubicacion_origen') || t.includes('schema cache') || t.includes('could not find')) {
       delete args.p_ubicacion_origen
       const retry = await client.rpc('confirmar_venta', args)
+      data = retry.data
       error = retry.error
     }
   }
-  if (!error) return null
+  if (!error) {
+    if (input.esSenia && input.montoSenia && data) {
+      const senia = await client.rpc('marcar_senia_venta', { p_id: data, p_monto: input.montoSenia })
+      if (senia.error) {
+        const t = senia.error.message.toLowerCase()
+        if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
+          return 'Falta crear señas. Pegá TODO supabase/068_senias.sql (rol postgres), dale Run y recargá.'
+        }
+        if (senia.error.message.includes('SENIA_INVALIDA')) {
+          return 'La seña tiene que ser mayor a 0 y menor que el total'
+        }
+        return senia.error.message
+      }
+    }
+    return null
+  }
   const msg = error.message
   if (msg.includes('Producto no pertenece a esta empresa')) {
     return 'Producto no pertenece a esta empresa'
@@ -337,4 +384,59 @@ export async function anularVenta(
 
 export function formatoFechaVenta(iso: string) {
   return formatoFechaHora(iso)
+}
+
+export function etiquetaEstadoCobro(estado: string, esSenia: boolean) {
+  if (!esSenia) return null
+  if (estado === 'pagado') return { texto: 'Saldo cobrado', fg: '#4ADE80', bg: 'rgba(74,222,128,0.16)' }
+  return { texto: 'Señado', fg: '#F59E0B', bg: 'rgba(245,158,11,0.18)' }
+}
+
+export async function obtenerVenta(
+  client: SupabaseClient,
+  id: string,
+): Promise<{ data: VentaFicha | null; error: string | null }> {
+  const { filas, error } = await hidratarVentas(client, [id])
+  if (error) return { data: null, error }
+  const base = filas[0]
+  if (!base) return { data: null, error: 'No se encontró la venta' }
+  const itemsRes = await client
+    .from('ventas_items')
+    .select('cantidad, precio_unitario, productos(nombre)')
+    .eq('venta_id', id)
+  return {
+    data: {
+      ...base,
+      items: ((itemsRes.data ?? []) as Record<string, unknown>[]).map((row) => {
+        const prod = row.productos as { nombre?: string } | { nombre?: string }[] | null
+        const nombre = Array.isArray(prod) ? prod[0]?.nombre : prod?.nombre
+        return {
+          nombre: String(nombre ?? 'Producto'),
+          cantidad: Number(row.cantidad ?? 0),
+          precioUnitario: Number(row.precio_unitario ?? 0),
+        }
+      }),
+    },
+    error: null,
+  }
+}
+
+export async function cobrarSaldoVenta(
+  client: SupabaseClient,
+  input: { id: string; monto: number; formaPago: string; fecha: string },
+): Promise<string | null> {
+  const { error } = await client.rpc('cobrar_saldo_venta', {
+    p_id: input.id,
+    p_monto: input.monto,
+    p_forma_pago: input.formaPago,
+    p_fecha: `${input.fecha}T12:00:00.000-03:00`,
+  })
+  if (!error) return null
+  const t = error.message.toLowerCase()
+  if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
+    return 'Falta crear señas. Pegá TODO supabase/068_senias.sql (rol postgres), dale Run y recargá.'
+  }
+  if (error.message.includes('VENTA_INVALIDA')) return 'Esa venta no tiene saldo para cobrar'
+  if (error.message.includes('MONTO_INVALIDO')) return 'El monto tiene que ser mayor a 0'
+  return error.message
 }

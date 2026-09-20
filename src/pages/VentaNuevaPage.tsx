@@ -61,6 +61,8 @@ export function VentaNuevaPage() {
   const [lineas, setLineas] = useState<Linea[]>([])
   const [descuento, setDescuento] = useState('0')
   const [formaPago, setFormaPago] = useState('efectivo')
+  const [esSenia, setEsSenia] = useState(false)
+  const [montoSenia, setMontoSenia] = useState('')
   const [cliente, setCliente] = useState('')
   const [clienteId, setClienteId] = useState<string | null>(null)
   const [clientes, setClientes] = useState<ClienteFila[]>([])
@@ -204,6 +206,8 @@ export function VentaNuevaPage() {
   const credito = formaPago === 'credito'
   const totalesCredito = calcularTotalesCredito(total, coefNum, cuotaElegida?.cuotas ?? 1)
   const totalACobrar = credito ? Number(totalesCredito.totalConInteres.toFixed(2)) : total
+  const seniaNum = Math.max(0, Number(montoSenia.replace(',', '.')) || 0)
+  const saldoSenia = Math.max(0, Number((totalACobrar - seniaNum).toFixed(2)))
   const ivaVenta =
     config?.mostrarIvaVentas && config.alicuotaIva > 0
       ? desgloseIva(totalACobrar, config.alicuotaIva)
@@ -427,6 +431,10 @@ export function VentaNuevaPage() {
       setError('Seleccioná un cliente para continuar')
       return
     }
+    if (esSenia && (seniaNum <= 0 || seniaNum >= totalACobrar)) {
+      setError('La seña tiene que ser mayor a 0 y menor que el total')
+      return
+    }
     setError(null)
     setEnviando(true)
     const fallo = await confirmarVenta(requireSupabase(), {
@@ -446,6 +454,8 @@ export function VentaNuevaPage() {
       totalSinInteres: total,
       totalConInteres: totalACobrar,
       ubicacionOrigen: ubicaciones.length > 1 ? ubicacionOrigen || ubicaciones[0]?.nombre : null,
+      esSenia,
+      montoSenia: esSenia ? seniaNum : 0,
     })
     setEnviando(false)
     if (fallo) {
@@ -747,6 +757,43 @@ export function VentaNuevaPage() {
                       </button>
                     ))}
                   </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-[#E2E8F0] px-3 py-3">
+                    <p className="text-sm font-medium text-[#1A2F4A]">¿Es una seña?</p>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={esSenia}
+                      className={`relative h-7 w-12 shrink-0 rounded-full ${esSenia ? 'bg-[#6366F1]' : 'bg-[#CBD5E1]'}`}
+                      onClick={() => setEsSenia((v) => !v)}
+                    >
+                      <span
+                        className="absolute top-[3px] left-[3px] h-[22px] w-[22px] rounded-full bg-white shadow transition-transform"
+                        style={{ transform: esSenia ? 'translate3d(20px, 0, 0)' : 'translate3d(0, 0, 0)' }}
+                      />
+                    </button>
+                  </div>
+                  {esSenia ? (
+                    <div className="mt-3 space-y-3 rounded-md bg-[#EEF2FF] px-3 py-3">
+                      <label className="block text-sm font-medium text-[#4A5568]">
+                        Monto de la seña
+                        <input
+                          className={`${inputClass} mt-1.5`}
+                          inputMode="decimal"
+                          value={montoSenia}
+                          placeholder="0"
+                          onChange={(ev) => setMontoSenia(ev.target.value)}
+                        />
+                      </label>
+                      <p className="text-sm font-semibold text-[#1A2F4A]">
+                        Saldo pendiente: {formatoARS(saldoSenia)}
+                      </p>
+                      <p className="text-xs text-[#4A5568]">
+                        Forma de pago de la seña: {etiquetaMedioPago(formaPago)}
+                      </p>
+                    </div>
+                  ) : null}
+
                   {formaPago === 'credito' ? (
                     <div className="mt-4">
                       <p className="text-sm font-medium text-[#4A5568]">Cuotas</p>
@@ -821,6 +868,12 @@ export function VentaNuevaPage() {
                     ) : (
                       <p className="mt-2 font-semibold">Total final {formatoARS(totalACobrar)}</p>
                     )}
+                    {esSenia ? (
+                      <>
+                        <p className="mt-2">Seña: {formatoARS(seniaNum)}</p>
+                        <p>Saldo pendiente: {formatoARS(saldoSenia)}</p>
+                      </>
+                    ) : null}
                     <p className="mt-1 text-[#4A5568]">{etiquetaMedioPago(formaPago)}</p>
                   </div>
                 </div>
@@ -957,6 +1010,12 @@ export function VentaNuevaPage() {
                       <p className="mt-2 font-semibold">Total {formatoARS(totalACobrar)}</p>
                     )}
                     <p>{etiquetaMedioPago(formaPago)}</p>
+                    {esSenia ? (
+                      <>
+                        <p>Seña: {formatoARS(seniaNum)}</p>
+                        <p>Saldo pendiente: {formatoARS(saldoSenia)}</p>
+                      </>
+                    ) : null}
                     {mostrarCampoCliente && cliente.trim() ? <p>Cliente: {cliente.trim()}</p> : null}
                   </div>
                 </div>
@@ -996,6 +1055,12 @@ export function VentaNuevaPage() {
                       if (formaPago === 'credito' && cuotasActivas.length === 0) {
                         setError('No hay cuotas activas para tarjeta de crédito')
                         return
+                      }
+                      if (esSenia) {
+                        if (seniaNum <= 0 || seniaNum >= totalACobrar) {
+                          setError('La seña tiene que ser mayor a 0 y menor que el total')
+                          return
+                        }
                       }
                       setError(null)
                       setPaso(3)
