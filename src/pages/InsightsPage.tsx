@@ -362,7 +362,15 @@ const PRESETS_INFLACION: { id: PresetPeriodo | 'todo'; label: string }[] = [
   { id: 'personalizado', label: 'Rango personalizado' },
 ]
 
-export function InsightsPage() {
+export function InsightsPage({
+  embebido = false,
+  desdeExterno,
+  hastaExterno,
+}: {
+  embebido?: boolean
+  desdeExterno?: string
+  hastaExterno?: string
+} = {}) {
   const { perfil, suscripcion } = useAuth()
   const [searchParams] = useSearchParams()
   const [cargando, setCargando] = useState(true)
@@ -388,6 +396,13 @@ export function InsightsPage() {
   const premium = Boolean(perfil && planTieneInsights(perfil.empresa.plan_actual, estaEnTrial(suscripcion)))
 
   useEffect(() => {
+    if (desdeExterno && hastaExterno) {
+      setInflacionPeriodo({ desde: desdeExterno, hasta: hastaExterno })
+      setDesdeDraft(desdeExterno)
+      setHastaDraft(hastaExterno)
+      setPresetInfla('personalizado')
+      return
+    }
     const q = searchParams.toString()
     const r = resolverPeriodoInflacion(q ? `?${q}` : '')
     setInflacionPeriodo(r)
@@ -395,7 +410,7 @@ export function InsightsPage() {
     setHastaDraft(r.hasta)
     const indec = rangoDatosIndec()
     setPresetInfla(r.desde === indec.desde && r.hasta === indec.hasta ? 'todo' : 'personalizado')
-  }, [searchParams])
+  }, [searchParams, desdeExterno, hastaExterno])
 
   useEffect(() => {
     if (!perfil || !planTieneInsights(perfil.empresa.plan_actual, estaEnTrial(suscripcion))) {
@@ -520,22 +535,17 @@ export function InsightsPage() {
 
   if (!perfil) return null
 
-  return (
-    <div
-      className="relative min-h-dvh"
-      style={{
-        fontFamily: theme.font,
-        background: `linear-gradient(180deg, ${theme.canvasFrom}, ${theme.canvasTo})`,
-      }}
-    >
-      <ParticleNetwork />
-      <div className="relative z-10 mx-auto max-w-6xl px-4 py-10 text-white">
-        <AppNav />
+  const periodoExterno = Boolean(desdeExterno && hastaExterno)
+
+  const cuerpo = (
+        <>
+        {!embebido ? (
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-wide text-[#A5B4FC]">Analítica 360</p>
           <h1 className="mt-1 text-xl font-bold">Insights</h1>
           <p className="mt-1 text-sm text-[#94A3B8]">Inteligencia de datos para decidir precios, stock y mix.</p>
         </div>
+        ) : null}
 
         {!premium ? (
           <div className="mx-auto max-w-lg rounded-lg px-6 py-10 text-center" style={CARD}>
@@ -664,6 +674,8 @@ export function InsightsPage() {
               <Sub>
                 {inflacionPeriodo.desde} → {inflacionPeriodo.hasta}
               </Sub>
+              {!periodoExterno ? (
+              <>
               <div className="mt-3 flex flex-wrap gap-2">
                 {PRESETS_INFLACION.map((p) => (
                   <button
@@ -715,6 +727,8 @@ export function InsightsPage() {
                     Aplicar período
                   </button>
                 </div>
+              ) : null}
+              </>
               ) : null}
               <div className="mt-4">
                 <InflacionVsPreciosPanel serie={inflacion} />
@@ -988,8 +1002,10 @@ export function InsightsPage() {
             </section>
           </>
         ) : null}
-      </div>
-      {modalCombo ? (
+    </>
+  )
+
+  const modalComboUi = modalCombo ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onClick={() => setModalCombo(false)}
@@ -1015,7 +1031,31 @@ export function InsightsPage() {
             </button>
           </div>
         </div>
-      ) : null}
+  ) : null
+
+  if (embebido) {
+    return (
+      <>
+        {cuerpo}
+        {modalComboUi}
+      </>
+    )
+  }
+
+  return (
+    <div
+      className="relative min-h-dvh"
+      style={{
+        fontFamily: theme.font,
+        background: `linear-gradient(180deg, ${theme.canvasFrom}, ${theme.canvasTo})`,
+      }}
+    >
+      <ParticleNetwork />
+      <div className="relative z-10 mx-auto max-w-6xl px-4 py-10 text-white">
+        <AppNav />
+        {cuerpo}
+      </div>
+      {modalComboUi}
     </div>
   )
 }

@@ -85,12 +85,21 @@ function money(n: number, fiscal: ConfigFiscal) {
   return formatoMoneda(n, fiscal)
 }
 
-export function ContabilidadPage() {
+export function ContabilidadPage({
+  embebido = false,
+  desdeExterno,
+  hastaExterno,
+}: {
+  embebido?: boolean
+  desdeExterno?: string
+  hastaExterno?: string
+} = {}) {
   const { perfil } = useAuth()
-  const [tab, setTab] = useState<TabId>('gastos')
-  const [preset, setPreset] = useState<PresetContabilidad>('mes')
-  const [desde, setDesde] = useState(() => rangoContabilidad('mes').desde)
-  const [hasta, setHasta] = useState(() => rangoContabilidad('mes').hasta)
+  const periodoExterno = Boolean(desdeExterno && hastaExterno)
+  const [tab, setTab] = useState<TabId>(embebido ? 'resultado' : 'gastos')
+  const [preset, setPreset] = useState<PresetContabilidad>(periodoExterno ? 'personalizado' : 'mes')
+  const [desde, setDesde] = useState(() => desdeExterno ?? rangoContabilidad('mes').desde)
+  const [hasta, setHasta] = useState(() => hastaExterno ?? rangoContabilidad('mes').hasta)
   const [filtroCat, setFiltroCat] = useState<CategoriaGasto | ''>('')
   const [gastos, setGastos] = useState<GastoFila[]>([])
   const [totales, setTotales] = useState<TotalesPeriodo>({
@@ -116,7 +125,20 @@ export function ContabilidadPage() {
   const [recurrente, setRecurrente] = useState(false)
   const [frecuencia, setFrecuencia] = useState<FrecuenciaGasto>('mensual')
 
-  const rango = useMemo(() => rangoContabilidad(preset, desde, hasta), [preset, desde, hasta])
+  useEffect(() => {
+    if (!desdeExterno || !hastaExterno) return
+    setPreset('personalizado')
+    setDesde(desdeExterno)
+    setHasta(hastaExterno)
+  }, [desdeExterno, hastaExterno])
+
+  const rango = useMemo(
+    () =>
+      periodoExterno && desdeExterno && hastaExterno
+        ? { desde: desdeExterno, hasta: hastaExterno }
+        : rangoContabilidad(preset, desde, hasta),
+    [periodoExterno, desdeExterno, hastaExterno, preset, desde, hasta],
+  )
 
   async function recargar() {
     if (!perfil) return
@@ -229,17 +251,9 @@ export function ContabilidadPage() {
 
   if (!perfil) return null
 
-  return (
-    <div
-      className="relative min-h-dvh"
-      style={{
-        fontFamily: theme.font,
-        background: `linear-gradient(180deg, ${theme.canvasFrom}, ${theme.canvasTo})`,
-      }}
-    >
-      <ParticleNetwork />
-      <div className="relative z-10 mx-auto max-w-6xl px-4 py-10 text-white">
-        <AppNav />
+  const cuerpo = (
+    <>
+        {!embebido ? (
         <PageTitle
           titulo="Contabilidad"
           subtitulo="Gastos, resultado, ratios y flujo de caja"
@@ -251,9 +265,16 @@ export function ContabilidadPage() {
             ) : null
           }
         />
+        ) : tab === 'gastos' ? (
+          <div className="mb-4 flex justify-end">
+            <button className={btnPrimary} type="button" onClick={() => setModal(true)}>
+              Nuevo gasto
+            </button>
+          </div>
+        ) : null}
 
         <div className="mb-6 flex flex-wrap gap-2">
-          {TABS.map((t) => (
+          {(embebido ? TABS.filter((t) => t.id !== 'gastos') : TABS).map((t) => (
             <button
               key={t.id}
               type="button"
@@ -290,6 +311,7 @@ export function ContabilidadPage() {
                   ))}
                 </select>
               </label>
+              {!periodoExterno ? (
               <label className="text-sm text-[#94A3B8]">
                 Período
                 <select
@@ -310,7 +332,8 @@ export function ContabilidadPage() {
                   ))}
                 </select>
               </label>
-              {preset === 'personalizado' ? (
+              ) : null}
+              {!periodoExterno && preset === 'personalizado' ? (
                 <>
                   <label className="text-sm text-[#94A3B8]">
                     Desde
@@ -391,6 +414,7 @@ export function ContabilidadPage() {
 
         {tab === 'resultado' ? (
           <div className="space-y-6">
+            {!periodoExterno ? (
             <div className="flex flex-wrap gap-2">
               {PRESETS.map((p) => (
                 <button
@@ -410,7 +434,8 @@ export function ContabilidadPage() {
                 </button>
               ))}
             </div>
-            {preset === 'personalizado' ? (
+            ) : null}
+            {!periodoExterno && preset === 'personalizado' ? (
               <div className="flex flex-wrap gap-3">
                 <input
                   className="h-10 rounded-lg border border-[rgba(99,102,241,0.3)] bg-white/5 px-3 text-sm"
@@ -620,9 +645,10 @@ export function ContabilidadPage() {
             </section>
           </div>
         ) : null}
-      </div>
+    </>
+  )
 
-      {modal ? (
+  const modalUi = modal ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 md:items-center">
           <form
             className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg p-5 shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
@@ -715,7 +741,31 @@ export function ContabilidadPage() {
             </div>
           </form>
         </div>
-      ) : null}
+  ) : null
+
+  if (embebido) {
+    return (
+      <>
+        {cuerpo}
+        {modalUi}
+      </>
+    )
+  }
+
+  return (
+    <div
+      className="relative min-h-dvh"
+      style={{
+        fontFamily: theme.font,
+        background: `linear-gradient(180deg, ${theme.canvasFrom}, ${theme.canvasTo})`,
+      }}
+    >
+      <ParticleNetwork />
+      <div className="relative z-10 mx-auto max-w-6xl px-4 py-10 text-white">
+        <AppNav />
+        {cuerpo}
+      </div>
+      {modalUi}
     </div>
   )
 }

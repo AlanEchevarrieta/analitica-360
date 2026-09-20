@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Card, Text } from '@tremor/react'
 import {
   Area,
@@ -71,6 +71,8 @@ import { requireSupabase } from '../lib/supabase'
 import { listarUbicaciones, type UbicacionFila } from '../lib/ubicaciones'
 import { theme } from '../theme'
 import { obtenerConfiguracion } from '../lib/configuracion'
+import { ContabilidadPage } from './ContabilidadPage'
+import { InsightsPage } from './InsightsPage'
 import {
   cargarAnalyticsVariantes,
   formatoRangoMargen,
@@ -124,6 +126,15 @@ const PRESETS: { id: PresetPeriodo; label: string }[] = [
   { id: 'tres_meses', label: 'Últimos 3 meses' },
   { id: 'anio', label: 'Último año' },
   { id: 'personalizado', label: 'Rango personalizado' },
+]
+
+type TabAnalytics = 'ventas' | 'productos' | 'contabilidad' | 'insights'
+
+const TABS_ANALYTICS: { id: TabAnalytics; label: string }[] = [
+  { id: 'ventas', label: 'Ventas' },
+  { id: 'productos', label: 'Productos' },
+  { id: 'contabilidad', label: 'Contabilidad' },
+  { id: 'insights', label: 'Insights' },
 ]
 
 type Columna = 'producto' | 'unidades' | 'total' | 'costo' | 'margen' | 'margen_pct' | 'rotacion'
@@ -327,6 +338,10 @@ export function AnalyticsPage() {
   const { perfil, suscripcion } = useAuth()
   const { tema } = useTema()
   const esMobile = useEsMobile()
+  const [params, setParams] = useSearchParams()
+  const tabRaw = params.get('tab')
+  const tab: TabAnalytics =
+    tabRaw === 'productos' || tabRaw === 'contabilidad' || tabRaw === 'insights' ? tabRaw : 'ventas'
   const g = useMemo(() => coloresGrafico(tema), [tema])
   const [preset, setPreset] = useState<PresetPeriodo>('mes')
   const [desdeDraft, setDesdeDraft] = useState(() => leerPeriodoAnalytics()?.desde ?? rangoPreset('mes').desde)
@@ -736,23 +751,58 @@ export function AnalyticsPage() {
               </button>
             </div>
 
-            {errorDebug ? (
+            <div className="mt-6 flex flex-wrap gap-2">
+              {TABS_ANALYTICS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`rounded-md px-3 py-2 text-sm font-semibold ${
+                    tab === t.id ? 'bg-[#6366F1] text-white' : 'bg-white/10 text-[#A5B4FC]'
+                  }`}
+                  onClick={() => {
+                    const next = new URLSearchParams(params)
+                    if (t.id === 'ventas') next.delete('tab')
+                    else next.set('tab', t.id)
+                    setParams(next, { replace: true })
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {errorDebug && (tab === 'ventas' || tab === 'productos') ? (
               <pre className="mt-4 overflow-auto rounded-lg bg-red-950/80 px-3 py-3 text-left text-xs whitespace-pre-wrap text-red-100">
                 {errorDebug}
               </pre>
             ) : null}
 
-            {avisoLimite != null ? (
+            {tab === 'contabilidad' ? (
+              <div className="mt-8">
+                <ContabilidadPage embebido desdeExterno={desde} hastaExterno={hasta} />
+              </div>
+            ) : null}
+            {tab === 'insights' ? (
+              <div className="mt-8">
+                <InsightsPage embebido desdeExterno={desde} hastaExterno={hasta} />
+              </div>
+            ) : null}
+
+            {(tab === 'ventas' || tab === 'productos') && avisoLimite != null ? (
               <p className="mt-4 rounded-lg bg-amber-100 px-3 py-3 text-sm text-amber-950">
                 Este período tiene {avisoLimite.toLocaleString('es-AR')} ventas — aplicá un filtro más
                 acotado para ver los gráficos.
               </p>
             ) : null}
 
-            {avisoLimite != null ? null : cargando ? (
+            {(tab === 'ventas' || tab === 'productos') && avisoLimite == null && cargando ? (
               <p className="mt-8 text-sm text-[#94A3B8]">Cargando…</p>
-            ) : (
+            ) : null}
+
+            {(tab === 'ventas' || tab === 'productos') && avisoLimite == null && !cargando ? (
               <>
+                {tab === 'ventas' ? (
+                <>
                 <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
                   <Kpi label="Total ventas" valor={formatoARS(data.total)} pct={comparacionPeriodo.pctVentas} />
                   <Kpi
@@ -1041,7 +1091,11 @@ export function AnalyticsPage() {
                     </p>
                   </Card>
                 </div>
+                </>
+                ) : null}
 
+                {tab === 'productos' ? (
+                <>
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
                   <Text className="!text-[#94A3B8]">Rendimiento por producto</Text>
                   {!tieneCostos ? (
@@ -1182,7 +1236,11 @@ export function AnalyticsPage() {
                       </ul>
                   ) : null}
                 </Card>
+                </>
+                ) : null}
 
+                {tab === 'ventas' ? (
+                <>
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
                   <GraficoExpandible titulo="¿Qué días vendés más?" compactoClass="min-h-[220px] overflow-hidden md:min-h-[320px]">
                     <ChartResponsive>
@@ -1230,7 +1288,11 @@ export function AnalyticsPage() {
                     </ChartResponsive>
                   </GraficoExpandible>
                 </Card>
+                </>
+                ) : null}
 
+                {tab === 'productos' ? (
+                <>
                 {usaVariantes && dataVar ? (
                   <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
                     <Text className="!text-[#94A3B8]">Análisis de variantes</Text>
@@ -1281,7 +1343,11 @@ export function AnalyticsPage() {
                     ) : null}
                   </Card>
                 ) : null}
+                </>
+                ) : null}
 
+                {tab === 'ventas' ? (
+                <>
                 {data.clientes.hay ? (
                   <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
                     <KpiShell
@@ -1307,8 +1373,10 @@ export function AnalyticsPage() {
                     />
                   </div>
                 ) : null}
+                </>
+                ) : null}
               </>
-            )}
+            ) : null}
           </>
         )}
       </div>
