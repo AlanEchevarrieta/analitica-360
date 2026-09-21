@@ -386,6 +386,8 @@ export async function listarKardexProducto(
   return { filas, total, error: null }
 }
 
+export type LineaTraslado = { productoId: string; nombre: string; unidades: number }
+
 export async function registrarTraslado(
   client: SupabaseClient,
   input: {
@@ -414,4 +416,37 @@ export async function registrarTraslado(
     return 'Falta correr supabase/032_inventario_movimientos.sql en el SQL Editor (rol postgres).'
   }
   return 'No se pudo registrar el traslado'
+}
+
+export async function registrarTrasladoMasivo(
+  client: SupabaseClient,
+  input: {
+    lineas: LineaTraslado[]
+    origen: string
+    destino: string
+    fecha: string
+    notas: string
+  },
+): Promise<{ error: string | null; hechos: LineaTraslado[] }> {
+  const hechos: LineaTraslado[] = []
+  for (const linea of input.lineas) {
+    if (linea.unidades <= 0) continue
+    const fallo = await registrarTraslado(client, {
+      productoId: linea.productoId,
+      cantidad: linea.unidades,
+      origen: input.origen,
+      destino: input.destino,
+      fecha: input.fecha,
+      notas: input.notas,
+    })
+    if (fallo) {
+      const extra =
+        hechos.length > 0
+          ? ` Se completaron ${hechos.length} producto${hechos.length === 1 ? '' : 's'} antes del error.`
+          : ''
+      return { error: `${fallo} (${linea.nombre}).${extra}`, hechos }
+    }
+    hechos.push(linea)
+  }
+  return { error: null, hechos }
 }

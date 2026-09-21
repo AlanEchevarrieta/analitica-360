@@ -19,7 +19,7 @@ import {
   theadClass,
   theadStyle,
 } from '../components/listado'
-import { MSG_ERROR_RED, mensajeCargaTabla } from '../lib/consulta'
+import { MSG_ERROR_RED, mensajeCargaTabla, mostrarToast } from '../lib/consulta'
 import {
   estadoStock,
   etiquetaEstadoStock,
@@ -28,6 +28,8 @@ import {
   listarUbicaciones,
   leerUmbralStock,
   registrarTraslado,
+  registrarTrasladoMasivo,
+  type LineaTraslado,
   type ResumenInventario,
   type EstadoStock,
   type UbicacionFila,
@@ -545,6 +547,8 @@ export function InventarioPage() {
   )
 }
 
+const TRASLADO_TODOS = '__todos__'
+
 function TrasladoModal({
   productos,
   ubicaciones,
@@ -556,6 +560,7 @@ function TrasladoModal({
   onCerrar: () => void
   onOk: () => void
 }) {
+  const idsProductos = useMemo(() => productos.map((p) => p.id), [productos])
   const [productoId, setProductoId] = useState(productos[0]?.id ?? '')
   const [cantidad, setCantidad] = useState('1')
   const [origen, setOrigen] = useState(
@@ -572,20 +577,103 @@ function TrasladoModal({
   const [notas, setNotas] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const [stockUbicModal, setStockUbicModal] = useState<Map<string, Map<string, number>>>(new Map())
+  const [cargandoStock, setCargandoStock] = useState(true)
+  const [exitoMasivo, setExitoMasivo] = useState<{
+    origen: string
+    destino: string
+    hechos: LineaTraslado[]
+  } | null>(null)
+
+  const masivo = productoId === TRASLADO_TODOS
+  const stockOrigen = productoId && !masivo ? stockDe(stockUbicModal, productoId, origen) : 0
+
+  const preview = useMemo(() => {
+    return productos
+      .map((p) => ({
+        productoId: p.id,
+        nombre: p.nombre,
+        unidades: stockDe(stockUbicModal, p.id, origen),
+      }))
+      .filter((p) => p.unidades > 0)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+  }, [productos, stockUbicModal, origen])
+
+  useEffect(() => {
+    let vivo = true
+    setCargandoStock(true)
+    void stockPorUbicaciones(requireSupabase(), idsProductos).then((mapa) => {
+      if (!vivo) return
+      setStockUbicModal(mapa)
+      setCargandoStock(false)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [idsProductos])
 
   async function confirmar() {
     setError(null)
-    const n = Number.parseInt(cantidad, 10)
+    if (!origen || !destino || origen === destino) {
+      setError('Elegí origen y destino distintos')
+      return
+    }
+    const client = requireSupabase()
+    const mapa = await stockPorUbicaciones(client, idsProductos)
+    setStockUbicModal(mapa)
+
+    if (masivo) {
+      const lineas = productos
+        .map((p) => ({
+          productoId: p.id,
+          nombre: p.nombre,
+          unidades: stockDe(mapa, p.id, origen),
+        }))
+        .filter((p) => p.unidades > 0)
+      if (lineas.length === 0) {
+        setError(`No hay stock para trasladar en ${origen}`)
+        return
+      }
+      setEnviando(true)
+      const res = await registrarTrasladoMasivo(client, {
+        lineas,
+        origen,
+        destino,
+        fecha,
+        notas: notas.trim(),
+      })
+      setEnviando(false)
+      if (res.hechos.length === 0 && res.error) {
+        setError(res.error)
+        return
+      }
+      const titulo = `✅ Se trasladaron ${res.hechos.length} producto${res.hechos.length === 1 ? '' : 's'} de ${origen} a ${destino}`
+      mostrarToast(titulo, 'ok')
+      if (res.error) setError(res.error)
+      setExitoMasivo({ origen, destino, hechos: res.hechos })
+      return
+    }
+
     if (!productoId) {
       setError('Elegí un producto')
       return
     }
+    const n = Number.parseInt(cantidad, 10)
     if (!Number.isFinite(n) || n <= 0) {
       setError('La cantidad tiene que ser un número positivo')
       return
     }
+    const disponible = stockDe(mapa, productoId, origen)
+    if (disponible <= 0) {
+      setError(`No hay stock de este producto en ${origen}`)
+      return
+    }
+    if (n > disponible) {
+      setError(`Máximo ${disponible}u en ${origen}`)
+      return
+    }
     setEnviando(true)
-    const fallo = await registrarTraslado(requireSupabase(), {
+    const fallo = await registrarTraslado(client, {
       productoId,
       cantidad: n,
       origen,
@@ -601,9 +689,49 @@ function TrasladoModal({
     onOk()
   }
 
+  if (exitoMasivo) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="max-h-[90vh] w-full max-w-[440px] overflow-y-auto rounded-lg bg-white/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+          <h2 className="text-xl font-bold text-[#1A2F4A]">Traslado registrado</h2>
+          <p className="mt-3 text-sm font-medium text-[#16A34A]">
+            ✅ Se trasladaron {exitoMasivo.hechos.length} producto
+            {exitoMasivo.hechos.length === 1 ? '' : 's'} de {exitoMasivo.origen} a {exitoMasivo.destino}
+          </p>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm text-[#1A2F4A]">
+              <thead className="text-xs text-[#4A5568]">
+                <tr>
+                  <th className="py-2 pr-3">Producto</th>
+                  <th className="py-2 text-right">Unidades</th>
+                </tr>
+              </thead>
+              <tbody>
+                {exitoMasivo.hechos.map((l) => (
+                  <tr key={l.productoId} className="border-t border-[#E2E8F0]">
+                    <td className="py-2 pr-3">{l.nombre}</td>
+                    <td className="py-2 text-right tabular-nums">{l.unidades}u</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {error ? <p className="mt-3 text-sm text-[#DC2626]">{error}</p> : null}
+          <button
+            type="button"
+            className="mt-6 h-11 w-full rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"
+            onClick={onOk}
+          >
+            Listo
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-[440px] rounded-lg bg-white/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+      <div className="max-h-[90vh] w-full max-w-[440px] overflow-y-auto rounded-lg bg-white/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
         <h2 className="text-xl font-bold text-[#1A2F4A]">Registrar traslado</h2>
         <label className="mt-4 block text-sm font-medium text-[#4A5568]">
           Producto
@@ -612,6 +740,7 @@ function TrasladoModal({
             value={productoId}
             onChange={(ev) => setProductoId(ev.target.value)}
           >
+            <option value={TRASLADO_TODOS}>📦 Todos los productos (traslado masivo)</option>
             {productos.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.nombre}
@@ -619,15 +748,53 @@ function TrasladoModal({
             ))}
           </select>
         </label>
-        <label className="mt-4 block text-sm font-medium text-[#4A5568]">
-          Cantidad
-          <input
-            className="mt-1.5 h-11 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A]"
-            inputMode="numeric"
-            value={cantidad}
-            onChange={(ev) => setCantidad(ev.target.value)}
-          />
-        </label>
+        {masivo ? (
+          <div className="mt-4 rounded-md border border-[#E2E8F0] bg-[#EEF2F6] p-3">
+            <p className="text-sm leading-relaxed text-[#1A2F4A]">
+              Se va a trasladar el stock máximo disponible de TODOS los productos de {origen || 'origen'} a{' '}
+              {destino || 'destino'}
+            </p>
+            {cargandoStock ? (
+              <p className="mt-3 text-sm text-[#4A5568]">Cargando stock…</p>
+            ) : preview.length === 0 ? (
+              <p className="mt-3 text-sm text-[#4A5568]">No hay productos con stock en {origen}.</p>
+            ) : (
+              <div className="mt-3 max-h-48 overflow-auto">
+                <table className="w-full text-left text-xs text-[#1A2F4A]">
+                  <thead className="text-[#4A5568]">
+                    <tr>
+                      <th className="py-1.5 pr-2">Producto</th>
+                      <th className="py-1.5 pr-2 text-right">Stock disponible</th>
+                      <th className="py-1.5 text-right">A mover</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.map((l) => (
+                      <tr key={l.productoId} className="border-t border-[#E2E8F0]">
+                        <td className="py-1.5 pr-2">{l.nombre}</td>
+                        <td className="py-1.5 pr-2 text-right tabular-nums">{l.unidades}u</td>
+                        <td className="py-1.5 text-right tabular-nums">{l.unidades}u</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
+          <label className="mt-4 block text-sm font-medium text-[#4A5568]">
+            Cantidad
+            <input
+              className="mt-1.5 h-11 w-full rounded-md border border-[#E2E8F0] bg-[#EEF2F6] px-3 text-sm text-[#1A2F4A]"
+              inputMode="numeric"
+              value={cantidad}
+              onChange={(ev) => setCantidad(ev.target.value)}
+            />
+            <span className="mt-1.5 block text-xs font-normal text-[#4A5568]">
+              {cargandoStock ? 'Cargando stock…' : `Máximo ${stockOrigen}u en ${origen || 'origen'}`}
+            </span>
+          </label>
+        )}
         <div className="mt-4 grid grid-cols-2 gap-3">
           <label className="text-sm font-medium text-[#4A5568]">
             De
@@ -687,7 +854,7 @@ function TrasladoModal({
           <button
             type="button"
             className="h-11 flex-1 rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
-            disabled={enviando}
+            disabled={enviando || cargandoStock}
             onClick={() => void confirmar()}
           >
             {enviando ? 'Guardando…' : 'Confirmar'}
