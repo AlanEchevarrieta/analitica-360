@@ -398,47 +398,46 @@ export async function guardarVariantesProducto(
       atributos: normalizarAtributos(v.atributos),
       precio_venta: v.precioVenta,
       costo: v.costo,
-      activo: v.activo,
+      activo: Boolean(v.activo),
       deleted_at: null,
     }
-    console.log('[variantes] guardar payload', payload)
-    if (v.id) {
-      const { error } = await client.from('producto_variantes').update(payload).eq('id', v.id)
+    const existente =
+      (v.id ? actuales.filas.find((f) => f.id === v.id) : null) ??
+      actuales.filas.find((f) => mismaCombinacion(f.atributos, payload.atributos))
+    if (existente) {
+      const { error } = await client.from('producto_variantes').update(payload).eq('id', existente.id)
       if (error) {
         console.log('[variantes] update error', error.message)
         return msgSqlFaltante(error.message)
       }
-      idsKeep.add(v.id)
-    } else {
-      const { data, error } = await client
-        .from('producto_variantes')
-        .insert(payload)
-        .select('id, empresa_id, producto_id')
-        .maybeSingle()
-      if (error) {
-        console.log('[variantes] insert error', error.message, payload)
-        return msgSqlFaltante(error.message)
-      }
-      let id = data?.id ? String(data.id) : ''
-      if (!id) {
-        const rec = await listarVariantesProducto(client, input.productoId)
-        const hit = rec.filas.find((f) => mismaCombinacion(f.atributos, payload.atributos))
-        id = hit?.id ?? ''
-      }
-      if (!id) {
-        return 'No se pudo guardar la variante. Revisá que empresa_id coincida con la empresa y que el SQL 035 esté corrido.'
-      }
-      console.log('[variantes] insert ok', { id, empresa_id: data?.empresa_id, producto_id: data?.producto_id })
-      idsKeep.add(id)
+      idsKeep.add(existente.id)
+      continue
     }
+    const { data, error } = await client
+      .from('producto_variantes')
+      .insert(payload)
+      .select('id, empresa_id, producto_id')
+      .maybeSingle()
+    if (error) {
+      console.log('[variantes] insert error', error.message, payload)
+      return msgSqlFaltante(error.message)
+    }
+    let id = data?.id ? String(data.id) : ''
+    if (!id) {
+      const rec = await listarVariantesProducto(client, input.productoId)
+      const hit = rec.filas.find((f) => mismaCombinacion(f.atributos, payload.atributos))
+      id = hit?.id ?? ''
+    }
+    if (!id) {
+      return 'No se pudo guardar la variante. Revisá que empresa_id coincida con la empresa y que el SQL 035 esté corrido.'
+    }
+    console.log('[variantes] insert ok', { id, empresa_id: data?.empresa_id, producto_id: data?.producto_id })
+    idsKeep.add(id)
   }
 
-  const aBorrar = actuales.filas.filter((a) => !idsKeep.has(a.id)).map((a) => a.id)
-  if (aBorrar.length > 0) {
-    const { error } = await client
-      .from('producto_variantes')
-      .update({ deleted_at: new Date().toISOString(), activo: false })
-      .in('id', aBorrar)
+  const aDesactivar = actuales.filas.filter((a) => !idsKeep.has(a.id)).map((a) => a.id)
+  if (aDesactivar.length > 0) {
+    const { error } = await client.from('producto_variantes').update({ activo: false }).in('id', aDesactivar)
     if (error) return msgSqlFaltante(error.message)
   }
   return null

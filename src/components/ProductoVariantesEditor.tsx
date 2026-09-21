@@ -33,6 +33,7 @@ export type VarianteDraft = {
 
 export type ProductoVariantesHandle = {
   persistir: (productoId: string) => Promise<string | null>
+  snapshot: () => VarianteDraft[]
 }
 
 function CeldaStockActual({
@@ -139,11 +140,12 @@ export const ProductoVariantesEditor = forwardRef<
       )
       setStockMap(stocks)
       setExistentes(res.filas)
+      const visibles = res.filas.filter((v) => v.activo)
       const keys = [...new Set(res.filas.flatMap((v) => Object.keys(v.atributos)))]
       setHidratar(true)
       setElegidos(keys)
       setDrafts(
-        res.filas.map((v) => {
+        visibles.map((v) => {
           const actual = stocks.get(v.id) ?? 0
           return {
             id: v.id,
@@ -198,23 +200,26 @@ export const ProductoVariantesEditor = forwardRef<
     }
     const combos = combinacionesDe(attrsActivos)
     setDrafts((prev) =>
-      combos.map((atributosCombo) => {
+      combos.flatMap((atributosCombo) => {
         const prevMatch = prev.find((d) => mismaCombinacion(d.atributos, atributosCombo))
-        if (prevMatch) return { ...prevMatch, atributos: atributosCombo }
+        if (prevMatch) return [{ ...prevMatch, atributos: atributosCombo }]
         const ex = existentes.find((e) => mismaCombinacion(e.atributos, atributosCombo))
+        if (ex && !ex.activo) return []
         const sku = skuAutomatico(nombreProducto, atributosCombo)
         const actual = ex?.id ? (stockMap.get(ex.id) ?? 0) : 0
-        return {
-          id: ex?.id,
-          sku: ex?.sku || sku,
-          atributos: atributosCombo,
-          precio: ex?.precioVenta != null ? String(ex.precioVenta) : '',
-          costo: ex?.costo != null ? String(ex.costo) : '',
-          activo: ex?.activo ?? true,
-          skuManual: Boolean(ex?.sku),
-          stockActual: actual,
-          stockInicial: actual > 0 ? '' : '0',
-        }
+        return [
+          {
+            id: ex?.id,
+            sku: ex?.sku || sku,
+            atributos: atributosCombo,
+            precio: ex?.precioVenta != null ? String(ex.precioVenta) : '',
+            costo: ex?.costo != null ? String(ex.costo) : '',
+            activo: ex?.activo ?? true,
+            skuManual: Boolean(ex?.sku),
+            stockActual: actual,
+            stockInicial: actual > 0 ? '' : '0',
+          },
+        ]
       }),
     )
   }, [attrsActivos, nombreProducto, existentes, cantidadPrevista, continuarMuchas, modoCarga, stockMap])
@@ -242,7 +247,7 @@ export const ProductoVariantesEditor = forwardRef<
   }, [drafts, stockMap, onCostoCalculado])
 
   async function persistirDrafts(pid: string): Promise<string | null> {
-    if (drafts.length === 0) return null
+    if (drafts.length === 0 && existentes.length === 0) return null
     const client = requireSupabase()
     const pendientes = drafts.filter((d) => {
       const actual = d.id ? (stockMap.get(d.id) ?? d.stockActual ?? 0) : 0
@@ -250,10 +255,19 @@ export const ProductoVariantesEditor = forwardRef<
       const n = Number.parseInt(d.stockInicial ?? '', 10)
       return Number.isFinite(n) && n > 0
     })
-    const fallo = await guardarVariantesProducto(client, {
-      productoId: pid,
-      empresaId,
-      variantes: drafts.map((d) => ({
+    const porId = new Set(drafts.map((d) => d.id).filter(Boolean) as string[])
+    const inactivas = existentes
+      .filter((e) => !porId.has(e.id) && !drafts.some((d) => mismaCombinacion(d.atributos, e.atributos)))
+      .map((e) => ({
+        id: e.id,
+        sku: e.sku,
+        atributos: e.atributos,
+        precioVenta: e.precioVenta,
+        costo: e.costo,
+        activo: false,
+      }))
+    const variantes = [
+      ...drafts.map((d) => ({
         id: d.id,
         sku: d.sku,
         atributos: d.atributos,
@@ -267,6 +281,13 @@ export const ProductoVariantesEditor = forwardRef<
         })(),
         activo: d.activo,
       })),
+      ...inactivas,
+    ]
+    console.log('[variantes a guardar]', variantes)
+    const fallo = await guardarVariantesProducto(client, {
+      productoId: pid,
+      empresaId,
+      variantes,
     })
     if (fallo) return fallo
     const rec = await listarVariantesProducto(client, pid)
@@ -289,20 +310,22 @@ export const ProductoVariantesEditor = forwardRef<
     setStockMap(stocksFinal)
     setExistentes(rec.filas)
     setDrafts(
-      rec.filas.map((v) => {
-        const actual = stocksFinal.get(v.id) ?? 0
-        return {
-          id: v.id,
-          sku: v.sku,
-          atributos: v.atributos,
-          precio: v.precioVenta == null ? '' : String(v.precioVenta),
-          costo: v.costo == null ? '' : String(v.costo),
-          activo: v.activo,
-          skuManual: Boolean(v.sku),
-          stockActual: actual,
-          stockInicial: actual > 0 ? '' : '0',
-        }
-      }),
+      rec.filas
+        .filter((v) => v.activo)
+        .map((v) => {
+          const actual = stocksFinal.get(v.id) ?? 0
+          return {
+            id: v.id,
+            sku: v.sku,
+            atributos: v.atributos,
+            precio: v.precioVenta == null ? '' : String(v.precioVenta),
+            costo: v.costo == null ? '' : String(v.costo),
+            activo: v.activo,
+            skuManual: Boolean(v.sku),
+            stockActual: actual,
+            stockInicial: actual > 0 ? '' : '0',
+          }
+        }),
     )
     return null
   }
@@ -311,8 +334,9 @@ export const ProductoVariantesEditor = forwardRef<
     ref,
     () => ({
       persistir: (pid: string) => persistirDrafts(pid),
+      snapshot: () => drafts,
     }),
-    [drafts, empresaId, precioBase, costoBase, stockMap],
+    [drafts, empresaId, precioBase, costoBase, stockMap, existentes],
   )
 
   function agregarManual() {

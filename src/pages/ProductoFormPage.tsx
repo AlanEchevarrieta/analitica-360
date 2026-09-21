@@ -205,6 +205,7 @@ export function ProductoFormPage() {
       }
       await asignarCategoriaProducto(client, creado.id, categoriaIdGuardar)
       const barraError = await guardarCodigoBarra(client, creado.id, codigoBarra)
+      console.log('[variantes a guardar]', variantesRef.current?.snapshot() ?? [])
       const varError = await variantesRef.current?.persistir(creado.id)
       const dimError = await persistirDimensiones(creado.id)
       setEnviando(false)
@@ -231,6 +232,7 @@ export function ProductoFormPage() {
     }
     await asignarCategoriaProducto(client, id!, categoriaIdGuardar)
     const barraError = await guardarCodigoBarra(client, id!, codigoBarra)
+    console.log('[variantes a guardar]', variantesRef.current?.snapshot() ?? [])
     const varError = await variantesRef.current?.persistir(id!)
     const dimError = await persistirDimensiones(id!)
     setEnviando(false)
