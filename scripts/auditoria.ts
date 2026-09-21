@@ -26,6 +26,11 @@ const EMPRESAS: Record<string, string> = {
   analitica: '345d45eb-a7c1-4099-9108-c6830db7a70a',
 }
 
+const UMBRAL_CANTIDAD_MOVIMIENTO: Record<string, number> = {
+  analitica: 50_000,
+}
+const UMBRAL_CANTIDAD_DEFAULT = 500
+
 const PAGE = 1000
 
 async function paginar<T>(cargar: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>) {
@@ -88,25 +93,26 @@ async function auditarEmpresa(nombre: string, empresaId: string) {
     }
   }
 
+  const umbralCantidad = UMBRAL_CANTIDAD_MOVIMIENTO[nombre] ?? UMBRAL_CANTIDAD_DEFAULT
   const { data: movGrandes, error: errMov } = await supabase
     .from('movimientos_inventario')
     .select('tipo, cantidad, fecha, producto_id')
     .eq('empresa_id', empresaId)
     .is('deleted_at', null)
-    .gt('cantidad', 500)
+    .gt('cantidad', umbralCantidad)
     .order('cantidad', { ascending: false })
     .limit(10)
 
   if (errMov) throw new Error(errMov.message)
 
   if (movGrandes && movGrandes.length > 0) {
-    console.log(rojo(`\n  ❌ Movimientos con cantidades sospechosas (>500):`))
+    console.log(rojo(`\n  ❌ Movimientos con cantidades sospechosas (>${umbralCantidad}):`))
     for (const m of movGrandes) {
       console.log(rojo(`     ${m.tipo}: ${m.cantidad} unidades — ${m.fecha}`))
       errores++
     }
   } else {
-    console.log(verde(`  ✅ Sin movimientos con cantidades imposibles`))
+    console.log(verde(`  ✅ Sin movimientos con cantidades imposibles (>${umbralCantidad})`))
   }
 
   const { count: ventasSinUbicacion, error: errUbic } = await supabase
@@ -119,11 +125,31 @@ async function auditarEmpresa(nombre: string, empresaId: string) {
 
   if (errUbic) throw new Error(errUbic.message)
 
-  if (ventasSinUbicacion && ventasSinUbicacion > 0) {
-    console.log(amarillo(`\n  ⚠️  ${ventasSinUbicacion} ventas sin ubicación asignada`))
+  const { count: ventasMovTotal, error: errVentasMov } = await supabase
+    .from('movimientos_inventario')
+    .select('*', { count: 'exact', head: true })
+    .eq('empresa_id', empresaId)
+    .eq('tipo', 'venta')
+    .is('deleted_at', null)
+
+  if (errVentasMov) throw new Error(errVentasMov.message)
+
+  const sinUbic = ventasSinUbicacion ?? 0
+  const totalVentasMov = ventasMovTotal ?? 0
+  const pctSinUbic = totalVentasMov > 0 ? (sinUbic / totalVentasMov) * 100 : 0
+
+  if (sinUbic === 0) {
+    console.log(verde(`  ✅ Todas las ventas tienen ubicación`))
+  } else if (pctSinUbic > 90) {
+    console.log(
+      amarillo(
+        `\n  ⚠️  ${sinUbic} ventas sin ubicación (${pctSinUbic.toFixed(0)}%) — típico de empresa de prueba`,
+      ),
+    )
     advertencias++
   } else {
-    console.log(verde(`  ✅ Todas las ventas tienen ubicación`))
+    console.log(rojo(`\n  ❌ ${sinUbic} ventas sin ubicación asignada (${pctSinUbic.toFixed(0)}%)`))
+    errores++
   }
 
   const ventaIds = (
@@ -179,7 +205,9 @@ async function auditarEmpresa(nombre: string, empresaId: string) {
   if (duplicadas) {
     const grupos: Record<string, number> = {}
     for (const v of duplicadas) {
-      const key = `${String(v.fecha ?? '').split('T')[0]}_${v.total_con_interes}_${v.cliente_nombre}`
+      const cliente = v.cliente_nombre == null ? '' : String(v.cliente_nombre).trim()
+      if (!cliente) continue
+      const key = `${String(v.fecha ?? '').split('T')[0]}_${v.total_con_interes}_${cliente}`
       grupos[key] = (grupos[key] || 0) + 1
     }
     const dupls = Object.entries(grupos).filter(([, count]) => count > 1)
