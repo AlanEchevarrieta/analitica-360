@@ -15,6 +15,7 @@ export function CompraFichaPage() {
   const [ficha, setFicha] = useState<CompraFicha | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
+  const [ampliar, setAmpliar] = useState(false)
 
   const cargar = useCallback(async () => {
     if (!id) return
@@ -117,12 +118,44 @@ export function CompraFichaPage() {
             </div>
 
             {ficha.notas ? <p className="mt-4 text-sm text-[#94A3B8]">{ficha.notas}</p> : null}
+            {ficha.imagenFacturaUrl ? (
+              <div className="mt-5">
+                <p className="text-sm font-semibold text-[#F1F5F9]">Factura</p>
+                <button
+                  className="mt-2 block w-full overflow-hidden rounded-xl border border-[rgba(99,102,241,0.2)]"
+                  type="button"
+                  onClick={() => setAmpliar(true)}
+                >
+                  <img
+                    src={ficha.imagenFacturaUrl}
+                    alt="Factura de compra"
+                    className="max-h-64 w-full bg-black/30 object-contain"
+                  />
+                </button>
+                <button
+                  className="mt-2 inline-block text-sm font-semibold text-[#A5B4FC]"
+                  type="button"
+                  onClick={() => setAmpliar(true)}
+                >
+                  Ver ampliada
+                </button>
+              </div>
+            ) : null}
             <Link className="mt-6 inline-block text-sm font-semibold text-[#A5B4FC]" to="/compras">
               Volver al listado
             </Link>
           </div>
         ) : null}
       </div>
+      {ampliar && ficha?.imagenFacturaUrl ? (
+        <button
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          type="button"
+          onClick={() => setAmpliar(false)}
+        >
+          <img src={ficha.imagenFacturaUrl} alt="Factura ampliada" className="max-h-full max-w-full object-contain" />
+        </button>
+      ) : null}
     </div>
   )
 }

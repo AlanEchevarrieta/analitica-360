@@ -16,6 +16,7 @@ export type CompraFila = {
   descripcionOtros: string | null
   totalCostosAdicionales: number
   totalReal: number
+  imagenFacturaUrl: string | null
 }
 
 export type CompraFicha = CompraFila & {
@@ -46,7 +47,7 @@ export async function listarComprasPaginado(
   let q = client
     .from('compras')
     .select(
-      'id, fecha, proveedor, total, notas, deleted_at, orden_compra_id, costo_flete, costo_impuestos, costo_otros, descripcion_otros, total_costos_adicionales, total_real, compras_items(producto_nombre, cantidad, costo_unitario, subtotal)',
+      'id, fecha, proveedor, total, notas, deleted_at, orden_compra_id, costo_flete, costo_impuestos, costo_otros, descripcion_otros, total_costos_adicionales, total_real, imagen_factura_url, compras_items(producto_nombre, cantidad, costo_unitario, subtotal)',
       { count: 'exact' },
     )
     .order('fecha', { ascending: false })
@@ -58,7 +59,7 @@ export async function listarComprasPaginado(
   const tabla = await q.range(from, to)
   if (tabla.error) {
     const t = tabla.error.message.toLowerCase()
-    if (t.includes('costo_flete') || t.includes('total_real') || t.includes('total_costos')) {
+    if (t.includes('costo_flete') || t.includes('total_real') || t.includes('total_costos') || t.includes('imagen_factura')) {
       let qCost = client
         .from('compras')
         .select('id, fecha, proveedor, total, notas, deleted_at, orden_compra_id, compras_items(producto_nombre, cantidad)', {
@@ -140,11 +141,13 @@ function mapCompras(rows: Record<string, unknown>[]): CompraFila[] {
         row.descripcion_otros == null || row.descripcion_otros === '' ? null : String(row.descripcion_otros),
       totalCostosAdicionales: extras,
       totalReal: Number(row.total_real ?? 0) > 0 ? Number(row.total_real) : total + extras,
+      imagenFacturaUrl:
+        row.imagen_factura_url == null || row.imagen_factura_url === '' ? null : String(row.imagen_factura_url),
     }
   })
 }
 
-export async function confirmarCompra(
+export async function ejecutarConfirmarCompra(
   client: SupabaseClient,
   input: {
     items: {
@@ -167,7 +170,7 @@ export async function confirmarCompra(
       descripcion: string
     }
   },
-): Promise<string | null> {
+): Promise<{ error: string | null; id: string | null }> {
   const args: Record<string, unknown> = {
     p_items: input.items,
     p_proveedor: input.proveedor,
@@ -202,21 +205,71 @@ export async function confirmarCompra(
       if (costos.error) {
         const t = costos.error.message.toLowerCase()
         if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
-          return 'Falta crear costos de compra. Pegá TODO supabase/069_costos_compras.sql (rol postgres), dale Run y recargá.'
+          return {
+            error:
+              'Falta crear costos de compra. Pegá TODO supabase/069_costos_compras.sql (rol postgres), dale Run y recargá.',
+            id: String(data),
+          }
         }
-        return costos.error.message
+        return { error: costos.error.message, id: String(data) }
       }
     }
-    return null
+    return { error: null, id: data ? String(data) : null }
   }
   const msg = error.message
-  if (msg.includes('SIN_PRODUCTOS')) return 'Agregá al menos un producto'
-  if (msg.includes('NO_AUTORIZADO')) return 'No tenés permiso para registrar compras'
-  if (msg.includes('PRODUCTO_INVALIDO')) return 'Hay un producto que ya no está disponible'
-  if (msg.includes('PROVEEDOR_INVALIDO')) return 'Ese proveedor ya no está disponible'
-  if (msg.includes('VARIANTE_INVALIDA')) return 'La variante elegida no es válida'
-  if (msg.includes('UBICACION_INVALIDA')) return 'Esa ubicación no está disponible'
-  return 'No se pudo confirmar la compra. Corré supabase/016_compras.sql, supabase/022_proveedores.sql, supabase/036_variantes_compras_dimensiones.sql, supabase/046_lotes.sql y supabase/047_ubicaciones.sql en el SQL Editor.'
+  if (msg.includes('SIN_PRODUCTOS')) return { error: 'Agregá al menos un producto', id: null }
+  if (msg.includes('NO_AUTORIZADO')) return { error: 'No tenés permiso para registrar compras', id: null }
+  if (msg.includes('PRODUCTO_INVALIDO')) return { error: 'Hay un producto que ya no está disponible', id: null }
+  if (msg.includes('PROVEEDOR_INVALIDO')) return { error: 'Ese proveedor ya no está disponible', id: null }
+  if (msg.includes('VARIANTE_INVALIDA')) return { error: 'La variante elegida no es válida', id: null }
+  if (msg.includes('UBICACION_INVALIDA')) return { error: 'Esa ubicación no está disponible', id: null }
+  return {
+    error:
+      'No se pudo confirmar la compra. Corré supabase/016_compras.sql, supabase/022_proveedores.sql, supabase/036_variantes_compras_dimensiones.sql, supabase/046_lotes.sql y supabase/047_ubicaciones.sql en el SQL Editor.',
+    id: null,
+  }
+}
+
+export async function confirmarCompra(
+  client: SupabaseClient,
+  input: Parameters<typeof ejecutarConfirmarCompra>[1],
+): Promise<string | null> {
+  const r = await ejecutarConfirmarCompra(client, input)
+  return r.error
+}
+
+export async function subirImagenFactura(
+  client: SupabaseClient,
+  input: { empresaId: string; compraId: string; archivo: File },
+): Promise<string | null> {
+  const ext = input.archivo.type.includes('png') ? 'png' : input.archivo.type.includes('webp') ? 'webp' : 'jpg'
+  const path = `${input.empresaId}/${input.compraId}/${Date.now()}.${ext}`
+  const up = await client.storage.from('facturas').upload(path, input.archivo, {
+    contentType: input.archivo.type || 'image/jpeg',
+    upsert: true,
+  })
+  if (up.error) {
+    const t = up.error.message.toLowerCase()
+    if (t.includes('bucket') || t.includes('not found') || t.includes('does not exist')) {
+      return 'Falta crear el bucket de facturas. Pegá TODO supabase/071_ocr_facturas.sql (rol postgres), dale Run y recargá.'
+    }
+    return up.error.message
+  }
+  const pub = client.storage.from('facturas').getPublicUrl(path)
+  const url = pub.data.publicUrl
+  const rpc = await client.rpc('guardar_imagen_factura', { p_id: input.compraId, p_url: url })
+  if (rpc.error) {
+    const t = rpc.error.message.toLowerCase()
+    if (t.includes('schema cache') || t.includes('could not find') || t.includes('does not exist')) {
+      const upd = await client.from('compras').update({ imagen_factura_url: url }).eq('id', input.compraId)
+      if (upd.error) {
+        return 'Falta guardar la URL de la factura. Pegá TODO supabase/071_ocr_facturas.sql (rol postgres), dale Run y recargá.'
+      }
+      return null
+    }
+    return rpc.error.message
+  }
+  return null
 }
 
 export async function anularCompra(
@@ -268,7 +321,7 @@ export async function obtenerCompra(
   let res = await client
     .from('compras')
     .select(
-      'id, fecha, proveedor, total, notas, deleted_at, orden_compra_id, costo_flete, costo_impuestos, costo_otros, descripcion_otros, total_costos_adicionales, total_real, compras_items(producto_nombre, cantidad, costo_unitario, subtotal)',
+      'id, fecha, proveedor, total, notas, deleted_at, orden_compra_id, costo_flete, costo_impuestos, costo_otros, descripcion_otros, total_costos_adicionales, total_real, imagen_factura_url, compras_items(producto_nombre, cantidad, costo_unitario, subtotal)',
     )
     .eq('id', id)
     .maybeSingle()

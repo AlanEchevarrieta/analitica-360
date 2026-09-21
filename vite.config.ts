@@ -21,6 +21,7 @@ function cssNoBloqueante(): Plugin {
 }
 
 export default defineConfig({
+  envPrefix: ['VITE_', 'GEMINI_'],
   plugins: [
     react(),
     tailwindcss(),

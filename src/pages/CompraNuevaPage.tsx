@@ -6,9 +6,10 @@ import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { VarianteChipsPicker } from '../components/VarianteChipsPicker'
 import {
-  confirmarCompra,
+  ejecutarConfirmarCompra,
   crearProductoParaCompra,
   hoyCompraISO,
+  subirImagenFactura,
 } from '../lib/compras'
 import { obtenerConfiguracion } from '../lib/configuracion'
 import { esSoloLectura } from '../lib/permisos'
@@ -32,6 +33,7 @@ import {
 } from '../lib/variantes'
 import { crearLote, prefijoLoteMes, sugerenciaNumeroLote } from '../lib/lotes'
 import { listarUbicaciones, type UbicacionFila } from '../lib/ubicaciones'
+import { OcrFacturaPanel, type ResultadoOcrCompra } from '../components/OcrFacturaPanel'
 
 type Linea = {
   uid: string
@@ -95,6 +97,7 @@ export function CompraNuevaPage() {
   const [impuestos, setImpuestos] = useState('')
   const [otros, setOtros] = useState('')
   const [descripcionOtros, setDescripcionOtros] = useState('')
+  const [facturaArchivo, setFacturaArchivo] = useState<File | null>(null)
 
   async function recargarCatalogo() {
     const { filas } = await listarProductos(requireSupabase())
@@ -420,6 +423,33 @@ export function CompraNuevaPage() {
     setPaso(2)
   }
 
+  function aplicarOcr(datos: ResultadoOcrCompra, continuarFlujo: boolean) {
+    setFacturaArchivo(datos.archivo)
+    setProveedor(datos.proveedor)
+    setProveedorId(datos.proveedorId)
+    if (datos.fecha) setFecha(datos.fecha)
+    const extra = [
+      datos.numeroFactura ? `Factura ${datos.tipo} ${datos.numeroFactura}` : '',
+      datos.cuit ? `CUIT ${datos.cuit}` : '',
+    ]
+      .filter(Boolean)
+      .join(' · ')
+    if (extra) setNotas((prev) => (prev.includes(extra) ? prev : [extra, prev].filter(Boolean).join('\n')))
+    if (datos.iva > 0) setImpuestos(String(datos.iva))
+    setLineas(
+      datos.items.map((it) => ({
+        uid: it.uid,
+        productoId: it.productoId,
+        varianteId: null,
+        nombre: it.productoNombre || it.descripcion,
+        cantidad: it.cantidad,
+        costoUnitario: it.precio_unitario,
+      })),
+    )
+    setError(null)
+    if (continuarFlujo) setPaso(2)
+  }
+
   async function confirmar() {
     if (!perfil) return
     setError(null)
@@ -462,7 +492,7 @@ export function CompraNuevaPage() {
         lote_id: loteId,
       })
     }
-    const fallo = await confirmarCompra(requireSupabase(), {
+    const r = await ejecutarConfirmarCompra(requireSupabase(), {
       items,
       proveedor,
       proveedorId,
@@ -476,9 +506,16 @@ export function CompraNuevaPage() {
         descripcion: descripcionOtros,
       },
     })
+    if (r.id && facturaArchivo) {
+      await subirImagenFactura(requireSupabase(), {
+        empresaId: perfil.empresa.id,
+        compraId: r.id,
+        archivo: facturaArchivo,
+      })
+    }
     setEnviando(false)
-    if (fallo) {
-      setError(fallo)
+    if (r.error) {
+      setError(r.error)
       return
     }
     setExito(true)
@@ -511,6 +548,7 @@ export function CompraNuevaPage() {
             <>
               {paso === 1 ? (
                 <div className="mt-5">
+                  <OcrFacturaPanel catalogo={catalogo} proveedores={proveedores} onAplicar={aplicarOcr} />
                   <div ref={comboProdRef}>
                     <label className="text-sm font-medium text-[#4A5568]">
                       Buscar producto
