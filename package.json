@@ -16,11 +16,14 @@
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:report": "playwright show-report",
-    "test:auth": "playwright test tests/01-auth.spec.ts"
+    "test:auth": "playwright test tests/01-auth.spec.ts",
+    "auditoria": "tsx scripts/auditoria.ts",
+    "auditoria:acacia": "tsx scripts/auditoria.ts --empresa=acacia",
+    "auditoria:analitica": "tsx scripts/auditoria.ts --empresa=analitica"
   },
   "dependencies": {
     "@sentry/react": "^10.74.0",
-    "@supabase/supabase-js": "^2.115.0",
+    "@supabase/supabase-js": "^2.116.0",
     "@tremor/react": "^3.18.7",
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.23.0",
@@ -48,10 +51,12 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
+    "dotenv": "^18.0.1",
     "oxlint": "^1.79.0",
     "rollup-plugin-visualizer": "^7.1.1",
     "tailwindcss": "^4.3.3",
     "terser": "^5.51.2",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   }
