@@ -403,6 +403,7 @@ export function AnalyticsPage() {
           cargarComprasPeriodo(client, desde, hasta, empresaId, filtroUbic),
         ])
         setData(res.data)
+        console.log('[analytics productos]', res.data?.productos)
         setComprasPeriodo(comprasRes.filas)
         if (res.error) setErrorDebug((prev) => (prev ? `${prev} · ${res.error}` : res.error))
         if (comprasRes.error) setErrorDebug((prev) => (prev ? `${prev} · ${comprasRes.error}` : comprasRes.error))
@@ -445,6 +446,10 @@ export function AnalyticsPage() {
       }
     })()
   }, [perfil, suscripcion, desde, hasta, ubicacion])
+
+  useEffect(() => {
+    console.log('[analytics productos]', data?.productos)
+  }, [data?.productos])
 
   const diasPeriodo = diasIncluidosPeriodo(desde, hasta)
   const dataPeriodoAnterior = useMemo(
@@ -554,7 +559,14 @@ export function AnalyticsPage() {
   }, [esMobile, granularidadEvo, data.evolucion, data.evolucionDiaria])
   const top10Data = useMemo(() => {
     const porNombre = new Map(data.productos.map((p) => [p.producto, p]))
-    return data.top10.map((p) => {
+    const base =
+      data.top10.length > 0
+        ? data.top10
+        : [...data.productos]
+            .sort((a, b) => b.unidades - a.unidades)
+            .slice(0, 10)
+            .map((p) => ({ nombre: p.producto, unidades: p.unidades }))
+    return base.map((p) => {
       const extra = porNombre.get(p.nombre)
       const tieneCosto = extra != null && extra.costo > 0
       return {
@@ -1021,7 +1033,7 @@ export function AnalyticsPage() {
                   </Card>
                   <Card className={cardClass} style={cardStyle}>
                     <GraficoExpandible titulo="Top 10 productos más vendidos" compactoClass="min-h-[220px] overflow-hidden md:min-h-[320px]">
-                    {data.top10.length === 0 ? (
+                    {top10Data.length === 0 ? (
                       <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">Sin ventas en el período</p>
                     ) : (
                         <ChartResponsive>
@@ -1105,11 +1117,90 @@ export function AnalyticsPage() {
                 {tab === 'productos' ? (
                 <>
                 <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
+                  <GraficoExpandible titulo="Top 10 productos más vendidos" compactoClass="min-h-[220px] overflow-hidden md:min-h-[320px]">
+                    {top10Data.length === 0 ? (
+                      <p className="flex h-full items-center justify-center text-sm text-[#94A3B8]">Sin ventas en el período</p>
+                    ) : (
+                      <ChartResponsive>
+                        <ComposedChart
+                          layout="vertical"
+                          data={top10Data}
+                          margin={MARGIN_CHART}
+                          barCategoryGap="30%"
+                          onMouseMove={top10Hover.onMouseMove as never}
+                          onMouseLeave={top10Hover.onMouseLeave}
+                        >
+                          <CartesianGrid stroke={g.grilla} horizontal={false} />
+                          <XAxis
+                            xAxisId="unidades"
+                            type="number"
+                            {...propsEjeY(g.eje, esMobile)}
+                            allowDecimals={false}
+                          />
+                          <XAxis
+                            xAxisId="margen"
+                            type="number"
+                            orientation="top"
+                            domain={[0, 100]}
+                            tick={{ fill: g.eje, fontSize: tamanoTick(esMobile) }}
+                            axisLine={false}
+                            tickLine={false}
+                            tickFormatter={(v: number) => `${v}%`}
+                          />
+                          <YAxis
+                            type="category"
+                            dataKey="etiqueta"
+                            width={esMobile ? 72 : 120}
+                            tick={{ fill: g.eje, fontSize: tamanoTick(esMobile) }}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <RechartsTooltip
+                            trigger={esMobile ? 'click' : 'hover'}
+                            cursor={<Rectangle fill={CHART_CURSOR_FILL} />}
+                            content={asRechartsTooltip(TooltipTopProductos)}
+                          />
+                          <Legend wrapperStyle={{ color: g.eje, fontSize: tamanoTick(esMobile) }} />
+                          <Bar
+                            xAxisId="unidades"
+                            dataKey="unidades"
+                            name="Unidades"
+                            radius={[0, 4, 4, 0]}
+                            background={{ fill: CHART_BAR_BG }}
+                            activeBar={<Rectangle fill={CHART_ACTIVE_BAR} />}
+                          >
+                            {top10Data.map((fila, i) => (
+                              <Cell
+                                key={`${fila.nombre}-${i}`}
+                                fill={fila.color}
+                                fillOpacity={top10Hover.activo == null || top10Hover.activo === i ? 1 : 0.5}
+                              />
+                            ))}
+                            <LabelList dataKey="unidades" position="right" fill="#94A3B8" fontSize={11} />
+                          </Bar>
+                          <Line
+                            xAxisId="margen"
+                            type="monotone"
+                            dataKey="margen_pct"
+                            name="Margen %"
+                            stroke="#94A3B8"
+                            strokeWidth={2}
+                            dot={<PuntoMargen />}
+                          />
+                        </ComposedChart>
+                      </ChartResponsive>
+                    )}
+                  </GraficoExpandible>
+                </Card>
+                <Card className={`mt-8 ${cardClass}`} style={cardStyle}>
                   <Text className="!text-[#94A3B8]">Rendimiento por producto</Text>
                   {!tieneCostos ? (
-                    <p className="mt-5 text-sm text-[#94A3B8]">
+                    <p className="mt-3 text-sm text-[#94A3B8]">
                       Cargá el costo de tus productos para ver el margen
                     </p>
+                  ) : null}
+                  {tabla.length === 0 ? (
+                    <p className="mt-5 text-sm text-[#94A3B8]">Sin ventas en el período</p>
                   ) : (
                     <div className="mt-5 overflow-x-auto">
                       <table className="w-full min-w-[860px] text-left text-sm">

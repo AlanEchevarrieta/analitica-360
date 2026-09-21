@@ -719,7 +719,13 @@ export async function cargarAnalyticsPeriodo(
   if (costo === 0 && num(row.cantidad) > 0) {
     costo = await costoItemsPeriodo(client, desde, hasta, empresaId)
   }
-  const productos = Array.isArray(row.productos) ? row.productos : []
+  let productos = parseProductos(row.productos ?? row.Productos)
+  if (productos.length === 0) productos = parseProductos(topRes.data)
+  if (productos.length === 0 && num(row.cantidad) > 0) {
+    productos = await productosDesdeItems(client, desde, hasta, empresaId)
+  }
+  let top10 = topRes.error || topRes.data == null ? parseTop10(row.top_10) : parseTop10(topRes.data)
+  if (top10.length === 0) top10 = top10DesdeProductos(productos)
   const evolucionDiaria =
     Array.isArray(row.evolucion) && row.evolucion.length > 0
       ? parseEvolucion(row.evolucion, 'dia')
@@ -742,18 +748,8 @@ export async function cargarAnalyticsPeriodo(
         pagosRes.error || pagosRes.data == null
           ? (Array.isArray(row.formas_pago) ? parseFormasPago(row.formas_pago) : formasDesdeVentas(row.ventas))
           : parseFormasPago(pagosRes.data),
-      top10: topRes.error || topRes.data == null ? parseTop10(row.top_10) : parseTop10(topRes.data),
-      productos: productos.map((item) => {
-        const p = item as Record<string, unknown>
-        return {
-          producto: String(p.producto ?? ''),
-          unidades: num(p.unidades),
-          total: num(p.total),
-          costo: num(p.costo),
-          margen: num(p.margen),
-          margen_pct: num(p.margen_pct),
-        }
-      }),
+      top10,
+      productos,
       clientes: parseClientes(row.clientes),
       dias_semana: parseDiasSemanaRaw(row.dias_semana),
     },
@@ -785,9 +781,98 @@ function parseFormasPago(raw: unknown): AnalyticsPago[] {
 
 function parseTop10(raw: unknown): AnalyticsTop[] {
   const top10 = Array.isArray(raw) ? raw : []
-  return top10.map((item) => {
-    const p = item as Record<string, unknown>
-    return { nombre: String(p.nombre ?? ''), unidades: num(p.unidades) }
+  return top10
+    .map((item) => {
+      const p = item as Record<string, unknown>
+      return { nombre: String(p.nombre ?? p.producto ?? ''), unidades: num(p.unidades) }
+    })
+    .filter((p) => p.nombre)
+}
+
+function parseProductos(raw: unknown): AnalyticsProducto[] {
+  const productos = Array.isArray(raw) ? raw : []
+  return productos
+    .map((item) => {
+      const p = item as Record<string, unknown>
+      const total = num(p.total)
+      const costo = num(p.costo)
+      const margen = p.margen != null && p.margen !== '' ? num(p.margen) : total - costo
+      const margen_pct =
+        p.margen_pct != null && p.margen_pct !== ''
+          ? num(p.margen_pct)
+          : total > 0
+            ? (margen / total) * 100
+            : 0
+      return {
+        producto: String(p.producto ?? p.nombre ?? '').trim(),
+        unidades: num(p.unidades),
+        total,
+        costo,
+        margen,
+        margen_pct,
+      }
+    })
+    .filter((p) => p.producto)
+}
+
+function top10DesdeProductos(productos: AnalyticsProducto[]): AnalyticsTop[] {
+  return [...productos]
+    .sort((a, b) => b.unidades - a.unidades)
+    .slice(0, 10)
+    .map((p) => ({ nombre: p.producto, unidades: p.unidades }))
+}
+
+async function productosDesdeItems(
+  client: SupabaseClient,
+  desde: string,
+  hasta: string,
+  empresaId?: string | null,
+): Promise<AnalyticsProducto[]> {
+  let q = client
+    .from('ventas')
+    .select('id')
+    .is('deleted_at', null)
+    .gte('fecha', `${desde}T00:00:00.000-03:00`)
+    .lte('fecha', `${hasta}T23:59:59.999-03:00`)
+  if (empresaId) q = q.eq('empresa_id', empresaId)
+  const { data: ventas, error } = await q
+  if (error || !ventas?.length) return []
+  const ids = ventas.map((v) => String(v.id))
+  const porProd = new Map<string, { unidades: number; total: number; costo: number }>()
+  const PAGE = 100
+  for (let i = 0; i < ids.length; i += PAGE) {
+    const { data } = await client
+      .from('ventas_items')
+      .select('cantidad, precio_unitario, costo_unitario, producto_id, productos(nombre, costo)')
+      .in('venta_id', ids.slice(i, i + PAGE))
+    for (const row of (data ?? []) as Record<string, unknown>[]) {
+      const prod = row.productos as Record<string, unknown> | null
+      const nombre =
+        prod && typeof prod === 'object' && prod.nombre != null
+          ? String(prod.nombre)
+          : String(row.producto_id ?? 'Producto')
+      const cantidad = num(row.cantidad)
+      const precio = num(row.precio_unitario)
+      const prodCosto = prod && typeof prod === 'object' ? num(prod.costo) : 0
+      const unitCosto =
+        row.costo_unitario != null && row.costo_unitario !== '' ? num(row.costo_unitario) : prodCosto
+      const prev = porProd.get(nombre) ?? { unidades: 0, total: 0, costo: 0 }
+      prev.unidades += cantidad
+      prev.total += cantidad * precio
+      prev.costo += cantidad * unitCosto
+      porProd.set(nombre, prev)
+    }
+  }
+  return [...porProd.entries()].map(([producto, p]) => {
+    const margen = p.total - p.costo
+    return {
+      producto,
+      unidades: p.unidades,
+      total: p.total,
+      costo: p.costo,
+      margen,
+      margen_pct: p.total > 0 ? (margen / p.total) * 100 : 0,
+    }
   })
 }
 
