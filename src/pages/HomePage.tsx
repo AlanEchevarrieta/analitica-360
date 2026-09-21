@@ -546,6 +546,13 @@ export function HomePage() {
           </p>
         </header>
 
+        {perfil.usuario.rol === 'contador' ? (
+          <p className="mb-4 rounded-lg border border-indigo-400/30 bg-indigo-500/15 px-3 py-3 text-sm text-indigo-100">
+            Estás accediendo como contador de {perfil.empresa.nombre}. Solo podés ver los datos — no podés modificar
+            nada.
+          </p>
+        ) : null}
+
         {trialActivo && dias > 4 ? (
           <p className="mb-4 rounded-lg bg-indigo-500/15 px-3 py-2 text-sm font-semibold text-indigo-200">
             ⭐ Trial Premium — {dias} {dias === 1 ? 'día restante' : 'días restantes'}

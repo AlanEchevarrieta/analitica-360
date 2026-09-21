@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth'
-import { tienePermiso } from '../lib/permisos'
+import { tienePermiso, esSoloLectura } from '../lib/permisos'
 import { AnularCompraModal } from '../components/AnularCompraModal'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
@@ -148,9 +148,11 @@ export function ComprasPage() {
                   Importar Excel
                 </button>
               ) : null}
-              <Link className={btnPrimary} to="/compras/nueva">
-                Nueva compra
-              </Link>
+              {!esSoloLectura(perfil) ? (
+                <Link className={btnPrimary} to="/compras/nueva">
+                  Nueva compra
+                </Link>
+              ) : null}
             </div>
           </div>
           <FilterCollapse activo={mostrarAnuladas}>
@@ -175,13 +177,14 @@ export function ComprasPage() {
 
         <TableCard>
           <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[720px] text-left">
+          <table className="w-full min-w-[860px] text-left">
             <thead className={theadClass} style={theadStyle}>
               <tr>
                 <Th>Fecha</Th>
                 <Th>Proveedor</Th>
                 <Th>Productos</Th>
                 <Th>Total</Th>
+                <Th>Costo real</Th>
                 <Th>Notas</Th>
                 {tienePermiso(perfil, 'anular_ventas') ? <Th /> : null}
               </tr>
@@ -192,10 +195,17 @@ export function ComprasPage() {
                 <Tr key={fila.id} index={index}>
                   <td className="px-3 py-3 whitespace-nowrap text-[#E2E8F0]">
                     <span className="inline-flex flex-wrap items-center gap-2">
-                      {formatoFechaCompra(fila.fecha)}
+                      <Link className="font-semibold text-[#A5B4FC] hover:underline" to={`/compras/${fila.id}`}>
+                        {formatoFechaCompra(fila.fecha)}
+                      </Link>
                       {fila.anulada ? (
                         <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[11px] font-semibold text-[#F87171]">
                           Anulada
+                        </span>
+                      ) : null}
+                      {fila.totalCostosAdicionales > 0 ? (
+                        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-semibold text-amber-200">
+                          📦 Incluye costos adicionales
                         </span>
                       ) : null}
                     </span>
@@ -209,6 +219,9 @@ export function ComprasPage() {
                   </td>
                   <td className="px-3 py-3">{fila.productos || '—'}</td>
                   <td className="px-3 py-3 font-bold text-[#6366F1]">{formatoARS(fila.total)}</td>
+                  <td className="px-3 py-3 text-[#E2E8F0]">
+                    {fila.totalCostosAdicionales > 0 ? formatoARS(fila.totalReal) : '—'}
+                  </td>
                   <td className="px-3 py-3 text-[#94A3B8]">
                     {(() => {
                       const oc = notasDesdeOc(fila.notas)
@@ -242,13 +255,16 @@ export function ComprasPage() {
           {!cargando && error !== MSG_ERROR_RED ? (
             <MobileCards>
               {filas.map((fila) => (
-                <ListCard key={fila.id}>
+                <ListCard key={fila.id} to={`/compras/${fila.id}`}>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     {formatoFechaCompra(fila.fecha)}
                     {fila.anulada ? ' · Anulada' : ''}
                   </p>
                   <p className="mt-1 text-sm font-medium">{fila.proveedor || 'Sin proveedor'}</p>
                   <p className="mt-1 font-bold text-[#6366F1]">{formatoARS(fila.total)}</p>
+                  {fila.totalCostosAdicionales > 0 ? (
+                    <p className="mt-1 text-xs text-amber-200">📦 Costo real {formatoARS(fila.totalReal)}</p>
+                  ) : null}
                   {notasDesdeOc(fila.notas) ? (
                     <p className="mt-1 text-xs text-[#A5B4FC]">📋 Desde {notasDesdeOc(fila.notas)}</p>
                   ) : null}
@@ -256,7 +272,11 @@ export function ComprasPage() {
                     <button
                       className="mt-2 text-xs text-[#F87171]"
                       type="button"
-                      onClick={() => setAnular(fila)}
+                      onClick={(ev) => {
+                        ev.preventDefault()
+                        ev.stopPropagation()
+                        setAnular(fila)
+                      }}
                     >
                       Anular
                     </button>
@@ -284,7 +304,7 @@ export function ComprasPage() {
           entidad="compras"
         />
         ) : null}
-        {true ? <FabLink to="/compras/nueva" label="Nueva compra" /> : null}
+        {!esSoloLectura(perfil) ? <FabLink to="/compras/nueva" label="Nueva compra" /> : null}
         {importar ? (
           <ImportarComprasModal
             productos={productos}

@@ -139,8 +139,9 @@ export function RegistroPage() {
       <>
       {esInvitacion ? (
         <p className="mt-4 rounded-lg bg-[#EEF2F6] px-3 py-2 text-sm text-[#1A2F4A]">
-          Te invitaron a unirte a {nombreInvEmpresa || 'el equipo'}. Completá tu cuenta y vas a ver los
-          módulos que el dueño habilitó para vos.
+          {searchParams.get('rol') === 'contador'
+            ? `Te invitaron como contador de ${nombreInvEmpresa || 'el equipo'}. Vas a poder ver los datos en solo lectura, sin consumir una licencia del plan.`
+            : `Te invitaron a unirte a ${nombreInvEmpresa || 'el equipo'}. Completá tu cuenta y vas a ver los módulos que el dueño habilitó para vos.`}
         </p>
       ) : null}
       <form className="mt-6 flex flex-col" onSubmit={onSubmit}>

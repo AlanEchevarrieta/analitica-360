@@ -22,6 +22,7 @@ import {
   filasDesdeListarEquipo,
   guardarPermisosColaborador,
   invitarColaborador,
+  invitarContador,
   type UsuarioEmpresa,
 } from '../lib/usuarios'
 import { formatoFechaHora } from '../lib/fechas'
@@ -63,6 +64,14 @@ import {
 import { LimitePlanModal } from '../components/LimitePlanModal'
 import { btnPrimary, cardShell } from '../components/listado'
 import { FISCAL_DEFAULT, PAISES_FISCAL, presetDePais, type PaisFiscal } from '../lib/fiscal'
+import {
+  exportarDatosClientes,
+  exportarDatosCompras,
+  exportarDatosGastos,
+  exportarDatosInventario,
+  exportarDatosProductos,
+  exportarDatosVentas,
+} from '../lib/exportarDatos'
 
 const inputClass =
   'h-10 w-full rounded-lg border border-[rgba(99,102,241,0.3)] bg-white/5 px-3 text-sm text-[#F1F5F9] outline-none focus:border-[#6366F1]'
@@ -80,6 +89,7 @@ type TabId =
   | 'remitente'
   | 'fiscal'
   | 'plan'
+  | 'datos'
 
 const MOSAICO: {
   id: TabId
@@ -93,6 +103,7 @@ const MOSAICO: {
   { id: 'variantes', icono: '🎨', titulo: 'Variantes', subtitulo: 'Color, talle, material y más' },
   { id: 'lotes', icono: '📅', titulo: 'Lotes y Vencimientos', subtitulo: 'Stock por lote y fechas de vencimiento' },
   { id: 'usuarios', icono: '👥', titulo: 'Equipo — Usuarios y colaboradores', subtitulo: 'Invitá al equipo y asigná permisos' },
+  { id: 'datos', icono: '📥', titulo: 'Exportar mis datos', subtitulo: 'Descargá todo tu historial en Excel. Tus datos son tuyos — siempre.' },
   { id: 'flujo', icono: '💸', titulo: 'Flujo de ventas', subtitulo: 'Configurá el proceso de venta' },
   { id: 'inventario', icono: '📦', titulo: 'Inventario', subtitulo: 'Umbral de stock bajo y alertas' },
   { id: 'ubicaciones', icono: '📍', titulo: 'Ubicaciones', subtitulo: 'Depósitos, locales y stands' },
@@ -144,7 +155,7 @@ export function ConfiguracionPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
   const [tab, setTab] = useState<TabId | null>(
-    TABS.some((t) => t.id === tabParam) ? (tabParam as TabId) : null,
+    TABS.some((t) => t.id === tabParam) && tabParam !== 'datos' ? (tabParam as TabId) : null,
   )
   const [medios, setMedios] = useState<MedioPagoId[]>([])
   const [tasas, setTasas] = useState<TasaCuota[]>([])
@@ -167,6 +178,12 @@ export function ConfiguracionPage() {
   const [guardando, setGuardando] = useState(false)
   const [invitar, setInvitar] = useState(false)
   const [emailInv, setEmailInv] = useState('')
+  const [invitarContadorUi, setInvitarContadorUi] = useState(false)
+  const [emailContador, setEmailContador] = useState('')
+  const [enviandoContador, setEnviandoContador] = useState(false)
+  const [exportar, setExportar] = useState(tabParam === 'datos')
+  const [exportando, setExportando] = useState<string | null>(null)
+  const [errorExport, setErrorExport] = useState<string | null>(null)
   const [accesoInv, setAccesoInv] = useState<AccesoColaborador>(() => accesoSoloPedidos())
   const [presetInv, setPresetInv] = useState<PresetPermiso>('pedidos')
   const [enviandoInv, setEnviandoInv] = useState(false)
@@ -471,16 +488,64 @@ export function ConfiguracionPage() {
   function abrirLinkInv(input: {
     email: string
     yaTieneCuenta: boolean
+    rol?: string
   }) {
     if (!perfil) return
     const nombre = input.email.split('@')[0] || input.email
+    const rol = input.rol ?? 'operario'
     setLinkInv({
-      url: linkInvitacionColaborador(perfil.usuario.empresa_id),
-      texto: textoLinkInvitacion(perfil.usuario.empresa_id),
+      url: linkInvitacionColaborador(perfil.usuario.empresa_id, rol),
+      texto: textoLinkInvitacion(perfil.usuario.empresa_id, rol),
       email: input.email,
       nombre,
       yaTieneCuenta: input.yaTieneCuenta,
     })
+  }
+
+  function cuentaLicencias() {
+    return usuarios.filter((u) => u.rol !== 'contador').length
+  }
+
+  async function onInvitarContador() {
+    if (!perfil) return
+    setError(null)
+    setOk(null)
+    if (!emailContador.trim()) {
+      setError('Completá el email del contador')
+      return
+    }
+    setEnviandoContador(true)
+    const fallo = await invitarContador(requireSupabase(), emailContador.trim())
+    setEnviandoContador(false)
+    if (fallo) {
+      setError(fallo)
+      return
+    }
+    const mail = emailContador.trim()
+    setOk(`Invitación de contador lista para ${mail}`)
+    abrirLinkInv({
+      email: mail,
+      yaTieneCuenta: await emailTieneCuenta(requireSupabase(), mail),
+      rol: 'contador',
+    })
+    setInvitarContadorUi(false)
+    setEmailContador('')
+    await cargarUsuarios()
+  }
+
+  async function onExportar(
+    clave: string,
+    fn: () => Promise<void>,
+  ) {
+    if (!perfil) return
+    setErrorExport(null)
+    setExportando(clave)
+    try {
+      await fn()
+    } catch (e) {
+      setErrorExport(e instanceof Error ? e.message : 'No se pudo exportar')
+    }
+    setExportando(null)
   }
 
   async function onGuardarPermisos() {
@@ -501,7 +566,7 @@ export function ConfiguracionPage() {
   async function onInvitarColaborador() {
     if (!perfil) return
     const maxU = estaEnTrial(suscripcion) ? null : defPlan(perfil.empresa.plan_actual).max_usuarios
-    if (maxU != null && usuarios.length >= maxU) {
+    if (maxU != null && cuentaLicencias() >= maxU) {
       setLimiteUsuarios(true)
       return
     }
@@ -574,6 +639,13 @@ export function ConfiguracionPage() {
                   type="button"
                   className="config-mosaic-card"
                   onClick={() => {
+                    if (card.id === 'datos') {
+                      setExportar(true)
+                      setErrorExport(null)
+                      setError(null)
+                      setOk(null)
+                      return
+                    }
                     setTab(card.id)
                     setSearchParams(card.id === 'medios' ? { tab: card.id } : { tab: card.id }, { replace: true })
                     setError(null)
@@ -1030,7 +1102,7 @@ export function ConfiguracionPage() {
                         const maxU = estaEnTrial(suscripcion)
                           ? null
                           : defPlan(perfil.empresa.plan_actual).max_usuarios
-                        if (maxU != null && usuarios.length >= maxU) {
+                        if (maxU != null && cuentaLicencias() >= maxU) {
                           setLimiteUsuarios(true)
                           return
                         }
@@ -1095,7 +1167,14 @@ export function ConfiguracionPage() {
                       <tbody>
                         {usuarios.map((u) => (
                           <tr key={u.id} className="border-t border-[rgba(99,102,241,0.15)]">
-                            <td className="py-2.5 pr-3 font-medium text-[#F1F5F9]">{u.nombre}</td>
+                            <td className="py-2.5 pr-3 font-medium text-[#F1F5F9]">
+                              {u.nombre}
+                              {u.rol === 'contador' ? (
+                                <span className="ml-2 rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] font-semibold text-indigo-200">
+                                  Contador
+                                </span>
+                              ) : null}
+                            </td>
                             <td className="py-2.5 pr-3 text-[#CBD5E1]">{u.email}</td>
                             <td className="py-2.5 pr-3 text-[#CBD5E1]">
                               {u.invitacionPendiente || u.esInvitacion
@@ -1118,7 +1197,11 @@ export function ConfiguracionPage() {
                                       type="button"
                                       onClick={() => {
                                         void emailTieneCuenta(requireSupabase(), u.email).then((ya) =>
-                                          abrirLinkInv({ email: u.email, yaTieneCuenta: ya }),
+                                          abrirLinkInv({
+                                            email: u.email,
+                                            yaTieneCuenta: ya,
+                                            rol: u.rol === 'contador' ? 'contador' : 'operario',
+                                          }),
                                         )
                                       }}
                                     >
@@ -1151,6 +1234,45 @@ export function ConfiguracionPage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+
+                  <div className="mt-8 rounded-xl border border-[rgba(99,102,241,0.25)] bg-indigo-500/10 p-4">
+                    <p className="text-sm font-semibold text-[#F1F5F9]">🧮 Invitá a tu contador — gratis</p>
+                    <p className="mt-1 text-sm text-[#CBD5E1]">
+                      Tu contador puede ver todos tus datos sin consumir usuarios de tu plan.
+                    </p>
+                    <button
+                      className="mt-3 h-9 rounded-lg bg-[#6366F1] px-3 text-xs font-semibold text-white hover:bg-[#4F46E5]"
+                      type="button"
+                      onClick={() => {
+                        setInvitarContadorUi((v) => !v)
+                        setError(null)
+                        setOk(null)
+                      }}
+                    >
+                      {invitarContadorUi ? 'Cerrar' : 'Invitar contador'}
+                    </button>
+                    {invitarContadorUi ? (
+                      <div className="mt-3 space-y-3">
+                        <label className="block text-sm font-medium text-[#94A3B8]">
+                          Email del contador
+                          <input
+                            className={`${inputClass} mt-1`}
+                            type="email"
+                            value={emailContador}
+                            onChange={(ev) => setEmailContador(ev.target.value)}
+                          />
+                        </label>
+                        <button
+                          className="h-10 w-full rounded-lg bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
+                          type="button"
+                          disabled={enviandoContador}
+                          onClick={() => void onInvitarContador()}
+                        >
+                          {enviandoContador ? 'ENVIANDO…' : 'Generar invitación'}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="mt-8 border-t border-[rgba(99,102,241,0.15)] pt-5">
@@ -1688,6 +1810,49 @@ export function ConfiguracionPage() {
           </Link>
         </div>
       </div>
+      {exportar && perfil ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 md:items-center">
+          <div className="w-full max-w-md rounded-lg bg-white p-5 text-[#1A2F4A] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+            <h3 className="text-lg font-bold">Exportar mis datos</h3>
+            <p className="mt-1 text-sm text-[#4A5568]">Descargá todo tu historial en Excel. Tus datos son tuyos — siempre.</p>
+            <div className="mt-4 space-y-2">
+              {(
+                [
+                  ['ventas', '📊 Exportar Ventas (Excel)', () => exportarDatosVentas(requireSupabase(), perfil.empresa.nombre)],
+                  ['productos', '📦 Exportar Productos (Excel)', () => exportarDatosProductos(requireSupabase(), perfil.empresa.nombre)],
+                  ['compras', '🛒 Exportar Compras (Excel)', () => exportarDatosCompras(requireSupabase(), perfil.empresa.nombre)],
+                  ['clientes', '👥 Exportar Clientes (Excel)', () => exportarDatosClientes(requireSupabase(), perfil.empresa.nombre)],
+                  ['inventario', '📋 Exportar Inventario (Excel)', () => exportarDatosInventario(requireSupabase(), perfil.empresa.nombre)],
+                  ['gastos', '💰 Exportar Gastos (Excel)', () => exportarDatosGastos(requireSupabase(), perfil.empresa.id, perfil.empresa.nombre)],
+                ] as const
+              ).map(([id, label, fn]) => (
+                <button
+                  key={id}
+                  className="h-11 w-full rounded-md border border-[#E2E8F0] px-3 text-left text-sm font-semibold text-[#1A2F4A] hover:bg-[#EEF2F6] disabled:opacity-50"
+                  type="button"
+                  disabled={exportando != null}
+                  onClick={() => void onExportar(id, fn)}
+                >
+                  {exportando === id ? 'Generando…' : label}
+                </button>
+              ))}
+            </div>
+            {errorExport ? (
+              <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{errorExport}</p>
+            ) : null}
+            <p className="mt-4 text-xs leading-relaxed text-[#4A5568]">
+              Exportar tus datos no cancela tu suscripción. Analítica 360 no retiene ni bloquea tus datos.
+            </p>
+            <button
+              className="mt-4 h-10 w-full rounded-md border border-[#E2E8F0] text-sm font-semibold text-[#4A5568]"
+              type="button"
+              onClick={() => setExportar(false)}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      ) : null}
       <LimitePlanModal
         abierto={limiteUsuarios}
         titulo="Llegaste al límite de usuarios"

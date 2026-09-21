@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
+  accesoContador,
   accesoSoloPedidos,
   accesoTotal,
   parseAcceso,
@@ -35,6 +36,7 @@ function filaDesdeRow(row: Record<string, unknown>, acceso: AccesoColaborador): 
 }
 
 function accesoDePermisos(modulos: unknown, acciones: unknown, rol: Rol): AccesoColaborador {
+  if (rol === 'contador') return accesoContador()
   if (modulos != null || acciones != null) return parseAcceso(modulos, acciones)
   if (rol === 'dueno') return accesoTotal(true)
   return accesoSoloPedidos()
@@ -127,6 +129,19 @@ export async function invitarColaborador(
   if (msg.includes('NO_AUTORIZADO')) return 'Solo el dueño puede invitar'
   if (msg.includes('could not find') || msg.includes('does not exist') || msg.includes('PGRST202')) {
     return 'Falta el SQL de permisos. Pegá TODO supabase/056_permisos_granulares.sql (rol postgres), dale Run y recargá.'
+  }
+  return msg
+}
+
+export async function invitarContador(client: SupabaseClient, email: string): Promise<string | null> {
+  const { error } = await client.rpc('invitar_contador', { p_email: email })
+  if (!error) return null
+  const msg = error.message
+  if (msg.includes('EMAIL_YA_REGISTRADO')) return 'Ese email ya tiene una cuenta en el equipo'
+  if (msg.includes('EMAIL_INVALIDO')) return 'El email no es válido'
+  if (msg.includes('NO_AUTORIZADO')) return 'Solo el dueño puede invitar'
+  if (msg.includes('could not find') || msg.includes('does not exist') || msg.includes('PGRST202')) {
+    return 'Falta el SQL del rol contador. Pegá TODO supabase/070_rol_contador.sql (rol postgres), dale Run y recargá.'
   }
   return msg
 }

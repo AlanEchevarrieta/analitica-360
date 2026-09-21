@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { AccesoDenegado } from '../components/AccesoDenegado'
 import { AppNav } from '../components/AppNav'
 import { ParticleNetwork } from '../components/ParticleNetwork'
 import { VarianteChipsPicker } from '../components/VarianteChipsPicker'
@@ -10,6 +11,7 @@ import {
   hoyCompraISO,
 } from '../lib/compras'
 import { obtenerConfiguracion } from '../lib/configuracion'
+import { esSoloLectura } from '../lib/permisos'
 import { formatoARS, listarProductos, type ProductoFila } from '../lib/productos'
 import {
   crearProveedor,
@@ -50,7 +52,7 @@ const inputClass =
 export function CompraNuevaPage() {
   const { perfil } = useAuth()
   const navigate = useNavigate()
-  const [paso, setPaso] = useState<1 | 2 | 3>(1)
+  const [paso, setPaso] = useState<1 | 2 | 3 | 4>(1)
   const [catalogo, setCatalogo] = useState<ProductoFila[]>([])
   const [busqueda, setBusqueda] = useState('')
   const [lineas, setLineas] = useState<Linea[]>([])
@@ -89,6 +91,10 @@ export function CompraNuevaPage() {
   const [picker, setPicker] = useState<ProductoFila | null>(null)
   const [ubicaciones, setUbicaciones] = useState<UbicacionFila[]>([])
   const [ubicacionDestino, setUbicacionDestino] = useState('')
+  const [flete, setFlete] = useState('')
+  const [impuestos, setImpuestos] = useState('')
+  const [otros, setOtros] = useState('')
+  const [descripcionOtros, setDescripcionOtros] = useState('')
 
   async function recargarCatalogo() {
     const { filas } = await listarProductos(requireSupabase())
@@ -183,6 +189,17 @@ export function CompraNuevaPage() {
   }, [busqueda, catalogo])
 
   const total = lineas.reduce((acc, l) => acc + l.cantidad * l.costoUnitario, 0)
+  const nFlete = Number(flete.replace(',', '.')) || 0
+  const nImp = Number(impuestos.replace(',', '.')) || 0
+  const nOtros = Number(otros.replace(',', '.')) || 0
+  const extras = Math.max(0, nFlete) + Math.max(0, nImp) + Math.max(0, nOtros)
+  const totalReal = total + extras
+  const costosPorLinea = lineas.map((l) => {
+    const sub = l.cantidad * l.costoUnitario
+    const share = total > 0 ? (sub / total) * extras : 0
+    const unitarioAjustado = l.cantidad > 0 ? (sub + share) / l.cantidad : 0
+    return { ...l, share, unitarioAjustado }
+  })
 
   function resaltarLinea(clave: string) {
     setLineaResaltada(clave)
@@ -452,6 +469,12 @@ export function CompraNuevaPage() {
       fecha,
       notas,
       ubicacionDestino: ubicaciones.length > 1 ? ubicacionDestino || ubicaciones[0]?.nombre : null,
+      costosAdicionales: {
+        flete: Math.max(0, nFlete),
+        impuestos: Math.max(0, nImp),
+        otros: Math.max(0, nOtros),
+        descripcion: descripcionOtros,
+      },
     })
     setEnviando(false)
     if (fallo) {
@@ -463,6 +486,7 @@ export function CompraNuevaPage() {
   }
 
   if (!perfil) return null
+  if (esSoloLectura(perfil)) return <AccesoDenegado />
 
   return (
     <div
@@ -477,7 +501,7 @@ export function CompraNuevaPage() {
         <AppNav />
         <div className="rounded-lg bg-white/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
           <h1 className="text-xl font-bold text-[#1A2F4A]">Nueva compra</h1>
-          <p className="mt-1 text-xs font-medium text-[#4A5568]">Paso {paso} de 3</p>
+          <p className="mt-1 text-xs font-medium text-[#4A5568]">Paso {paso} de 4</p>
 
           {exito ? (
             <p className="mt-6 rounded-md bg-green-50 px-3 py-3 text-sm text-green-800">
@@ -674,6 +698,88 @@ export function CompraNuevaPage() {
 
               {paso === 2 ? (
                 <div className="mt-5 space-y-4">
+                  <p className="text-sm font-semibold text-[#1A2F4A]">Costos adicionales (opcional)</p>
+                  <label className="block text-sm font-medium text-[#4A5568]">
+                    🚚 Flete / Envío
+                    <input
+                      className={`${inputClass} mt-1.5`}
+                      inputMode="decimal"
+                      value={flete}
+                      placeholder="0"
+                      onChange={(ev) => setFlete(ev.target.value)}
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#4A5568]">
+                    📋 Impuestos / Aranceles
+                    <input
+                      className={`${inputClass} mt-1.5`}
+                      inputMode="decimal"
+                      value={impuestos}
+                      placeholder="0"
+                      onChange={(ev) => setImpuestos(ev.target.value)}
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#4A5568]">
+                    📦 Otros gastos
+                    <input
+                      className={`${inputClass} mt-1.5`}
+                      inputMode="decimal"
+                      value={otros}
+                      placeholder="0"
+                      onChange={(ev) => setOtros(ev.target.value)}
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-[#4A5568]">
+                    Descripción
+                    <input
+                      className={`${inputClass} mt-1.5`}
+                      value={descripcionOtros}
+                      placeholder="Texto libre"
+                      onChange={(ev) => setDescripcionOtros(ev.target.value)}
+                    />
+                  </label>
+                  <div className="rounded-md bg-[#EEF2F6] px-3 py-3 text-sm text-[#1A2F4A]">
+                    <p className="flex justify-between">
+                      <span>Subtotal productos</span>
+                      <span>{formatoARS(total)}</span>
+                    </p>
+                    <p className="mt-1 flex justify-between">
+                      <span>+ Flete</span>
+                      <span>{formatoARS(Math.max(0, nFlete))}</span>
+                    </p>
+                    <p className="mt-1 flex justify-between">
+                      <span>+ Impuestos</span>
+                      <span>{formatoARS(Math.max(0, nImp))}</span>
+                    </p>
+                    <p className="mt-1 flex justify-between">
+                      <span>+ Otros</span>
+                      <span>{formatoARS(Math.max(0, nOtros))}</span>
+                    </p>
+                    <p className="mt-2 flex justify-between border-t border-[#E2E8F0] pt-2 font-semibold">
+                      <span>Total real</span>
+                      <span>{formatoARS(totalReal)}</span>
+                    </p>
+                    {extras > 0 ? (
+                      <div className="mt-3 text-xs text-[#4A5568]">
+                        <p className="font-medium text-[#1A2F4A]">Costo unitario ajustado por producto</p>
+                        <p>(distribuido proporcionalmente)</p>
+                        {costosPorLinea.map((l) => (
+                          <p key={l.uid} className="mt-1">
+                            {l.nombre} × {l.cantidad}: {formatoARS(l.unitarioAjustado)} c/u
+                            <span className="block">
+                              (antes {formatoARS(l.costoUnitario)} + {formatoARS(l.share / Math.max(l.cantidad, 1))} de
+                              costos)
+                            </span>
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
+              {paso === 3 ? (
+                <div className="mt-5 space-y-4">
                   {ubicaciones.length > 1 ? (
                     <label className="block text-sm font-medium text-[#4A5568]">
                       Ingresar a ubicación
@@ -850,7 +956,7 @@ export function CompraNuevaPage() {
                 </div>
               ) : null}
 
-              {paso === 3 ? (
+              {paso === 4 ? (
                 <div className="mt-5 text-sm text-[#1A2F4A]">
                   <p>Vas a registrar esta compra:</p>
                   <div className="mt-3 rounded-md bg-[#EEF2F6] px-3 py-3">
@@ -863,7 +969,9 @@ export function CompraNuevaPage() {
                     {proveedor.trim() ? <p className="mt-2">Proveedor: {proveedor.trim()}</p> : null}
                     <p>Fecha: {fecha}</p>
                     {notas.trim() ? <p>Notas: {notas.trim()}</p> : null}
-                    <p className="mt-2 font-semibold">Total {formatoARS(total)}</p>
+                    <p className="mt-2">Subtotal productos {formatoARS(total)}</p>
+                    {extras > 0 ? <p>Costos adicionales {formatoARS(extras)}</p> : null}
+                    <p className="mt-2 font-semibold">Total real {formatoARS(totalReal)}</p>
                   </div>
                   <button
                     className="mt-6 h-11 w-full rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5] disabled:opacity-50"
@@ -887,7 +995,7 @@ export function CompraNuevaPage() {
                     type="button"
                     onClick={() => {
                       setError(null)
-                      setPaso((p) => (p === 3 ? 2 : 1))
+                      setPaso((p) => (p === 1 ? 1 : ((p - 1) as 1 | 2 | 3 | 4)))
                     }}
                   >
                     Atrás
@@ -907,12 +1015,24 @@ export function CompraNuevaPage() {
                     className="h-11 flex-1 rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"
                     type="button"
                     onClick={() => {
+                      setError(null)
+                      setPaso(3)
+                    }}
+                  >
+                    Siguiente
+                  </button>
+                ) : null}
+                {paso === 3 ? (
+                  <button
+                    className="h-11 flex-1 rounded-md bg-[#6366F1] text-sm font-semibold text-white hover:bg-[#4F46E5]"
+                    type="button"
+                    onClick={() => {
                       if (!fecha) {
                         setError('Elegí la fecha de la compra')
                         return
                       }
                       setError(null)
-                      setPaso(3)
+                      setPaso(4)
                     }}
                   >
                     Siguiente

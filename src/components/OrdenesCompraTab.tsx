@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../auth'
+import { esSoloLectura } from '../lib/permisos'
 import {
   PAGE_COMPRAS,
   PaginacionBar,
@@ -41,6 +43,8 @@ function BadgeEstadoOc({ estado }: { estado: EstadoOc }) {
 }
 
 export function OrdenesCompraTab() {
+  const { perfil } = useAuth()
+  const puedeEscribir = !esSoloLectura(perfil)
   const [filas, setFilas] = useState<OrdenCompraFila[]>([])
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -122,9 +126,11 @@ export function OrdenesCompraTab() {
             </select>
           </label>
         </div>
-        <Link className={btnPrimaryDesk} to="/compras/oc/nueva">
-          Nueva OC
-        </Link>
+        {puedeEscribir ? (
+          <Link className={btnPrimaryDesk} to="/compras/oc/nueva">
+            Nueva OC
+          </Link>
+        ) : null}
       </div>
 
       {error && error !== MSG_ERROR_RED ? (
@@ -202,7 +208,7 @@ export function OrdenesCompraTab() {
           entidad="órdenes"
         />
       ) : null}
-      <FabLink to="/compras/oc/nueva" label="Nueva OC" />
+      {puedeEscribir ? <FabLink to="/compras/oc/nueva" label="Nueva OC" /> : null}
     </div>
   )
 }

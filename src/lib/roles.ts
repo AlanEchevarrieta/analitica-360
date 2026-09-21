@@ -4,12 +4,21 @@ export function parseRol(raw: unknown): Rol {
   const r = String(raw ?? '')
   if (r === 'dueno') return 'dueno'
   if (r === 'administrador') return 'administrador'
+  if (r === 'contador') return 'contador'
   if (r === 'operario' || r === 'operador' || r === 'visor') return 'operario'
   return 'dueno'
 }
 
 export function esDueno(rol: string | undefined) {
   return rol === 'dueno'
+}
+
+export function esContador(rol: string | undefined) {
+  return rol === 'contador'
+}
+
+export function esSoloLecturaRol(rol: string | undefined) {
+  return rol === 'contador'
 }
 
 export function linkInvitacionColaborador(empresaId: string, rol = 'operario') {

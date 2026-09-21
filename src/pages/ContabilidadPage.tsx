@@ -44,6 +44,7 @@ import {
   type FrecuenciaGasto,
   type GastoFila,
 } from '../lib/gastos'
+import { esSoloLectura } from '../lib/permisos'
 import { requireSupabase } from '../lib/supabase'
 import { theme } from '../theme'
 
@@ -258,14 +259,14 @@ export function ContabilidadPage({
           titulo="Contabilidad"
           subtitulo="Gastos, resultado, ratios y flujo de caja"
           accion={
-            tab === 'gastos' ? (
+            tab === 'gastos' && !esSoloLectura(perfil) ? (
               <button className={btnPrimary} type="button" onClick={() => setModal(true)}>
                 Nuevo gasto
               </button>
             ) : null
           }
         />
-        ) : tab === 'gastos' ? (
+        ) : tab === 'gastos' && !esSoloLectura(perfil) ? (
           <div className="mb-4 flex justify-end">
             <button className={btnPrimary} type="button" onClick={() => setModal(true)}>
               Nuevo gasto
@@ -394,6 +395,7 @@ export function ContabilidadPage({
                               : 'No'}
                           </td>
                           <td className="py-2">
+                            {!esSoloLectura(perfil) ? (
                             <button
                               className="text-xs font-semibold text-red-300 hover:underline"
                               type="button"
@@ -401,6 +403,7 @@ export function ContabilidadPage({
                             >
                               Eliminar
                             </button>
+                            ) : null}
                           </td>
                         </tr>
                       )

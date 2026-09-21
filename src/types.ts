@@ -1,6 +1,6 @@
 import type { AccesoColaborador } from './lib/permisos'
 
-export type Rol = 'dueno' | 'administrador' | 'operario'
+export type Rol = 'dueno' | 'administrador' | 'operario' | 'contador'
 
 export type Empresa = {
   id: string

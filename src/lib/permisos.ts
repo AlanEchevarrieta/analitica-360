@@ -101,6 +101,25 @@ export function accesoSoloVentas(): AccesoColaborador {
   return acceso
 }
 
+export function accesoContador(): AccesoColaborador {
+  const acceso = accesoVacio()
+  acceso.modulos.inicio = true
+  acceso.modulos.productos = true
+  acceso.modulos.ventas = true
+  acceso.modulos.compras = true
+  acceso.modulos.analytics = true
+  acceso.modulos.contabilidad = true
+  acceso.acciones.ver_costos = true
+  acceso.acciones.ver_reportes = true
+  return acceso
+}
+
+export function esSoloLectura(
+  perfil: { usuario: { rol: string } } | null | undefined,
+) {
+  return perfil?.usuario.rol === 'contador'
+}
+
 export type PresetPermiso = 'completo' | 'pedidos' | 'ventas' | 'personalizado'
 
 export function detectarPreset(acceso: AccesoColaborador): PresetPermiso {
@@ -139,6 +158,16 @@ export function tieneModulo(
 ) {
   if (!perfil) return false
   if (esDuenoPerfil(perfil.usuario.rol)) return true
+  if (perfil.usuario.rol === 'contador') {
+    return (
+      modulo === 'inicio' ||
+      modulo === 'productos' ||
+      modulo === 'ventas' ||
+      modulo === 'compras' ||
+      modulo === 'analytics' ||
+      modulo === 'contabilidad'
+    )
+  }
   if (modulo === 'configuracion') return false
   return Boolean(perfil.usuario.acceso?.modulos[modulo])
 }
@@ -149,6 +178,9 @@ export function tieneAccion(
 ) {
   if (!perfil) return false
   if (esDuenoPerfil(perfil.usuario.rol)) return true
+  if (perfil.usuario.rol === 'contador') {
+    return accion === 'ver_costos' || accion === 'ver_reportes'
+  }
   return Boolean(perfil.usuario.acceso?.acciones[accion])
 }
 
@@ -197,6 +229,7 @@ export async function leerAccesoColaborador(
     .select('modulos, acciones')
     .eq('usuario_id', usuarioId)
     .maybeSingle()
+  if (rol === 'contador') return accesoContador()
   if (data) return parseAcceso(data.modulos, data.acciones)
   if (rol === 'administrador') return accesoTotal(false)
   return accesoSoloPedidos()
