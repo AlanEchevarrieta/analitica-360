@@ -1,9 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-const genAI = new GoogleGenerativeAI(
-  String(import.meta.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY || ''),
-)
-
 export interface DatosFactura {
   proveedor?: string
   cuit?: string
@@ -25,53 +19,20 @@ export async function procesarFacturaConIA(
   imagenBase64: string,
   mimeType: string = 'image/jpeg',
 ): Promise<DatosFactura> {
-  const key = String(import.meta.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY || '')
-  if (!key.trim()) {
-    throw new Error('Falta GEMINI_API_KEY')
-  }
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/ocr-factura`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({ imagenBase64, mimeType }),
   })
 
-  const prompt = `Analizá esta factura argentina y extraé los datos en formato JSON.
-  
-Devolvé SOLO un objeto JSON con esta estructura exacta, sin texto adicional:
-{
-  "proveedor": "nombre del proveedor o razón social",
-  "cuit": "XX-XXXXXXXX-X",
-  "fecha": "DD/MM/YYYY",
-  "numero_factura": "XXXX-XXXXXXXX",
-  "tipo_comprobante": "A, B o C",
-  "items": [
-    {
-      "descripcion": "nombre del producto",
-      "cantidad": 1,
-      "precio_unitario": 1000,
-      "subtotal": 1000
-    }
-  ],
-  "subtotal": 0,
-  "iva": 0,
-  "total": 0
-}
-
-Si no podés leer algún campo, poné null.
-Todos los montos deben ser números, sin símbolo de pesos.`
-
-  const result = await model.generateContent([
-    prompt,
-    {
-      inlineData: {
-        data: imagenBase64,
-        mimeType,
-      },
-    },
-  ])
-
-  const text = result.response.text()
-  const jsonStr = text.replace(/```json|```/g, '').trim()
-  const parsed = JSON.parse(jsonStr) as DatosFactura
-  return normalizarDatosFactura(parsed)
+  if (!response.ok) throw new Error('Error en OCR')
+  const raw = (await response.json()) as DatosFactura
+  return normalizarDatosFactura(raw)
 }
 
 export function normalizarDatosFactura(raw: DatosFactura): DatosFactura {

@@ -19,7 +19,6 @@
     "test:auth": "playwright test tests/01-auth.spec.ts"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "@sentry/react": "^10.74.0",
     "@supabase/supabase-js": "^2.115.0",
     "@tremor/react": "^3.18.7",
