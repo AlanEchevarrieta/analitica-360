@@ -8,6 +8,8 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { UsuariosModule } from './modules/usuarios/usuarios.module.js';
 import { ProductosModule } from './modules/productos/productos.module.js';
 import { VariantesModule } from './modules/productos/variantes.module.js';
+import { UbicacionesModule } from './modules/ubicaciones/ubicaciones.module.js';
+import { InventarioModule } from './modules/inventario/inventario.module.js';
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { VariantesModule } from './modules/productos/variantes.module.js';
     AuthModule,
     ProductosModule,
     VariantesModule,
+    UbicacionesModule,
+    InventarioModule,
   ],
   controllers: [AppController],
   providers: [AppService],
