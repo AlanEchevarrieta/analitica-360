@@ -10,6 +10,8 @@ import { ProductosModule } from './modules/productos/productos.module.js';
 import { VariantesModule } from './modules/productos/variantes.module.js';
 import { UbicacionesModule } from './modules/ubicaciones/ubicaciones.module.js';
 import { InventarioModule } from './modules/inventario/inventario.module.js';
+import { ProveedoresModule } from './modules/proveedores/proveedores.module.js';
+import { ComprasModule } from './modules/compras/compras.module.js';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { InventarioModule } from './modules/inventario/inventario.module.js';
     VariantesModule,
     UbicacionesModule,
     InventarioModule,
+    ProveedoresModule,
+    ComprasModule,
   ],
   controllers: [AppController],
   providers: [AppService],
