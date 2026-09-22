@@ -13,6 +13,7 @@ import { InventarioModule } from './modules/inventario/inventario.module.js';
 import { ProveedoresModule } from './modules/proveedores/proveedores.module.js';
 import { ComprasModule } from './modules/compras/compras.module.js';
 import { VentasModule } from './modules/ventas/ventas.module.js';
+import { DevolucionesModule } from './modules/devoluciones/devoluciones.module.js';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { VentasModule } from './modules/ventas/ventas.module.js';
     ProveedoresModule,
     ComprasModule,
     VentasModule,
+    DevolucionesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
