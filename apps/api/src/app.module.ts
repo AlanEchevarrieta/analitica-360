@@ -15,6 +15,7 @@ import { ComprasModule } from './modules/compras/compras.module.js';
 import { VentasModule } from './modules/ventas/ventas.module.js';
 import { DevolucionesModule } from './modules/devoluciones/devoluciones.module.js';
 import { PedidosModule } from './modules/pedidos/pedidos.module.js';
+import { ClientesModule } from './modules/clientes/clientes.module.js';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { PedidosModule } from './modules/pedidos/pedidos.module.js';
     VentasModule,
     DevolucionesModule,
     PedidosModule,
+    ClientesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
