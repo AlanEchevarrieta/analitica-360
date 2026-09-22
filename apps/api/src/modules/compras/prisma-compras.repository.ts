@@ -87,15 +87,13 @@ export class PrismaComprasRepository implements ComprasRepository {
         if (!todasValidas) return { ok: false, motivo: 'variante_invalida' };
       }
 
-      if (input.proveedorId) {
-        const proveedor = await tx.proveedor.findFirst({ where: { id: input.proveedorId, empresaId } });
-        if (!proveedor) return { ok: false, motivo: 'proveedor_invalido' };
-      }
-
-      if (input.ubicacionDestino) {
-        const ubicacion = await tx.ubicacion.findFirst({ where: { empresaId, nombre: input.ubicacionDestino } });
-        if (!ubicacion) return { ok: false, motivo: 'ubicacion_invalida' };
-      }
+      // Chequeos independientes en paralelo, no en serie.
+      const [proveedor, ubicacion] = await Promise.all([
+        input.proveedorId ? tx.proveedor.findFirst({ where: { id: input.proveedorId, empresaId } }) : null,
+        input.ubicacionDestino ? tx.ubicacion.findFirst({ where: { empresaId, nombre: input.ubicacionDestino } }) : null,
+      ]);
+      if (input.proveedorId && !proveedor) return { ok: false, motivo: 'proveedor_invalido' };
+      if (input.ubicacionDestino && !ubicacion) return { ok: false, motivo: 'ubicacion_invalida' };
 
       const total = input.items.reduce((acc, i) => acc + i.cantidad * i.costoUnitario, 0);
       const flete = input.costosAdicionales?.flete ?? 0;

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import type {
   AgregarInteraccionInput,
@@ -38,22 +39,25 @@ export class PrismaClientesRepository implements ClientesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private async aggregarVentasPorCliente(empresaId: string): Promise<Map<string, AggVentas>> {
-    const ventas = await this.prisma.venta.findMany({
-      where: { empresaId, deletedAt: null, clienteId: { not: null } },
-      select: { clienteId: true, fecha: true, totalConInteres: true, totalSinInteres: true },
-    });
+    // GROUP BY en Postgres en vez de traer cada Venta de la empresa a
+    // memoria para sumarlas en JS - esto se llama en cada GET /clientes y
+    // /clientes/segmentos, así que el costo crece con todo el historial de
+    // ventas si no se empuja la agregación a la DB.
+    const filas = await this.prisma.$queryRaw<
+      { cliente_id: string; ultima: Date; total: unknown; cantidad: bigint }[]
+    >(Prisma.sql`
+      SELECT
+        cliente_id,
+        MAX(fecha) AS ultima,
+        COALESCE(SUM(COALESCE(total_con_interes, total_sin_interes, 0)), 0) AS total,
+        COUNT(*) AS cantidad
+      FROM ventas
+      WHERE empresa_id = ${empresaId}::uuid AND deleted_at IS NULL AND cliente_id IS NOT NULL
+      GROUP BY cliente_id
+    `);
     const mapa = new Map<string, AggVentas>();
-    for (const v of ventas) {
-      const clienteId = v.clienteId!;
-      const total = v.totalConInteres?.toNumber() ?? v.totalSinInteres?.toNumber() ?? 0;
-      const actual = mapa.get(clienteId);
-      if (!actual) {
-        mapa.set(clienteId, { ultima: v.fecha, total, cantidad: 1 });
-      } else {
-        if (v.fecha > actual.ultima) actual.ultima = v.fecha;
-        actual.total += total;
-        actual.cantidad += 1;
-      }
+    for (const f of filas) {
+      mapa.set(f.cliente_id, { ultima: f.ultima, total: Number(f.total), cantidad: Number(f.cantidad) });
     }
     return mapa;
   }

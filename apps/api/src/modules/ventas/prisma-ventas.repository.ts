@@ -144,14 +144,14 @@ export class PrismaVentasRepository implements VentasRepository {
         for (const v of variantes) costoVariante.set(v.id, v.costo?.toNumber() ?? 0);
       }
 
-      if (input.clienteId) {
-        const cliente = await tx.cliente.findFirst({ where: { id: input.clienteId, empresaId } });
-        if (!cliente) return { ok: false, motivo: 'cliente_invalido' };
-      }
-      if (input.ubicacionOrigen) {
-        const ubicacion = await tx.ubicacion.findFirst({ where: { empresaId, nombre: input.ubicacionOrigen } });
-        if (!ubicacion) return { ok: false, motivo: 'ubicacion_invalida' };
-      }
+      // Chequeos independientes en paralelo, no en serie (confirmar() es el
+      // endpoint de escritura más llamado del módulo).
+      const [cliente, ubicacion] = await Promise.all([
+        input.clienteId ? tx.cliente.findFirst({ where: { id: input.clienteId, empresaId } }) : null,
+        input.ubicacionOrigen ? tx.ubicacion.findFirst({ where: { empresaId, nombre: input.ubicacionOrigen } }) : null,
+      ]);
+      if (input.clienteId && !cliente) return { ok: false, motivo: 'cliente_invalido' };
+      if (input.ubicacionOrigen && !ubicacion) return { ok: false, motivo: 'ubicacion_invalida' };
 
       // Los totales se recalculan siempre acá - nunca se confía en un monto
       // que mande el cliente para algo que involucra dinero.
