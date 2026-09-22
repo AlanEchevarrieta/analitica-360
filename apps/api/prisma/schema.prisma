@@ -686,6 +686,8 @@ model Pedido {
   provincia          String?
   metodoEnvio        String?  @map("metodo_envio")
   numeroSeguimiento  String?  @map("numero_seguimiento")
+  transportista      String?
+  notas              String?
   // Remitente (053_pedidos_remitente.sql)
   remitenteNombre    String?  @map("remitente_nombre")
   remitenteDireccion String?  @map("remitente_direccion")
