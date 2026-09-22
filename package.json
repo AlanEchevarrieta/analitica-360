@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@12.5.1",
   "engines": {
     "node": ">=20"
   },
@@ -19,7 +20,11 @@
     "test:auth": "playwright test tests/01-auth.spec.ts",
     "auditoria": "tsx scripts/auditoria.ts",
     "auditoria:acacia": "tsx scripts/auditoria.ts --empresa=acacia",
-    "auditoria:analitica": "tsx scripts/auditoria.ts --empresa=analitica"
+    "auditoria:analitica": "tsx scripts/auditoria.ts --empresa=analitica",
+    "new:dev": "turbo run dev --filter=./apps/*",
+    "new:build": "turbo run build --filter=./apps/*",
+    "new:lint": "turbo run lint --filter=./apps/*",
+    "new:test": "turbo run test --filter=./apps/*"
   },
   "dependencies": {
     "@sentry/react": "^10.74.0",
@@ -57,6 +62,7 @@
     "tailwindcss": "^4.3.3",
     "terser": "^5.51.2",
     "tsx": "^4.23.15",
+    "turbo": "^2.5.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   }

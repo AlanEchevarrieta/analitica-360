@@ -1,0 +1,6 @@
+/*
+ * Tokens de marca, portados desde el legacy src/theme.ts + src/index.css
+ * (fondo degradado #0F1B2D -> #1A2F4A, acento #6366F1, cards blancas radio
+ * 8px, Inter vía next/font). Se completa en la fase de design system
+ * (Fase 5) junto con components.json de shadcn/ui.
+ */

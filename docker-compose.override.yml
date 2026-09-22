@@ -1,0 +1,10 @@
+services:
+  postgres:
+    # Remapeado a 5433: el 5432 del host ya lo ocupa un Postgres nativo
+    # corriendo como servicio de Windows en esta máquina.
+    ports:
+      - "5433:5432"
+  minio:
+    ports:
+      - "9000:9000"
+      - "9001:9001"
