@@ -6,6 +6,7 @@ import { validateEnv } from './config/env.validation.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { UsuariosModule } from './modules/usuarios/usuarios.module.js';
+import { ProductosModule } from './modules/productos/productos.module.js';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module.js';
     DatabaseModule,
     UsuariosModule,
     AuthModule,
+    ProductosModule,
   ],
   controllers: [AppController],
   providers: [AppService],
