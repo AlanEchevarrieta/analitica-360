@@ -12,6 +12,7 @@ import { UbicacionesModule } from './modules/ubicaciones/ubicaciones.module.js';
 import { InventarioModule } from './modules/inventario/inventario.module.js';
 import { ProveedoresModule } from './modules/proveedores/proveedores.module.js';
 import { ComprasModule } from './modules/compras/compras.module.js';
+import { VentasModule } from './modules/ventas/ventas.module.js';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ComprasModule } from './modules/compras/compras.module.js';
     InventarioModule,
     ProveedoresModule,
     ComprasModule,
+    VentasModule,
   ],
   controllers: [AppController],
   providers: [AppService],
