@@ -194,16 +194,28 @@ export class PrismaDevolucionesRepository implements DevolucionesRepository {
   async procesar(empresaId: string, id: string): Promise<ResultadoTransicionDevolucion> {
     const devolucion = await this.prisma.devolucion.findFirst({ where: { id, empresaId } });
     if (!devolucion) return 'no_encontrada';
-    if (devolucion.estado !== 'pendiente') return 'no_pendiente';
-    await this.prisma.devolucion.update({ where: { id }, data: { estado: 'procesado' } });
-    return 'ok';
+    // El WHERE con estado:'pendiente' hace de la transición un UPDATE
+    // atómico - dos requests concurrentes nunca marcan "procesado" dos veces.
+    const { count } = await this.prisma.devolucion.updateMany({
+      where: { id, empresaId, estado: 'pendiente' },
+      data: { estado: 'procesado' },
+    });
+    return count > 0 ? 'ok' : 'no_pendiente';
   }
 
   async cancelar(empresaId: string, usuarioId: string, id: string): Promise<ResultadoTransicionDevolucion> {
     return this.prisma.$transaction(async (tx) => {
       const devolucion = await tx.devolucion.findFirst({ where: { id, empresaId } });
       if (!devolucion) return 'no_encontrada';
-      if (devolucion.estado !== 'pendiente') return 'no_pendiente';
+
+      // "Reclama" la cancelación de forma atómica antes de revertir
+      // movimientos - si dos cancelaciones concurrentes llegan acá, solo una
+      // gana la fila (count>0); la otra corta con 'no_pendiente'.
+      const { count } = await tx.devolucion.updateMany({
+        where: { id, empresaId, estado: 'pendiente' },
+        data: { estado: 'cancelado' },
+      });
+      if (count === 0) return 'no_pendiente';
 
       const movimientosOriginales = await tx.movimientoInventario.findMany({
         where: { empresaId, referenciaId: id, deletedAt: null },
@@ -224,7 +236,6 @@ export class PrismaDevolucionesRepository implements DevolucionesRepository {
         });
       }
 
-      await tx.devolucion.update({ where: { id }, data: { estado: 'cancelado' } });
       return 'ok';
     });
   }

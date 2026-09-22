@@ -163,7 +163,21 @@ export class PrismaComprasRepository implements ComprasRepository {
     return this.prisma.$transaction(async (tx) => {
       const compra = await tx.compra.findFirst({ where: { id, empresaId } });
       if (!compra) return 'no_encontrada';
-      if (compra.deletedAt) return 'ya_anulada';
+
+      // updateMany con deletedAt:null en el WHERE "reclama" la anulación de
+      // forma atómica - si dos anulaciones concurrentes de la misma compra
+      // llegan acá, solo una afecta una fila; la otra ve count=0 y corta
+      // antes de revertir movimientos por segunda vez.
+      const { count } = await tx.compra.updateMany({
+        where: { id, empresaId, deletedAt: null },
+        data: {
+          deletedAt: new Date(),
+          // Compra no tiene columna propia de motivo de anulación en el
+          // schema - se agrega al final de notas.
+          notas: compra.notas ? `${compra.notas}\n[Anulada] ${motivo}` : `[Anulada] ${motivo}`,
+        },
+      });
+      if (count === 0) return 'ya_anulada';
 
       // Revierte cada movimiento original (mismo producto/variante/lote/
       // cantidad, signo -1) en vez de recalcular desde CompraItem - CompraItem
@@ -190,16 +204,6 @@ export class PrismaComprasRepository implements ComprasRepository {
           },
         });
       }
-
-      // Compra no tiene columna propia de motivo de anulación en el schema -
-      // se agrega al final de notas.
-      await tx.compra.update({
-        where: { id },
-        data: {
-          deletedAt: new Date(),
-          notas: compra.notas ? `${compra.notas}\n[Anulada] ${motivo}` : `[Anulada] ${motivo}`,
-        },
-      });
       return 'ok';
     });
   }

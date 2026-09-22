@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Venta, VentaItem } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
+import { esViolacionUnica } from '../../common/prisma-errors.util.js';
 import type {
   ConfirmarVentaInput,
   EstadoCobro,
@@ -228,7 +229,16 @@ export class PrismaVentasRepository implements VentasRepository {
     return this.prisma.$transaction(async (tx) => {
       const venta = await tx.venta.findFirst({ where: { id, empresaId } });
       if (!venta) return 'no_encontrada';
-      if (venta.deletedAt) return 'ya_anulada';
+
+      // "Reclama" la anulación de forma atómica antes de revertir
+      // movimientos - cierra la carrera de dos anulaciones concurrentes
+      // (antes llegaban ambas a tx.anulacion.create() y la segunda tiraba
+      // un P2002 sin capturar por la restricción única en ventaId).
+      const { count } = await tx.venta.updateMany({
+        where: { id, empresaId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
+      if (count === 0) return 'ya_anulada';
 
       const movimientosOriginales = await tx.movimientoInventario.findMany({
         where: { empresaId, referenciaId: id, tipo: 'venta', signo: -1, deletedAt: null },
@@ -252,8 +262,16 @@ export class PrismaVentasRepository implements VentasRepository {
         });
       }
 
-      await tx.venta.update({ where: { id }, data: { deletedAt: new Date() } });
-      await tx.anulacion.create({ data: { empresaId, ventaId: id, usuarioId, motivo } });
+      try {
+        await tx.anulacion.create({ data: { empresaId, ventaId: id, usuarioId, motivo } });
+      } catch (error) {
+        // Defensa en profundidad: el updateMany de arriba ya cierra la
+        // carrera en el 99% de los casos, pero si igual se llega acá con la
+        // fila única ya tomada, se traduce a 'ya_anulada' en vez de dejar
+        // pasar un PrismaClientKnownRequestError crudo.
+        if (esViolacionUnica(error)) return 'ya_anulada';
+        throw error;
+      }
       return 'ok';
     });
   }
@@ -265,23 +283,31 @@ export class PrismaVentasRepository implements VentasRepository {
     formaPago: string,
     fecha: Date,
   ): Promise<ResultadoCobrarSaldo> {
-    return this.prisma.$transaction(async (tx) => {
-      const venta = await tx.venta.findFirst({ where: { id, empresaId, deletedAt: null } });
-      if (!venta) return { ok: false, motivo: 'no_encontrada' };
-      const saldoActual = venta.saldoPendiente.toNumber();
-      if (!venta.esSenia || saldoActual <= 0) return { ok: false, motivo: 'sin_saldo_pendiente' };
-      if (!(monto > 0 && monto <= saldoActual)) return { ok: false, motivo: 'monto_invalido' };
+    const venta = await this.prisma.venta.findFirst({ where: { id, empresaId, deletedAt: null } });
+    if (!venta) return { ok: false, motivo: 'no_encontrada' };
+    if (!venta.esSenia || venta.saldoPendiente.toNumber() <= 0) return { ok: false, motivo: 'sin_saldo_pendiente' };
+    if (monto <= 0) return { ok: false, motivo: 'monto_invalido' };
 
-      const nuevoSaldo = saldoActual - monto;
-      const pagado = nuevoSaldo <= 0;
+    return this.prisma.$transaction(async (tx) => {
+      // decrement atómico guardado por saldoPendiente >= monto en el WHERE -
+      // antes se leía saldoPendiente, se restaba en JS y se escribía un
+      // valor absoluto: dos cobros parciales concurrentes podían pisarse y
+      // perder un pago del registro (lost update).
+      const { count } = await tx.venta.updateMany({
+        where: { id, empresaId, deletedAt: null, saldoPendiente: { gte: monto } },
+        data: { saldoPendiente: { decrement: monto } },
+      });
+      if (count === 0) return { ok: false, motivo: 'monto_invalido' };
+
+      const actual = await tx.venta.findFirstOrThrow({ where: { id } });
+      const pagado = actual.saldoPendiente.toNumber() <= 0;
       const nota = `Saldo cobrado el ${fecha.toISOString().slice(0, 10)}: $${monto} (${formaPago})`;
       const actualizada = await tx.venta.update({
         where: { id },
         data: {
-          saldoPendiente: pagado ? 0 : nuevoSaldo,
           estadoCobro: pagado ? 'pagado' : 'señado',
-          fechaCobroSaldo: pagado ? fecha : venta.fechaCobroSaldo,
-          notas: venta.notas ? `${venta.notas}\n${nota}` : nota,
+          fechaCobroSaldo: pagado ? fecha : actual.fechaCobroSaldo,
+          notas: actual.notas ? `${actual.notas}\n${nota}` : nota,
         },
         include: { items: { include: { producto: { select: { nombre: true } } } } },
       });

@@ -259,19 +259,27 @@ export class PrismaOrdenesCompraRepository implements OrdenesCompraRepository {
             referenciaId: compra.id,
           },
         });
-        const nuevaCantidad = item.cantidadRecibida + qty;
+        // increment atómico en vez de leer cantidadRecibida (de la ficha
+        // capturada al principio de la transacción) y escribir un valor
+        // absoluto - dos recepciones parciales concurrentes sobre el mismo
+        // item podían pisarse y perder una de las dos.
         await tx.ordenCompraItem.update({
           where: { id: item.id },
-          data: { cantidadRecibida: nuevaCantidad, recibido: nuevaCantidad >= item.cantidadPedida },
+          data: { cantidadRecibida: { increment: qty } },
         });
       }
 
-      const itemsFinal = ficha.items.map((it) => {
-        const recibidoAhora = lote.find((l) => l.item.id === it.id)?.qty ?? 0;
-        return { ...it, cantidadRecibida: it.cantidadRecibida + recibidoAhora };
-      });
-      const completa = itemsFinal.every((it) => it.cantidadRecibida >= it.cantidadPedida);
-      const alguna = itemsFinal.some((it) => it.cantidadRecibida > 0);
+      // recibido/el estado de la OC se calculan releyendo los items ya
+      // actualizados (post-increment), no desde la ficha stale de arriba.
+      const itemsActualizados = await tx.ordenCompraItem.findMany({ where: { ordenCompraId: id } });
+      for (const it of itemsActualizados) {
+        const completoAhora = it.cantidadRecibida.toNumber() >= it.cantidadPedida.toNumber();
+        if (it.recibido !== completoAhora) {
+          await tx.ordenCompraItem.update({ where: { id: it.id }, data: { recibido: completoAhora } });
+        }
+      }
+      const completa = itemsActualizados.every((it) => it.cantidadRecibida.toNumber() >= it.cantidadPedida.toNumber());
+      const alguna = itemsActualizados.some((it) => it.cantidadRecibida.toNumber() > 0);
       const nuevoEstado: EstadoOc = completa ? 'recibida' : alguna ? 'recibida_parcial' : ficha.estado;
       const actualizada = await tx.ordenCompra.update({
         where: { id },
