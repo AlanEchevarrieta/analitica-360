@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common
 import type { EmpresaContext, UsuarioContext } from '../../common/auth/request-context.types.js';
 import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
-import { RequireModulo } from '../../common/decorators/permiso.decorator.js';
+import { RequireModulo, RequirePermiso } from '../../common/decorators/permiso.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { ClientesService } from './clientes.service.js';
 import {
@@ -43,6 +43,7 @@ export class ClientesController {
   }
 
   @Post()
+  @RequirePermiso('gestionar_clientes')
   crear(
     @CurrentEmpresa() empresa: EmpresaContext,
     @Body(new ZodValidationPipe(guardarClienteSchema)) body: GuardarClienteInput,
@@ -51,6 +52,7 @@ export class ClientesController {
   }
 
   @Patch(':id')
+  @RequirePermiso('gestionar_clientes')
   actualizar(
     @CurrentEmpresa() empresa: EmpresaContext,
     @Param('id') id: string,
@@ -60,6 +62,7 @@ export class ClientesController {
   }
 
   @Post(':id/interacciones')
+  @RequirePermiso('gestionar_clientes')
   agregarInteraccion(
     @CurrentEmpresa() empresa: EmpresaContext,
     @CurrentUser() usuario: UsuarioContext,

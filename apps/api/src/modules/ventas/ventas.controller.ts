@@ -61,6 +61,7 @@ export class VentasController {
   }
 
   @Post(':id/cobrar-saldo')
+  @RequirePermiso('registrar_ventas')
   cobrarSaldo(
     @CurrentEmpresa() empresa: EmpresaContext,
     @Param('id') id: string,

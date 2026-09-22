@@ -83,6 +83,7 @@ export class PedidosController {
   }
 
   @Post(':id/despacho')
+  @RequirePermiso('hacer_picking')
   registrarDespacho(
     @CurrentEmpresa() empresa: EmpresaContext,
     @CurrentUser() usuario: UsuarioContext,
@@ -103,6 +104,7 @@ export class PedidosController {
   }
 
   @Post(':id/cancelar')
+  @RequirePermiso('crear_pedidos')
   cancelar(@CurrentEmpresa() empresa: EmpresaContext, @Param('id') id: string) {
     return this.pedidosService.cancelar(empresa.id, id);
   }
