@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { LOTES_REPOSITORY, type LoteRecord, type LotesRepository } from './lotes.repository.js';
 import type { CrearLoteInput as CrearLoteDto } from './inventario.dto.js';
 import { fechaHoyAR, prefijoLoteMes } from './inventario.util.js';
@@ -14,7 +14,7 @@ export class LotesService {
   }
 
   async crear(empresaId: string, usuarioId: string, productoId: string, input: CrearLoteDto): Promise<LoteRecord> {
-    const lote = await this.lotesRepository.crear(empresaId, usuarioId, {
+    const resultado = await this.lotesRepository.crear(empresaId, usuarioId, {
       productoId,
       varianteId: input.varianteId ?? null,
       numeroLote: input.numeroLote,
@@ -25,8 +25,14 @@ export class LotesService {
       notas: input.notas ?? null,
       registrarMovimiento: input.registrarMovimiento,
     });
-    if (!lote) throw new NotFoundException('Producto no encontrado');
-    return lote;
+    if (!resultado.ok) {
+      if (resultado.motivo === 'producto_no_encontrado') throw new NotFoundException('Producto no encontrado');
+      if (resultado.motivo === 'variante_invalida') {
+        throw new BadRequestException('La variante no existe o no pertenece a este producto');
+      }
+      throw new BadRequestException('El proveedor no existe o no pertenece a esta empresa');
+    }
+    return resultado.lote;
   }
 
   async sugerenciaNumero(empresaId: string): Promise<string> {

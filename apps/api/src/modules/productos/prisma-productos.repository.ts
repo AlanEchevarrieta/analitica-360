@@ -8,6 +8,7 @@ import type {
   ProductoRecord,
   ProductosFiltro,
   ProductosRepository,
+  ResultadoGuardarProducto,
 } from './productos.repository.js';
 import { coincideMargen, esBusquedaCodigoBarras } from './productos.util.js';
 
@@ -35,7 +36,16 @@ export class PrismaProductosRepository implements ProductosRepository {
     };
   }
 
-  async crear(empresaId: string, input: GuardarProductoInput): Promise<ProductoRecord> {
+  private async categoriaValida(empresaId: string, categoriaId: string | null): Promise<boolean> {
+    if (categoriaId === null) return true;
+    const categoria = await this.prisma.categoria.findFirst({ where: { id: categoriaId, empresaId } });
+    return categoria != null;
+  }
+
+  async crear(empresaId: string, input: GuardarProductoInput): Promise<ResultadoGuardarProducto> {
+    if (!(await this.categoriaValida(empresaId, input.categoriaId))) {
+      return { ok: false, motivo: 'categoria_invalida' };
+    }
     const producto = await this.prisma.$transaction(async (tx) => {
       const creado = await tx.producto.create({
         data: {
@@ -62,12 +72,15 @@ export class PrismaProductosRepository implements ProductosRepository {
       }
       return creado;
     });
-    return this.toRecord(producto);
+    return { ok: true, producto: this.toRecord(producto) };
   }
 
-  async actualizar(empresaId: string, id: string, input: GuardarProductoInput): Promise<ProductoRecord | null> {
+  async actualizar(empresaId: string, id: string, input: GuardarProductoInput): Promise<ResultadoGuardarProducto> {
     const existente = await this.prisma.producto.findFirst({ where: { id, empresaId } });
-    if (!existente) return null;
+    if (!existente) return { ok: false, motivo: 'producto_no_encontrado' };
+    if (!(await this.categoriaValida(empresaId, input.categoriaId))) {
+      return { ok: false, motivo: 'categoria_invalida' };
+    }
 
     const producto = await this.prisma.$transaction(async (tx) => {
       const actualizado = await tx.producto.update({
@@ -88,7 +101,7 @@ export class PrismaProductosRepository implements ProductosRepository {
       }
       return actualizado;
     });
-    return this.toRecord(producto);
+    return { ok: true, producto: this.toRecord(producto) };
   }
 
   async buscarPorId(empresaId: string, id: string): Promise<ProductoRecord | null> {

@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { LotesService } from './lotes.service.js';
 import { LOTES_REPOSITORY, type LoteRecord, type LotesRepository } from './lotes.repository.js';
@@ -45,7 +45,7 @@ describe('LotesService', () => {
   });
 
   it('crear() devuelve el lote creado cuando el repositorio lo confirma', async () => {
-    repository.crear.mockResolvedValue(loteBase);
+    repository.crear.mockResolvedValue({ ok: true, lote: loteBase });
     const resultado = await service.crear('empresa-1', 'user-1', 'prod-1', {
       numeroLote: 'LOTE-202609-001',
       cantidadInicial: 10,
@@ -55,7 +55,7 @@ describe('LotesService', () => {
   });
 
   it('crear() lanza NotFoundException cuando el producto no existe', async () => {
-    repository.crear.mockResolvedValue(null);
+    repository.crear.mockResolvedValue({ ok: false, motivo: 'producto_no_encontrado' });
     await expect(
       service.crear('empresa-1', 'user-1', 'prod-x', {
         numeroLote: 'L-1',
@@ -63,6 +63,30 @@ describe('LotesService', () => {
         registrarMovimiento: true,
       }),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('crear() lanza BadRequestException cuando la variante no pertenece al producto/empresa', async () => {
+    repository.crear.mockResolvedValue({ ok: false, motivo: 'variante_invalida' });
+    await expect(
+      service.crear('empresa-1', 'user-1', 'prod-1', {
+        numeroLote: 'L-1',
+        varianteId: 'var-ajena',
+        cantidadInicial: 0,
+        registrarMovimiento: true,
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('crear() lanza BadRequestException cuando el proveedor no pertenece a la empresa', async () => {
+    repository.crear.mockResolvedValue({ ok: false, motivo: 'proveedor_invalido' });
+    await expect(
+      service.crear('empresa-1', 'user-1', 'prod-1', {
+        numeroLote: 'L-1',
+        proveedorId: 'prov-ajeno',
+        cantidadInicial: 0,
+        registrarMovimiento: true,
+      }),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('sugerenciaNumero() arma el prefijo del mes y rellena el correlativo a 3 dígitos', async () => {

@@ -46,6 +46,10 @@ export interface DimensionesProducto {
 
 export const PRODUCTOS_REPOSITORY = Symbol('PRODUCTOS_REPOSITORY');
 
+export type ResultadoGuardarProducto =
+  | { ok: true; producto: ProductoRecord }
+  | { ok: false; motivo: 'producto_no_encontrado' | 'categoria_invalida' };
+
 /**
  * Puerto de persistencia de Producto. Implementación real:
  * PrismaProductosRepository. El stock NO vive acá - Producto no tiene columna
@@ -53,9 +57,14 @@ export const PRODUCTOS_REPOSITORY = Symbol('PRODUCTOS_REPOSITORY');
  * sin implementar) - ver riesgo "stock derivado" en el plan de reescritura.
  */
 export interface ProductosRepository {
-  crear(empresaId: string, input: GuardarProductoInput): Promise<ProductoRecord>;
+  /**
+   * `categoria_invalida` si `categoriaId` viene seteado y no es una
+   * Categoria de esta empresa (aislamiento multi-tenant - ver riesgo en
+   * el plan).
+   */
+  crear(empresaId: string, input: GuardarProductoInput): Promise<ResultadoGuardarProducto>;
   /** Actualiza y, si cambia precioVenta/costo, agrega un registro a PrecioHistorial (transaccional). */
-  actualizar(empresaId: string, id: string, input: GuardarProductoInput): Promise<ProductoRecord | null>;
+  actualizar(empresaId: string, id: string, input: GuardarProductoInput): Promise<ResultadoGuardarProducto>;
   buscarPorId(empresaId: string, id: string): Promise<ProductoRecord | null>;
   listar(empresaId: string, filtro: ProductosFiltro): Promise<ListaProductos>;
   listarNombres(empresaId: string): Promise<{ id: string; nombre: string }[]>;

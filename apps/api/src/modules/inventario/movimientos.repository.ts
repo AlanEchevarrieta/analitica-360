@@ -40,16 +40,26 @@ export interface MovimientoKardexRecord extends MovimientoRecord {
   numeroLote: string | null;
 }
 
+export type ResultadoCrearMovimiento =
+  | { ok: true; movimiento: MovimientoRecord }
+  | { ok: false; motivo: 'producto_no_encontrado' | 'variante_invalida' };
+
 export type ResultadoTraslado =
   | { ok: true; movimientos: [MovimientoRecord, MovimientoRecord] }
-  | { ok: false; motivo: 'ubicacion_invalida' | 'producto_no_encontrado' };
+  | { ok: false; motivo: 'ubicacion_invalida' | 'producto_no_encontrado' | 'stock_insuficiente' };
 
 export const MOVIMIENTOS_REPOSITORY = Symbol('MOVIMIENTOS_REPOSITORY');
 
 /** Puerto de persistencia de MovimientoInventario. Implementación real: PrismaMovimientosRepository. */
 export interface MovimientosRepository {
-  crear(empresaId: string, input: CrearMovimientoInput): Promise<MovimientoRecord | null>;
-  /** Crea el par de filas signo -1/+1 que representa la transferencia (ver comentario en el schema). */
+  /** `variante_invalida` si `varianteId` viene seteado y no pertenece a este producto/empresa (aislamiento multi-tenant). */
+  crear(empresaId: string, input: CrearMovimientoInput): Promise<ResultadoCrearMovimiento>;
+  /**
+   * Crea el par de filas signo -1/+1 que representa la transferencia (ver
+   * comentario en el schema), validando producto/ubicaciones y stock
+   * suficiente en origen dentro de una única transacción interactiva -
+   * evita la ventana de carrera de validar fuera del `$transaction`.
+   */
   registrarTraslado(
     empresaId: string,
     usuarioId: string,

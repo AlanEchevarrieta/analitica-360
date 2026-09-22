@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
-import type { CrearLoteInput, LoteRecord, LotesRepository } from './lotes.repository.js';
+import type { CrearLoteInput, LoteRecord, LotesRepository, ResultadoCrearLote } from './lotes.repository.js';
 import { estadoLote } from './inventario.util.js';
 
 type LoteConJoins = {
@@ -94,9 +94,19 @@ export class PrismaLotesRepository implements LotesRepository {
     return this.toRecords(filas);
   }
 
-  async crear(empresaId: string, usuarioId: string, input: CrearLoteInput): Promise<LoteRecord | null> {
+  async crear(empresaId: string, usuarioId: string, input: CrearLoteInput): Promise<ResultadoCrearLote> {
     const producto = await this.prisma.producto.findFirst({ where: { id: input.productoId, empresaId } });
-    if (!producto) return null;
+    if (!producto) return { ok: false, motivo: 'producto_no_encontrado' };
+    if (input.varianteId) {
+      const variante = await this.prisma.productoVariante.findFirst({
+        where: { id: input.varianteId, productoId: input.productoId, empresaId },
+      });
+      if (!variante) return { ok: false, motivo: 'variante_invalida' };
+    }
+    if (input.proveedorId) {
+      const proveedor = await this.prisma.proveedor.findFirst({ where: { id: input.proveedorId, empresaId } });
+      if (!proveedor) return { ok: false, motivo: 'proveedor_invalido' };
+    }
 
     const lote = await this.prisma.$transaction(async (tx) => {
       const creado = await tx.lote.create({
@@ -131,7 +141,7 @@ export class PrismaLotesRepository implements LotesRepository {
       }
       return creado;
     });
-    return (await this.toRecords([lote]))[0];
+    return { ok: true, lote: (await this.toRecords([lote]))[0] };
   }
 
   async sugerenciaNumero(empresaId: string, prefijo: string): Promise<number> {

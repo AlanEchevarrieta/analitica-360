@@ -7,6 +7,7 @@ import type {
   MovimientoKardexRecord,
   MovimientoRecord,
   MovimientosRepository,
+  ResultadoCrearMovimiento,
   ResultadoTraslado,
 } from './movimientos.repository.js';
 import { deltaStockKardex } from './inventario.util.js';
@@ -41,9 +42,15 @@ export class PrismaMovimientosRepository implements MovimientosRepository {
     };
   }
 
-  async crear(empresaId: string, input: CrearMovimientoInput): Promise<MovimientoRecord | null> {
+  async crear(empresaId: string, input: CrearMovimientoInput): Promise<ResultadoCrearMovimiento> {
     const producto = await this.prisma.producto.findFirst({ where: { id: input.productoId, empresaId } });
-    if (!producto) return null;
+    if (!producto) return { ok: false, motivo: 'producto_no_encontrado' };
+    if (input.varianteId) {
+      const variante = await this.prisma.productoVariante.findFirst({
+        where: { id: input.varianteId, productoId: input.productoId, empresaId },
+      });
+      if (!variante) return { ok: false, motivo: 'variante_invalida' };
+    }
     const creado = await this.prisma.movimientoInventario.create({
       data: {
         empresaId,
@@ -62,7 +69,32 @@ export class PrismaMovimientosRepository implements MovimientosRepository {
         referenciaId: input.referenciaId ?? null,
       },
     });
-    return this.toRecord(creado);
+    return { ok: true, movimiento: this.toRecord(creado) };
+  }
+
+  /** Stock del producto en una ubicación puntual - misma semántica que stockPorUbicaciones() del legacy, acotada a una ubicación. */
+  private async stockEnUbicacion(
+    tx: Prisma.TransactionClient,
+    empresaId: string,
+    productoId: string,
+    ubicacion: string,
+  ): Promise<number> {
+    const filas = await tx.$queryRaw<{ stock: string | null }[]>(Prisma.sql`
+      SELECT COALESCE(SUM(
+        CASE
+          WHEN tipo = 'transferencia' AND signo = -1 AND ubicacion_origen = ${ubicacion} THEN -cantidad
+          WHEN tipo = 'transferencia' AND signo = 1 AND ubicacion_destino = ${ubicacion} THEN cantidad
+          WHEN tipo <> 'transferencia' AND ubicacion_destino = ${ubicacion} THEN cantidad * signo
+          WHEN tipo <> 'transferencia' AND ubicacion_destino IS NULL AND ubicacion_origen = ${ubicacion} THEN cantidad * signo
+          ELSE 0
+        END
+      ), 0) AS stock
+      FROM movimientos_inventario
+      WHERE empresa_id = ${empresaId}::uuid
+        AND producto_id = ${productoId}::uuid
+        AND deleted_at IS NULL
+    `);
+    return Number(filas[0]?.stock ?? 0);
   }
 
   async registrarTraslado(
@@ -70,33 +102,43 @@ export class PrismaMovimientosRepository implements MovimientosRepository {
     usuarioId: string,
     input: { productoId: string; cantidad: number; origen: string; destino: string; motivo: string | null; fecha: Date },
   ): Promise<ResultadoTraslado> {
-    const producto = await this.prisma.producto.findFirst({ where: { id: input.productoId, empresaId } });
-    if (!producto) return { ok: false, motivo: 'producto_no_encontrado' };
+    // Transacción interactiva con aislamiento Serializable: valida producto,
+    // ubicaciones y stock suficiente en origen, y crea el par de filas, todo
+    // como una unidad atómica - evita la ventana de carrera de traslados
+    // concurrentes que dos $create sueltos (o validar fuera de la tx) dejaban
+    // abierta.
+    return this.prisma.$transaction(
+      async (tx) => {
+        const producto = await tx.producto.findFirst({ where: { id: input.productoId, empresaId } });
+        if (!producto) return { ok: false, motivo: 'producto_no_encontrado' };
 
-    if (input.origen === input.destino) return { ok: false, motivo: 'ubicacion_invalida' };
-    const [origenValida, destinoValida] = await Promise.all([
-      this.prisma.ubicacion.findFirst({ where: { empresaId, nombre: input.origen } }),
-      this.prisma.ubicacion.findFirst({ where: { empresaId, nombre: input.destino } }),
-    ]);
-    if (!origenValida || !destinoValida) return { ok: false, motivo: 'ubicacion_invalida' };
+        if (input.origen === input.destino) return { ok: false, motivo: 'ubicacion_invalida' };
+        const [origenValida, destinoValida] = await Promise.all([
+          tx.ubicacion.findFirst({ where: { empresaId, nombre: input.origen } }),
+          tx.ubicacion.findFirst({ where: { empresaId, nombre: input.destino } }),
+        ]);
+        if (!origenValida || !destinoValida) return { ok: false, motivo: 'ubicacion_invalida' };
 
-    const datosComunes = {
-      empresaId,
-      productoId: input.productoId,
-      usuarioId,
-      tipo: 'transferencia',
-      cantidad: input.cantidad,
-      ubicacionOrigen: input.origen,
-      ubicacionDestino: input.destino,
-      motivo: input.motivo,
-      fecha: input.fecha,
-    };
+        const stockOrigen = await this.stockEnUbicacion(tx, empresaId, input.productoId, input.origen);
+        if (stockOrigen < input.cantidad) return { ok: false, motivo: 'stock_insuficiente' };
 
-    const [salida, entrada] = await this.prisma.$transaction([
-      this.prisma.movimientoInventario.create({ data: { ...datosComunes, signo: -1 } }),
-      this.prisma.movimientoInventario.create({ data: { ...datosComunes, signo: 1 } }),
-    ]);
-    return { ok: true, movimientos: [this.toRecord(salida), this.toRecord(entrada)] };
+        const datosComunes = {
+          empresaId,
+          productoId: input.productoId,
+          usuarioId,
+          tipo: 'transferencia',
+          cantidad: input.cantidad,
+          ubicacionOrigen: input.origen,
+          ubicacionDestino: input.destino,
+          motivo: input.motivo,
+          fecha: input.fecha,
+        };
+        const salida = await tx.movimientoInventario.create({ data: { ...datosComunes, signo: -1 } });
+        const entrada = await tx.movimientoInventario.create({ data: { ...datosComunes, signo: 1 } });
+        return { ok: true, movimientos: [this.toRecord(salida), this.toRecord(entrada)] };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   async calcularStockActual(empresaId: string, productoId: string, varianteId?: string | null): Promise<number> {
@@ -155,13 +197,26 @@ export class PrismaMovimientosRepository implements MovimientosRepository {
     const varianteIds = [...new Set(pagina.filter((m) => m.varianteId).map((m) => m.varianteId!))];
     const loteIds = [...new Set(pagina.filter((m) => m.loteId).map((m) => m.loteId!))];
 
+    // empresaId explícito en cada join, aunque los ids ya salen de filas
+    // scopeadas - defensa en profundidad, no depender de que ningún otro
+    // punto de escritura pueda colar un id de otra empresa acá (ver
+    // aislamiento multi-tenant en el plan).
     const [usuarios, ventas, variantes, lotes] = await Promise.all([
-      usuarioIds.length > 0 ? this.prisma.usuario.findMany({ where: { id: { in: usuarioIds } }, select: { id: true, nombre: true } }) : [],
-      ventaIds.length > 0 ? this.prisma.venta.findMany({ where: { id: { in: ventaIds } }, select: { id: true, fecha: true } }) : [],
-      varianteIds.length > 0
-        ? this.prisma.productoVariante.findMany({ where: { id: { in: varianteIds } }, select: { id: true, atributos: true } })
+      usuarioIds.length > 0
+        ? this.prisma.usuario.findMany({ where: { id: { in: usuarioIds }, empresaId }, select: { id: true, nombre: true } })
         : [],
-      loteIds.length > 0 ? this.prisma.lote.findMany({ where: { id: { in: loteIds } }, select: { id: true, numeroLote: true } }) : [],
+      ventaIds.length > 0
+        ? this.prisma.venta.findMany({ where: { id: { in: ventaIds }, empresaId }, select: { id: true, fecha: true } })
+        : [],
+      varianteIds.length > 0
+        ? this.prisma.productoVariante.findMany({
+            where: { id: { in: varianteIds }, empresaId },
+            select: { id: true, atributos: true },
+          })
+        : [],
+      loteIds.length > 0
+        ? this.prisma.lote.findMany({ where: { id: { in: loteIds }, empresaId }, select: { id: true, numeroLote: true } })
+        : [],
     ]);
     const nombresUsuario = new Map(usuarios.map((u) => [u.id, u.nombre]));
     const fechasVenta = new Map(ventas.map((v) => [v.id, v.fecha]));

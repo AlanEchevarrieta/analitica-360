@@ -31,6 +31,10 @@ export interface CrearLoteInput {
   registrarMovimiento?: boolean;
 }
 
+export type ResultadoCrearLote =
+  | { ok: true; lote: LoteRecord }
+  | { ok: false; motivo: 'producto_no_encontrado' | 'variante_invalida' | 'proveedor_invalido' };
+
 export const LOTES_REPOSITORY = Symbol('LOTES_REPOSITORY');
 
 /** Puerto de persistencia de Lote. Implementación real: PrismaLotesRepository. */
@@ -39,9 +43,11 @@ export interface LotesRepository {
   /**
    * Si `registrarMovimiento` y `cantidadInicial > 0`, agrega un
    * MovimientoInventario 'ajuste_positivo' (stock inicial del lote), en la
-   * misma transacción - puerto de crearLote() del legacy.
+   * misma transacción - puerto de crearLote() del legacy. `variante_invalida`/
+   * `proveedor_invalido` si esos ids no pertenecen a este producto/empresa
+   * (aislamiento multi-tenant).
    */
-  crear(empresaId: string, usuarioId: string, input: CrearLoteInput): Promise<LoteRecord | null>;
+  crear(empresaId: string, usuarioId: string, input: CrearLoteInput): Promise<ResultadoCrearLote>;
   sugerenciaNumero(empresaId: string, prefijo: string): Promise<number>;
   /** Lotes con stock > 0 para un producto/variante, ordenados por vencimiento más próximo primero (FEFO). */
   disponibles(empresaId: string, productoId: string, varianteId: string | null): Promise<LoteRecord[]>;

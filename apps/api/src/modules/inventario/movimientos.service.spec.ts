@@ -43,7 +43,7 @@ describe('MovimientosService', () => {
   });
 
   it('registrarAjuste() calcula el signo según el tipo y delega al repositorio', async () => {
-    repository.crear.mockResolvedValue(movimientoBase);
+    repository.crear.mockResolvedValue({ ok: true, movimiento: movimientoBase });
     await service.registrarAjuste('empresa-1', 'user-1', { productoId: 'prod-1', tipo: 'merma', cantidad: 3 });
     expect(repository.crear).toHaveBeenCalledWith('empresa-1', {
       productoId: 'prod-1',
@@ -56,11 +56,35 @@ describe('MovimientosService', () => {
     });
   });
 
-  it('registrarAjuste() lanza NotFoundException cuando el repositorio devuelve null', async () => {
-    repository.crear.mockResolvedValue(null);
+  it('registrarAjuste() lanza NotFoundException cuando el producto no existe', async () => {
+    repository.crear.mockResolvedValue({ ok: false, motivo: 'producto_no_encontrado' });
     await expect(
       service.registrarAjuste('empresa-1', 'user-1', { productoId: 'prod-x', tipo: 'ajuste_positivo', cantidad: 1 }),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('registrarAjuste() lanza BadRequestException cuando la variante no pertenece al producto/empresa', async () => {
+    repository.crear.mockResolvedValue({ ok: false, motivo: 'variante_invalida' });
+    await expect(
+      service.registrarAjuste('empresa-1', 'user-1', {
+        productoId: 'prod-1',
+        varianteId: 'var-ajena',
+        tipo: 'ajuste_positivo',
+        cantidad: 1,
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('registrarTraslado() lanza BadRequestException cuando no hay stock suficiente en origen', async () => {
+    repository.registrarTraslado.mockResolvedValue({ ok: false, motivo: 'stock_insuficiente' });
+    await expect(
+      service.registrarTraslado('empresa-1', 'user-1', {
+        productoId: 'prod-1',
+        cantidad: 1000,
+        origen: 'Casa',
+        destino: 'Stand',
+      }),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('registrarTraslado() lanza BadRequestException cuando la ubicación es inválida', async () => {

@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { ProductosService } from './productos.service.js';
 import { PRODUCTOS_REPOSITORY, type ProductoRecord, type ProductosRepository } from './productos.repository.js';
@@ -40,7 +40,7 @@ describe('ProductosService', () => {
   });
 
   it('crear() normaliza campos opcionales a null y delega al repositorio', async () => {
-    repository.crear.mockResolvedValue(productoBase);
+    repository.crear.mockResolvedValue({ ok: true, producto: productoBase });
     await service.crear('empresa-1', { nombre: 'Yerba', activo: true });
     expect(repository.crear).toHaveBeenCalledWith('empresa-1', {
       nombre: 'Yerba',
@@ -51,11 +51,18 @@ describe('ProductosService', () => {
     });
   });
 
-  it('actualizar() lanza NotFoundException cuando el repositorio devuelve null (empresa no dueña o no existe)', async () => {
-    repository.actualizar.mockResolvedValue(null);
+  it('actualizar() lanza NotFoundException cuando el producto no existe en esa empresa', async () => {
+    repository.actualizar.mockResolvedValue({ ok: false, motivo: 'producto_no_encontrado' });
     await expect(
       service.actualizar('empresa-1', 'prod-x', { nombre: 'X', activo: true }),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('actualizar() lanza BadRequestException cuando la categoría no pertenece a esta empresa', async () => {
+    repository.actualizar.mockResolvedValue({ ok: false, motivo: 'categoria_invalida' });
+    await expect(
+      service.actualizar('empresa-1', 'prod-1', { nombre: 'X', activo: true, categoriaId: 'cat-ajena' }),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('buscarPorId() lanza NotFoundException cuando no existe', async () => {
