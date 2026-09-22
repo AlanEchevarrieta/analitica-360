@@ -35,10 +35,17 @@ describe('UbicacionesService', () => {
   });
 
   it('actualizar() lanza NotFoundException cuando el repositorio no encuentra la ubicación en esa empresa', async () => {
-    repository.actualizar.mockResolvedValue(null);
+    repository.actualizar.mockResolvedValue({ ok: false, motivo: 'no_encontrada' });
     await expect(
       service.actualizar('empresa-1', 'ubi-x', { nombre: 'X', tipo: 'otro', activo: true }),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('crear() lanza ConflictException cuando el nombre ya existe en la empresa', async () => {
+    repository.crear.mockResolvedValue({ ok: false, motivo: 'nombre_duplicado' });
+    await expect(
+      service.crear('empresa-1', { nombre: 'Casa', tipo: 'deposito', activo: true }),
+    ).rejects.toThrow(ConflictException);
   });
 
   it('eliminar() lanza NotFoundException cuando no existe', async () => {
@@ -57,7 +64,7 @@ describe('UbicacionesService', () => {
   });
 
   it('crear() recorta la descripción vacía a null', async () => {
-    repository.crear.mockResolvedValue(ubicacionBase);
+    repository.crear.mockResolvedValue({ ok: true, ubicacion: ubicacionBase });
     await service.crear('empresa-1', { nombre: 'Casa', descripcion: '   ', tipo: 'deposito', activo: true });
     expect(repository.crear).toHaveBeenCalledWith('empresa-1', {
       nombre: 'Casa',

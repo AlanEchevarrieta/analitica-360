@@ -16,13 +16,18 @@ export interface GuardarUbicacionInput {
   activo: boolean;
 }
 
+export type ResultadoGuardarUbicacion =
+  | { ok: true; ubicacion: UbicacionRecord }
+  | { ok: false; motivo: 'no_encontrada' | 'nombre_duplicado' };
+
 export const UBICACIONES_REPOSITORY = Symbol('UBICACIONES_REPOSITORY');
 
 /** Puerto de persistencia de Ubicacion. Implementación real: PrismaUbicacionesRepository. */
 export interface UbicacionesRepository {
   listar(empresaId: string, soloActivas: boolean): Promise<UbicacionRecord[]>;
-  crear(empresaId: string, input: GuardarUbicacionInput): Promise<UbicacionRecord>;
-  actualizar(empresaId: string, id: string, input: GuardarUbicacionInput): Promise<UbicacionRecord | null>;
+  /** `nombre_duplicado` si ya existe una ubicación con ese nombre en la empresa (`@@unique([empresaId, nombre])`). */
+  crear(empresaId: string, input: GuardarUbicacionInput): Promise<ResultadoGuardarUbicacion>;
+  actualizar(empresaId: string, id: string, input: GuardarUbicacionInput): Promise<ResultadoGuardarUbicacion>;
   buscarPorId(empresaId: string, id: string): Promise<UbicacionRecord | null>;
   /**
    * false si no existe en esta empresa. Lanza con un mensaje de dominio (no

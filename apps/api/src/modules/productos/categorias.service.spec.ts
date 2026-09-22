@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { CategoriasService } from './categorias.service.js';
 import {
@@ -34,7 +34,7 @@ describe('CategoriasService', () => {
   });
 
   it('crear() recorta la descripción vacía a null', async () => {
-    repository.crear.mockResolvedValue(categoriaBase);
+    repository.crear.mockResolvedValue({ ok: true, categoria: categoriaBase });
     await service.crear('empresa-1', { nombre: 'Bebidas', descripcion: '   ', activo: true });
     expect(repository.crear).toHaveBeenCalledWith({
       empresaId: 'empresa-1',
@@ -44,8 +44,15 @@ describe('CategoriasService', () => {
     });
   });
 
+  it('crear() lanza ConflictException cuando el nombre ya existe en la empresa', async () => {
+    repository.crear.mockResolvedValue({ ok: false, motivo: 'nombre_duplicado' });
+    await expect(service.crear('empresa-1', { nombre: 'Bebidas', activo: true })).rejects.toThrow(
+      ConflictException,
+    );
+  });
+
   it('actualizar() lanza NotFoundException cuando el repositorio no encuentra la categoría en esa empresa', async () => {
-    repository.actualizar.mockResolvedValue(null);
+    repository.actualizar.mockResolvedValue({ ok: false, motivo: 'no_encontrada' });
     await expect(
       service.actualizar('empresa-1', 'cat-x', { nombre: 'X', activo: true }),
     ).rejects.toThrow(NotFoundException);

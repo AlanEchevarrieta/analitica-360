@@ -1,10 +1,17 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   UBICACIONES_REPOSITORY,
+  type ResultadoGuardarUbicacion,
   type UbicacionRecord,
   type UbicacionesRepository,
 } from './ubicaciones.repository.js';
 import type { GuardarUbicacionInput } from './ubicaciones.dto.js';
+
+function desempacar(resultado: ResultadoGuardarUbicacion): UbicacionRecord {
+  if (resultado.ok) return resultado.ubicacion;
+  if (resultado.motivo === 'no_encontrada') throw new NotFoundException('Ubicación no encontrada');
+  throw new ConflictException('Ya existe una ubicación con ese nombre');
+}
 
 @Injectable()
 export class UbicacionesService {
@@ -14,24 +21,24 @@ export class UbicacionesService {
     return this.ubicacionesRepository.listar(empresaId, soloActivas);
   }
 
-  crear(empresaId: string, input: GuardarUbicacionInput): Promise<UbicacionRecord> {
-    return this.ubicacionesRepository.crear(empresaId, {
+  async crear(empresaId: string, input: GuardarUbicacionInput): Promise<UbicacionRecord> {
+    const resultado = await this.ubicacionesRepository.crear(empresaId, {
       nombre: input.nombre,
       descripcion: input.descripcion?.trim() || null,
       tipo: input.tipo,
       activo: input.activo,
     });
+    return desempacar(resultado);
   }
 
   async actualizar(empresaId: string, id: string, input: GuardarUbicacionInput): Promise<UbicacionRecord> {
-    const ubicacion = await this.ubicacionesRepository.actualizar(empresaId, id, {
+    const resultado = await this.ubicacionesRepository.actualizar(empresaId, id, {
       nombre: input.nombre,
       descripcion: input.descripcion?.trim() || null,
       tipo: input.tipo,
       activo: input.activo,
     });
-    if (!ubicacion) throw new NotFoundException('Ubicación no encontrada');
-    return ubicacion;
+    return desempacar(resultado);
   }
 
   async eliminar(empresaId: string, id: string): Promise<void> {
