@@ -131,22 +131,41 @@ export class PrismaProductosRepository implements ProductosRepository {
         : {}),
     };
 
-    // El margen (precioVenta/costo) no es filtrable en SQL de forma simple -
-    // se trae el subconjunto ya filtrado por DB y se filtra/pagina en memoria,
-    // igual que hacía listarProductosPaginado() en el legacy.
+    const from = (filtro.pagina - 1) * filtro.pageSize;
+    const activosPromise = this.prisma.producto.count({ where: { empresaId, deletedAt: null, activo: true } });
+
+    // Camino rápido (el caso común: sin filtro de margen) - paginación real
+    // en Postgres via skip/take. El margen (precioVenta/costo) no es
+    // filtrable en SQL de forma simple, así que solo en ese caso se cae al
+    // camino lento: traer todo lo filtrado por DB y filtrar/paginar en
+    // memoria, igual que hacía listarProductosPaginado() en el legacy.
+    if (filtro.margen === 'todos') {
+      const [filas, total, activos] = await Promise.all([
+        this.prisma.producto.findMany({
+          where,
+          include: { categoriaRel: { select: { nombre: true } } },
+          orderBy: { nombre: 'asc' },
+          skip: from,
+          take: filtro.pageSize,
+        }),
+        this.prisma.producto.count({ where }),
+        activosPromise,
+      ]);
+      return { items: filas.map((p) => this.toRecord(p)), total, activos };
+    }
+
     const [filas, activos] = await Promise.all([
       this.prisma.producto.findMany({
         where,
         include: { categoriaRel: { select: { nombre: true } } },
         orderBy: { nombre: 'asc' },
       }),
-      this.prisma.producto.count({ where: { empresaId, deletedAt: null, activo: true } }),
+      activosPromise,
     ]);
 
     const registros = filas.map((p) => this.toRecord(p));
     const filtrados = registros.filter((p) => coincideMargen(filtro.margen, p.precioVenta, p.costo));
 
-    const from = (filtro.pagina - 1) * filtro.pageSize;
     return {
       items: filtrados.slice(from, from + filtro.pageSize),
       total: filtrados.length,

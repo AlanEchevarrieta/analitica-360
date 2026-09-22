@@ -48,14 +48,18 @@ export class EmpresaScopeGuard implements CanActivate {
       );
     }
 
-    const empresa = await this.usuariosRepository.findEmpresaByClerkOrgId(clerkAuth.clerkOrgId);
+    // Lookups independientes - en paralelo, no en serie. Este guard es
+    // global (corre en cada request autenticado), así que una ronda extra
+    // de latencia acá pesa en toda la API, no solo en este endpoint.
+    const [empresa, usuario] = await Promise.all([
+      this.usuariosRepository.findEmpresaByClerkOrgId(clerkAuth.clerkOrgId),
+      this.usuariosRepository.findUsuarioByClerkUserId(clerkAuth.clerkUserId),
+    ]);
     if (!empresa) {
       throw new ForbiddenException(
         'Empresa no sincronizada todavía (esperando el webhook de Clerk). Reintentá en unos segundos.',
       );
     }
-
-    const usuario = await this.usuariosRepository.findUsuarioByClerkUserId(clerkAuth.clerkUserId);
     if (!usuario || usuario.empresaId !== empresa.id) {
       throw new ForbiddenException('Usuario no sincronizado o no pertenece a esta empresa.');
     }
