@@ -185,8 +185,16 @@ export class PrismaPedidosRepository implements PedidosRepository {
       }
 
       const asignadoAId = await this.resolverAsignacion(tx, empresaId);
-      // Sin tabla de numeración propia en el schema - mismo criterio que Devolucion.numero.
-      const numero = (await tx.pedido.count({ where: { empresaId } })) + 1;
+      // A diferencia de Devolucion, Pedido SÍ tiene su tabla de numeración
+      // propia (PedidoNumeracion) - se me había pasado usarla y generaba el
+      // número con count()+1, vulnerable a duplicados bajo concurrencia
+      // (mismo problema que ya se había resuelto para Venta/OrdenCompra).
+      const numeracion = await tx.pedidoNumeracion.upsert({
+        where: { empresaId },
+        create: { empresaId, ultimo: 1 },
+        update: { ultimo: { increment: 1 } },
+      });
+      const numero = numeracion.ultimo;
 
       const creado = await tx.pedido.create({
         data: {
