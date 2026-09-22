@@ -16,6 +16,7 @@ import { VentasModule } from './modules/ventas/ventas.module.js';
 import { DevolucionesModule } from './modules/devoluciones/devoluciones.module.js';
 import { PedidosModule } from './modules/pedidos/pedidos.module.js';
 import { ClientesModule } from './modules/clientes/clientes.module.js';
+import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ClientesModule } from './modules/clientes/clientes.module.js';
     DevolucionesModule,
     PedidosModule,
     ClientesModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
