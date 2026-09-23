@@ -19,6 +19,7 @@ import { ClientesModule } from './modules/clientes/clientes.module.js';
 import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 import { ContabilidadModule } from './modules/contabilidad/contabilidad.module.js';
 import { ImportExportModule } from './modules/import-export/import-export.module.js';
+import { NotificacionesModule } from './modules/notificaciones/notificaciones.module.js';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { ImportExportModule } from './modules/import-export/import-export.module
     AnalyticsModule,
     ContabilidadModule,
     ImportExportModule,
+    NotificacionesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
