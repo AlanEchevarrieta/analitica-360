@@ -842,6 +842,19 @@ model TicketRespuesta {
   @@map("tickets_respuestas")
 }
 
+// Numeración GLOBAL (no por empresa, a diferencia de VentaNumeracion/
+// PedidoNumeracion) - fiel a tickets_numero_seq en
+// supabase/039_tickets_soporte.sql, una secuencia de Postgres compartida
+// por todo el SaaS. Fila única (id fijo en 1) en vez de una secuencia
+// nativa de Postgres, para seguir el mismo patrón upsert-increment que ya
+// usan los otros numeradores de este schema.
+model TicketNumeracion {
+  id     Int    @id @default(1)
+  ultimo BigInt @default(0)
+
+  @@map("tickets_numeracion")
+}
+
 // ==== Admin SaaS ====
 
 model Pago {

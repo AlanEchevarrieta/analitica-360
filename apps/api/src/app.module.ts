@@ -20,6 +20,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 import { ContabilidadModule } from './modules/contabilidad/contabilidad.module.js';
 import { ImportExportModule } from './modules/import-export/import-export.module.js';
 import { NotificacionesModule } from './modules/notificaciones/notificaciones.module.js';
+import { SoporteModule } from './modules/soporte/soporte.module.js';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { NotificacionesModule } from './modules/notificaciones/notificaciones.mo
     ContabilidadModule,
     ImportExportModule,
     NotificacionesModule,
+    SoporteModule,
   ],
   controllers: [AppController],
   providers: [AppService],
