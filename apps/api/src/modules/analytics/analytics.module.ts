@@ -12,10 +12,14 @@ import { InsightsCombosController } from './combos.controller.js';
 import { InsightsCombosService } from './combos.service.js';
 import { INSIGHTS_COMBOS_REPOSITORY } from './combos.repository.js';
 import { PrismaInsightsCombosRepository } from './prisma-combos.repository.js';
+import { InsightsController } from './insights.controller.js';
+import { InsightsService } from './insights.service.js';
+import { INSIGHTS_REPOSITORY } from './insights.repository.js';
+import { PrismaInsightsRepository } from './prisma-insights.repository.js';
 
 @Module({
   imports: [ClientesModule],
-  controllers: [DashboardController, AnalyticsPeriodoController, InsightsCombosController],
+  controllers: [DashboardController, AnalyticsPeriodoController, InsightsCombosController, InsightsController],
   providers: [
     DashboardService,
     { provide: DASHBOARD_REPOSITORY, useClass: PrismaDashboardRepository },
@@ -23,6 +27,8 @@ import { PrismaInsightsCombosRepository } from './prisma-combos.repository.js';
     { provide: ANALYTICS_PERIODO_REPOSITORY, useClass: PrismaAnalyticsPeriodoRepository },
     InsightsCombosService,
     { provide: INSIGHTS_COMBOS_REPOSITORY, useClass: PrismaInsightsCombosRepository },
+    InsightsService,
+    { provide: INSIGHTS_REPOSITORY, useClass: PrismaInsightsRepository },
   ],
 })
 export class AnalyticsModule {}

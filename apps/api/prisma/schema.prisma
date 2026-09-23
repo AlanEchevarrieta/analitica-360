@@ -210,6 +210,7 @@ model ConfiguracionEmpresa {
   alicuotaIva             Decimal  @default(21.00) @map("alicuota_iva") @db.Decimal(5, 2)
   nombreIva               String   @default("IVA") @map("nombre_iva")
   mostrarIvaVentas        Boolean  @default(false) @map("mostrar_iva_ventas")
+  usaVariantes            Boolean  @default(false) @map("usa_variantes")
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @default(now()) @updatedAt @map("updated_at")
 

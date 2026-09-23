@@ -25,6 +25,11 @@ export function inicioMesIso(iso: string): string {
   return `${iso.slice(0, 7)}-01`;
 }
 
+/** Puerto de src/lib/analytics.ts::inicioAnioIso. */
+export function inicioAnioIso(iso: string): string {
+  return `${iso.slice(0, 4)}-01-01`;
+}
+
 const DIAS_ABREV = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 
 /** Puerto de la etiqueta de día usada en dashboard_inicio() (SQL): extract(dow) 0=dom..6=sáb. */
