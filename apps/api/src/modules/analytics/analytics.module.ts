@@ -8,15 +8,21 @@ import { AnalyticsPeriodoController } from './periodo.controller.js';
 import { AnalyticsPeriodoService } from './periodo.service.js';
 import { ANALYTICS_PERIODO_REPOSITORY } from './periodo.repository.js';
 import { PrismaAnalyticsPeriodoRepository } from './prisma-periodo.repository.js';
+import { InsightsCombosController } from './combos.controller.js';
+import { InsightsCombosService } from './combos.service.js';
+import { INSIGHTS_COMBOS_REPOSITORY } from './combos.repository.js';
+import { PrismaInsightsCombosRepository } from './prisma-combos.repository.js';
 
 @Module({
   imports: [ClientesModule],
-  controllers: [DashboardController, AnalyticsPeriodoController],
+  controllers: [DashboardController, AnalyticsPeriodoController, InsightsCombosController],
   providers: [
     DashboardService,
     { provide: DASHBOARD_REPOSITORY, useClass: PrismaDashboardRepository },
     AnalyticsPeriodoService,
     { provide: ANALYTICS_PERIODO_REPOSITORY, useClass: PrismaAnalyticsPeriodoRepository },
+    InsightsCombosService,
+    { provide: INSIGHTS_COMBOS_REPOSITORY, useClass: PrismaInsightsCombosRepository },
   ],
 })
 export class AnalyticsModule {}
