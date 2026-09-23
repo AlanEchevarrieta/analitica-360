@@ -58,18 +58,17 @@ export class PrismaInsightsRepository implements InsightsRepository {
 
   async itemsDeVentas(empresaId: string, ventaIds: string[]): Promise<ItemInsight[]> {
     if (ventaIds.length === 0) return [];
-    const out: ItemInsight[] = [];
-    for (let i = 0; i < ventaIds.length; i += 200) {
-      const slice = ventaIds.slice(i, i + 200);
-      const items = await this.prisma.ventaItem.findMany({
-        where: { empresaId, ventaId: { in: slice } },
-        select: { ventaId: true, productoId: true, varianteId: true, cantidad: true },
-      });
-      for (const it of items) {
-        out.push({ ventaId: it.ventaId, productoId: it.productoId, varianteId: it.varianteId, cantidad: it.cantidad });
-      }
-    }
-    return out;
+    const slices: string[][] = [];
+    for (let i = 0; i < ventaIds.length; i += 200) slices.push(ventaIds.slice(i, i + 200));
+    const paginas = await Promise.all(
+      slices.map((slice) =>
+        this.prisma.ventaItem.findMany({
+          where: { empresaId, ventaId: { in: slice } },
+          select: { ventaId: true, productoId: true, varianteId: true, cantidad: true },
+        }),
+      ),
+    );
+    return paginas.flat().map((it) => ({ ventaId: it.ventaId, productoId: it.productoId, varianteId: it.varianteId, cantidad: it.cantidad }));
   }
 
   async historialPrecios(empresaId: string): Promise<HistorialPrecio[]> {

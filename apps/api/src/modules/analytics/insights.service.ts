@@ -100,11 +100,11 @@ export class InsightsService {
       try {
         const vars = await this.repository.variantesDeProductos(empresaId, productos.map((p) => p.id));
         const ids = vars.map((v) => v.id);
+        const slices: string[][] = [];
+        for (let i = 0; i < ids.length; i += 200) slices.push(ids.slice(i, i + 200));
+        const partes = await Promise.all(slices.map((slice) => this.repository.stockPorVariante(empresaId, slice)));
         const stock = new Map<string, number>();
-        for (let i = 0; i < ids.length; i += 200) {
-          const part = await this.repository.stockPorVariante(empresaId, ids.slice(i, i + 200));
-          for (const [k, val] of part) stock.set(k, val);
-        }
+        for (const part of partes) for (const [k, val] of part) stock.set(k, val);
         const dist = armarVariantes(items, ventas, vars, stock, hoy);
         variantes = dist.hayVentas ? dist : { hayVentas: false, porAtributo: [], combinaciones: [], bullets: [] };
       } catch (e) {
