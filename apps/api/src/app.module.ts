@@ -17,6 +17,7 @@ import { DevolucionesModule } from './modules/devoluciones/devoluciones.module.j
 import { PedidosModule } from './modules/pedidos/pedidos.module.js';
 import { ClientesModule } from './modules/clientes/clientes.module.js';
 import { AnalyticsModule } from './modules/analytics/analytics.module.js';
+import { ContabilidadModule } from './modules/contabilidad/contabilidad.module.js';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module.js';
     PedidosModule,
     ClientesModule,
     AnalyticsModule,
+    ContabilidadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
