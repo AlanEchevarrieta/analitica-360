@@ -16,10 +16,15 @@ import { InsightsController } from './insights.controller.js';
 import { InsightsService } from './insights.service.js';
 import { INSIGHTS_REPOSITORY } from './insights.repository.js';
 import { PrismaInsightsRepository } from './prisma-insights.repository.js';
+import { InflacionController } from './inflacion.controller.js';
+import { InflacionService } from './inflacion.service.js';
+import { INFLACION_REPOSITORY } from './inflacion.repository.js';
+import { PrismaInflacionRepository } from './prisma-inflacion.repository.js';
+import { BcraInflacionClient } from './bcra-inflacion.client.js';
 
 @Module({
   imports: [ClientesModule],
-  controllers: [DashboardController, AnalyticsPeriodoController, InsightsCombosController, InsightsController],
+  controllers: [DashboardController, AnalyticsPeriodoController, InsightsCombosController, InsightsController, InflacionController],
   providers: [
     DashboardService,
     { provide: DASHBOARD_REPOSITORY, useClass: PrismaDashboardRepository },
@@ -29,6 +34,9 @@ import { PrismaInsightsRepository } from './prisma-insights.repository.js';
     { provide: INSIGHTS_COMBOS_REPOSITORY, useClass: PrismaInsightsCombosRepository },
     InsightsService,
     { provide: INSIGHTS_REPOSITORY, useClass: PrismaInsightsRepository },
+    InflacionService,
+    { provide: INFLACION_REPOSITORY, useClass: PrismaInflacionRepository },
+    BcraInflacionClient,
   ],
 })
 export class AnalyticsModule {}
