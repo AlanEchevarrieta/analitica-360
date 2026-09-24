@@ -21,6 +21,7 @@ import { ContabilidadModule } from './modules/contabilidad/contabilidad.module.j
 import { ImportExportModule } from './modules/import-export/import-export.module.js';
 import { NotificacionesModule } from './modules/notificaciones/notificaciones.module.js';
 import { SoporteModule } from './modules/soporte/soporte.module.js';
+import { PlanesModule } from './modules/planes/planes.module.js';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { SoporteModule } from './modules/soporte/soporte.module.js';
     ImportExportModule,
     NotificacionesModule,
     SoporteModule,
+    PlanesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
