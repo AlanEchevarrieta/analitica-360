@@ -17,6 +17,9 @@ describe('TicketService', () => {
       contarNoLeidos: vi.fn(),
       marcarTodosVistos: vi.fn(),
       bannerHome: vi.fn(),
+      listarAdmin: vi.fn(),
+      fichaAdmin: vi.fn(),
+      cambiarEstado: vi.fn(),
     };
     const module = await Test.createTestingModule({
       providers: [TicketService, { provide: TICKET_REPOSITORY, useValue: repository }],
@@ -55,5 +58,22 @@ describe('TicketService', () => {
       categoria: 'consulta',
       prioridad: 'media',
     });
+  });
+
+  it('fichaAdmin() lanza NotFoundException si no existe (cross-empresa, no toma empresaId)', async () => {
+    repository.fichaAdmin.mockResolvedValue(null);
+    await expect(service.fichaAdmin('t1')).rejects.toThrow(NotFoundException);
+    expect(repository.fichaAdmin).toHaveBeenCalledWith('t1');
+  });
+
+  it('cambiarEstado() lanza NotFoundException si no existe', async () => {
+    repository.cambiarEstado.mockResolvedValue({ ok: false, motivo: 'no_encontrado' });
+    await expect(service.cambiarEstado('t1', 'resuelto')).rejects.toThrow(NotFoundException);
+  });
+
+  it('cambiarEstado() delega al repositorio sin empresaId (admin cross-tenant)', async () => {
+    repository.cambiarEstado.mockResolvedValue({ ok: true, valor: true });
+    await service.cambiarEstado('t1', 'cerrado');
+    expect(repository.cambiarEstado).toHaveBeenCalledWith('t1', 'cerrado');
   });
 });

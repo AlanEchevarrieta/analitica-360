@@ -4,6 +4,7 @@ export type EstadoTicket = 'abierto' | 'en_proceso' | 'resuelto' | 'cerrado';
 
 export const CATEGORIAS_TICKET: CategoriaTicket[] = ['consulta', 'bug', 'sugerencia', 'facturacion', 'otro'];
 export const PRIORIDADES_TICKET: PrioridadTicket[] = ['baja', 'media', 'alta', 'urgente'];
+export const ESTADOS_TICKET: EstadoTicket[] = ['abierto', 'en_proceso', 'resuelto', 'cerrado'];
 
 export interface TicketFila {
   id: string;
@@ -53,26 +54,28 @@ export interface BannerTicketHome {
   numero: string | null;
 }
 
+export interface TicketFilaAdmin extends TicketFila {
+  empresaId: string;
+  empresaNombre: string;
+}
+
 export const TICKET_REPOSITORY = Symbol('TICKET_REPOSITORY');
 
 /**
- * Puerto fiel de la parte TENANT (no admin) de src/lib/tickets.ts, según el
- * SQL real en supabase/039_tickets_soporte.sql: cualquier usuario
- * autenticado de la empresa puede ver/crear/responder sus propios tickets
- * (RLS: `empresa_id = get_empresa_id()`, sin distinción de rol).
- *
- * Deliberadamente fuera de alcance - requieren el concepto "es_admin_app()"
- * (staff de Analítica 360 con acceso cross-tenant), que no existe todavía
- * en el sistema de roles nuevo (Rol = dueno|operador|contador, todos
- * tenant-scoped) y le corresponde a AdminSaasModule, fase posterior:
- * - listarTicketsAdmin/admin_listar_tickets(): panel cross-empresa.
- * - cambiarEstadoTicket(): el trigger tickets_before_write() en el SQL real
- *   revierte silenciosamente estado/categoria/prioridad/asunto/descripcion
- *   a su valor anterior si quien actualiza NO es admin - un tenant llamando
- *   a este endpoint hoy no cambiaría nada en los hechos, así que no se
- *   expone en vez de simular un endpoint que no haría lo que promete.
- * - respuestas con es_admin=true: siempre false en este módulo, coherente
- *   con que acá no hay usuarios admin todavía.
+ * Puerto fiel de src/lib/tickets.ts, según el SQL real en
+ * supabase/039_tickets_soporte.sql. La parte tenant (RLS:
+ * `empresa_id = get_empresa_id()`, sin distinción de rol) convive acá con
+ * la parte admin (gateada por @RequireAdminApp() en el controller, no acá -
+ * el repositorio confía en que el caller ya autorizó):
+ * - listarAdmin/fichaAdmin: cross-empresa, puerto de
+ *   admin_listar_tickets()/ficha_ticket() (con el bypass de empresa).
+ * - cambiarEstado: puerto de cambiarEstadoTicket() - el trigger real
+ *   tickets_before_write() solo deja pasar un cambio de estado cuando quien
+ *   escribe es admin (para cualquier otro caller revierte silenciosamente a
+ *   OLD.*), así que este método asume que ya se verificó @RequireAdminApp().
+ * - respuestas con es_admin=true: no expuesto todavía - ni siquiera el
+ *   panel admin del legacy tenía una ficha de UI propia acá, se deja para
+ *   cuando AdminSoportePanel.tsx tenga su puerto dedicado.
  */
 export interface TicketRepository {
   listar(empresaId: string): Promise<TicketFila[]>;
@@ -83,4 +86,9 @@ export interface TicketRepository {
   contarNoLeidos(empresaId: string): Promise<number>;
   marcarTodosVistos(empresaId: string): Promise<void>;
   bannerHome(empresaId: string): Promise<BannerTicketHome | null>;
+  /** Cross-empresa - puerto de admin_listar_tickets(). Fiel al SQL real: no filtra deleted_at (ni el original lo hacía). */
+  listarAdmin(): Promise<TicketFilaAdmin[]>;
+  /** Cross-empresa - puerto del bypass de empresa en ficha_ticket() cuando es_admin_app(). */
+  fichaAdmin(id: string): Promise<TicketFicha | null>;
+  cambiarEstado(id: string, estado: EstadoTicket): Promise<ResultadoTicket<true>>;
 }

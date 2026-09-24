@@ -9,6 +9,7 @@ import type {
   ResultadoTicket,
   TicketFicha,
   TicketFila,
+  TicketFilaAdmin,
   TicketRepository,
   TicketRespuesta,
 } from './ticket.repository.js';
@@ -44,8 +45,17 @@ export class PrismaTicketRepository implements TicketRepository {
   }
 
   async ficha(empresaId: string, id: string): Promise<TicketFicha | null> {
+    return this.fichaWhere({ id, empresaId, deletedAt: null });
+  }
+
+  /** Puerto del bypass de empresa en ficha_ticket() cuando es_admin_app() - el caller ya verificó @RequireAdminApp(). */
+  async fichaAdmin(id: string): Promise<TicketFicha | null> {
+    return this.fichaWhere({ id, deletedAt: null });
+  }
+
+  private async fichaWhere(where: { id: string; empresaId?: string; deletedAt: null }): Promise<TicketFicha | null> {
     const t = await this.prisma.ticket.findFirst({
-      where: { id, empresaId, deletedAt: null },
+      where,
       include: {
         empresa: { select: { nombre: true } },
         usuario: { select: { nombre: true, email: true } },
@@ -152,5 +162,30 @@ export class PrismaTicketRepository implements TicketRepository {
     const sinAdmin = tickets.find((t) => !t.respuestas.some((r) => r.esAdmin));
     if (sinAdmin) return { tipo: 'revision', id: sinAdmin.id, numero: sinAdmin.numeroTicket };
     return null;
+  }
+
+  async listarAdmin(): Promise<TicketFilaAdmin[]> {
+    const tickets = await this.prisma.ticket.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 2000,
+      select: {
+        id: true,
+        empresaId: true,
+        numeroTicket: true,
+        asunto: true,
+        categoria: true,
+        prioridad: true,
+        estado: true,
+        createdAt: true,
+        empresa: { select: { nombre: true } },
+      },
+    });
+    return tickets.map((t) => ({ ...toFila(t), empresaId: t.empresaId, empresaNombre: t.empresa.nombre }));
+  }
+
+  async cambiarEstado(id: string, estado: EstadoTicket): Promise<ResultadoTicket<true>> {
+    const { count } = await this.prisma.ticket.updateMany({ where: { id }, data: { estado } });
+    if (count === 0) return { ok: false, motivo: 'no_encontrado' };
+    return { ok: true, valor: true };
   }
 }

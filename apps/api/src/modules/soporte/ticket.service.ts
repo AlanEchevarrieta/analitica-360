@@ -2,8 +2,10 @@ import { ConflictException, Inject, Injectable, NotFoundException } from '@nestj
 import {
   TICKET_REPOSITORY,
   type BannerTicketHome,
+  type EstadoTicket,
   type TicketFicha,
   type TicketFila,
+  type TicketFilaAdmin,
   type TicketRepository,
   type TicketRespuesta,
 } from './ticket.repository.js';
@@ -51,5 +53,20 @@ export class TicketService {
 
   bannerHome(empresaId: string): Promise<BannerTicketHome | null> {
     return this.repository.bannerHome(empresaId);
+  }
+
+  listarAdmin(): Promise<TicketFilaAdmin[]> {
+    return this.repository.listarAdmin();
+  }
+
+  async fichaAdmin(id: string): Promise<TicketFicha> {
+    const ficha = await this.repository.fichaAdmin(id);
+    if (!ficha) throw new NotFoundException('Ticket no encontrado');
+    return ficha;
+  }
+
+  async cambiarEstado(id: string, estado: EstadoTicket): Promise<void> {
+    const resultado = await this.repository.cambiarEstado(id, estado);
+    if (!resultado.ok) throw new NotFoundException('Ticket no encontrado');
   }
 }

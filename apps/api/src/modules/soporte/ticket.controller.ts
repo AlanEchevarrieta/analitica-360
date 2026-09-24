@@ -1,16 +1,30 @@
-import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
 import type { EmpresaContext, UsuarioContext } from '../../common/auth/request-context.types.js';
 import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { RequireAdminApp } from '../../common/decorators/admin-app.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { TicketService } from './ticket.service.js';
-import { crearTicketSchema, responderTicketSchema, type CrearTicketDto, type ResponderTicketDto } from './ticket.dto.js';
+import {
+  cambiarEstadoTicketSchema,
+  crearTicketSchema,
+  responderTicketSchema,
+  type CambiarEstadoTicketDto,
+  type CrearTicketDto,
+  type ResponderTicketDto,
+} from './ticket.dto.js';
 
 /**
- * Sin @RequireModulo: no hay claim 'soporte' en la taxonomía de roles
- * todavía y, más importante, la RLS real (supabase/039_tickets_soporte.sql)
- * no restringe por rol - cualquier usuario autenticado de la empresa puede
- * abrir/ver/responder tickets. Mismo criterio que NotificacionesController.
+ * Sin @RequireModulo en las rutas tenant: no hay claim 'soporte' en la
+ * taxonomía de roles todavía y, más importante, la RLS real
+ * (supabase/039_tickets_soporte.sql) no restringe por rol - cualquier
+ * usuario autenticado de la empresa puede abrir/ver/responder tickets.
+ * Mismo criterio que NotificacionesController. Las rutas /admin/* sí están
+ * gateadas, con @RequireAdminApp() (puerto de es_admin_app()).
+ *
+ * Orden de rutas importa: los literales (no-leidos, banner-home, admin)
+ * van antes de los `:id` genéricos para que Express no los confunda con un
+ * id de ticket.
  */
 @Controller('tickets')
 export class TicketController {
@@ -29,6 +43,25 @@ export class TicketController {
   @Get('banner-home')
   bannerHome(@CurrentEmpresa() empresa: EmpresaContext) {
     return this.ticketService.bannerHome(empresa.id);
+  }
+
+  @Get('admin')
+  @RequireAdminApp()
+  listarAdmin() {
+    return this.ticketService.listarAdmin();
+  }
+
+  @Get('admin/:id')
+  @RequireAdminApp()
+  fichaAdmin(@Param('id') id: string) {
+    return this.ticketService.fichaAdmin(id);
+  }
+
+  @Patch('admin/:id/estado')
+  @RequireAdminApp()
+  @HttpCode(204)
+  async cambiarEstado(@Param('id') id: string, @Body(new ZodValidationPipe(cambiarEstadoTicketSchema)) body: CambiarEstadoTicketDto) {
+    await this.ticketService.cambiarEstado(id, body.estado);
   }
 
   @Get(':id')
