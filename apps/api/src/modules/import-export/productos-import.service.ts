@@ -34,11 +34,15 @@ export class ProductosImportService {
       const resultados = await Promise.allSettled(lote.map((fila) => this.repository.crear(empresaId, usuarioId, fila)));
       resultados.forEach((r, i) => {
         const fila = lote[i];
-        if (r.status === 'fulfilled' && r.value.ok) {
-          importados += 1;
+        if (r.status === 'fulfilled') {
+          if (r.value.ok) {
+            importados += 1;
+            return;
+          }
+          saltados.push(`${fila.nombre} (${r.value.motivo})`);
           return;
         }
-        const motivo = r.status === 'fulfilled' ? r.value.motivo : r.reason instanceof Error ? r.reason.message : String(r.reason);
+        const motivo = r.reason instanceof Error ? r.reason.message : String(r.reason);
         saltados.push(`${fila.nombre} (${motivo})`);
       });
     }

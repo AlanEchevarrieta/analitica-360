@@ -1,6 +1,109 @@
-/*
- * Tokens de marca, portados desde el legacy src/theme.ts + src/index.css
- * (fondo degradado #0F1B2D -> #1A2F4A, acento #6366F1, cards blancas radio
- * 8px, Inter vía next/font). Se completa en la fase de design system
- * (Fase 5) junto con components.json de shadcn/ui.
+/**
+ * Tokens de marca de Analítica 360 - puerto fiel de src/theme.ts +
+ * src/index.css (legacy). Dos temas: oscuro (navy/índigo, el default de
+ * producción) y claro (lavanda). Nunca la paleta crema anterior a estos dos.
+ *
+ * Esta capa son los valores RAW de marca. globals.css los mapea a las
+ * variables semánticas que shadcn/base-ui esperan (--background, --primary,
+ * etc.) - así el nombre de marca (--brand-nav-idle, --brand-badge-on-bg...)
+ * se preserva para estilizar componentes custom (Sidebar, Badge, Table) más
+ * adelante, sin perder la fidelidad de los valores originales.
  */
+
+:root {
+  /* -- Light (lavanda) -- */
+  --brand-canvas-from: #dddaf5;
+  --brand-canvas-to: #dddaf5;
+  --brand-navbar-bg: #d4d0f0;
+  --brand-navbar-shadow: 0 4px 18px rgba(79, 70, 229, 0.14);
+  --brand-card-bg: #f5f4ff;
+  --brand-border: rgba(99, 102, 241, 0.2);
+  --brand-text: #1e1b4b;
+  --brand-text-muted: #3730a3;
+  --brand-btn-primary: #6366f1;
+  --brand-btn-hover: #4f46e5;
+  --brand-input-bg: #ffffff;
+  --brand-input-text: #1e1b4b;
+  --brand-input-border: rgba(99, 102, 241, 0.3);
+  --brand-input-focus: #6366f1;
+  --brand-input-placeholder: #6b7280;
+  --brand-table-head: rgba(99, 102, 241, 0.12);
+  --brand-row-hover: rgba(99, 102, 241, 0.08);
+  --brand-row-alt: #eeecff;
+  --brand-row-border: rgba(99, 102, 241, 0.14);
+  --brand-badge-on-bg: #d1fae5;
+  --brand-badge-on-fg: #065f46;
+  --brand-badge-off-bg: #e0e7ff;
+  --brand-badge-off-fg: #3730a3;
+  --brand-logout-border: #4f46e5;
+  --brand-logout-fg: #4f46e5;
+  --brand-nav-idle: #312e81;
+  --brand-nav-idle-hover: #1e1b4b;
+  --brand-nav-active-bg: transparent;
+  --brand-nav-active-fg: #4f46e5;
+  --brand-surface: #f5f4ff;
+  --brand-kpi-label: #3730a3;
+  --brand-kpi-value: #1e1b4b;
+  --brand-kpi-sub: #4f46e5;
+  --brand-skeleton: rgba(99, 102, 241, 0.08);
+  --brand-th-fg: #312e81;
+  --brand-th-active-bg: rgba(99, 102, 241, 0.15);
+  --brand-select-bg: #ffffff;
+  --brand-select-fg: #1e1b4b;
+  --brand-select-hover-bg: rgba(99, 102, 241, 0.12);
+  --brand-select-hover-fg: #1e1b4b;
+  --brand-select-checked-bg: #6366f1;
+  --brand-select-checked-fg: #ffffff;
+  --brand-danger: #dc2626;
+  --brand-warn: #d97706;
+  --brand-ok: #16a34a;
+}
+
+.dark {
+  /* -- Dark (navy/índigo) - default de producción -- */
+  --brand-canvas-from: #0f1b2d;
+  --brand-canvas-to: #1a2f4a;
+  --brand-navbar-bg: transparent;
+  --brand-navbar-shadow: none;
+  --brand-card-bg: rgba(15, 23, 41, 0.6);
+  --brand-border: rgba(99, 102, 241, 0.15);
+  --brand-text: #f1f5f9;
+  --brand-text-muted: #94a3b8;
+  --brand-btn-primary: #6366f1;
+  --brand-btn-hover: #4f46e5;
+  --brand-input-bg: #0f1729;
+  --brand-input-text: #f1f5f9;
+  --brand-input-border: rgba(99, 102, 241, 0.3);
+  --brand-input-focus: #6366f1;
+  --brand-input-placeholder: #94a3b8;
+  --brand-table-head: rgba(99, 102, 241, 0.1);
+  --brand-row-hover: rgba(99, 102, 241, 0.06);
+  --brand-row-alt: rgba(255, 255, 255, 0.02);
+  --brand-row-border: rgba(255, 255, 255, 0.04);
+  --brand-badge-on-bg: rgba(74, 222, 128, 0.1);
+  --brand-badge-on-fg: #4ade80;
+  --brand-badge-off-bg: rgba(148, 163, 184, 0.12);
+  --brand-badge-off-fg: #94a3b8;
+  --brand-logout-border: rgba(255, 255, 255, 0.2);
+  --brand-logout-fg: #ffffff;
+  --brand-nav-idle: #a5b4fc;
+  --brand-nav-idle-hover: #ffffff;
+  --brand-nav-active-bg: rgba(255, 255, 255, 0.15);
+  --brand-nav-active-fg: #ffffff;
+  --brand-surface: rgba(255, 255, 255, 0.05);
+  --brand-kpi-label: #94a3b8;
+  --brand-kpi-value: #f1f5f9;
+  --brand-kpi-sub: #a5b4fc;
+  --brand-skeleton: rgba(255, 255, 255, 0.06);
+  --brand-th-fg: #94a3b8;
+  --brand-th-active-bg: rgba(99, 102, 241, 0.15);
+  --brand-select-bg: #1e293b;
+  --brand-select-fg: #f1f5f9;
+  --brand-select-hover-bg: rgba(99, 102, 241, 0.2);
+  --brand-select-hover-fg: #f1f5f9;
+  --brand-select-checked-bg: #6366f1;
+  --brand-select-checked-fg: #ffffff;
+  --brand-danger: #dc2626;
+  --brand-warn: #d97706;
+  --brand-ok: #16a34a;
+}

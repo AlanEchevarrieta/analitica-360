@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { CATEGORIAS_GASTO, FRECUENCIAS_GASTO } from './gasto.repository.js';
+import { CATEGORIAS_GASTO, FRECUENCIAS_GASTO, type CategoriaGasto, type FrecuenciaGasto } from './gasto.repository.js';
 
 const fechaIso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido (YYYY-MM-DD)');
-const categoriaSchema = z.enum(CATEGORIAS_GASTO as [string, ...string[]]);
-const frecuenciaSchema = z.enum(FRECUENCIAS_GASTO as [string, ...string[]]);
+const categoriaSchema = z.enum(CATEGORIAS_GASTO as [CategoriaGasto, ...CategoriaGasto[]]);
+const frecuenciaSchema = z.enum(FRECUENCIAS_GASTO as [FrecuenciaGasto, ...FrecuenciaGasto[]]);
 
 export const listarGastosQuerySchema = z
   .object({ desde: fechaIso, hasta: fechaIso, categoria: categoriaSchema.optional() })
