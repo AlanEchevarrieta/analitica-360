@@ -1,4 +1,9 @@
-import { agruparEntradas, costoPromedioPonderado, costoUnitarioConAdicionales } from './costo-promedio.js';
+import {
+  agruparEntradas,
+  costoPromedioPonderado,
+  costoUnitarioConAdicionales,
+  revertirCostoPromedio,
+} from './costo-promedio.js';
 
 describe('costoPromedioPonderado', () => {
   it('pondera el stock previo con la entrada', () => {
@@ -58,5 +63,20 @@ describe('agruparEntradas', () => {
       { productoId: 'p1', varianteId: null, cantidad: 4, costoUnitario: 150 },
       { productoId: 'p1', varianteId: 'v1', cantidad: 1, costoUnitario: 50 },
     ]);
+  });
+});
+
+describe('revertirCostoPromedio', () => {
+  it('deshace exactamente la entrada si no hubo movimientos en el medio', () => {
+    const costo = costoPromedioPonderado(33, 2500, 10, 3100); // 2639.53
+    expect(revertirCostoPromedio(43, costo, 10, 3100)).toBeCloseTo(2500, 0);
+  });
+
+  it('sin stock restante deja el costo como está', () => {
+    expect(revertirCostoPromedio(10, 3100, 10, 3100)).toBeNull();
+  });
+
+  it('sin costo actual no hace nada', () => {
+    expect(revertirCostoPromedio(20, null, 5, 100)).toBeNull();
   });
 });

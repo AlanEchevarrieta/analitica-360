@@ -50,6 +50,24 @@ export function costoPromedioPonderado(
   return redondear((stock * costoPrevio + cantidad * costoNuevo) / (stock + cantidad));
 }
 
+/**
+ * Inverso del PPP al anular una entrada: saca del promedio las unidades que
+ * entraron a ese costo. Si ya no queda stock que promediar (o el resultado no
+ * tiene sentido porque hubo ventas en el medio), deja el costo como estaba.
+ */
+export function revertirCostoPromedio(
+  stockConEntrada: number,
+  costoActual: number | null,
+  cantidad: number,
+  costoEntrada: number,
+): number | null {
+  if (!costoActual || costoActual <= 0) return null;
+  const resto = stockConEntrada - cantidad;
+  if (resto <= 0) return null;
+  const costo = (stockConEntrada * costoActual - cantidad * costoEntrada) / resto;
+  return costo > 0 ? redondear(costo) : null;
+}
+
 /** Junta entradas del mismo producto/variante en una sola, con su costo promedio. */
 export function agruparEntradas(entradas: EntradaCosto[]): EntradaCosto[] {
   const porClave = new Map<string, EntradaCosto>();
@@ -67,6 +85,39 @@ export function agruparEntradas(entradas: EntradaCosto[]): EntradaCosto[] {
   return [...porClave.values()];
 }
 
+async function stockDe(tx: Prisma.TransactionClient, empresaId: string, productoId: string, varianteId: string | null) {
+  const [{ stock }] = await tx.$queryRaw<{ stock: string | null }[]>(Prisma.sql`
+    SELECT SUM(cantidad * signo) AS stock FROM movimientos_inventario
+    WHERE empresa_id = ${empresaId}::uuid AND deleted_at IS NULL AND producto_id = ${productoId}::uuid
+      AND ${varianteId ? Prisma.sql`variante_id = ${varianteId}::uuid` : Prisma.sql`variante_id IS NULL`}
+  `);
+  return Number(stock ?? 0);
+}
+
+/**
+ * Deshace el PPP de entradas que se anulan (anulación de compra). Debe
+ * llamarse ANTES de crear los movimientos que revierten el stock.
+ */
+export async function revertirCostoPromedioEntradas(
+  tx: Prisma.TransactionClient,
+  empresaId: string,
+  entradas: EntradaCosto[],
+): Promise<void> {
+  for (const e of agruparEntradas(entradas)) {
+    const producto = await tx.producto.findFirst({ where: { id: e.productoId, empresaId } });
+    if (!producto) continue;
+    const variante = e.varianteId
+      ? await tx.productoVariante.findFirst({ where: { id: e.varianteId, empresaId } })
+      : null;
+    const costoActual = (variante?.costo ?? producto.costo)?.toNumber() ?? null;
+    const stock = await stockDe(tx, empresaId, e.productoId, e.varianteId);
+    const costo = revertirCostoPromedio(stock, costoActual, e.cantidad, e.costoUnitario);
+    if (costo == null) continue;
+    if (variante) await tx.productoVariante.update({ where: { id: variante.id }, data: { costo } });
+    else await tx.producto.update({ where: { id: producto.id }, data: { costo } });
+  }
+}
+
 /**
  * Actualiza el costo (PPP) de cada producto/variante que entra y deja el
  * registro en precios_historial. Debe llamarse dentro de la transacción de
@@ -81,11 +132,7 @@ export async function aplicarCostoPromedio(
 ): Promise<void> {
   for (const e of agruparEntradas(entradas)) {
     if (e.cantidad <= 0) continue;
-    const [{ stock }] = await tx.$queryRaw<{ stock: string | null }[]>(Prisma.sql`
-      SELECT SUM(cantidad * signo) AS stock FROM movimientos_inventario
-      WHERE empresa_id = ${empresaId}::uuid AND deleted_at IS NULL AND producto_id = ${e.productoId}::uuid
-        AND ${e.varianteId ? Prisma.sql`variante_id = ${e.varianteId}::uuid` : Prisma.sql`variante_id IS NULL`}
-    `);
+    const stock = await stockDe(tx, empresaId, e.productoId, e.varianteId);
 
     const producto = await tx.producto.findFirst({ where: { id: e.productoId, empresaId } });
     if (!producto) continue;

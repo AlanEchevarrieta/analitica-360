@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Compra } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
-import { aplicarCostoPromedio, costoUnitarioConAdicionales } from '../inventario/costo-promedio.js';
+import {
+  aplicarCostoPromedio,
+  costoUnitarioConAdicionales,
+  revertirCostoPromedioEntradas,
+} from '../inventario/costo-promedio.js';
 import type {
   CompraFicha,
   CompraRecord,
@@ -200,6 +204,17 @@ export class PrismaComprasRepository implements ComprasRepository {
       const movimientosOriginales = await tx.movimientoInventario.findMany({
         where: { empresaId, referenciaId: id, tipo: 'compra', signo: 1, deletedAt: null },
       });
+      // Sacar esta compra del costo promedio antes de revertir el stock.
+      await revertirCostoPromedioEntradas(
+        tx,
+        empresaId,
+        movimientosOriginales.map((m) => ({
+          productoId: m.productoId,
+          varianteId: m.varianteId,
+          cantidad: m.cantidad.toNumber(),
+          costoUnitario: m.costoUnitario?.toNumber() ?? 0,
+        })),
+      );
       for (const m of movimientosOriginales) {
         await tx.movimientoInventario.create({
           data: {
