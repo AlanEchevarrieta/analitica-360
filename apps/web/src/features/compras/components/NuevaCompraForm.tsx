@@ -99,6 +99,7 @@ export function NuevaCompraForm() {
               onAgregar={agregar}
               precioDe={(producto, variante) => variante?.costo ?? producto.costo ?? 0}
               mostrar="costo"
+              permitirNuevaVariante
             />
             <LineasProductos
               lineas={lineas}

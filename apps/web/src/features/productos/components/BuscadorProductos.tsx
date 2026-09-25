@@ -10,6 +10,7 @@ import { useProductos } from "../hooks/use-productos";
 import { useVariantes } from "../hooks/use-variantes";
 import { etiquetaVariante, type LineaProducto, type ProductoFila, type VarianteProducto } from "../types";
 import { EscanerCamara } from "./EscanerCamara";
+import { NuevaVarianteInline } from "./NuevaVarianteInline";
 
 const MAX_RESULTADOS = 8;
 const MAS_VENDIDOS = 8;
@@ -23,12 +24,15 @@ export function BuscadorProductos({
   onAgregar,
   precioDe = (producto, variante) => variante?.precioVenta ?? producto.precioVenta ?? 0,
   mostrar = "precio",
+  permitirNuevaVariante = false,
 }: {
   onAgregar: (linea: Omit<LineaProducto, "cantidad">) => void;
   /** Precio inicial de la línea: venta por defecto; en compras, el costo. */
   precioDe?: (producto: ProductoFila, variante: VarianteProducto | null) => number;
   /** Qué valor mostrar en los resultados de búsqueda. */
   mostrar?: "precio" | "costo";
+  /** Compras: permite crear una variante que todavía no existe (ej. un color nuevo). */
+  permitirNuevaVariante?: boolean;
 }) {
   const [busqueda, setBusqueda] = useState("");
   const [eligiendo, setEligiendo] = useState<{ producto: ProductoFila; variantes: VarianteProducto[] } | null>(null);
@@ -107,6 +111,13 @@ export function BuscadorProductos({
           <Button variant="ghost" onClick={() => setEligiendo(null)}>
             Cancelar
           </Button>
+          {permitirNuevaVariante && (
+            <NuevaVarianteInline
+              productoId={eligiendo.producto.id}
+              atributoSugerido={Object.keys(eligiendo.variantes[0]?.atributos ?? {})[0] ?? ""}
+              onCreada={(v) => agregar(eligiendo.producto, v)}
+            />
+          )}
         </div>
       </div>
     );
