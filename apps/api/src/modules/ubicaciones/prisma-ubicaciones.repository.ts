@@ -39,11 +39,28 @@ export class PrismaUbicacionesRepository implements UbicacionesRepository {
 
   async actualizar(empresaId: string, id: string, input: GuardarUbicacionInput): Promise<ResultadoGuardarUbicacion> {
     try {
-      const { count } = await this.prisma.ubicacion.updateMany({
-        where: { id, empresaId },
-        data: { nombre: input.nombre, descripcion: input.descripcion, tipo: input.tipo, activo: input.activo },
+      const encontrada = await this.prisma.$transaction(async (tx) => {
+        const anterior = await tx.ubicacion.findFirst({ where: { id, empresaId } });
+        if (!anterior) return false;
+        await tx.ubicacion.update({
+          where: { id },
+          data: { nombre: input.nombre, descripcion: input.descripcion, tipo: input.tipo, activo: input.activo },
+        });
+        // Los movimientos y la configuración guardan el NOMBRE (texto, sin FK):
+        // al renombrar se actualizan para que el stock por ubicación y la
+        // ubicación de venta por defecto sigan apuntando al mismo lugar.
+        if (anterior.nombre !== input.nombre) {
+          await tx.movimientoInventario.updateMany({ where: { empresaId, ubicacionOrigen: anterior.nombre }, data: { ubicacionOrigen: input.nombre } });
+          await tx.movimientoInventario.updateMany({ where: { empresaId, ubicacionDestino: anterior.nombre }, data: { ubicacionDestino: input.nombre } });
+          const config = await tx.configuracionEmpresa.findUnique({ where: { empresaId } });
+          if (config?.ubicacionVentaDefault === anterior.nombre) {
+            const inventario = { ...((config.inventario ?? {}) as Record<string, unknown>), ubicacion_venta_default: input.nombre };
+            await tx.configuracionEmpresa.update({ where: { empresaId }, data: { ubicacionVentaDefault: input.nombre, inventario } });
+          }
+        }
+        return true;
       });
-      if (count === 0) return { ok: false, motivo: 'no_encontrada' };
+      if (!encontrada) return { ok: false, motivo: 'no_encontrada' };
       const actualizada = await this.buscarPorId(empresaId, id);
       return { ok: true, ubicacion: actualizada! };
     } catch (error) {
