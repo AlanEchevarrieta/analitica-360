@@ -8,9 +8,14 @@ export default function Page() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Ventas</h1>
-        <Link href="/ventas/nueva" className={buttonVariants()}>
-          <Plus aria-hidden /> Nueva venta
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/ventas/devoluciones" className={buttonVariants({ variant: "outline" })}>
+            Devoluciones
+          </Link>
+          <Link href="/ventas/nueva" className={buttonVariants()}>
+            <Plus aria-hidden /> Nueva venta
+          </Link>
+        </div>
       </div>
       <VentasListado />
     </div>

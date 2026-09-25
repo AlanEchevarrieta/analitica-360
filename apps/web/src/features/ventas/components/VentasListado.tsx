@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,7 +91,11 @@ export function VentasListado() {
               <TableBody>
                 {data.items.map((v) => (
                   <TableRow key={v.id} className={v.anulada ? "opacity-60" : undefined}>
-                    <TableCell className="tabular-nums">{v.numeroVenta ?? "—"}</TableCell>
+                    <TableCell className="tabular-nums">
+                      <Link href={`/ventas/${v.id}`} className="font-medium hover:underline">
+                        {v.numeroVenta ?? "Ver"}
+                      </Link>
+                    </TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">{formatoFechaHora(v.fecha)}</TableCell>
                     <TableCell>{v.clienteNombre ?? <span className="text-muted-foreground">Sin cliente</span>}</TableCell>
                     <TableCell className="max-w-72 truncate" title={v.productos}>
