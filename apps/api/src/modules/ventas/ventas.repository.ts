@@ -56,6 +56,7 @@ export interface ConfirmarVentaInput {
   ubicacionOrigen?: string | null;
   esSenia: boolean;
   montoSenia: number;
+  notas?: string | null;
 }
 
 export type MotivoRechazoVenta =

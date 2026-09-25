@@ -448,6 +448,8 @@ model Venta {
   anulacion    Anulacion?
   devoluciones Devolucion[]
 
+  pedido Pedido?
+
   @@index([empresaId, fecha])
   @@map("ventas")
 }
@@ -695,9 +697,12 @@ model Pedido {
   remitenteTelefono  String?  @map("remitente_telefono")
   remitenteEmail     String?  @map("remitente_email")
   asignadoAId        String?  @map("asignado_a") @db.Uuid
+  // Venta generada al despachar (ingreso + costo del pedido); null antes del despacho.
+  ventaId            String?  @unique @map("venta_id") @db.Uuid
   createdAt          DateTime @default(now()) @map("created_at")
 
   empresa   Empresa      @relation(fields: [empresaId], references: [id])
+  venta     Venta?       @relation(fields: [ventaId], references: [id])
   cliente   Cliente?     @relation(fields: [clienteId], references: [id])
   asignadoA Usuario?     @relation("PedidoAsignadoA", fields: [asignadoAId], references: [id])
   items     PedidoItem[]

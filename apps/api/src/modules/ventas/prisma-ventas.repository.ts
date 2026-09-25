@@ -6,6 +6,7 @@ import { esViolacionUnica } from '../../common/prisma-errors.util.js';
 import type {
   ConfiguracionVenta,
   ConfirmarVentaInput,
+  MotivoRechazoVenta,
   EstadoCobro,
   FiltrosVentas,
   ListaVentas,
@@ -125,108 +126,8 @@ export class PrismaVentasRepository implements VentasRepository {
 
   async confirmar(empresaId: string, input: ConfirmarVentaInput): Promise<ResultadoConfirmarVenta> {
     if (input.items.length === 0) return { ok: false, motivo: 'sin_productos' };
-
-    return this.prisma.$transaction(async (tx) => {
-      const productoIds = [...new Set(input.items.map((i) => i.productoId))];
-      const productos = await tx.producto.findMany({ where: { id: { in: productoIds }, empresaId } });
-      if (productos.length !== productoIds.length) return { ok: false, motivo: 'producto_invalido' };
-      const costoProducto = new Map(productos.map((p) => [p.id, p.costo?.toNumber() ?? 0]));
-
-      const varianteIds = [...new Set(input.items.filter((i) => i.varianteId).map((i) => i.varianteId!))];
-      const costoVariante = new Map<string, number>();
-      if (varianteIds.length > 0) {
-        const variantes = await tx.productoVariante.findMany({ where: { id: { in: varianteIds }, empresaId } });
-        if (variantes.length !== varianteIds.length) return { ok: false, motivo: 'variante_invalida' };
-        const productoDeVariante = new Map(variantes.map((v) => [v.id, v.productoId]));
-        const todasValidas = input.items.every(
-          (i) => !i.varianteId || productoDeVariante.get(i.varianteId) === i.productoId,
-        );
-        if (!todasValidas) return { ok: false, motivo: 'variante_invalida' };
-        // Variante sin costo propio: vale el costo del producto (igual que su precio).
-        for (const v of variantes) costoVariante.set(v.id, v.costo?.toNumber() ?? costoProducto.get(v.productoId) ?? 0);
-      }
-
-      // Chequeos independientes en paralelo, no en serie (confirmar() es el
-      // endpoint de escritura más llamado del módulo).
-      const [cliente, ubicacion] = await Promise.all([
-        input.clienteId ? tx.cliente.findFirst({ where: { id: input.clienteId, empresaId } }) : null,
-        input.ubicacionOrigen ? tx.ubicacion.findFirst({ where: { empresaId, nombre: input.ubicacionOrigen } }) : null,
-      ]);
-      if (input.clienteId && !cliente) return { ok: false, motivo: 'cliente_invalido' };
-      if (input.ubicacionOrigen && !ubicacion) return { ok: false, motivo: 'ubicacion_invalida' };
-
-      // Los totales se recalculan siempre acá - nunca se confía en un monto
-      // que mande el cliente para algo que involucra dinero.
-      const itemsTotal = input.items.reduce((acc, i) => acc + i.cantidad * i.precioUnitario, 0);
-      if (input.descuento > itemsTotal) return { ok: false, motivo: 'descuento_invalido' };
-      const totalSinInteres = itemsTotal - input.descuento;
-      const { totalConInteres } = calcularTotalesCredito(totalSinInteres, input.coeficienteInteres, input.cuotas);
-
-      if (input.esSenia && !(input.montoSenia > 0 && input.montoSenia < totalConInteres)) {
-        return { ok: false, motivo: 'senia_invalida' };
-      }
-
-      const numeracion = await tx.ventaNumeracion.upsert({
-        where: { empresaId },
-        create: { empresaId, ultimo: 1 },
-        update: { ultimo: { increment: 1 } },
-      });
-
-      const saldoPendiente = input.esSenia ? totalConInteres - input.montoSenia : 0;
-      const estadoCobro: EstadoCobro = input.esSenia ? 'señado' : 'pagado';
-
-      const venta = await tx.venta.create({
-        data: {
-          empresaId,
-          usuarioId: input.usuarioId,
-          clienteId: input.clienteId ?? null,
-          clienteNombre: input.clienteNombre,
-          // Mismo formato que el legacy (V-000569).
-          numeroVenta: `V-${String(numeracion.ultimo).padStart(6, '0')}`,
-          formaPago: input.formaPago,
-          descuento: input.descuento,
-          cuotas: input.cuotas,
-          coeficienteInteres: input.coeficienteInteres,
-          totalSinInteres,
-          totalConInteres,
-          esSenia: input.esSenia,
-          montoSenia: input.esSenia ? input.montoSenia : 0,
-          saldoPendiente,
-          estadoCobro,
-          items: {
-            create: input.items.map((i) => ({
-              empresaId,
-              productoId: i.productoId,
-              varianteId: i.varianteId ?? null,
-              cantidad: i.cantidad,
-              precioUnitario: i.precioUnitario,
-              costoUnitario: i.varianteId ? (costoVariante.get(i.varianteId) ?? 0) : (costoProducto.get(i.productoId) ?? 0),
-            })),
-          },
-        },
-        include: { items: { include: { producto: { select: { nombre: true } } } } },
-      });
-
-      for (const item of input.items) {
-        await tx.movimientoInventario.create({
-          data: {
-            empresaId,
-            productoId: item.productoId,
-            varianteId: item.varianteId ?? null,
-            loteId: item.loteId ?? null,
-            usuarioId: input.usuarioId,
-            tipo: 'venta',
-            cantidad: item.cantidad,
-            signo: -1,
-            precioUnitario: item.precioUnitario,
-            ubicacionOrigen: input.ubicacionOrigen ?? null,
-            referenciaId: venta.id,
-          },
-        });
-      }
-
-      return { ok: true, venta: this.toRecord(venta) };
-    });
+    const resultado = await this.prisma.$transaction((tx) => confirmarVentaEnTx(tx, empresaId, input));
+    return resultado.ok ? { ok: true, venta: this.toRecord(resultado.venta) } : resultado;
   }
 
   async anular(empresaId: string, usuarioId: string, id: string, motivo: string): Promise<ResultadoAnularVenta> {
@@ -323,4 +224,118 @@ export class PrismaVentasRepository implements VentasRepository {
     const config = await this.prisma.configuracionEmpresa.findUnique({ where: { empresaId } });
     return configuracionVentaDesde(config?.mediosPago, config?.tasasCuotas, config?.ubicacionVentaDefault ?? null);
   }
+}
+
+/**
+ * Crea la venta, congela el costo de cada ítem (PPP vigente) y descuenta el
+ * stock, dentro de una transacción ya abierta. La usan VentasRepository y el
+ * despacho de pedidos (PedidosRepository), así una venta de mostrador y un
+ * pedido despachado calculan totales, costos y stock exactamente igual.
+ */
+export async function confirmarVentaEnTx(
+  tx: Prisma.TransactionClient,
+  empresaId: string,
+  input: ConfirmarVentaInput,
+): Promise<{ ok: true; venta: VentaConItemsNombre } | { ok: false; motivo: MotivoRechazoVenta }> {
+  if (input.items.length === 0) return { ok: false, motivo: 'sin_productos' };
+    const productoIds = [...new Set(input.items.map((i) => i.productoId))];
+    const productos = await tx.producto.findMany({ where: { id: { in: productoIds }, empresaId } });
+    if (productos.length !== productoIds.length) return { ok: false, motivo: 'producto_invalido' };
+    const costoProducto = new Map(productos.map((p) => [p.id, p.costo?.toNumber() ?? 0]));
+
+    const varianteIds = [...new Set(input.items.filter((i) => i.varianteId).map((i) => i.varianteId!))];
+    const costoVariante = new Map<string, number>();
+    if (varianteIds.length > 0) {
+      const variantes = await tx.productoVariante.findMany({ where: { id: { in: varianteIds }, empresaId } });
+      if (variantes.length !== varianteIds.length) return { ok: false, motivo: 'variante_invalida' };
+      const productoDeVariante = new Map(variantes.map((v) => [v.id, v.productoId]));
+      const todasValidas = input.items.every(
+        (i) => !i.varianteId || productoDeVariante.get(i.varianteId) === i.productoId,
+      );
+      if (!todasValidas) return { ok: false, motivo: 'variante_invalida' };
+      // Variante sin costo propio: vale el costo del producto (igual que su precio).
+      for (const v of variantes) costoVariante.set(v.id, v.costo?.toNumber() ?? costoProducto.get(v.productoId) ?? 0);
+    }
+
+    // Chequeos independientes en paralelo, no en serie (confirmar() es el
+    // endpoint de escritura más llamado del módulo).
+    const [cliente, ubicacion] = await Promise.all([
+      input.clienteId ? tx.cliente.findFirst({ where: { id: input.clienteId, empresaId } }) : null,
+      input.ubicacionOrigen ? tx.ubicacion.findFirst({ where: { empresaId, nombre: input.ubicacionOrigen } }) : null,
+    ]);
+    if (input.clienteId && !cliente) return { ok: false, motivo: 'cliente_invalido' };
+    if (input.ubicacionOrigen && !ubicacion) return { ok: false, motivo: 'ubicacion_invalida' };
+
+    // Los totales se recalculan siempre acá - nunca se confía en un monto
+    // que mande el cliente para algo que involucra dinero.
+    const itemsTotal = input.items.reduce((acc, i) => acc + i.cantidad * i.precioUnitario, 0);
+    if (input.descuento > itemsTotal) return { ok: false, motivo: 'descuento_invalido' };
+    const totalSinInteres = itemsTotal - input.descuento;
+    const { totalConInteres } = calcularTotalesCredito(totalSinInteres, input.coeficienteInteres, input.cuotas);
+
+    if (input.esSenia && !(input.montoSenia > 0 && input.montoSenia < totalConInteres)) {
+      return { ok: false, motivo: 'senia_invalida' };
+    }
+
+    const numeracion = await tx.ventaNumeracion.upsert({
+      where: { empresaId },
+      create: { empresaId, ultimo: 1 },
+      update: { ultimo: { increment: 1 } },
+    });
+
+    const saldoPendiente = input.esSenia ? totalConInteres - input.montoSenia : 0;
+    const estadoCobro: EstadoCobro = input.esSenia ? 'señado' : 'pagado';
+
+    const venta = await tx.venta.create({
+      data: {
+        empresaId,
+        usuarioId: input.usuarioId,
+        clienteId: input.clienteId ?? null,
+        clienteNombre: input.clienteNombre,
+        // Mismo formato que el legacy (V-000569).
+        numeroVenta: `V-${String(numeracion.ultimo).padStart(6, '0')}`,
+        formaPago: input.formaPago,
+        descuento: input.descuento,
+        cuotas: input.cuotas,
+        coeficienteInteres: input.coeficienteInteres,
+        totalSinInteres,
+        totalConInteres,
+        esSenia: input.esSenia,
+        montoSenia: input.esSenia ? input.montoSenia : 0,
+        notas: input.notas ?? null,
+        saldoPendiente,
+        estadoCobro,
+        items: {
+          create: input.items.map((i) => ({
+            empresaId,
+            productoId: i.productoId,
+            varianteId: i.varianteId ?? null,
+            cantidad: i.cantidad,
+            precioUnitario: i.precioUnitario,
+            costoUnitario: i.varianteId ? (costoVariante.get(i.varianteId) ?? 0) : (costoProducto.get(i.productoId) ?? 0),
+          })),
+        },
+      },
+      include: { items: { include: { producto: { select: { nombre: true } } } } },
+    });
+
+    for (const item of input.items) {
+      await tx.movimientoInventario.create({
+        data: {
+          empresaId,
+          productoId: item.productoId,
+          varianteId: item.varianteId ?? null,
+          loteId: item.loteId ?? null,
+          usuarioId: input.usuarioId,
+          tipo: 'venta',
+          cantidad: item.cantidad,
+          signo: -1,
+          precioUnitario: item.precioUnitario,
+          ubicacionOrigen: input.ubicacionOrigen ?? null,
+          referenciaId: venta.id,
+        },
+      });
+    }
+
+    return { ok: true, venta };
 }

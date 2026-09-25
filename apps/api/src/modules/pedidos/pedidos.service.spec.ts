@@ -83,15 +83,23 @@ describe('PedidosService', () => {
   it('registrarDespacho() lanza BadRequestException cuando el pedido no está listo para despacho', async () => {
     repository.registrarDespacho.mockResolvedValue({ ok: false, motivo: 'no_listo_despacho' });
     await expect(
-      service.registrarDespacho('empresa-1', 'user-1', 'ped-1', {}),
+      service.registrarDespacho('empresa-1', 'user-1', 'ped-1', { formaPago: 'transferencia' }),
     ).rejects.toThrow(BadRequestException);
   });
 
   it('registrarDespacho() lanza BadRequestException cuando la ubicación no pertenece a la empresa', async () => {
     repository.registrarDespacho.mockResolvedValue({ ok: false, motivo: 'ubicacion_invalida' });
     await expect(
-      service.registrarDespacho('empresa-1', 'user-1', 'ped-1', { ubicacionOrigen: 'Ajena' }),
+      service.registrarDespacho('empresa-1', 'user-1', 'ped-1', { ubicacionOrigen: 'Ajena', formaPago: 'transferencia' }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('registrarDespacho() pasa la forma de pago al repositorio y avisa si la venta no se pudo registrar', async () => {
+    repository.registrarDespacho.mockResolvedValue({ ok: false, motivo: 'venta_invalida' });
+    await expect(
+      service.registrarDespacho('empresa-1', 'user-1', 'ped-1', { formaPago: 'efectivo' }),
+    ).rejects.toThrow('No se pudo registrar la venta del pedido');
+    expect(repository.registrarDespacho).toHaveBeenCalledWith('empresa-1', 'user-1', 'ped-1', null, null, null, 'efectivo');
   });
 
   it('cancelar() lanza NotFoundException cuando no existe', async () => {

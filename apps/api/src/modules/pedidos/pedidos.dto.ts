@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { FORMAS_PAGO } from '../ventas/ventas.util.js';
 import { ESTADOS_PEDIDO, ORIGENES_PEDIDO } from './pedidos.repository.js';
 
 const itemPedidoSchema = z.object({
@@ -39,6 +40,8 @@ export const registrarDespachoSchema = z.object({
   transportista: z.string().trim().nullable().optional(),
   numeroSeguimiento: z.string().trim().nullable().optional(),
   ubicacionOrigen: z.string().trim().nullable().optional(),
+  /** Cómo pagó el cliente: queda en la venta que genera el despacho. */
+  formaPago: z.enum(FORMAS_PAGO).default('transferencia'),
 });
 export type RegistrarDespachoInput = z.infer<typeof registrarDespachoSchema>;
 

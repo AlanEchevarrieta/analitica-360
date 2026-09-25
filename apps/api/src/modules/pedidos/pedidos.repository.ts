@@ -87,7 +87,7 @@ export type ResultadoItem = 'ok' | 'no_encontrado';
 export type ResultadoListoDespacho = { ok: true; pedido: PedidoFicha } | { ok: false; motivo: 'no_encontrado' | 'incompleto' };
 export type ResultadoDespacho =
   | { ok: true; pedido: PedidoFicha }
-  | { ok: false; motivo: 'no_encontrado' | 'no_listo_despacho' | 'ubicacion_invalida' };
+  | { ok: false; motivo: 'no_encontrado' | 'no_listo_despacho' | 'ubicacion_invalida' | 'venta_invalida' };
 export type ResultadoTransicion = 'ok' | 'no_encontrado' | 'estado_invalido';
 
 export interface FiltrosPedidos {
@@ -109,9 +109,10 @@ export const PEDIDOS_REPOSITORY = Symbol('PEDIDOS_REPOSITORY');
  * Puerto de persistencia de Pedido. Implementación real:
  * PrismaPedidosRepository. crear() valida producto/variante/cliente contra
  * la empresa y resuelve la asignación automática (ConfiguracionEmpresa.
- * modoAsignacion) al crear. El stock se descuenta recién en
- * registrarDespacho() (tipo 'pedido', signo -1) - hasta ahí un pedido no
- * mueve inventario, solo lo "reserva" visualmente en el picking.
+ * modoAsignacion) al crear. registrarDespacho() registra la Venta del pedido
+ * (ingreso, costo congelado y descuento de stock, igual que una venta de
+ * mostrador) y la vincula en Pedido.ventaId - hasta ahí un pedido no mueve
+ * inventario, solo lo "reserva" visualmente en el picking.
  */
 export interface PedidosRepository {
   listar(empresaId: string, filtro: FiltrosPedidos): Promise<ListaPedidos>;
@@ -135,6 +136,7 @@ export interface PedidosRepository {
     transportista: string | null,
     numeroSeguimiento: string | null,
     ubicacionOrigen: string | null,
+    formaPago: string,
   ): Promise<ResultadoDespacho>;
   marcarConTransportista(empresaId: string, id: string): Promise<ResultadoTransicion>;
   marcarEntregado(empresaId: string, id: string): Promise<ResultadoTransicion>;

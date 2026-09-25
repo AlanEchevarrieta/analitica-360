@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
+import { confirmarVentaEnTx } from '../ventas/prisma-ventas.repository.js';
 import type {
   CrearPedidoInput,
   EstadoPedido,
@@ -314,6 +315,7 @@ export class PrismaPedidosRepository implements PedidosRepository {
     transportista: string | null,
     numeroSeguimiento: string | null,
     ubicacionOrigen: string | null,
+    formaPago: string,
   ): Promise<ResultadoDespacho> {
     return this.prisma.$transaction(async (tx) => {
       const pedido = await tx.pedido.findFirst({ where: { id, empresaId }, include: { items: true } });
@@ -324,30 +326,36 @@ export class PrismaPedidosRepository implements PedidosRepository {
         if (!ubicacion) return { ok: false, motivo: 'ubicacion_invalida' };
       }
 
+      // El despacho es el momento en que el pedido se vende: se registra la
+      // venta (ingreso, costo congelado y movimiento de stock tipo 'venta')
+      // con la misma lógica que una venta de mostrador.
+      const venta = await confirmarVentaEnTx(tx, empresaId, {
+        usuarioId,
+        items: pedido.items.map((i) => ({
+          productoId: i.productoId,
+          varianteId: i.varianteId,
+          loteId: i.loteId,
+          cantidad: Math.round(i.cantidad.toNumber()),
+          precioUnitario: i.precioUnitario.toNumber(),
+        })),
+        formaPago,
+        descuento: 0,
+        clienteNombre: pedido.clienteNombre,
+        clienteId: pedido.clienteId,
+        cuotas: 1,
+        coeficienteInteres: 0,
+        ubicacionOrigen,
+        esSenia: false,
+        montoSenia: 0,
+        notas: `Pedido ${pedido.numeroPedido}${pedido.origen === 'tienda_online' ? ' (tienda online)' : ''}`,
+      });
+      if (!venta.ok) return { ok: false, motivo: 'venta_invalida' };
+
       const actualizado = await tx.pedido.update({
         where: { id },
-        data: { estado: 'despachado', transportista, numeroSeguimiento },
+        data: { estado: 'despachado', transportista, numeroSeguimiento, ventaId: venta.venta.id },
         include: includeFicha,
       });
-
-      for (const item of pedido.items) {
-        await tx.movimientoInventario.create({
-          data: {
-            empresaId,
-            productoId: item.productoId,
-            varianteId: item.varianteId,
-            loteId: item.loteId,
-            usuarioId,
-            tipo: 'pedido',
-            cantidad: item.cantidad,
-            signo: -1,
-            precioUnitario: item.precioUnitario,
-            motivo: `Pedido ${pedido.numeroPedido}`,
-            referenciaId: id,
-            ubicacionOrigen,
-          },
-        });
-      }
       return { ok: true, pedido: this.toFicha(actualizado) };
     });
   }

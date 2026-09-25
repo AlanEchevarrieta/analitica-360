@@ -113,11 +113,15 @@ export class PedidosService {
       input.transportista ?? null,
       input.numeroSeguimiento ?? null,
       input.ubicacionOrigen ?? null,
+      input.formaPago,
     );
     if (!resultado.ok) {
       if (resultado.motivo === 'no_encontrado') throw new NotFoundException('Pedido no encontrado');
       if (resultado.motivo === 'no_listo_despacho') {
         throw new BadRequestException('El pedido tiene que estar listo para despacho');
+      }
+      if (resultado.motivo === 'venta_invalida') {
+        throw new BadRequestException('No se pudo registrar la venta del pedido (revisá productos y variantes)');
       }
       throw new BadRequestException('Esa ubicación no existe o no pertenece a esta empresa');
     }
