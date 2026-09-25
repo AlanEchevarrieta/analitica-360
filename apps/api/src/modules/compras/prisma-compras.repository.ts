@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Compra } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
+import { aplicarCostoPromedio, costoUnitarioConAdicionales } from '../inventario/costo-promedio.js';
 import type {
   CompraFicha,
   CompraRecord,
@@ -130,7 +131,22 @@ export class PrismaComprasRepository implements ComprasRepository {
         },
       });
 
-      for (const item of input.items) {
+      // Costo real por unidad (factura + flete/impuestos/otros prorrateados):
+      // actualiza el costo promedio ponderado ANTES de sumar el stock nuevo.
+      const costosReales = costoUnitarioConAdicionales(input.items, totalCostosAdicionales);
+      await aplicarCostoPromedio(
+        tx,
+        empresaId,
+        input.items.map((i, idx) => ({
+          productoId: i.productoId,
+          varianteId: i.varianteId ?? null,
+          cantidad: i.cantidad,
+          costoUnitario: costosReales[idx],
+        })),
+        new Date(input.fecha),
+      );
+
+      for (const [idx, item] of input.items.entries()) {
         await tx.movimientoInventario.create({
           data: {
             empresaId,
@@ -141,7 +157,7 @@ export class PrismaComprasRepository implements ComprasRepository {
             tipo: 'compra',
             cantidad: item.cantidad,
             signo: 1,
-            costoUnitario: item.costoUnitario,
+            costoUnitario: costosReales[idx],
             ubicacionDestino: input.ubicacionDestino ?? null,
             referenciaId: compra.id,
           },

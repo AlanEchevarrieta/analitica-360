@@ -97,7 +97,7 @@ export class PrismaInsightsRepository implements InsightsRepository {
 
   async serieVentasHistorial(empresaId: string): Promise<PuntoSerieDia[]> {
     const filas = await this.prisma.$queryRaw<{ dia: string; total: string }[]>(Prisma.sql`
-      SELECT ${DIA_VENTA} AS dia, SUM(COALESCE(total_con_interes, 0)) AS total
+      SELECT (${DIA_VENTA})::text AS dia, SUM(COALESCE(total_con_interes, 0)) AS total
       FROM ventas
       WHERE empresa_id = ${empresaId}::uuid AND deleted_at IS NULL
       GROUP BY 1

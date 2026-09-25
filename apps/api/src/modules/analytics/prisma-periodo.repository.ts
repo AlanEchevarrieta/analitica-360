@@ -58,14 +58,20 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
         SELECT
           v.id, v.fecha, v.forma_pago,
           GREATEST(COALESCE(v.total_con_interes, 0) - COALESCE(v.saldo_pendiente, 0), 0) AS cobrado,
-          COALESCE(v.saldo_pendiente, 0) AS saldo
+          COALESCE(v.saldo_pendiente, 0) AS saldo,
+          -- Proporción de lo facturado que quedó después del descuento (sin
+          -- interés): reparte el descuento de la venta entre sus ítems.
+          COALESCE(
+            v.total_sin_interes / NULLIF((SELECT SUM(i2.cantidad * i2.precio_unitario) FROM ventas_items i2 WHERE i2.venta_id = v.id), 0),
+            1
+          ) AS factor_descuento
         FROM ventas v
         WHERE v.empresa_id = ${empresaId}::uuid
-          AND v.fecha BETWEEN ${desde}::date AND ${hasta}::date
+          AND ${DIA_VENTA} BETWEEN ${desde}::date AND ${hasta}::date
           AND v.deleted_at IS NULL
       ),
       costos AS (
-        SELECT COALESCE(SUM(COALESCE(vi.costo_unitario, pr.costo, 0) * vi.cantidad), 0) AS costo
+        SELECT COALESCE(SUM(COALESCE(NULLIF(vi.costo_unitario, 0), pr.costo, 0) * vi.cantidad), 0) AS costo
         FROM ventas_items vi
         JOIN periodo p ON p.id = vi.venta_id
         LEFT JOIN productos pr ON pr.id = vi.producto_id
@@ -74,12 +80,12 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
         SELECT
           COALESCE(pr.nombre, 'Producto') AS nombre,
           SUM(vi.cantidad)::int AS unidades,
-          SUM(vi.cantidad * vi.precio_unitario) AS total,
-          SUM(vi.cantidad * COALESCE(vi.costo_unitario, pr.costo, 0)) AS costo
+          SUM(vi.cantidad * vi.precio_unitario * p.factor_descuento) AS total,
+          SUM(vi.cantidad * COALESCE(NULLIF(vi.costo_unitario, 0), pr.costo, 0)) AS costo
         FROM ventas_items vi
         JOIN periodo p ON p.id = vi.venta_id
         LEFT JOIN productos pr ON pr.id = vi.producto_id
-        GROUP BY COALESCE(pr.nombre, 'Producto')
+        GROUP BY vi.producto_id, COALESCE(pr.nombre, 'Producto')
       )
       SELECT
         COALESCE((SELECT SUM(cobrado) FROM periodo), 0) AS total_ventas,
@@ -140,7 +146,7 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
       ),
       anterior AS (
         SELECT
-          date_trunc(${unit}, ((${DIA_VENTA}) + ${dias})::timestamp)::date AS periodo,
+          date_trunc(${unit}, ((${DIA_VENTA}) + ${dias}::int)::timestamp)::date AS periodo,
           SUM(${MONTO_VENTA}) AS total
         FROM ventas v
         WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL
@@ -148,7 +154,7 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
         GROUP BY 1
       )
       SELECT
-        COALESCE(a.periodo, b.periodo) AS periodo,
+        COALESCE(a.periodo, b.periodo)::text AS periodo,
         COALESCE(a.total, 0) AS total,
         COALESCE(b.total, 0) AS anterior,
         COALESCE(a.cantidad, 0) AS cantidad

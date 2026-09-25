@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
+import { aplicarCostoPromedio } from '../inventario/costo-promedio.js';
 import type {
   EstadoOc,
   GuardarOrdenCompraInput,
@@ -245,6 +246,18 @@ export class PrismaOrdenesCompraRepository implements OrdenesCompraRepository {
           },
         },
       });
+
+      await aplicarCostoPromedio(
+        tx,
+        empresaId,
+        lote.map(({ item, qty }) => ({
+          productoId: item.productoId,
+          varianteId: item.varianteId,
+          cantidad: qty,
+          costoUnitario: item.precioUnitario,
+        })),
+        new Date(),
+      );
 
       for (const { item, qty } of lote) {
         await tx.movimientoInventario.create({

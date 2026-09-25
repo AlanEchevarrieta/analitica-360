@@ -1,5 +1,7 @@
-// Placeholder de la ruta /analytics — se implementa en Fase 5 del plan de reescritura,
-// consumiendo la API de apps/api y reusando features/analytics.
+import { redirect } from "next/navigation";
+
+// Mientras se portan las demás vistas de Analytics, la entrada del menú
+// abre el reporte de ganancia por producto.
 export default function Page() {
-  return <div>analytics (placeholder — Fase 5)</div>;
+  redirect("/analytics/productos");
 }
