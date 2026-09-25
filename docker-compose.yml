@@ -17,6 +17,11 @@ services:
       retries: 10
 
   minio:
+    # Desactivado por defecto: MinIO dejó de publicar imágenes en Docker Hub
+    # y quay.io (pull denegado), y todavía ningún módulo lo usa (Fase 6).
+    # Reemplazar por una alternativa S3 (ej. RustFS/SeaweedFS) al implementar
+    # storage. Para levantarlo igual: docker compose --profile storage up -d
+    profiles: ["storage"]
     image: minio/minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
