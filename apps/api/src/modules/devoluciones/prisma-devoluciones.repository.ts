@@ -120,21 +120,52 @@ export class PrismaDevolucionesRepository implements DevolucionesRepository {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      // Con venta asociada, lo devuelto sale de esa venta: no se puede devolver
+      // algo que no se vendió ni más de lo vendido, y el precio (lo que se
+      // reintegra) es el de la venta, no el que mande el cliente.
+      let items = input.items;
       if (input.ventaId) {
-        const venta = await tx.venta.findFirst({ where: { id: input.ventaId, empresaId } });
+        const venta = await tx.venta.findFirst({ where: { id: input.ventaId, empresaId }, include: { items: true } });
         if (!venta) return { ok: false, motivo: 'venta_invalida' };
+        if (venta.deletedAt) return { ok: false, motivo: 'venta_anulada' };
+        const previas = await tx.devolucionItem.groupBy({
+          by: ['productoId', 'varianteId'],
+          where: { tipo: 'devuelto', devolucion: { ventaId: input.ventaId, empresaId, estado: { not: 'cancelado' } } },
+          _sum: { cantidad: true },
+        });
+        const clave = (p: string, v: string | null | undefined) => `${p}:${v ?? ''}`;
+        const vendido = new Map<string, { cantidad: number; precio: number }>();
+        for (const i of venta.items) {
+          const k = clave(i.productoId, i.varianteId);
+          const previo = vendido.get(k);
+          vendido.set(k, { cantidad: (previo?.cantidad ?? 0) + i.cantidad, precio: i.precioUnitario.toNumber() });
+        }
+        const pedido = new Map<string, number>();
+        for (const i of input.items.filter((x) => x.tipo === 'devuelto')) {
+          const k = clave(i.productoId, i.varianteId);
+          if (!vendido.has(k)) return { ok: false, motivo: 'no_vendido' };
+          pedido.set(k, (pedido.get(k) ?? 0) + i.cantidad);
+        }
+        for (const [k, cantidad] of pedido) {
+          const [p, v] = k.split(':');
+          const ya = previas.find((x) => x.productoId === p && (x.varianteId ?? '') === v)?._sum.cantidad?.toNumber() ?? 0;
+          if (cantidad + ya > vendido.get(k)!.cantidad) return { ok: false, motivo: 'excede_vendido' };
+        }
+        items = input.items.map((i) =>
+          i.tipo === 'devuelto' ? { ...i, precioUnitario: vendido.get(clave(i.productoId, i.varianteId))!.precio } : i,
+        );
       }
 
-      const productoIds = [...new Set(input.items.map((i) => i.productoId))];
+      const productoIds = [...new Set(items.map((i) => i.productoId))];
       const productos = await tx.producto.findMany({ where: { id: { in: productoIds }, empresaId } });
       if (productos.length !== productoIds.length) return { ok: false, motivo: 'item_invalido' };
 
-      const varianteIds = [...new Set(input.items.filter((i) => i.varianteId).map((i) => i.varianteId!))];
+      const varianteIds = [...new Set(items.filter((i) => i.varianteId).map((i) => i.varianteId!))];
       if (varianteIds.length > 0) {
         const variantes = await tx.productoVariante.findMany({ where: { id: { in: varianteIds }, empresaId } });
         if (variantes.length !== varianteIds.length) return { ok: false, motivo: 'item_invalido' };
         const productoDeVariante = new Map(variantes.map((v) => [v.id, v.productoId]));
-        const validas = input.items.every((i) => !i.varianteId || productoDeVariante.get(i.varianteId) === i.productoId);
+        const validas = items.every((i) => !i.varianteId || productoDeVariante.get(i.varianteId) === i.productoId);
         if (!validas) return { ok: false, motivo: 'item_invalido' };
       }
 
@@ -154,7 +185,7 @@ export class PrismaDevolucionesRepository implements DevolucionesRepository {
           estado: 'pendiente',
           notas: input.notas,
           items: {
-            create: input.items.map((i) => ({
+            create: items.map((i) => ({
               productoId: i.productoId,
               varianteId: i.varianteId ?? null,
               cantidad: i.cantidad,
@@ -166,7 +197,7 @@ export class PrismaDevolucionesRepository implements DevolucionesRepository {
         include: includeFicha,
       });
 
-      for (const item of input.items) {
+      for (const item of items) {
         const esDevuelto = item.tipo === 'devuelto';
         await tx.movimientoInventario.create({
           data: {

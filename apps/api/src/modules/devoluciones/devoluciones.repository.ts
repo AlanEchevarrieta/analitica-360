@@ -57,7 +57,13 @@ export interface RegistrarDevolucionInput {
   items: ItemDevolucionInput[];
 }
 
-export type MotivoRechazoDevolucion = 'sin_items' | 'item_invalido' | 'venta_invalida';
+export type MotivoRechazoDevolucion =
+  | 'sin_items'
+  | 'item_invalido'
+  | 'venta_invalida'
+  | 'venta_anulada'
+  | 'no_vendido'
+  | 'excede_vendido';
 
 export type ResultadoRegistrarDevolucion =
   | { ok: true; devolucion: DevolucionFicha }

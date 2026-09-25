@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
+import { dineroDevoluciones, sumarDinero } from './devoluciones-dinero.js';
 import type {
   DashboardDiaSerie,
   DashboardInicioBase,
@@ -46,7 +47,9 @@ export class PrismaDashboardRepository implements DashboardRepository {
       where: { empresaId, deletedAt: null, fecha: { gte: desde, lte: hasta } },
       select: selectParaTotal,
     });
-    return { cantidad: ventas.length, total: ventas.reduce((acc, v) => acc + totalDeVenta(v), 0) };
+    // Neto de devoluciones y cambios del rango (reintegros restan, diferencias a favor suman).
+    const devoluciones = sumarDinero(await dineroDevoluciones(this.prisma, empresaId, desde, hasta));
+    return { cantidad: ventas.length, total: ventas.reduce((acc, v) => acc + totalDeVenta(v), 0) + devoluciones.ingreso };
   }
 
   private async topProductos(empresaId: string, desde: Date, hasta: Date, limite: number): Promise<DashboardTopProducto[]> {

@@ -93,15 +93,30 @@ export class PrismaVentasRepository implements VentasRepository {
   async ficha(empresaId: string, id: string): Promise<VentaFicha | null> {
     const venta = await this.prisma.venta.findFirst({
       where: { id, empresaId },
-      include: { items: { include: { producto: { select: { nombre: true } } } } },
+      include: {
+        items: { include: { producto: { select: { nombre: true } }, variante: { select: { atributos: true } } } },
+      },
     });
     if (!venta) return null;
+    const devueltas = await this.prisma.devolucionItem.groupBy({
+      by: ['productoId', 'varianteId'],
+      where: { tipo: 'devuelto', devolucion: { ventaId: id, empresaId, estado: { not: 'cancelado' } } },
+      _sum: { cantidad: true },
+    });
+    const devueltasDe = (productoId: string, varianteId: string | null) =>
+      devueltas.find((d) => d.productoId === productoId && d.varianteId === varianteId)?._sum.cantidad?.toNumber() ?? 0;
     return {
       ...this.toRecord(venta),
       items: venta.items.map((i) => ({
         productoNombre: i.producto.nombre,
         cantidad: i.cantidad,
         precioUnitario: i.precioUnitario.toNumber(),
+        productoId: i.productoId,
+        varianteId: i.varianteId,
+        varianteEtiqueta: i.variante
+          ? Object.values(i.variante.atributos as Record<string, string>).filter(Boolean).join(' / ') || null
+          : null,
+        devueltas: devueltasDe(i.productoId, i.varianteId),
       })),
     };
   }
@@ -134,6 +149,10 @@ export class PrismaVentasRepository implements VentasRepository {
     return this.prisma.$transaction(async (tx) => {
       const venta = await tx.venta.findFirst({ where: { id, empresaId } });
       if (!venta) return 'no_encontrada';
+      // Anular revierte todo lo vendido: si ya hubo devoluciones, esas unidades
+      // volverían dos veces al stock. Primero hay que cancelar la devolución.
+      const devolucionActiva = await tx.devolucion.findFirst({ where: { ventaId: id, empresaId, estado: { not: 'cancelado' } } });
+      if (devolucionActiva) return 'tiene_devoluciones';
 
       // "Reclama" la anulación de forma atómica antes de revertir
       // movimientos - cierra la carrera de dos anulaciones concurrentes

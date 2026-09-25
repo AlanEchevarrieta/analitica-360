@@ -21,6 +21,8 @@ export interface AnalyticsPeriodoResultado {
   formasPago: AnalyticsFormaPago[];
   top10: { nombre: string; unidades: number }[];
   productos: AnalyticsPeriodoProducto[];
+  /** Neto de devoluciones/cambios del período, ya incluido en total y costo. */
+  devoluciones: { ingreso: number; costo: number };
 }
 
 export interface AnalyticsPeriodoRespuesta {
@@ -70,6 +72,7 @@ export class AnalyticsPeriodoService {
         // analytics_top_productos siempre gana sobre el top_10 propio de analytics_periodo, igual que cargarAnalyticsPeriodo().
         top10: topProductos.map((p: AnalyticsTopProducto) => ({ nombre: p.nombre, unidades: p.unidades })),
         productos: base.productos,
+        devoluciones: base.devoluciones,
       },
     };
   }

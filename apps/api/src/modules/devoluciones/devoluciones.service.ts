@@ -13,6 +13,9 @@ const MOTIVO_MENSAJE: Record<MotivoRechazoDevolucion, string> = {
   sin_items: 'Agregá al menos un producto',
   item_invalido: 'Revisá cantidades y productos',
   venta_invalida: 'Esa venta no existe o no pertenece a esta empresa',
+  venta_anulada: 'Esa venta está anulada: no se puede devolver',
+  no_vendido: 'Hay un producto que no está en esa venta',
+  excede_vendido: 'Se quiere devolver más unidades de las que se vendieron (contando devoluciones anteriores)',
 };
 
 @Injectable()

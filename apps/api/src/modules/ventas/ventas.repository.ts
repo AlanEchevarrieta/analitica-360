@@ -30,6 +30,12 @@ export interface VentaItemRecord {
   productoNombre: string;
   cantidad: number;
   precioUnitario: number;
+  /** Solo en la ficha: para armar devoluciones/cambios sobre esta venta. */
+  productoId?: string;
+  varianteId?: string | null;
+  varianteEtiqueta?: string | null;
+  /** Unidades ya devueltas en devoluciones no canceladas de esta venta. */
+  devueltas?: number;
 }
 
 export interface VentaFicha extends VentaRecord {
@@ -70,7 +76,7 @@ export type MotivoRechazoVenta =
 
 export type ResultadoConfirmarVenta = { ok: true; venta: VentaRecord } | { ok: false; motivo: MotivoRechazoVenta };
 
-export type ResultadoAnularVenta = 'ok' | 'no_encontrada' | 'ya_anulada';
+export type ResultadoAnularVenta = 'ok' | 'no_encontrada' | 'ya_anulada' | 'tiene_devoluciones';
 
 export type ResultadoCobrarSaldo =
   | { ok: true; venta: VentaRecord }

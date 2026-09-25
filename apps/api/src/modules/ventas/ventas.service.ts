@@ -77,6 +77,9 @@ export class VentasService {
     const resultado = await this.ventasRepository.anular(empresaId, usuarioId, id, input.motivo);
     if (resultado === 'no_encontrada') throw new NotFoundException('Venta no encontrada');
     if (resultado === 'ya_anulada') throw new BadRequestException('Esa venta ya fue anulada');
+    if (resultado === 'tiene_devoluciones') {
+      throw new BadRequestException('La venta tiene devoluciones o cambios: cancelalos antes de anularla');
+    }
   }
 
   async cobrarSaldo(empresaId: string, id: string, input: CobrarSaldoVentaInput): Promise<VentaRecord> {

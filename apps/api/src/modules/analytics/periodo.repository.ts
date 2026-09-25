@@ -24,6 +24,8 @@ export interface AnalyticsPeriodoBase {
   porCobrar: number;
   ventas: AnalyticsVentaCobrada[];
   productos: AnalyticsPeriodoProducto[];
+  /** Neto de devoluciones/cambios del período (ya incluido en totalVentas y costo). */
+  devoluciones: { ingreso: number; costo: number };
 }
 
 export interface AnalyticsEvolucionPunto {

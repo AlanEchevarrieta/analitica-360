@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
+import { dineroDevoluciones, sumarDinero } from './devoluciones-dinero.js';
 import type {
   AnalyticsEvolucionPunto,
   AnalyticsFormaPago,
@@ -107,24 +108,46 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
         ), '[]'::jsonb) AS productos
     `);
     const fila = filas[0];
+    const devoluciones = await dineroDevoluciones(
+      this.prisma,
+      empresaId,
+      new Date(`${desde}T00:00:00.000-03:00`),
+      new Date(`${hasta}T23:59:59.999-03:00`),
+    );
+    const netoDevoluciones = sumarDinero(devoluciones);
     if (!fila) {
-      return { totalVentas: 0, cantidad: 0, ticketPromedio: 0, costo: 0, porCobrar: 0, ventas: [], productos: [] };
+      return { totalVentas: 0, cantidad: 0, ticketPromedio: 0, costo: 0, porCobrar: 0, ventas: [], productos: [], devoluciones: netoDevoluciones };
+    }
+    const productos = fila.productos.map((p) => ({
+      producto: p.producto,
+      unidades: Number(p.unidades),
+      total: Number(p.total),
+      costo: Number(p.costo),
+      margen: Number(p.margen),
+      margenPct: Number(p.margen_pct),
+    }));
+    // Las devoluciones/cambios del período ajustan unidades, ingreso y costo de cada producto.
+    for (const dv of devoluciones) {
+      let fila = productos.find((x) => x.producto === dv.nombre);
+      if (!fila) {
+        fila = { producto: dv.nombre, unidades: 0, total: 0, costo: 0, margen: 0, margenPct: 0 };
+        productos.push(fila);
+      }
+      fila.unidades += dv.unidades;
+      fila.total += dv.ingreso;
+      fila.costo += dv.costo;
+      fila.margen = fila.total - fila.costo;
+      fila.margenPct = fila.total > 0 ? Math.round((fila.margen / fila.total) * 1000) / 10 : 0;
     }
     return {
-      totalVentas: Number(fila.total_ventas),
+      totalVentas: Number(fila.total_ventas) + netoDevoluciones.ingreso,
       cantidad: Number(fila.cantidad),
       ticketPromedio: Number(fila.ticket_promedio),
-      costo: Number(fila.costo),
+      costo: Number(fila.costo) + netoDevoluciones.costo,
       porCobrar: Number(fila.por_cobrar),
       ventas: fila.ventas.map((v) => ({ fecha: new Date(v.fecha), total: Number(v.total), formaPago: v.forma_pago })),
-      productos: fila.productos.map((p) => ({
-        producto: p.producto,
-        unidades: Number(p.unidades),
-        total: Number(p.total),
-        costo: Number(p.costo),
-        margen: Number(p.margen),
-        margenPct: Number(p.margen_pct),
-      })),
+      productos,
+      devoluciones: netoDevoluciones,
     };
   }
 
