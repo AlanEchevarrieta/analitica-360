@@ -47,12 +47,27 @@ import {
 } from '../lib/ventas'
 import { theme } from '../theme'
 
-function detalleVentaMeta(fila: VentaFila) {
-  const partes = [
-    fila.cargadoPor ? `👤 ${fila.cargadoPor}` : null,
-    fila.ubicacion ? `📍 ${fila.ubicacion}` : null,
-  ].filter(Boolean)
-  return partes.length > 0 ? partes.join(' · ') : null
+function MetaChip({ label }: { label: string | null }) {
+  if (!label) {
+    return (
+      <span className="text-[13px]" style={{ color: 'var(--text-muted)' }}>
+        —
+      </span>
+    )
+  }
+  return (
+    <span
+      className="inline-flex max-w-[11rem] truncate rounded-full px-2.5 py-[3px] text-[11px] font-medium"
+      style={{
+        color: 'var(--text)',
+        background: 'rgba(99, 102, 241, 0.14)',
+        border: '1px solid rgba(99, 102, 241, 0.28)',
+      }}
+      title={label}
+    >
+      {label}
+    </span>
+  )
 }
 
 function rangoAnio() {
@@ -378,15 +393,18 @@ export function VentasPage() {
         ) : null}
 
         <TableCard>
-          <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[980px] text-left">
+          <div className="hidden overflow-hidden rounded-[12px] md:block">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[1120px] text-left">
             <thead className={theadClass} style={theadStyle}>
               <tr>
                 <Th>N° Venta</Th>
+                <Th>Cargó</Th>
+                <Th>Ubicación</Th>
                 <Th>Fecha</Th>
                 <Th>Productos</Th>
-                <Th>Total</Th>
-                <Th>Saldo pendiente</Th>
+                <Th className="text-right">Total</Th>
+                <Th className="text-right">Saldo</Th>
                 <ThFilter
                   label="Forma de pago"
                   active={Boolean(forma)}
@@ -447,22 +465,24 @@ export function VentasPage() {
             <tbody>
               {filas.map((fila, index) => (
                 <Tr key={fila.id} index={index}>
-                  <td className="px-3 py-3 whitespace-nowrap font-semibold">
-                    <Link className="text-[#A5B4FC] hover:underline" to={`/ventas/${fila.id}`}>
+                  <td className="whitespace-nowrap px-3 py-3.5">
+                    <Link
+                      className="inline-flex items-center rounded-md px-2 py-1 text-[13px] font-semibold tabular-nums hover:bg-[rgba(99,102,241,0.16)]"
+                      style={{ color: theme.accent }}
+                      to={`/ventas/${fila.id}`}
+                    >
                       {fila.numeroVenta ?? '—'}
                     </Link>
-                    {(() => {
-                      const meta = detalleVentaMeta(fila)
-                      return meta ? (
-                        <p className="mt-0.5 text-xs font-normal" style={{ color: 'var(--text-muted)' }}>
-                          {meta}
-                        </p>
-                      ) : null
-                    })()}
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    <span className="inline-flex flex-wrap items-center gap-2">
-                      {formatoFechaVenta(fila.fecha)}
+                  <td className="px-3 py-3.5">
+                    <MetaChip label={fila.cargadoPor} />
+                  </td>
+                  <td className="px-3 py-3.5">
+                    <MetaChip label={fila.ubicacion} />
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3.5">
+                    <span className="inline-flex flex-wrap items-center gap-1.5">
+                      <span className="text-[13px]">{formatoFechaVenta(fila.fecha)}</span>
                       {fila.anulada ? (
                         <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[11px] font-semibold text-[#F87171]">
                           Anulada
@@ -482,24 +502,35 @@ export function VentasPage() {
                       })()}
                     </span>
                   </td>
-                  <td className="px-3 py-3">{fila.productos || '—'}</td>
-                  <td className="px-3 py-3 font-bold text-[#4ADE80]">{formatoARS(fila.total)}</td>
-                  <td className="px-3 py-3">
+                  <td className="max-w-[220px] px-3 py-3.5">
+                    <span className="line-clamp-2 leading-snug" title={fila.productos || undefined}>
+                      {fila.productos || '—'}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3.5 text-right font-semibold tabular-nums text-[#4ADE80]">
+                    {formatoARS(fila.total)}
+                  </td>
+                  <td
+                    className="whitespace-nowrap px-3 py-3.5 text-right tabular-nums"
+                    style={{ color: fila.esSenia && fila.saldoPendiente > 0 ? 'var(--text)' : 'var(--text-muted)' }}
+                  >
                     {fila.esSenia && fila.saldoPendiente > 0 ? formatoARS(fila.saldoPendiente) : '—'}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3.5">
                     <BadgePago forma={fila.forma_pago} />
                   </td>
-                  <td className="px-3 py-3">{etiquetaCuotas(fila.cuotas)}</td>
-                  <td className="px-3 py-3">
+                  <td className="whitespace-nowrap px-3 py-3.5 text-[13px]" style={{ color: 'var(--text-muted)' }}>
+                    {etiquetaCuotas(fila.cuotas)}
+                  </td>
+                  <td className="max-w-[140px] truncate px-3 py-3.5" title={fila.cliente ?? undefined}>
                     {fila.cliente ? (
-                      <span>👤 {fila.cliente}</span>
+                      fila.cliente
                     ) : (
                       <span style={{ color: 'var(--text-muted)' }}>—</span>
                     )}
                   </td>
                   {puedeAnular ? (
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3.5">
                       {!fila.anulada ? (
                         <IconBtn label="Anular venta" hoverOnly onClick={() => setAnular(fila)}>
                           🗑️
@@ -513,25 +544,29 @@ export function VentasPage() {
             ) : null}
           </table>
           </div>
+          </div>
           {!cargando && error !== MSG_ERROR_RED ? (
             <MobileCards>
               {filas.map((fila) => (
                 <ListCard key={fila.id} to={`/ventas/${fila.id}`}>
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      {fila.numeroVenta ? `${fila.numeroVenta} · ` : ''}
-                      {formatoFechaVenta(fila.fecha)}
-                      {fila.anulada ? ' · Anulada' : ''}
-                    </p>
-                    {detalleVentaMeta(fila) ? (
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold tabular-nums">{fila.numeroVenta ?? 'Venta'}</p>
                       <p className="mt-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {detalleVentaMeta(fila)}
+                        {formatoFechaVenta(fila.fecha)}
+                        {fila.anulada ? ' · Anulada' : ''}
                       </p>
-                    ) : null}
+                    </div>
                     <BadgePago forma={fila.forma_pago} />
                   </div>
-                  <p className="mt-1 text-sm font-medium">{fila.productos || '—'}</p>
-                  <p className="mt-1 font-bold text-[#4ADE80]">{formatoARS(fila.total)}</p>
+                  {fila.cargadoPor || fila.ubicacion ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {fila.cargadoPor ? <MetaChip label={fila.cargadoPor} /> : null}
+                      {fila.ubicacion ? <MetaChip label={fila.ubicacion} /> : null}
+                    </div>
+                  ) : null}
+                  <p className="mt-2 text-sm font-medium leading-snug">{fila.productos || '—'}</p>
+                  <p className="mt-1 font-semibold tabular-nums text-[#4ADE80]">{formatoARS(fila.total)}</p>
                   {(() => {
                     const b = etiquetaEstadoCobro(fila.estadoCobro, fila.esSenia)
                     if (!b) return null

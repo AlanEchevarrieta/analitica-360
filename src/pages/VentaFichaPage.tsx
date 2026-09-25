@@ -122,27 +122,54 @@ export function VentaFichaPage() {
                 {` · ${etiquetaFormaPago(ficha.forma_pago)}`}
               </p>
               {ficha.cargadoPor || ficha.ubicacion ? (
-                <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-                  {ficha.cargadoPor ? `Cargada por ${ficha.cargadoPor}` : ''}
-                  {ficha.cargadoPor && ficha.ubicacion ? ' · ' : ''}
-                  {ficha.ubicacion ? ficha.ubicacion : ''}
-                </p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {ficha.cargadoPor ? (
+                    <span
+                      className="rounded-full px-2.5 py-[3px] text-[11px] font-medium"
+                      style={{
+                        color: 'var(--text)',
+                        background: 'rgba(99, 102, 241, 0.14)',
+                        border: '1px solid rgba(99, 102, 241, 0.28)',
+                      }}
+                    >
+                      Cargó {ficha.cargadoPor}
+                    </span>
+                  ) : null}
+                  {ficha.ubicacion ? (
+                    <span
+                      className="rounded-full px-2.5 py-[3px] text-[11px] font-medium"
+                      style={{
+                        color: 'var(--text)',
+                        background: 'rgba(99, 102, 241, 0.14)',
+                        border: '1px solid rgba(99, 102, 241, 0.28)',
+                      }}
+                    >
+                      {ficha.ubicacion}
+                    </span>
+                  ) : null}
+                </div>
               ) : null}
-              <p className="mt-3 text-lg font-bold text-[#4ADE80]">{formatoARS(ficha.total)}</p>
-              <table className="mt-4 w-full text-left text-sm">
+              <p className="mt-4 text-lg font-semibold tabular-nums text-[#4ADE80]">{formatoARS(ficha.total)}</p>
+              <table className="mt-5 w-full text-left text-sm">
                 <thead>
                   <tr style={{ color: 'var(--text-muted)' }}>
-                    <th className="py-2 pr-3 font-medium">Producto</th>
-                    <th className="py-2 pr-3 font-medium">Cant.</th>
-                    <th className="py-2 font-medium">Subtotal</th>
+                    <th className="pb-2 pr-3 text-[11px] font-semibold uppercase tracking-wide">Producto</th>
+                    <th className="pb-2 pr-3 text-right text-[11px] font-semibold uppercase tracking-wide">Cant.</th>
+                    <th className="pb-2 text-right text-[11px] font-semibold uppercase tracking-wide">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
                   {ficha.items.map((i, idx) => (
-                    <tr key={`${i.nombre}-${idx}`} className="border-t border-white/10">
-                      <td className="py-2 pr-3">{i.nombre}</td>
-                      <td className="py-2 pr-3">{i.cantidad}</td>
-                      <td className="py-2">{formatoARS(i.cantidad * i.precioUnitario)}</td>
+                    <tr
+                      key={`${i.nombre}-${idx}`}
+                      className="border-t"
+                      style={{ borderColor: 'var(--row-border)', background: idx % 2 === 1 ? 'var(--row-alt)' : 'transparent' }}
+                    >
+                      <td className="py-2.5 pr-3">{i.nombre}</td>
+                      <td className="py-2.5 pr-3 text-right tabular-nums">{i.cantidad}</td>
+                      <td className="py-2.5 text-right font-medium tabular-nums">
+                        {formatoARS(i.cantidad * i.precioUnitario)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
