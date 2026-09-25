@@ -68,7 +68,7 @@ export interface InsightSalud {
   bullets: string[];
 }
 
-export type BadgeElasticidad = 'inelastica' | 'moderada' | 'elastica' | 'giffen';
+export type BadgeElasticidad = 'inelastica' | 'moderada' | 'elastica' | 'otros_factores';
 
 export interface FilaElasticidad {
   productoId: string;
@@ -170,7 +170,9 @@ export function inicioMesHace(iso: string, mesesAtras: number): string {
 }
 
 function interpretarElasticidad(e: number): Pick<FilaElasticidad, 'badge' | 'recomendacion'> {
-  if (e > 0) return { badge: 'giffen', recomendacion: 'Más precio = más ventas' };
+  // Precio y ventas moviéndose en la misma dirección casi nunca es un efecto
+  // del precio (bienes Giffen): lo normal es temporada, stock o promociones.
+  if (e > 0) return { badge: 'otros_factores', recomendacion: 'Las ventas cambiaron por otros motivos (temporada, stock, promociones): no alcanza para decidir el precio' };
   if (e >= -0.5) return { badge: 'inelastica', recomendacion: 'Podés subir precio sin perder ventas' };
   if (e >= -1) return { badge: 'moderada', recomendacion: 'Subí precio con cuidado' };
   return { badge: 'elastica', recomendacion: 'Muy sensible al precio' };
@@ -181,12 +183,12 @@ function ejePrecio(filas: FilaElasticidad[]): number {
   for (const f of filas) {
     if (f.badge === 'inelastica') extra += 15;
     else if (f.badge === 'moderada') extra += 8;
-    else if (f.badge === 'giffen') extra += 10;
+
   }
   return clamp(50 + extra);
 }
 
-function bulletsSalud(ejes: Record<string, number>, score: number): string[] {
+function bulletsSalud(ejes: Record<string, number>, score: number, sinDatosClientes = false): string[] {
   const v = ejes.Ventas ?? 0;
   const m = ejes.Margen ?? 0;
   const s = ejes.Stock ?? 0;
@@ -197,7 +199,8 @@ function bulletsSalud(ejes: Record<string, number>, score: number): string[] {
   if (m > 70) out.push('✅ Tu margen es excelente');
   if (m < 40) out.push('⚠️ Margen bajo — revisá tus costos');
   if (s < 40) out.push('📦 Más del 60% de tus productos sin stock');
-  if (c < 30) out.push('👥 Pocos clientes identificados — usá el CRM');
+  if (sinDatosClientes) out.push('👥 Casi no cargás el cliente en las ventas: cargalo para medir recompra (no cuenta en el puntaje)');
+  else if (c < 30) out.push('👥 Pocos clientes identificados — usá el CRM');
   if (score > 80) out.push('🏆 Tu negocio está en excelente forma');
   return out.slice(0, 4);
 }
@@ -239,11 +242,16 @@ export function calcularSalud(input: {
 
   const totalV = input.ventas.length;
   const clientesEje = totalV === 0 ? 50 : clamp((input.ventas.filter((v) => v.clienteId).length / totalV) * 100);
+  // Si casi ninguna venta tiene cliente cargado no hay datos para medir: el
+  // eje se muestra pero no pesa en el puntaje (antes bajaba el score a 0).
+  const sinDatosClientes = clientesEje < 5;
 
   const precioEje = ejePrecio(input.elasticidades);
 
   const ejesMap = { Ventas: ventasEje, Margen: margenEje, Stock: stockEje, Clientes: clientesEje, Precio: precioEje };
-  const score = ventasEje * 0.25 + margenEje * 0.25 + stockEje * 0.2 + clientesEje * 0.15 + precioEje * 0.15;
+  const score = sinDatosClientes
+    ? (ventasEje * 0.25 + margenEje * 0.25 + stockEje * 0.2 + precioEje * 0.15) / 0.85
+    : ventasEje * 0.25 + margenEje * 0.25 + stockEje * 0.2 + clientesEje * 0.15 + precioEje * 0.15;
   const s = semaforo(score);
   return {
     ejes: (['Ventas', 'Margen', 'Stock', 'Clientes', 'Precio'] as const).map((eje) => ({
@@ -254,11 +262,14 @@ export function calcularSalud(input: {
     score: Math.round(score),
     etiqueta: s.etiqueta,
     color: s.color,
-    bullets: bulletsSalud(ejesMap, score),
+    bullets: bulletsSalud(ejesMap, score, sinDatosClientes),
   };
 }
 
-/** Puerto de calcularElasticidades (src/lib/insights.ts). */
+/** Unidades mínimas vendidas antes del cambio de precio para estimar la elasticidad. */
+const MIN_UNIDADES_ELASTICIDAD = 5;
+
+/** Puerto de calcularElasticidades (src/lib/insights.ts), ajustado por estacionalidad y muestra mínima. */
 export function calcularElasticidades(
   productos: InsightProducto[],
   historial: HistorialPrecio[],
@@ -283,6 +294,16 @@ export function calcularElasticidades(
   }
 
   const nombres = new Map(productos.map((p) => [p.id, p.nombre]));
+  // Unidades del RESTO del negocio (sin el producto medido) en una ventana.
+  const unidadesResto = (excluir: string, desde: string, hasta: string) => {
+    let n = 0;
+    for (const it of items) {
+      if (it.productoId === excluir) continue;
+      const f = fechaPorVenta.get(it.ventaId);
+      if (f && f >= desde && f <= hasta) n += it.cantidad;
+    }
+    return n;
+  };
   const out: FilaElasticidad[] = [];
 
   for (const [pid, hist] of porProd) {
@@ -307,10 +328,16 @@ export function calcularElasticidades(
       if (m.fecha >= split && m.fecha <= hoy) q2 += m.cant;
       else if (m.fecha >= desdeAnt && m.fecha <= hastaAnt) q1 += m.cant;
     }
-    if (q1 <= 0) continue;
+    // Muestra mínima: con 1 o 2 ventas por período cualquier cambio es ruido.
+    if (diasDesp < 14 || q1 < MIN_UNIDADES_ELASTICIDAD || q2 + q1 < 2 * MIN_UNIDADES_ELASTICIDAD) continue;
     const dP = (actual.precio - anterior.precio) / anterior.precio;
     if (Math.abs(dP) < 0.0001) continue;
-    const dQ = (q2 - q1) / q1;
+    // Se descuenta cuánto se movieron las ventas de todo el negocio en esas
+    // mismas ventanas (temporada): lo que queda es el efecto propio del producto.
+    const t1 = unidadesResto(pid, desdeAnt, hastaAnt);
+    const t2 = unidadesResto(pid, split, hoy);
+    const factorGeneral = t1 > 0 && t2 > 0 ? t2 / t1 : 1;
+    const dQ = q2 / q1 / factorGeneral - 1;
     const e = dQ / dP;
     if (!Number.isFinite(e)) continue;
     const inter = interpretarElasticidad(e);
@@ -356,6 +383,7 @@ export function armarForecast(
   serieDiaria: PuntoSerieDia[],
   granularidad: GranularidadForecast,
   diasHistorial: number,
+  hoy?: string,
 ): InsightForecast | null {
   const serie = [...serieDiaria].filter((p) => Boolean(p.fecha)).sort((a, b) => a.fecha.localeCompare(b.fecha));
   if (serie.length === 0) return null;
@@ -366,7 +394,24 @@ export function armarForecast(
   else if (granularidad === 'mes') agregados = agregarPorClave(serie, inicioMesIso);
   else agregados = agregarPorClave(serie, inicioAnioIso);
 
-  const puntos = agregados.filter((p) => p.total != null && Number.isFinite(p.total) && p.total !== 0);
+  // Períodos sin ventas cuentan como 0 (antes se descartaban y la serie
+  // parecía no tener semanas flojas); solo se ignoran los ceros del comienzo.
+  const claveDe = granularidad === 'semana' ? lunesIso : granularidad === 'mes' ? inicioMesIso : null;
+  if (claveDe && agregados.length > 1) {
+    const porClave = new Map(agregados.map((p) => [p.clave, p.total]));
+    const completos: { clave: string; total: number }[] = [];
+    const ultima = agregados[agregados.length - 1].clave;
+    for (let d = agregados[0].clave; d <= ultima; d = claveDe(sumarDiasIso(d, granularidad === 'semana' ? 7 : 32))) {
+      completos.push({ clave: d, total: porClave.get(d) ?? 0 });
+    }
+    agregados = completos;
+  }
+  // El período en curso (ej. la semana de hoy) está incompleto: no entra en la regresión.
+  if (hoy && claveDe && agregados.length > 0 && agregados[agregados.length - 1].clave === claveDe(hoy)) {
+    agregados = agregados.slice(0, -1);
+  }
+  const primero = agregados.findIndex((p) => Number.isFinite(p.total) && p.total !== 0);
+  const puntos = primero < 0 ? [] : agregados.slice(primero).filter((p) => Number.isFinite(p.total));
 
   const maxPeriodos = granularidad === 'dia' ? 30 : granularidad === 'semana' ? 13 : granularidad === 'mes' ? 6 : 8;
   const puntosReg = puntos.slice(-maxPeriodos);
@@ -414,7 +459,10 @@ export function armarForecast(
           ? 'Proyección próximos 3 meses'
           : 'Proyección próximos 2 años';
 
-  const tendencia: InsightForecast['tendencia'] = reg.m > 1 ? 'positiva' : reg.m < -1 ? 'negativa' : 'neutra';
+  // Tendencia relativa: la pendiente tiene que mover más de 2% del promedio por período.
+  const promedio = puntosReg.reduce((a, p) => a + p.total, 0) / puntosReg.length;
+  const relativa = promedio > 0 ? reg.m / promedio : 0;
+  const tendencia: InsightForecast['tendencia'] = relativa > 0.02 ? 'positiva' : relativa < -0.02 ? 'negativa' : 'neutra';
   return { diasHistorial, periodosHistorial: puntosReg.length, puntos: chart, totalProyeccion, tendencia, granularidad, etiquetaProyeccion };
 }
 

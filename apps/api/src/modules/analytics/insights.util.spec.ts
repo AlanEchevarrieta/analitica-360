@@ -70,7 +70,48 @@ describe('calcularElasticidades', () => {
     const res = calcularElasticidades(productos, historial, ventas, items, '2026-09-22');
     expect(res).toHaveLength(1);
     expect(res[0].elasticidad).toBeLessThan(0);
-    expect(res[0].badge).not.toBe('giffen');
+    expect(res[0].badge).not.toBe('otros_factores');
+  });
+
+  it('descuenta la temporada: si todo el negocio vendió la mitad, no es efecto del precio', () => {
+    const productos: InsightProducto[] = [
+      { id: 'p1', nombre: 'Yerba', costo: 50, precioVenta: 120, activo: true, stockActual: 5 },
+      { id: 'p2', nombre: 'Mate', costo: 50, precioVenta: 100, activo: true, stockActual: 5 },
+    ];
+    const historial = [
+      { productoId: 'p1', precio: 100, desde: '2026-07-01' },
+      { productoId: 'p1', precio: 120, desde: '2026-08-15' },
+    ];
+    const ventas: VentaInsight[] = [
+      { id: 'v1', fechaIso: '2026-07-10', clienteId: null, total: 100 },
+      { id: 'v2', fechaIso: '2026-08-20', clienteId: null, total: 120 },
+    ];
+    // El producto y el resto del negocio caen igual (50%): elasticidad ~0.
+    const items: ItemInsight[] = [
+      { ventaId: 'v1', productoId: 'p1', varianteId: null, cantidad: 10 },
+      { ventaId: 'v1', productoId: 'p2', varianteId: null, cantidad: 20 },
+      { ventaId: 'v2', productoId: 'p1', varianteId: null, cantidad: 5 },
+      { ventaId: 'v2', productoId: 'p2', varianteId: null, cantidad: 10 },
+    ];
+    const res = calcularElasticidades(productos, historial, ventas, items, '2026-09-22');
+    expect(res[0].elasticidad).toBeCloseTo(0, 5);
+  });
+
+  it('no estima con muy pocas unidades (ruido)', () => {
+    const productos: InsightProducto[] = [{ id: 'p1', nombre: 'Yerba', costo: 50, precioVenta: 120, activo: true, stockActual: 5 }];
+    const historial = [
+      { productoId: 'p1', precio: 100, desde: '2026-07-01' },
+      { productoId: 'p1', precio: 120, desde: '2026-08-15' },
+    ];
+    const ventas: VentaInsight[] = [
+      { id: 'v1', fechaIso: '2026-07-10', clienteId: null, total: 100 },
+      { id: 'v2', fechaIso: '2026-08-20', clienteId: null, total: 120 },
+    ];
+    const items: ItemInsight[] = [
+      { ventaId: 'v1', productoId: 'p1', varianteId: null, cantidad: 2 },
+      { ventaId: 'v2', productoId: 'p1', varianteId: null, cantidad: 1 },
+    ];
+    expect(calcularElasticidades(productos, historial, ventas, items, '2026-09-22')).toHaveLength(0);
   });
 
   it('ignora productos con un solo precio en el historial', () => {
@@ -148,5 +189,26 @@ describe('armarVariantes', () => {
     expect(res.combinaciones[0].pct).toBeCloseTo((5 / 7) * 100);
     const colorAttr = res.porAtributo.find((a) => a.atributo === 'Color')!;
     expect(colorAttr.valores.map((v) => v.name)).toEqual(['Rojo', 'Azul']);
+  });
+});
+
+describe('armarForecast (semanal)', () => {
+  const dia = (fecha: string, total: number) => ({ fecha, total });
+
+  it('no usa la semana en curso y cuenta las semanas sin ventas como 0', () => {
+    // Lunes 07/09, 14/09 (sin ventas), 21/09 y la semana en curso del 28/09.
+    const serie = [dia('2026-09-07', 1000), dia('2026-09-21', 1000), dia('2026-09-28', 50)];
+    const f = armarForecast(serie, 'semana', 60, '2026-09-29');
+    const historicos = f!.puntos.filter((p) => p.historico != null).map((p) => [p.clave, p.historico]);
+    expect(historicos).toEqual([
+      ['2026-09-07', 1000],
+      ['2026-09-14', 0],
+      ['2026-09-21', 1000],
+    ]);
+  });
+
+  it('una semana estable da tendencia neutra', () => {
+    const serie = ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24'].map((d) => dia(d, 1000));
+    expect(armarForecast(serie, 'semana', 60, '2026-09-29')!.tendencia).toBe('neutra');
   });
 });

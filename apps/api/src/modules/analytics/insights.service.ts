@@ -79,7 +79,11 @@ export class InsightsService {
     let salud: InsightSalud | null = null;
     try {
       const ventasMes = ventas.filter((v) => v.fechaIso >= mesIni).reduce((a, v) => a + v.total, 0);
-      const ventasMesAnt = ventas.filter((v) => v.fechaIso >= mesAntIni && v.fechaIso <= mesAntFin).reduce((a, v) => a + v.total, 0);
+      // Mismos días del mes anterior (1 al N): comparar el mes en curso contra
+      // el mes anterior completo hacía que las ventas siempre "bajaran".
+      const diaHoy = Number(hoy.slice(8, 10));
+      const mesAntTope = sumarDiasIso(mesAntIni, diaHoy - 1) < mesAntFin ? sumarDiasIso(mesAntIni, diaHoy - 1) : mesAntFin;
+      const ventasMesAnt = ventas.filter((v) => v.fechaIso >= mesAntIni && v.fechaIso <= mesAntTope).reduce((a, v) => a + v.total, 0);
       const hayMesAnterior = ventas.some((v) => v.fechaIso >= mesAntIni && v.fechaIso <= mesAntFin);
       salud = calcularSalud({ ventasMes, ventasMesAnt, hayMesAnterior, productos, ventas, elasticidades });
     } catch (e) {
@@ -90,7 +94,7 @@ export class InsightsService {
 
     let forecast = null;
     try {
-      if (diasHistorial >= 30) forecast = armarForecast(serieDiaria, 'semana', diasHistorial);
+      if (diasHistorial >= 30) forecast = armarForecast(serieDiaria, 'semana', diasHistorial, hoy);
     } catch (e) {
       errores.forecast = e instanceof Error ? e.message : 'No se pudo calcular la proyección';
     }
