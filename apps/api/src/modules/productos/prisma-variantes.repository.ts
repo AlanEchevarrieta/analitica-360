@@ -29,11 +29,20 @@ export class PrismaVariantesRepository implements VariantesRepository {
   async listarPorProducto(empresaId: string, productoId: string): Promise<VarianteRecord[] | null> {
     const producto = await this.prisma.producto.findFirst({ where: { id: productoId, empresaId } });
     if (!producto) return null;
-    const filas = await this.prisma.productoVariante.findMany({
-      where: { empresaId, productoId, deletedAt: null },
-      orderBy: { createdAt: 'asc' },
-    });
-    return filas.map((v) => this.toRecord(v));
+    const [filas, stocks] = await Promise.all([
+      this.prisma.productoVariante.findMany({
+        where: { empresaId, productoId, deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.$queryRaw<{ variante_id: string; stock: string }[]>(Prisma.sql`
+        SELECT variante_id, SUM(cantidad * signo) AS stock FROM movimientos_inventario
+        WHERE empresa_id = ${empresaId}::uuid AND producto_id = ${productoId}::uuid
+          AND variante_id IS NOT NULL AND deleted_at IS NULL
+        GROUP BY variante_id
+      `),
+    ]);
+    const stock = new Map(stocks.map((s) => [s.variante_id, Number(s.stock)]));
+    return filas.map((v) => ({ ...this.toRecord(v), stock: stock.get(v.id) ?? 0 }));
   }
 
   async guardarVariantesProducto(

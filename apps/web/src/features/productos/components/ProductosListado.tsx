@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -106,7 +107,9 @@ export function ProductosListado() {
                   return (
                     <TableRow key={p.id} className={p.activo ? undefined : "opacity-60"}>
                       <TableCell className="font-medium">
-                        {p.nombre}
+                        <Link href={`/productos/${p.id}`} className="hover:underline">
+                          {p.nombre}
+                        </Link>
                         {!p.activo && <span className="ml-2 text-xs text-muted-foreground">(inactivo)</span>}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{p.categoriaNombre ?? "—"}</TableCell>

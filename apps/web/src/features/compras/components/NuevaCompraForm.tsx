@@ -12,7 +12,7 @@ import { formatoPesos } from "@/lib/formato";
 import { BuscadorProductos } from "@/features/productos/components/BuscadorProductos";
 import { LineasProductos } from "@/features/productos/components/LineasProductos";
 import type { LineaProducto } from "@/features/productos/types";
-import { aNumero } from "@/features/ventas/components/CobroVenta";
+import { aNumero } from "@/lib/numeros";
 import { useUbicaciones } from "@/features/ventas/hooks/use-nueva-venta";
 import { useConfirmarCompra, useProveedores } from "../hooks/use-compras";
 import { ADICIONALES_VACIOS, CostosAdicionales, costoRealPorUnidad, type DatosAdicionales } from "./CostosAdicionales";

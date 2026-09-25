@@ -41,12 +41,8 @@ export function esClienteNuevo(nombre: string, clientes: ClienteVenta[]) {
   return n.length > 0 && !clientes.some((c) => c.nombre.toLowerCase() === n);
 }
 
-/** Número de un input de texto ("1.500,50" o "1500.5"); vacío o inválido = 0. */
-export function aNumero(texto: string) {
-  const limpio = texto.trim().replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".");
-  const n = Number(limpio);
-  return Number.isFinite(n) && n > 0 ? n : 0;
-}
+export { aNumero } from "@/lib/numeros";
+import { aNumero } from "@/lib/numeros";
 
 export function calcularTotales(subtotal: number, cobro: DatosCobro) {
   const descuento = Math.min(aNumero(cobro.descuento), subtotal);

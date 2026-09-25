@@ -7,6 +7,8 @@ export interface VarianteRecord {
   precioVenta: number | null;
   costo: number | null;
   activo: boolean;
+  /** Solo en el listado: stock actual de la variante. */
+  stock?: number;
 }
 
 export interface GuardarVarianteInput {
