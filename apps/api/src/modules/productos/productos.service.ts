@@ -69,6 +69,9 @@ export class ProductosService {
   async guardarCodigoBarra(empresaId: string, id: string, codigoBarra: string | null): Promise<ProductoRecord> {
     const producto = await this.productosRepository.guardarCodigoBarra(empresaId, id, codigoBarra);
     if (!producto) throw new NotFoundException('Producto no encontrado');
+    if ('duplicadoDe' in producto) {
+      throw new BadRequestException(`Ese código de barras ya lo tiene "${producto.duplicadoDe}"`);
+    }
     return producto;
   }
 

@@ -1,6 +1,7 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   VARIANTES_REPOSITORY,
+  VarianteConStockError,
   type VarianteRecord,
   type VariantesRepository,
 } from './variantes.repository.js';
@@ -21,7 +22,8 @@ export class VariantesService {
     productoId: string,
     input: GuardarVariantesProductoInput,
   ): Promise<VarianteRecord[]> {
-    const variantes = await this.variantesRepository.guardarVariantesProducto(
+    const variantes = await this.variantesRepository
+      .guardarVariantesProducto(
       empresaId,
       productoId,
       input.variantes.map((v) => ({
@@ -32,7 +34,14 @@ export class VariantesService {
         costo: v.costo ?? null,
         activo: v.activo,
       })),
-    );
+      )
+      .catch((error: unknown) => {
+        if (!(error instanceof VarianteConStockError)) throw error;
+        const detalle = error.conStock.map((v) => `${v.etiqueta} (${v.stock})`).join(', ');
+        throw new BadRequestException(
+          `No se puede desactivar una variante con stock: ${detalle}. Vendé, transferí o ajustá ese stock a 0 primero.`,
+        );
+      });
     if (!variantes) throw new NotFoundException('Producto no encontrado');
     return variantes;
   }

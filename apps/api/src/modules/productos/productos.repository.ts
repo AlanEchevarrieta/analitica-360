@@ -76,7 +76,12 @@ export interface ProductosRepository {
   buscarPorId(empresaId: string, id: string): Promise<ProductoRecord | null>;
   listar(empresaId: string, filtro: ProductosFiltro): Promise<ListaProductos>;
   listarNombres(empresaId: string): Promise<{ id: string; nombre: string }[]>;
-  guardarCodigoBarra(empresaId: string, id: string, codigoBarra: string | null): Promise<ProductoRecord | null>;
+  /** null = producto inexistente; duplicadoDe = otro producto ya usa ese código. */
+  guardarCodigoBarra(
+    empresaId: string,
+    id: string,
+    codigoBarra: string | null,
+  ): Promise<ProductoRecord | null | { duplicadoDe: string }>;
   guardarDimensiones(
     empresaId: string,
     id: string,

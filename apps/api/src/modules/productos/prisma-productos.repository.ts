@@ -98,7 +98,12 @@ export class PrismaProductosRepository implements ProductosRepository {
         },
         include: { categoriaRel: { select: { nombre: true } } },
       });
-      if (input.precioVenta != null && input.costo != null) {
+      // Solo si cambió precio o costo: guardar el producto sin tocar precios
+      // no debe ensuciar el historial (lo usa Insights para analizar precios).
+      const cambioPrecio =
+        (existente.precioVenta?.toNumber() ?? null) !== (input.precioVenta ?? null) ||
+        (existente.costo?.toNumber() ?? null) !== (input.costo ?? null);
+      if (cambioPrecio && input.precioVenta != null && input.costo != null) {
         await tx.precioHistorial.create({
           data: { empresaId, productoId: id, precioVenta: input.precioVenta, costo: input.costo },
         });
@@ -223,9 +228,21 @@ export class PrismaProductosRepository implements ProductosRepository {
     });
   }
 
-  async guardarCodigoBarra(empresaId: string, id: string, codigoBarra: string | null): Promise<ProductoRecord | null> {
+  async guardarCodigoBarra(
+    empresaId: string,
+    id: string,
+    codigoBarra: string | null,
+  ): Promise<ProductoRecord | null | { duplicadoDe: string }> {
     const existente = await this.prisma.producto.findFirst({ where: { id, empresaId } });
     if (!existente) return null;
+    // Un mismo código en dos productos haría que el escáner agregue el equivocado.
+    if (codigoBarra) {
+      const otro = await this.prisma.producto.findFirst({
+        where: { empresaId, codigoBarra, deletedAt: null, id: { not: id } },
+        select: { nombre: true },
+      });
+      if (otro) return { duplicadoDe: otro.nombre };
+    }
     const producto = await this.prisma.producto.update({
       where: { id },
       data: { codigoBarra },

@@ -18,6 +18,13 @@ export interface GuardarVarianteInput {
   activo: boolean;
 }
 
+/** Se lanza (y revierte la transacción) al querer apagar variantes que todavía tienen stock. */
+export class VarianteConStockError extends Error {
+  constructor(public readonly conStock: { etiqueta: string; stock: number }[]) {
+    super('Variantes con stock');
+  }
+}
+
 export const VARIANTES_REPOSITORY = Symbol('VARIANTES_REPOSITORY');
 
 /**
