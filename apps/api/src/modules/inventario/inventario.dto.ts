@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TIPOS_AJUSTE } from './inventario.util.js';
+import { fechaSoloSchema } from '../../common/fecha-solo.js';
 
 export const registrarAjusteSchema = z.object({
   productoId: z.uuid(),
@@ -44,8 +45,8 @@ export type KardexQuery = z.infer<typeof kardexQuerySchema>;
 export const crearLoteSchema = z.object({
   varianteId: z.uuid().nullable().optional(),
   numeroLote: z.string().trim().min(1, 'El número de lote es obligatorio'),
-  fechaVencimiento: z.string().trim().nullable().optional(),
-  fechaElaboracion: z.string().trim().nullable().optional(),
+  fechaVencimiento: fechaSoloSchema.nullable().optional(),
+  fechaElaboracion: fechaSoloSchema.nullable().optional(),
   cantidadInicial: z.number().nonnegative().default(0),
   proveedorId: z.uuid().nullable().optional(),
   notas: z.string().trim().nullable().optional(),

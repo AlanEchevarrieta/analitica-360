@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { CrearLoteInput, LoteRecord, LotesRepository, ResultadoCrearLote } from './lotes.repository.js';
 import { estadoLote } from './inventario.util.js';
+import { aFechaSolo } from '../../common/fecha-solo.js';
 
 type LoteConJoins = {
   id: string;
@@ -115,8 +116,8 @@ export class PrismaLotesRepository implements LotesRepository {
           productoId: input.productoId,
           varianteId: input.varianteId ?? null,
           numeroLote: input.numeroLote,
-          fechaVencimiento: input.fechaVencimiento || null,
-          fechaElaboracion: input.fechaElaboracion || null,
+          fechaVencimiento: aFechaSolo(input.fechaVencimiento),
+          fechaElaboracion: aFechaSolo(input.fechaElaboracion),
           cantidadInicial: input.cantidadInicial,
           proveedorId: input.proveedorId || null,
           notas: input.notas?.trim() || null,

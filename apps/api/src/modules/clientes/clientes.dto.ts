@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import { TIPOS_INTERACCION } from './clientes.repository.js';
+import { fechaSoloSchema } from '../../common/fecha-solo.js';
 
 export const guardarClienteSchema = z.object({
   nombre: z.string().trim().min(1, 'El nombre es obligatorio'),
   telefono: z.string().trim().nullable().optional(),
   email: z.email().nullable().optional(),
-  cumpleanos: z.string().trim().nullable().optional(),
+  cumpleanos: fechaSoloSchema.nullable().optional(),
   notasLibres: z.string().trim().nullable().optional(),
   etiquetas: z.array(z.string().trim().min(1)).default([]),
 });

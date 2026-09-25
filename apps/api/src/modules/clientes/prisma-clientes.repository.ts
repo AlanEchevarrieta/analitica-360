@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
+import { fechaLocalAR } from '../analytics/analytics.util.js';
+import { aFechaSolo } from '../../common/fecha-solo.js';
 import type {
   AgregarInteraccionInput,
   ClienteFicha,
@@ -78,7 +80,7 @@ export class PrismaClientesRepository implements ClientesRepository {
         cumpleanos: isoDate(c.cumpleanos),
         notasLibres: c.notasLibres,
         etiquetas: c.etiquetas,
-        ultimaCompra: agg ? isoDate(agg.ultima) : null,
+        ultimaCompra: agg ? fechaLocalAR(agg.ultima) : null,
         totalGastado: agg?.total ?? 0,
         cantidadCompras: agg?.cantidad ?? 0,
       };
@@ -148,7 +150,7 @@ export class PrismaClientesRepository implements ClientesRepository {
         nombre: input.nombre,
         telefono: input.telefono,
         email: input.email,
-        cumpleanos: input.cumpleanos,
+        cumpleanos: aFechaSolo(input.cumpleanos),
         notasLibres: input.notasLibres,
         etiquetas: input.etiquetas,
       },
@@ -175,7 +177,7 @@ export class PrismaClientesRepository implements ClientesRepository {
         nombre: input.nombre,
         telefono: input.telefono,
         email: input.email,
-        cumpleanos: input.cumpleanos,
+        cumpleanos: aFechaSolo(input.cumpleanos),
         notasLibres: input.notasLibres,
         etiquetas: input.etiquetas,
       },
@@ -201,7 +203,7 @@ export class PrismaClientesRepository implements ClientesRepository {
       cumpleanos: isoDate(cliente.cumpleanos),
       notasLibres: cliente.notasLibres,
       etiquetas: cliente.etiquetas,
-      ultimaCompra: isoDate(ultima),
+      ultimaCompra: ultima ? fechaLocalAR(ultima) : null,
       totalGastado: total,
       cantidadCompras: ventas.length,
     };
@@ -244,7 +246,7 @@ export class PrismaClientesRepository implements ClientesRepository {
           nombre: c.nombre,
           telefono: c.telefono,
           dias,
-          ultimaCompra: isoDate(agg.ultima),
+          ultimaCompra: fechaLocalAR(agg.ultima),
           fechaNacimiento: isoDate(c.cumpleanos),
           totalFacturado: agg.total,
           totalCompras: agg.cantidad,
@@ -260,7 +262,7 @@ export class PrismaClientesRepository implements ClientesRepository {
             nombre: c.nombre,
             telefono: c.telefono,
             dias,
-            ultimaCompra: agg ? isoDate(agg.ultima) : null,
+            ultimaCompra: agg ? fechaLocalAR(agg.ultima) : null,
             fechaNacimiento: isoDate(c.cumpleanos),
             totalFacturado: agg?.total ?? null,
             totalCompras: agg?.cantidad ?? null,
@@ -277,7 +279,7 @@ export class PrismaClientesRepository implements ClientesRepository {
         nombre: c.nombre,
         telefono: c.telefono,
         dias: null,
-        ultimaCompra: isoDate(agg.ultima),
+        ultimaCompra: fechaLocalAR(agg.ultima),
         fechaNacimiento: isoDate(c.cumpleanos),
         totalFacturado: agg.total,
         totalCompras: agg.cantidad,
