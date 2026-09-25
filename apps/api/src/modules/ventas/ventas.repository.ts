@@ -64,7 +64,8 @@ export type MotivoRechazoVenta =
   | 'variante_invalida'
   | 'cliente_invalido'
   | 'ubicacion_invalida'
-  | 'senia_invalida';
+  | 'senia_invalida'
+  | 'descuento_invalido';
 
 export type ResultadoConfirmarVenta = { ok: true; venta: VentaRecord } | { ok: false; motivo: MotivoRechazoVenta };
 

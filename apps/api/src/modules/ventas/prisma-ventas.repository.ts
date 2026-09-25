@@ -142,7 +142,8 @@ export class PrismaVentasRepository implements VentasRepository {
           (i) => !i.varianteId || productoDeVariante.get(i.varianteId) === i.productoId,
         );
         if (!todasValidas) return { ok: false, motivo: 'variante_invalida' };
-        for (const v of variantes) costoVariante.set(v.id, v.costo?.toNumber() ?? 0);
+        // Variante sin costo propio: vale el costo del producto (igual que su precio).
+        for (const v of variantes) costoVariante.set(v.id, v.costo?.toNumber() ?? costoProducto.get(v.productoId) ?? 0);
       }
 
       // Chequeos independientes en paralelo, no en serie (confirmar() es el
@@ -157,6 +158,7 @@ export class PrismaVentasRepository implements VentasRepository {
       // Los totales se recalculan siempre acá - nunca se confía en un monto
       // que mande el cliente para algo que involucra dinero.
       const itemsTotal = input.items.reduce((acc, i) => acc + i.cantidad * i.precioUnitario, 0);
+      if (input.descuento > itemsTotal) return { ok: false, motivo: 'descuento_invalido' };
       const totalSinInteres = itemsTotal - input.descuento;
       const { totalConInteres } = calcularTotalesCredito(totalSinInteres, input.coeficienteInteres, input.cuotas);
 

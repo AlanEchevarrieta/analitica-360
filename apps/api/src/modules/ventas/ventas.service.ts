@@ -23,6 +23,7 @@ const MOTIVO_MENSAJE: Record<MotivoRechazoVenta, string> = {
   cliente_invalido: 'Ese cliente no existe o no pertenece a esta empresa',
   ubicacion_invalida: 'Esa ubicación no existe o no pertenece a esta empresa',
   senia_invalida: 'La seña tiene que ser mayor a 0 y menor que el total',
+  descuento_invalido: 'El descuento no puede ser mayor que el total de los productos',
 };
 
 @Injectable()
