@@ -137,7 +137,8 @@ export class PrismaOrdenesCompraRepository implements OrdenesCompraRepository {
       const creada = await tx.ordenCompra.create({
         data: {
           empresaId,
-          numeroOc: `OC-${numeracion.ultimo}`,
+          // Mismo formato que el legacy (OC-000001).
+          numeroOc: `OC-${String(numeracion.ultimo).padStart(6, '0')}`,
           proveedorId: input.proveedorId,
           fechaEmision: new Date(),
           fechaEntregaEstimada: input.fechaEntregaEstimada,

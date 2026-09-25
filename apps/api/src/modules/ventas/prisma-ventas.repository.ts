@@ -178,7 +178,8 @@ export class PrismaVentasRepository implements VentasRepository {
           usuarioId: input.usuarioId,
           clienteId: input.clienteId ?? null,
           clienteNombre: input.clienteNombre,
-          numeroVenta: String(numeracion.ultimo),
+          // Mismo formato que el legacy (V-000569).
+          numeroVenta: `V-${String(numeracion.ultimo).padStart(6, '0')}`,
           formaPago: input.formaPago,
           descuento: input.descuento,
           cuotas: input.cuotas,
