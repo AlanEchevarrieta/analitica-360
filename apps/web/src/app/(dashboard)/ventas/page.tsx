@@ -1,5 +1,10 @@
-// Placeholder de la ruta /ventas — se implementa en Fase 5 del plan de reescritura,
-// consumiendo la API de apps/api y reusando features/ventas.
+import { VentasListado } from "@/features/ventas/components/VentasListado";
+
 export default function Page() {
-  return <div>ventas (placeholder — Fase 5)</div>;
+  return (
+    <div className="flex flex-col gap-4">
+      <h1 className="text-xl font-semibold">Ventas</h1>
+      <VentasListado />
+    </div>
+  );
 }

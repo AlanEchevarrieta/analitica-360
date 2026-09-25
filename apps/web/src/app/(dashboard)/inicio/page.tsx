@@ -1,5 +1,10 @@
-// Placeholder de la ruta /inicio — se implementa en Fase 5 del plan de reescritura,
-// consumiendo la API de apps/api y reusando features/inicio.
+import { InicioDashboard } from "@/features/dashboard/components/InicioDashboard";
+
 export default function Page() {
-  return <div>inicio (placeholder — Fase 5)</div>;
+  return (
+    <div className="flex flex-col gap-4">
+      <h1 className="text-xl font-semibold">Inicio</h1>
+      <InicioDashboard />
+    </div>
+  );
 }
