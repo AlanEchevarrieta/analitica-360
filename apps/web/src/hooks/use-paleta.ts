@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
-import { CLAVE_STORAGE_PALETA, PALETA_DEFAULT, esPaleta, type ClavePaleta } from "@/lib/paletas";
+import { COOKIE_PALETA, PALETA_DEFAULT, esPaleta, type ClavePaleta } from "@/lib/paletas";
 
-// La fuente de verdad es el atributo data-paleta de <html> (lo pone el script
-// del <head> al cargar); se observa con un MutationObserver para que todos los
+// La fuente de verdad es el atributo data-paleta de <html> (lo pone el root
+// layout leyendo la cookie); se observa con un MutationObserver para que todos los
 // selectores abiertos se enteren del cambio.
 function suscribir(aviso: () => void) {
   const observer = new MutationObserver(aviso);
@@ -22,11 +22,8 @@ export function usePaleta() {
 
   const setPaleta = useCallback((nueva: ClavePaleta) => {
     document.documentElement.dataset.paleta = nueva;
-    try {
-      localStorage.setItem(CLAVE_STORAGE_PALETA, nueva);
-    } catch {
-      // Navegación privada / almacenamiento bloqueado: se aplica igual, solo no se recuerda.
-    }
+    // Un año; la lee el root layout en el servidor.
+    document.cookie = `${COOKIE_PALETA}=${nueva}; path=/; max-age=31536000; samesite=lax`;
   }, []);
 
   return { paleta, setPaleta };

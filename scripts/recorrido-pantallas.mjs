@@ -6,7 +6,7 @@
 // Uso (web en :3000 y API en :3001 levantadas):
 //   node scripts/recorrido-pantallas.mjs <clerkUserId> <carpetaCapturas> [ancho]
 // RUTAS=/inicio,/ventas limita el recorrido a esas rutas.
-// PALETA=acacia y MODO=light|dark eligen la apariencia (se guardan en localStorage).
+// PALETA=acacia y MODO=light|dark eligen la apariencia (cookie y localStorage).
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -43,10 +43,8 @@ fs.mkdirSync(carpeta, { recursive: true });
 const { token } = await clerk('/sign_in_tokens', { user_id: clerkUserId, expires_in_seconds: 600 });
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: Number(ancho), height: 900 }, locale: 'es-AR' });
-await context.addInitScript(([paleta, modo]) => {
-  if (paleta) localStorage.setItem('a360-paleta', paleta);
-  if (modo) localStorage.setItem('theme', modo);
-}, [process.env.PALETA, process.env.MODO]);
+if (process.env.PALETA) await context.addCookies([{ name: 'a360-paleta', value: process.env.PALETA, url: WEB }]);
+if (process.env.MODO) await context.addInitScript((modo) => localStorage.setItem('theme', modo), process.env.MODO);
 const page = await context.newPage();
 
 const problemas = [];

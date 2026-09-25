@@ -1,7 +1,8 @@
 /**
  * Paletas de color elegibles (se aplican con data-paleta en <html>; los
- * colores viven en src/styles/paletas.css). La elección se guarda en el
- * navegador: es una preferencia de cada dispositivo, como claro/oscuro.
+ * colores viven en src/styles/paletas.css). La elección se guarda en una
+ * cookie del navegador (preferencia de cada dispositivo, como claro/oscuro):
+ * así el servidor ya manda el <html> con la paleta y no hay parpadeo.
  */
 export const PALETAS = [
   { clave: "indigo", nombre: "Índigo", descripcion: "El clásico de Analítica 360", muestra: ["#6366f1", "#4ade80", "#f59e0b"] },
@@ -14,16 +15,8 @@ export const PALETAS = [
 export type ClavePaleta = (typeof PALETAS)[number]["clave"];
 
 export const PALETA_DEFAULT: ClavePaleta = "indigo";
-export const CLAVE_STORAGE_PALETA = "a360-paleta";
+export const COOKIE_PALETA = "a360-paleta";
 
 export function esPaleta(v: unknown): v is ClavePaleta {
   return PALETAS.some((p) => p.clave === v);
 }
-
-/**
- * Script que corre antes de pintar la página (en <head>) para aplicar la
- * paleta guardada sin "parpadeo" del color por defecto.
- */
-export const SCRIPT_PALETA = `try{var p=localStorage.getItem(${JSON.stringify(CLAVE_STORAGE_PALETA)});if(p&&${JSON.stringify(
-  PALETAS.map((p) => p.clave),
-)}.indexOf(p)>-1)document.documentElement.dataset.paleta=p}catch(e){}`;
