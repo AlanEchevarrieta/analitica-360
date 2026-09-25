@@ -10,6 +10,9 @@ const envSchema = z.object({
   // POST /internal/clerk-webhook en UsuariosModule).
   INTERNAL_WEBHOOK_SECRET: z.string().min(1, 'INTERNAL_WEBHOOK_SECRET es obligatoria'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL es obligatoria'),
+  // Clave compartida con las tiendas online para reenviar la IP del cliente
+  // (límite de requests por cliente, ver TiendaThrottlerGuard). Opcional.
+  TIENDA_PROXY_KEY: z.string().min(16).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

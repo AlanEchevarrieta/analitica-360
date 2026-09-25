@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { booleanQuery } from '../../common/zod/boolean-query.js';
 
 export const guardarCategoriaSchema = z.object({
   nombre: z.string().trim().min(1, 'El nombre es obligatorio'),
@@ -8,6 +9,6 @@ export const guardarCategoriaSchema = z.object({
 export type GuardarCategoriaInput = z.infer<typeof guardarCategoriaSchema>;
 
 export const listarCategoriasQuerySchema = z.object({
-  soloActivas: z.coerce.boolean().default(false),
+  soloActivas: booleanQuery(false),
 });
 export type ListarCategoriasQuery = z.infer<typeof listarCategoriasQuerySchema>;

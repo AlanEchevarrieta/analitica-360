@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { booleanQuery } from '../../common/zod/boolean-query.js';
 import { FORMAS_PAGO } from './ventas.util.js';
 
 const itemVentaSchema = z.object({
@@ -44,6 +45,6 @@ export const listarVentasQuerySchema = z.object({
   cliente: z.string().trim().default(''),
   productoId: z.string().trim().default(''),
   numeroVenta: z.string().trim().default(''),
-  mostrarAnuladas: z.coerce.boolean().default(false),
+  mostrarAnuladas: booleanQuery(false),
 });
 export type ListarVentasQuery = z.infer<typeof listarVentasQuerySchema>;

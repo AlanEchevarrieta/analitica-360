@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { booleanQuery } from '../../common/zod/boolean-query.js';
 
 export const tipoUbicacionSchema = z.enum(['deposito', 'local', 'stand', 'feria', 'otro']);
 
@@ -11,6 +12,6 @@ export const guardarUbicacionSchema = z.object({
 export type GuardarUbicacionInput = z.infer<typeof guardarUbicacionSchema>;
 
 export const listarUbicacionesQuerySchema = z.object({
-  soloActivas: z.coerce.boolean().default(true),
+  soloActivas: booleanQuery(true),
 });
 export type ListarUbicacionesQuery = z.infer<typeof listarUbicacionesQuerySchema>;

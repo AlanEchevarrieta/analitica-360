@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Public } from '../../common/decorators/public.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { TiendaService } from './tienda.service.js';
+import { TiendaThrottlerGuard } from './tienda-throttler.guard.js';
 import { crearPedidoTiendaSchema, type CrearPedidoTiendaInput } from './tienda.dto.js';
 
 /**
@@ -11,6 +13,7 @@ import { crearPedidoTiendaSchema, type CrearPedidoTiendaInput } from './tienda.d
  */
 @Controller('tienda/:empresaId')
 @Public()
+@UseGuards(TiendaThrottlerGuard)
 export class TiendaController {
   constructor(private readonly tiendaService: TiendaService) {}
 
@@ -19,7 +22,9 @@ export class TiendaController {
     return this.tiendaService.catalogo(empresaId);
   }
 
+  // Un cliente real no confirma más de un par de pedidos por minuto.
   @Post('pedidos')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   crearPedido(
     @Param('empresaId', new ParseUUIDPipe()) empresaId: string,
     @Body(new ZodValidationPipe(crearPedidoTiendaSchema)) body: CrearPedidoTiendaInput,

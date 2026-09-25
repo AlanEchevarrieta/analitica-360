@@ -7,7 +7,7 @@ import type { CompraFila, ConfirmarCompraInput, ListaCompras, ProveedorFila } fr
 
 export const COMPRAS_POR_PAGINA = 25;
 
-/** GET /compras (sin anuladas: mostrarAnuladas no se manda, el backend usa z.coerce.boolean). */
+/** GET /compras (por defecto la API excluye las anuladas). */
 export function useCompras(pagina: number, proveedor: string) {
   const api = useApiFetch();
   const { orgId } = useAuth();

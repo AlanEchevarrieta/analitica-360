@@ -17,7 +17,7 @@ export function useVentas(filtros: FiltrosVentas) {
     params.set("hasta", filtros.hasta);
   }
   if (filtros.cliente.trim()) params.set("cliente", filtros.cliente.trim());
-  // mostrarAnuladas no se manda: el backend usa z.coerce.boolean y "false" se leería como true.
+  // Sin mostrarAnuladas: por defecto la API excluye las anuladas.
 
   return useQuery({
     queryKey: ["ventas", orgId, filtros],
