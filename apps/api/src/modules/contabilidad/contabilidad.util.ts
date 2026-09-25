@@ -30,6 +30,8 @@ export interface VentaConCogs {
   id: string;
   fecha: string;
   total: number;
+  /** Ajuste (devoluciones/cambios del día): suma a ingresos y costo pero no cuenta como venta. */
+  esAjuste?: boolean;
 }
 
 export interface ItemCogs {
@@ -41,6 +43,43 @@ export interface GastoParaContabilidad {
   fecha: string;
   monto: number;
   recurrente: boolean;
+  frecuencia?: 'mensual' | 'quincenal' | 'semanal' | null;
+}
+
+function sumarDiasISO(iso: string, dias: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + dias)).toISOString().slice(0, 10);
+}
+
+function sumarMesISO(iso: string, meses: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const ultimo = new Date(Date.UTC(y, m - 1 + meses + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m - 1 + meses, Math.min(d, ultimo))).toISOString().slice(0, 10);
+}
+
+/**
+ * Un gasto recurrente se carga una vez y se repite cada semana / 15 días /
+ * mes desde su fecha hasta `hasta` (en el legacy la frecuencia era solo una
+ * etiqueta y el gasto contaba una única vez, lo que inflaba el resultado).
+ */
+export function expandirRecurrentes<T extends GastoParaContabilidad>(gastos: T[], hasta: string): T[] {
+  const out: T[] = [];
+  for (const g of gastos) {
+    if (!g.recurrente || !g.frecuencia) {
+      out.push(g);
+      continue;
+    }
+    for (let i = 0, fecha = g.fecha; fecha <= hasta && i < 1000; i++) {
+      out.push({ ...g, fecha });
+      fecha =
+        g.frecuencia === 'semanal'
+          ? sumarDiasISO(g.fecha, 7 * (i + 1))
+          : g.frecuencia === 'quincenal'
+            ? sumarDiasISO(g.fecha, 15 * (i + 1))
+            : sumarMesISO(g.fecha, i + 1);
+    }
+  }
+  return out;
 }
 
 function ultimoDiaMes(y: number, m: number): number {
@@ -88,7 +127,7 @@ export function sumarPeriodo(ventas: VentaConCogs[], items: ItemCogs[], gastos: 
   const ingresos = ventasP.reduce((a, v) => a + v.total, 0);
   const cogs = items.filter((i) => ids.has(i.ventaId)).reduce((a, i) => a + i.cogs, 0);
   const g = gastos.filter((x) => enRango(x.fecha)).reduce((a, x) => a + x.monto, 0);
-  return { ingresos, cogs, gastos: g, neto: ingresos - cogs - g, cantidadVentas: ventasP.length };
+  return { ingresos, cogs, gastos: g, neto: ingresos - cogs - g, cantidadVentas: ventasP.filter((v) => !v.esAjuste).length };
 }
 
 /** Puerto de serieMensual: un punto por cada clave YYYY-MM en `claves`. */

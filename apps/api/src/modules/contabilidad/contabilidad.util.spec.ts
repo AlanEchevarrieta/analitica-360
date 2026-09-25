@@ -1,4 +1,4 @@
-import { acumuladoSerie, mesesAtras, proyectarFlujo, ratiosFinancieros, semaforoMargenBruto, semaforoMargenNeto, serieMensual, sumarPeriodo, type PuntoMes } from './contabilidad.util.js';
+import { acumuladoSerie, expandirRecurrentes, mesesAtras, proyectarFlujo, ratiosFinancieros, semaforoMargenBruto, semaforoMargenNeto, serieMensual, sumarPeriodo, type PuntoMes } from './contabilidad.util.js';
 
 describe('mesesAtras', () => {
   it('devuelve las últimas N claves YYYY-MM terminando en el mes de hoy', () => {
@@ -108,5 +108,29 @@ describe('acumuladoSerie', () => {
     ];
     const res = acumuladoSerie(puntos);
     expect(res.map((p) => p.acumulado)).toEqual([50, 90]);
+  });
+});
+
+describe('expandirRecurrentes', () => {
+  const g = (fecha: string, frecuencia: 'mensual' | 'quincenal' | 'semanal' | null, recurrente = true) => ({ fecha, monto: 100, recurrente, frecuencia });
+
+  it('un gasto semanal cuenta cada 7 días hasta la fecha tope', () => {
+    expect(expandirRecurrentes([g('2026-09-01', 'semanal')], '2026-09-25').map((x) => x.fecha)).toEqual([
+      '2026-09-01', '2026-09-08', '2026-09-15', '2026-09-22',
+    ]);
+  });
+
+  it('mensual respeta fin de mes (31/01 -> 28/02 -> 31/03)', () => {
+    expect(expandirRecurrentes([g('2026-01-31', 'mensual')], '2026-03-31').map((x) => x.fecha)).toEqual([
+      '2026-01-31', '2026-02-28', '2026-03-31',
+    ]);
+  });
+
+  it('quincenal cada 15 días', () => {
+    expect(expandirRecurrentes([g('2026-09-01', 'quincenal')], '2026-09-30').map((x) => x.fecha)).toEqual(['2026-09-01', '2026-09-16']);
+  });
+
+  it('los no recurrentes quedan igual', () => {
+    expect(expandirRecurrentes([g('2026-09-01', null, false)], '2026-12-31')).toHaveLength(1);
   });
 });

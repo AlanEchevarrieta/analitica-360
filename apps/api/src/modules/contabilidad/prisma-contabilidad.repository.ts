@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
+import { dineroDevolucionesPorDia } from '../analytics/devoluciones-dinero.js';
+import { fechaLocalAR } from '../analytics/analytics.util.js';
 import type { ContabilidadRepository, ValorStock } from './contabilidad.repository.js';
 import type { ItemCogs, VentaConCogs } from './contabilidad.util.js';
 import { sumarDiasIso } from '../analytics/analytics.util.js';
@@ -16,10 +18,14 @@ export class PrismaContabilidadRepository implements ContabilidadRepository {
       where: { empresaId, deletedAt: null, fecha: { gte: desdeDate, lt: hastaDate } },
       select: { id: true, fecha: true, totalConInteres: true },
     });
-    const ventasOut: VentaConCogs[] = ventas.map((v) => ({ id: v.id, fecha: v.fecha.toISOString().slice(0, 10), total: v.totalConInteres?.toNumber() ?? 0 }));
+    // Fecha local AR: con toISOString() una venta del 31/08 a las 22 h caía en septiembre.
+    const ventasOut: VentaConCogs[] = ventas.map((v) => ({ id: v.id, fecha: fechaLocalAR(v.fecha), total: v.totalConInteres?.toNumber() ?? 0 }));
+    const ajustes = await dineroDevolucionesPorDia(this.prisma, empresaId, desdeDate, hastaDate);
 
     const ids = ventasOut.map((v) => v.id);
-    if (ids.length === 0) return { ventas: ventasOut, items: [] };
+    const itemsAjuste: ItemCogs[] = ajustes.map((a) => ({ ventaId: `devoluciones-${a.fecha}`, cogs: a.costo }));
+    ventasOut.push(...ajustes.map((a) => ({ id: `devoluciones-${a.fecha}`, fecha: a.fecha, total: a.ingreso, esAjuste: true })));
+    if (ids.length === 0) return { ventas: ventasOut, items: itemsAjuste };
     const slices: string[][] = [];
     for (let i = 0; i < ids.length; i += 200) slices.push(ids.slice(i, i + 200));
     const paginas = await Promise.all(
@@ -28,7 +34,7 @@ export class PrismaContabilidadRepository implements ContabilidadRepository {
       ),
     );
     const items: ItemCogs[] = paginas.flat().map((it) => ({ ventaId: it.ventaId, cogs: it.cantidad * it.costoUnitario.toNumber() }));
-    return { ventas: ventasOut, items };
+    return { ventas: ventasOut, items: [...items, ...itemsAjuste] };
   }
 
   async valorStock(empresaId: string): Promise<ValorStock> {

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { InflacionRepository } from './inflacion.repository.js';
-import { mesAnteriorKey, promediarPorMes } from './inflacion.util.js';
+import { indiceEncadenado, mesAnteriorKey } from './inflacion.util.js';
 import { fechaLocalAR } from './analytics.util.js';
 
 @Injectable()
@@ -13,9 +13,16 @@ export class PrismaInflacionRepository implements InflacionRepository {
     const hastaDate = new Date(`${hasta}T23:59:59.999`);
     const filas = await this.prisma.precioHistorial.findMany({
       where: { empresaId, fechaDesde: { gte: desdeExt, lte: hastaDate } },
-      select: { precioVenta: true, fechaDesde: true },
+      select: { productoId: true, variante: true, precioVenta: true, fechaDesde: true },
     });
-    return promediarPorMes(filas.map((f) => ({ mes: f.fechaDesde.toISOString().slice(0, 7), precio: f.precioVenta.toNumber() })));
+    return indiceEncadenado(
+      filas.map((f) => ({
+        mes: f.fechaDesde.toISOString().slice(0, 7),
+        productoId: `${f.productoId}:${f.variante ?? ''}`,
+        precio: f.precioVenta.toNumber(),
+        cantidad: 1,
+      })),
+    );
   }
 
   async preciosPromedioVentasItems(empresaId: string, desde: string, hasta: string): Promise<Map<string, number>> {
@@ -32,9 +39,20 @@ export class PrismaInflacionRepository implements InflacionRepository {
     const slices: string[][] = [];
     for (let i = 0; i < ids.length; i += 200) slices.push(ids.slice(i, i + 200));
     const paginas = await Promise.all(
-      slices.map((slice) => this.prisma.ventaItem.findMany({ where: { empresaId, ventaId: { in: slice } }, select: { ventaId: true, precioUnitario: true } })),
+      slices.map((slice) =>
+        this.prisma.ventaItem.findMany({
+          where: { empresaId, ventaId: { in: slice } },
+          select: { ventaId: true, productoId: true, varianteId: true, cantidad: true, precioUnitario: true },
+        }),
+      ),
     );
-    const items = paginas.flat().map((r) => ({ mes: mesPorVenta.get(r.ventaId) ?? '', precio: r.precioUnitario.toNumber() }));
-    return promediarPorMes(items);
+    return indiceEncadenado(
+      paginas.flat().map((r) => ({
+        mes: mesPorVenta.get(r.ventaId) ?? '',
+        productoId: `${r.productoId}:${r.varianteId ?? ''}`,
+        precio: r.precioUnitario.toNumber(),
+        cantidad: r.cantidad,
+      })),
+    );
   }
 }

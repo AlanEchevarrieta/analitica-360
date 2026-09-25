@@ -22,6 +22,8 @@ describe('InflacionService', () => {
   });
 
   it('usa la tabla estática y no llama al BCRA cuando todos los meses están cubiertos', async () => {
+    // Sin ventas en el período: cae al historial de precios.
+    repository.preciosPromedioVentasItems.mockResolvedValue(new Map());
     repository.preciosPromedioHistorial.mockResolvedValue(new Map([['2024-05', 100]]));
     const res = await service.inflacionVsPrecios('empresa-1', '2024-05-01', '2024-05-31');
     expect(bcra.inflacionDesdeBcra).not.toHaveBeenCalled();

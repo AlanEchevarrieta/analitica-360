@@ -1,4 +1,4 @@
-import { acumularPct, armarSerieInflacion, finMesIso, mesAnteriorKey, mesesEnRango, mesKeyDe, promediarPorMes, rangoDatosIndec } from './inflacion.util.js';
+import { acumularPct, armarSerieInflacion, finMesIso, mesAnteriorKey, mesesEnRango, indiceEncadenado, mesKeyDe, promediarPorMes, rangoDatosIndec } from './inflacion.util.js';
 
 describe('mesesEnRango', () => {
   it('devuelve las claves YYYY-MM entre desde y hasta, inclusive', () => {
@@ -84,5 +84,36 @@ describe('armarSerieInflacion', () => {
     const res = armarSerieInflacion(['2026-01', '2026-02'], { '2026-01': 10, '2026-02': 10 }, precios, '2026-01-01', '2026-02-28');
     expect(res.resumen.variacionPreciosPct).toBeCloseTo(0, 5);
     expect(res.resumen.valorRealDe100).toBeLessThan(100);
+  });
+});
+
+describe('indiceEncadenado', () => {
+  it('un cambio en la mezcla de productos no se toma como cambio de precio', () => {
+    const indice = indiceEncadenado([
+      { mes: '2026-01', productoId: 'caro', precio: 1000, cantidad: 10 },
+      { mes: '2026-01', productoId: 'barato', precio: 100, cantidad: 1 },
+      { mes: '2026-02', productoId: 'caro', precio: 1000, cantidad: 1 },
+      { mes: '2026-02', productoId: 'barato', precio: 100, cantidad: 50 },
+    ]);
+    expect(indice.get('2026-01')).toBe(100);
+    expect(indice.get('2026-02')).toBe(100);
+  });
+
+  it('encadena subas ponderadas por facturación', () => {
+    const indice = indiceEncadenado([
+      { mes: '2026-01', productoId: 'a', precio: 100, cantidad: 1 },
+      { mes: '2026-02', productoId: 'a', precio: 110, cantidad: 1 },
+      { mes: '2026-03', productoId: 'a', precio: 121, cantidad: 1 },
+    ]);
+    expect(indice.get('2026-03')).toBeCloseTo(121, 5);
+  });
+
+  it('un producto nuevo no mueve el índice el mes que aparece', () => {
+    const indice = indiceEncadenado([
+      { mes: '2026-01', productoId: 'a', precio: 100, cantidad: 1 },
+      { mes: '2026-02', productoId: 'a', precio: 100, cantidad: 1 },
+      { mes: '2026-02', productoId: 'nuevo', precio: 5000, cantidad: 3 },
+    ]);
+    expect(indice.get('2026-02')).toBe(100);
   });
 });

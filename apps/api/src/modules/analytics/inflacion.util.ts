@@ -214,3 +214,44 @@ export function armarSerieInflacion(
 }
 
 export { MSG_SIN_INFLACION };
+
+/**
+ * Índice de precios propio, encadenado por producto (base 100 en el primer
+ * mes con datos). Cada mes, la variación es el promedio ponderado por
+ * facturación de cuánto cambió el precio de CADA producto respecto de su
+ * último precio conocido. Reemplaza a promediarPorMes para comparar contra
+ * la inflación: el promedio simple mezclaba productos distintos y un cambio
+ * en qué se vendió (más productos baratos) parecía una baja de precios.
+ */
+export function indiceEncadenado(filas: { mes: string; productoId: string; precio: number; cantidad: number }[]): Map<string, number> {
+  // mes -> producto -> { facturado, unidades }
+  const porMes = new Map<string, Map<string, { facturado: number; unidades: number }>>();
+  for (const f of filas) {
+    if (!f.mes || !(f.precio > 0) || !(f.cantidad > 0)) continue;
+    const mes = porMes.get(f.mes) ?? new Map();
+    const p = mes.get(f.productoId) ?? { facturado: 0, unidades: 0 };
+    p.facturado += f.precio * f.cantidad;
+    p.unidades += f.cantidad;
+    mes.set(f.productoId, p);
+    porMes.set(f.mes, mes);
+  }
+  const indice = new Map<string, number>();
+  const ultimoPrecio = new Map<string, number>();
+  let nivel = 100;
+  for (const mes of [...porMes.keys()].sort()) {
+    let suma = 0;
+    let peso = 0;
+    for (const [producto, { facturado, unidades }] of porMes.get(mes)!) {
+      const precio = facturado / unidades;
+      const anterior = ultimoPrecio.get(producto);
+      if (anterior) {
+        suma += facturado * (precio / anterior - 1);
+        peso += facturado;
+      }
+      ultimoPrecio.set(producto, precio);
+    }
+    if (indice.size > 0 && peso > 0) nivel *= 1 + suma / peso;
+    indice.set(mes, nivel);
+  }
+  return indice;
+}

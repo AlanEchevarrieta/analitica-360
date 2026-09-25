@@ -3,6 +3,7 @@ import { CONTABILIDAD_REPOSITORY, type ContabilidadRepository, type ValorStock }
 import { GASTO_REPOSITORY, type GastoRepository } from './gasto.repository.js';
 import {
   acumuladoSerie,
+  expandirRecurrentes,
   mesesAtras,
   proyectarFlujo,
   ratiosFinancieros,
@@ -41,12 +42,14 @@ export class ContabilidadService {
     const claves6 = mesesAtras(hoy, 6);
     const desdeHist = `${claves6[0]}-01`;
 
-    const [{ ventas, items }, gastosHist, valorStock] = await Promise.all([
+    const [{ ventas, items }, gastosCargados, valorStock] = await Promise.all([
       this.repository.ventasConItems(empresaId, desdeHist, hoy),
-      this.gastoRepository.listar(empresaId, desdeHist, hoy),
+      // Desde el principio: un recurrente cargado hace un año sigue generando gasto este mes.
+      this.gastoRepository.listar(empresaId, '2000-01-01', hoy),
       this.repository.valorStock(empresaId),
     ]);
 
+    const gastosHist = expandirRecurrentes(gastosCargados, hoy).filter((g) => g.fecha >= desdeHist);
     const serie6 = serieMensual(claves6, ventas, items, gastosHist);
     const totales = sumarPeriodo(ventas, items, gastosHist, desde, hasta);
 

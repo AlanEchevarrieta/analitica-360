@@ -30,16 +30,17 @@ export class InflacionService {
     const { mapa: inflacion, errorInflacion } = await this.mapaInflacionParaPeriodo(desde, hasta, meses);
     if (errorInflacion) return { ...SERIE_INFLACION_VACIA, errorInflacion, desde, hasta };
 
-    let historial = new Map<string, number>();
+    // Fuente principal: los precios reales a los que se vendió (el historial
+    // de precios es escaso y mezcla cambios de costo); si no hubo ventas, el historial.
+    let precios = new Map<string, number>();
     try {
-      historial = await this.repository.preciosPromedioHistorial(empresaId, desde, hasta);
+      precios = await this.repository.preciosPromedioVentasItems(empresaId, desde, hasta);
     } catch {
-      historial = new Map();
+      precios = new Map();
     }
-    let precios = historial;
-    if (historial.size === 0) {
+    if (precios.size === 0) {
       try {
-        precios = await this.repository.preciosPromedioVentasItems(empresaId, desde, hasta);
+        precios = await this.repository.preciosPromedioHistorial(empresaId, desde, hasta);
       } catch {
         precios = new Map();
       }
