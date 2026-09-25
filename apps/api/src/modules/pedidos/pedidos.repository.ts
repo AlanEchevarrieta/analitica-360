@@ -64,6 +64,8 @@ export interface ItemPedidoInput {
 }
 
 export interface CrearPedidoInput {
+  /** Default 'manual'. La tienda pública crea con 'tienda_online'. */
+  origen?: OrigenPedido;
   clienteId?: string | null;
   clienteNombre: string | null;
   clienteEmail: string | null;

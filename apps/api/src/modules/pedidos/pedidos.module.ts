@@ -10,5 +10,6 @@ import { PrismaPedidosRepository } from './prisma-pedidos.repository.js';
     PedidosService,
     { provide: PEDIDOS_REPOSITORY, useClass: PrismaPedidosRepository },
   ],
+  exports: [PEDIDOS_REPOSITORY],
 })
 export class PedidosModule {}

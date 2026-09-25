@@ -204,7 +204,7 @@ export class PrismaPedidosRepository implements PedidosRepository {
           clienteNombre: input.clienteNombre,
           clienteEmail: input.clienteEmail,
           clienteTelefono: input.clienteTelefono,
-          origen: 'manual',
+          origen: input.origen ?? 'manual',
           estado: 'nuevo',
           direccionEnvio: input.direccionEnvio,
           codigoPostal: input.codigoPostal,

@@ -23,6 +23,7 @@ import { NotificacionesModule } from './modules/notificaciones/notificaciones.mo
 import { SoporteModule } from './modules/soporte/soporte.module.js';
 import { PlanesModule } from './modules/planes/planes.module.js';
 import { AdminSaasModule } from './modules/admin-saas/admin-saas.module.js';
+import { TiendaModule } from './modules/tienda/tienda.module.js';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { AdminSaasModule } from './modules/admin-saas/admin-saas.module.js';
     SoporteModule,
     PlanesModule,
     AdminSaasModule,
+    TiendaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
