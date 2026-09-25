@@ -31,8 +31,13 @@ export interface ProductosFiltro {
   pageSize: number;
 }
 
+/** Fila del listado: el producto más su stock actual (SUM(cantidad*signo) de MovimientoInventario, mismo criterio que el dashboard). */
+export interface ProductoListado extends ProductoRecord {
+  stock: number;
+}
+
 export interface ListaProductos {
-  items: ProductoRecord[];
+  items: ProductoListado[];
   total: number;
   activos: number;
 }

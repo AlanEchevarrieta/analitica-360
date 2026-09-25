@@ -44,7 +44,10 @@ export class ClerkAuthGuard implements CanActivate {
       });
       request.clerkAuth = {
         clerkUserId: claims.sub,
-        clerkOrgId: (claims.org_id as string | undefined) ?? null,
+        // Session token v2 (default de Clerk) trae la organización activa en
+        // `o.id`; v1 la traía en `org_id`. Se aceptan ambos formatos.
+        clerkOrgId:
+          ((claims as { o?: { id?: string } }).o?.id ?? (claims.org_id as string | undefined)) ?? null,
         sessionClaims: claims as unknown as Record<string, unknown>,
       };
       return true;

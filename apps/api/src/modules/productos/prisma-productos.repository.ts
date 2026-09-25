@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma, Producto } from '@prisma/client';
+import { Prisma, type Producto } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import type {
   DimensionesProducto,
   GuardarProductoInput,
   ListaProductos,
+  ProductoListado,
   ProductoRecord,
   ProductosFiltro,
   ProductosRepository,
@@ -151,7 +152,7 @@ export class PrismaProductosRepository implements ProductosRepository {
         this.prisma.producto.count({ where }),
         activosPromise,
       ]);
-      return { items: filas.map((p) => this.toRecord(p)), total, activos };
+      return { items: await this.conStock(empresaId, filas.map((p) => this.toRecord(p))), total, activos };
     }
 
     const [filas, activos] = await Promise.all([
@@ -167,10 +168,23 @@ export class PrismaProductosRepository implements ProductosRepository {
     const filtrados = registros.filter((p) => coincideMargen(filtro.margen, p.precioVenta, p.costo));
 
     return {
-      items: filtrados.slice(from, from + filtro.pageSize),
+      items: await this.conStock(empresaId, filtrados.slice(from, from + filtro.pageSize)),
       total: filtrados.length,
       activos,
     };
+  }
+
+  private async conStock(empresaId: string, productos: ProductoRecord[]): Promise<ProductoListado[]> {
+    if (productos.length === 0) return [];
+    const filas = await this.prisma.$queryRaw<{ producto_id: string; stock: string }[]>(Prisma.sql`
+      SELECT producto_id, SUM(cantidad * signo) AS stock
+      FROM movimientos_inventario
+      WHERE empresa_id = ${empresaId}::uuid AND deleted_at IS NULL
+        AND producto_id IN (${Prisma.join(productos.map((p) => Prisma.sql`${p.id}::uuid`))})
+      GROUP BY producto_id
+    `);
+    const stock = new Map(filas.map((f) => [f.producto_id, Number(f.stock)]));
+    return productos.map((p) => ({ ...p, stock: stock.get(p.id) ?? 0 }));
   }
 
   async listarNombres(empresaId: string): Promise<{ id: string; nombre: string }[]> {
