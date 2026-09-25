@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "../styles/tokens.css";
+@import "../styles/paletas.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -54,7 +55,7 @@
   --foreground: var(--brand-text);
   --card: var(--brand-card-bg);
   --card-foreground: var(--brand-text);
-  --popover: var(--brand-card-bg);
+  --popover: var(--brand-select-bg);
   --popover-foreground: var(--brand-text);
   --primary: var(--brand-btn-primary);
   --primary-foreground: #ffffff;
@@ -89,7 +90,7 @@
   --foreground: var(--brand-text);
   --card: var(--brand-card-bg);
   --card-foreground: var(--brand-text);
-  --popover: var(--brand-card-bg);
+  --popover: var(--brand-select-bg);
   --popover-foreground: var(--brand-text);
   --primary: var(--brand-btn-primary);
   --primary-foreground: #ffffff;

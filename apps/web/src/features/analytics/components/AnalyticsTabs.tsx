@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -12,8 +13,13 @@ const TABS = [
 
 export function AnalyticsTabs() {
   const pathname = usePathname();
+  const nav = useRef<HTMLElement>(null);
+  // En celular las pestañas no entran: mostrar siempre la activa.
+  useEffect(() => {
+    nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [pathname]);
   return (
-    <nav className="flex gap-1 overflow-x-auto border-b" aria-label="Secciones de Analytics">
+    <nav ref={nav} className="flex gap-1 overflow-x-auto border-b" aria-label="Secciones de Analytics">
       {TABS.map((t) => {
         const activo = pathname.startsWith(t.href);
         return (

@@ -1,12 +1,15 @@
 "use client";
 
 import { AlertTriangle, Cake } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { formatoNumero, formatoPesos } from "@/lib/formato";
 import { useDashboard } from "../hooks/use-dashboard";
+
+const GRAFICO_7_DIAS = { total: { label: "Total", color: "var(--chart-1)" } } satisfies ChartConfig;
 
 function Kpi({ titulo, valor, detalle }: { titulo: string; valor: string; detalle?: string }) {
   return (
@@ -56,9 +59,9 @@ export function InicioDashboard() {
             <CardDescription>Total vendido por día</CardDescription>
           </CardHeader>
           <CardContent className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer config={GRAFICO_7_DIAS} className="aspect-auto h-full w-full">
               <BarChart data={data.ultimos7} margin={{ left: 8, right: 8 }}>
-                <CartesianGrid vertical={false} strokeOpacity={0.15} />
+                <CartesianGrid vertical={false} />
                 <XAxis dataKey="dia" tickLine={false} axisLine={false} fontSize={12} />
                 <YAxis
                   tickLine={false}
@@ -67,14 +70,10 @@ export function InicioDashboard() {
                   width={70}
                   tickFormatter={(v: number) => formatoPesos(v)}
                 />
-                <Tooltip
-                  cursor={{ fillOpacity: 0.08 }}
-                  formatter={(v) => [formatoPesos(Number(v)), "Total"]}
-                  contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8 }}
-                />
-                <Bar dataKey="total" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} />} />
+                <Bar dataKey="total" fill="var(--color-total)" radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 

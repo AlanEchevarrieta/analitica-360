@@ -31,7 +31,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { SelectorTema } from "@/components/shared/selector-tema";
 import { useRol } from "@/hooks/use-rol";
 import { tieneModulo, type ModuloClave } from "@/lib/rol";
 import { useSuscripcion } from "@/hooks/use-suscripcion";
@@ -193,7 +193,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <div className="flex items-center justify-between gap-2 px-1 py-1">
           <UserButton />
-          <ThemeToggle />
+          <SelectorTema />
         </div>
       </SidebarFooter>
     </Sidebar>

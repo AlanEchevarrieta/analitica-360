@@ -1,8 +1,6 @@
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Semaforo } from "../types";
 
-export const TOOLTIP_ESTILO = { background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 };
-
 export function Kpi({ titulo, valor, detalle, semaforo }: { titulo: string; valor: string; detalle?: string; semaforo?: Semaforo }) {
   const color = semaforo === "verde" ? "bg-emerald-500" : semaforo === "amarillo" ? "bg-amber-500" : semaforo === "rojo" ? "bg-red-500" : null;
   return (

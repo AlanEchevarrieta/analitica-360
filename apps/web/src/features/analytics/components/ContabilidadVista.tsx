@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { SelectorPeriodo } from "@/components/shared/selector-periodo";
@@ -9,7 +10,14 @@ import { formatoNumero, formatoPesos } from "@/lib/formato";
 import { etiquetaFecha, fechasDe, type Rango } from "@/lib/periodos";
 import { useContabilidad } from "../hooks/use-analytics";
 import { GastosPanel } from "./GastosPanel";
-import { Kpi, TOOLTIP_ESTILO } from "./comunes";
+import { Kpi } from "./comunes";
+
+const GRAFICO_MESES = {
+  ingresos: { label: "Ventas", color: "var(--chart-1)" },
+  cogs: { label: "Costo", color: "var(--chart-3)" },
+  gastos: { label: "Gastos", color: "var(--chart-5)" },
+  resultado: { label: "Resultado", color: "var(--chart-2)" },
+} satisfies ChartConfig;
 
 const pct = (n: number) => `${Number.isFinite(n) ? n.toFixed(1) : "0"}%`;
 
@@ -66,19 +74,19 @@ export function ContabilidadVista() {
                 <CardDescription>Ventas, costo y gastos por mes; la línea es el resultado. Los 3 meses finales son proyectados.</CardDescription>
               </CardHeader>
               <CardContent className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer config={GRAFICO_MESES} className="aspect-auto h-full w-full">
                   <ComposedChart data={[...data.serie6, ...data.proyeccion.map((p) => ({ ...p, clave: `${p.clave} (proy.)` }))]} margin={{ left: 8, right: 8 }}>
-                    <CartesianGrid vertical={false} strokeOpacity={0.15} />
+                    <CartesianGrid vertical={false} />
                     <XAxis dataKey="clave" tickFormatter={(c: string) => etiquetaFecha(c.slice(0, 7)) + (c.includes("proy") ? "*" : "")} tickLine={false} axisLine={false} fontSize={12} />
                     <YAxis tickFormatter={(v: number) => formatoPesos(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
-                    <Tooltip formatter={(v) => formatoPesos(Number(v))} contentStyle={TOOLTIP_ESTILO} />
-                    <Legend />
-                    <Bar dataKey="ingresos" name="Ventas" fill="var(--chart-1)" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="cogs" name="Costo" fill="var(--chart-3)" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="gastos" name="Gastos" fill="var(--chart-5)" radius={[3, 3, 0, 0]} />
-                    <Line type="monotone" dataKey="resultado" name="Resultado" stroke="var(--chart-2)" strokeWidth={2} />
+                    <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Bar dataKey="ingresos" fill="var(--color-ingresos)" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="cogs" fill="var(--color-cogs)" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="gastos" fill="var(--color-gastos)" radius={[3, 3, 0, 0]} />
+                    <Line type="monotone" dataKey="resultado" stroke="var(--color-resultado)" strokeWidth={2} />
                   </ComposedChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
           </div>

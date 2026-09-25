@@ -2,6 +2,7 @@
 
 import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { useConfiguracion } from "../hooks/use-configuracion";
+import { AparienciaConfig } from "./AparienciaConfig";
 import { EquipoConfig, ExportarConfig } from "./EquipoExportarConfig";
 import { AtributosConfig, CategoriasConfig, UbicacionesConfig } from "./ListasConfig";
 import { CuotasConfig, MediosConfig } from "./MediosCuotasConfig";
@@ -42,6 +43,9 @@ export function ConfiguracionVista() {
       </Seccion>
       <Seccion icono="🌎" titulo="Configuración fiscal" subtitulo="País, moneda e IVA">
         <FiscalConfig config={config} />
+      </Seccion>
+      <Seccion icono="🖌️" titulo="Apariencia" subtitulo="Modo claro u oscuro y colores de la app">
+        <AparienciaConfig />
       </Seccion>
       <Seccion icono="👥" titulo="Equipo" subtitulo="Invitá al equipo y asigná roles">
         <EquipoConfig />

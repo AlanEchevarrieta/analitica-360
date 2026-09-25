@@ -15,6 +15,8 @@
 //    lo consolida ahí con ajustes; si tiene varias, solo lo informa.
 // 5. Compras con proveedor escrito a mano: se vinculan al proveedor cuyo
 //    nombre coincide (sin mayúsculas ni tildes).
+// 6. Productos con la categoría como texto: se vinculan a la tabla de
+//    categorías (creándola si no existe).
 
 import 'dotenv/config';
 import pg from 'pg';
@@ -150,6 +152,29 @@ try {
   );
   console.log(`5. Compras vinculadas a su proveedor: ${vinculadas.rowCount}` +
     (sinVincular.rowCount ? ` · sin proveedor que coincida: ${sinVincular.rows.map((r) => `"${r.proveedor}" (${r.n})`).join(', ')}` : ''));
+
+  // 6. Productos con la categoría escrita como texto (legacy) sin vincular a la
+  //    tabla de categorías: se crea la categoría si falta y se vincula.
+  const creadas = await q(
+    `INSERT INTO categorias (id, empresa_id, nombre)
+     SELECT gen_random_uuid(), $1, min(trim(p.categoria))
+     FROM productos p
+     WHERE p.empresa_id = $1 AND p.categoria_id IS NULL AND trim(coalesce(p.categoria, '')) <> ''
+       AND NOT EXISTS (SELECT 1 FROM categorias c WHERE c.empresa_id = $1 AND ${norm('c.nombre')} = ${norm('p.categoria')})
+     GROUP BY ${norm('p.categoria')}
+     RETURNING nombre`,
+    [empresa],
+  );
+  const categorizados = await q(
+    `UPDATE productos p SET categoria_id = c.id
+     FROM categorias c
+     WHERE p.empresa_id = $1 AND c.empresa_id = $1 AND p.categoria_id IS NULL
+       AND ${norm('p.categoria')} = ${norm('c.nombre')}
+     RETURNING p.id`,
+    [empresa],
+  );
+  console.log(`6. Productos vinculados a su categoría: ${categorizados.rowCount}` +
+    (creadas.rowCount ? ` · categorías creadas: ${creadas.rows.map((r) => r.nombre).join(', ')}` : ''));
 
   await q(APLICAR ? 'COMMIT' : 'ROLLBACK');
   console.log(APLICAR ? '\nCorrecciones aplicadas.' : '\nDry run: no se guardó nada. Usá --aplicar para guardar.');

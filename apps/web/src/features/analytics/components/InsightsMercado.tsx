@@ -1,12 +1,17 @@
 "use client";
 
-import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SinDatos } from "@/components/shared/estado-datos";
 import { etiquetaFecha } from "@/lib/periodos";
 import { useCombos, useInflacion } from "../hooks/use-analytics";
 import type { Insights } from "../types";
-import { TOOLTIP_ESTILO } from "./comunes";
+
+const GRAFICO_INFLACION = {
+  inflacion: { label: "Inflación del mes", color: "var(--chart-5)" },
+  variacion: { label: "Variación de tus precios", color: "var(--chart-1)" },
+} satisfies ChartConfig;
 
 const pct = (n: number | null) => (n == null ? "—" : `${n > 0 ? "+" : ""}${n.toFixed(1)}%`);
 
@@ -32,17 +37,17 @@ export function InsightsMercado({ desde, hasta, variantes }: { desde: string; ha
         </CardHeader>
         <CardContent className="h-64">
           {inflacion.data && inflacion.data.puntos.length > 0 && (
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer config={GRAFICO_INFLACION} className="aspect-auto h-full w-full">
               <ComposedChart data={inflacion.data.puntos} margin={{ left: 8, right: 8 }}>
-                <CartesianGrid vertical={false} strokeOpacity={0.15} />
+                <CartesianGrid vertical={false} />
                 <XAxis dataKey="mesKey" tickFormatter={etiquetaFecha} tickLine={false} axisLine={false} fontSize={12} />
                 <YAxis tickFormatter={(v: number) => `${v}%`} tickLine={false} axisLine={false} fontSize={12} width={48} />
-                <Tooltip formatter={(v) => (v == null ? "—" : `${Number(v).toFixed(1)}%`)} labelFormatter={(l) => etiquetaFecha(String(l))} contentStyle={TOOLTIP_ESTILO} />
-                <Legend />
-                <Bar dataKey="inflacion" name="Inflación del mes" fill="var(--chart-5)" radius={[3, 3, 0, 0]} />
-                <Line dataKey="variacion" name="Variación de tus precios" stroke="var(--chart-1)" strokeWidth={2} connectNulls />
+                <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => `${Number(v).toFixed(1)}%`} labelFormatter={(l) => etiquetaFecha(String(l))} />} />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="inflacion" fill="var(--color-inflacion)" radius={[3, 3, 0, 0]} />
+                <Line dataKey="variacion" stroke="var(--color-variacion)" strokeWidth={2} connectNulls />
               </ComposedChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           )}
         </CardContent>
       </Card>

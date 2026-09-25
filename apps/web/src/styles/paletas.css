@@ -1,0 +1,238 @@
+/**
+ * Paletas de color elegibles por el usuario (atributo data-paleta en <html>,
+ * ver src/lib/paletas.ts). "indigo" es la marca de siempre y no necesita
+ * reglas: usa tokens.css tal cual. Cada paleta pisa los tokens de marca y los
+ * colores de gráficos, en claro (:root:not(.dark)) y en oscuro (.dark), con
+ * más especificidad que tokens.css/globals.css para ganarles sin !important.
+ */
+
+/* -- Acacia: terracota y verde oliva, colores de mate y cuero -- */
+:root:not(.dark)[data-paleta="acacia"] {
+  --brand-canvas-from: #f3e9df;
+  --brand-canvas-to: #efe2d4;
+  --brand-navbar-bg: #eadbcb;
+  --brand-card-bg: #fffaf5;
+  --brand-surface: #fffaf5;
+  --brand-border: rgba(194, 65, 12, 0.18);
+  --brand-text: #3b2418;
+  --brand-text-muted: #8a5a3c;
+  --brand-btn-primary: #c2410c;
+  --brand-btn-hover: #9a3412;
+  --brand-input-border: rgba(194, 65, 12, 0.3);
+  --brand-input-focus: #c2410c;
+  --brand-nav-idle: #7c2d12;
+  --brand-nav-idle-hover: #3b2418;
+  --brand-nav-active-fg: #c2410c;
+  --brand-row-alt: #fbf1e7;
+  --brand-table-head: rgba(194, 65, 12, 0.1);
+  --brand-row-hover: rgba(194, 65, 12, 0.06);
+  --brand-kpi-label: #8a5a3c;
+  --brand-kpi-sub: #c2410c;
+  --brand-th-fg: #7c2d12;
+  --brand-select-checked-bg: #c2410c;
+  --chart-1: #c2410c;
+  --chart-2: #4d7c0f;
+  --chart-3: #ca8a04;
+  --chart-4: #0f766e;
+  --chart-5: #be123c;
+}
+.dark[data-paleta="acacia"] {
+  --brand-canvas-from: #1a120d;
+  --brand-canvas-to: #2b1d14;
+  --brand-card-bg: rgba(43, 29, 20, 0.6);
+  --brand-border: rgba(234, 88, 12, 0.18);
+  --brand-text: #faf5f0;
+  --brand-text-muted: #c4a898;
+  --brand-btn-primary: #ea580c;
+  --brand-btn-hover: #c2410c;
+  --brand-input-bg: #1f150f;
+  --brand-input-border: rgba(234, 88, 12, 0.3);
+  --brand-input-focus: #ea580c;
+  --brand-nav-idle: #fdba74;
+  --brand-table-head: rgba(234, 88, 12, 0.1);
+  --brand-row-hover: rgba(234, 88, 12, 0.06);
+  --brand-kpi-label: #c4a898;
+  --brand-kpi-sub: #fdba74;
+  --brand-th-fg: #c4a898;
+  --brand-th-active-bg: rgba(234, 88, 12, 0.15);
+  --brand-select-bg: #2b1d14;
+  --brand-select-hover-bg: rgba(234, 88, 12, 0.2);
+  --brand-select-checked-bg: #ea580c;
+  --chart-1: #f97316;
+  --chart-2: #84cc16;
+  --chart-3: #facc15;
+  --chart-4: #2dd4bf;
+  --chart-5: #fb7185;
+}
+
+/* -- Bosque: verde esmeralda -- */
+:root:not(.dark)[data-paleta="bosque"] {
+  --brand-canvas-from: #e2f1e9;
+  --brand-canvas-to: #dcede4;
+  --brand-navbar-bg: #d2e8dc;
+  --brand-card-bg: #f6fcf9;
+  --brand-surface: #f6fcf9;
+  --brand-border: rgba(5, 150, 105, 0.2);
+  --brand-text: #052e22;
+  --brand-text-muted: #0f5c45;
+  --brand-btn-primary: #047857;
+  --brand-btn-hover: #065f46;
+  --brand-input-border: rgba(5, 150, 105, 0.3);
+  --brand-input-focus: #059669;
+  --brand-nav-idle: #064e3b;
+  --brand-nav-idle-hover: #052e22;
+  --brand-nav-active-fg: #047857;
+  --brand-row-alt: #ecf8f2;
+  --brand-table-head: rgba(5, 150, 105, 0.1);
+  --brand-row-hover: rgba(5, 150, 105, 0.06);
+  --brand-kpi-label: #0f5c45;
+  --brand-kpi-sub: #047857;
+  --brand-th-fg: #064e3b;
+  --brand-select-checked-bg: #047857;
+  --chart-1: #059669;
+  --chart-2: #2563eb;
+  --chart-3: #d97706;
+  --chart-4: #7c3aed;
+  --chart-5: #dc2626;
+}
+.dark[data-paleta="bosque"] {
+  --brand-canvas-from: #0a1a14;
+  --brand-canvas-to: #11291f;
+  --brand-card-bg: rgba(10, 30, 22, 0.6);
+  --brand-border: rgba(16, 185, 129, 0.16);
+  --brand-text-muted: #9cb8ab;
+  --brand-btn-primary: #059669;
+  --brand-btn-hover: #047857;
+  --brand-input-bg: #0c1f17;
+  --brand-input-border: rgba(16, 185, 129, 0.3);
+  --brand-input-focus: #10b981;
+  --brand-nav-idle: #6ee7b7;
+  --brand-table-head: rgba(16, 185, 129, 0.1);
+  --brand-row-hover: rgba(16, 185, 129, 0.06);
+  --brand-kpi-label: #9cb8ab;
+  --brand-kpi-sub: #6ee7b7;
+  --brand-th-fg: #9cb8ab;
+  --brand-th-active-bg: rgba(16, 185, 129, 0.15);
+  --brand-select-bg: #11291f;
+  --brand-select-hover-bg: rgba(16, 185, 129, 0.2);
+  --brand-select-checked-bg: #059669;
+  --chart-1: #10b981;
+  --chart-2: #60a5fa;
+  --chart-3: #fbbf24;
+  --chart-4: #c084fc;
+  --chart-5: #f87171;
+}
+
+/* -- Océano: azul y celeste -- */
+:root:not(.dark)[data-paleta="oceano"] {
+  --brand-canvas-from: #dfeefa;
+  --brand-canvas-to: #d8e9f7;
+  --brand-navbar-bg: #cfe3f4;
+  --brand-card-bg: #f5faff;
+  --brand-surface: #f5faff;
+  --brand-border: rgba(2, 132, 199, 0.2);
+  --brand-text: #082f49;
+  --brand-text-muted: #0c4a6e;
+  --brand-btn-primary: #0369a1;
+  --brand-btn-hover: #075985;
+  --brand-input-border: rgba(2, 132, 199, 0.3);
+  --brand-input-focus: #0284c7;
+  --brand-nav-idle: #0c4a6e;
+  --brand-nav-idle-hover: #082f49;
+  --brand-nav-active-fg: #0369a1;
+  --brand-row-alt: #eaf4fd;
+  --brand-table-head: rgba(2, 132, 199, 0.1);
+  --brand-row-hover: rgba(2, 132, 199, 0.06);
+  --brand-kpi-label: #0c4a6e;
+  --brand-kpi-sub: #0369a1;
+  --brand-th-fg: #0c4a6e;
+  --brand-select-checked-bg: #0369a1;
+  --chart-1: #0284c7;
+  --chart-2: #16a34a;
+  --chart-3: #d97706;
+  --chart-4: #7c3aed;
+  --chart-5: #e11d48;
+}
+.dark[data-paleta="oceano"] {
+  --brand-canvas-from: #081726;
+  --brand-canvas-to: #0d2740;
+  --brand-card-bg: rgba(8, 25, 42, 0.6);
+  --brand-border: rgba(14, 165, 233, 0.16);
+  --brand-btn-primary: #0284c7;
+  --brand-btn-hover: #0369a1;
+  --brand-input-bg: #0a1d30;
+  --brand-input-border: rgba(14, 165, 233, 0.3);
+  --brand-input-focus: #0ea5e9;
+  --brand-nav-idle: #7dd3fc;
+  --brand-table-head: rgba(14, 165, 233, 0.1);
+  --brand-row-hover: rgba(14, 165, 233, 0.06);
+  --brand-kpi-sub: #7dd3fc;
+  --brand-th-active-bg: rgba(14, 165, 233, 0.15);
+  --brand-select-hover-bg: rgba(14, 165, 233, 0.2);
+  --brand-select-checked-bg: #0284c7;
+  --chart-1: #38bdf8;
+  --chart-2: #4ade80;
+  --chart-3: #fbbf24;
+  --chart-4: #a78bfa;
+  --chart-5: #fb7185;
+}
+
+/* -- Grafito: grises neutros, sobrio -- */
+:root:not(.dark)[data-paleta="grafito"] {
+  --brand-canvas-from: #f4f4f5;
+  --brand-canvas-to: #f4f4f5;
+  --brand-navbar-bg: #e9e9ec;
+  --brand-card-bg: #ffffff;
+  --brand-surface: #fafafa;
+  --brand-border: rgba(24, 24, 27, 0.12);
+  --brand-text: #18181b;
+  --brand-text-muted: #52525b;
+  --brand-btn-primary: #27272a;
+  --brand-btn-hover: #18181b;
+  --brand-input-border: rgba(24, 24, 27, 0.2);
+  --brand-input-focus: #52525b;
+  --brand-nav-idle: #3f3f46;
+  --brand-nav-idle-hover: #18181b;
+  --brand-nav-active-fg: #18181b;
+  --brand-row-alt: #f7f7f8;
+  --brand-table-head: rgba(24, 24, 27, 0.05);
+  --brand-row-hover: rgba(24, 24, 27, 0.04);
+  --brand-kpi-label: #52525b;
+  --brand-kpi-sub: #3f3f46;
+  --brand-th-fg: #3f3f46;
+  --brand-select-hover-bg: rgba(24, 24, 27, 0.06);
+  --brand-select-checked-bg: #27272a;
+  --chart-1: #2563eb;
+  --chart-2: #16a34a;
+  --chart-3: #d97706;
+  --chart-4: #7c3aed;
+  --chart-5: #dc2626;
+}
+.dark[data-paleta="grafito"] {
+  --brand-canvas-from: #0c0c0e;
+  --brand-canvas-to: #18181b;
+  --brand-card-bg: rgba(24, 24, 27, 0.7);
+  --brand-border: rgba(255, 255, 255, 0.1);
+  --brand-text: #fafafa;
+  --brand-text-muted: #a1a1aa;
+  --brand-btn-primary: #52525b;
+  --brand-btn-hover: #3f3f46;
+  --brand-input-bg: #18181b;
+  --brand-input-border: rgba(255, 255, 255, 0.15);
+  --brand-input-focus: #a1a1aa;
+  --brand-nav-idle: #d4d4d8;
+  --brand-table-head: rgba(255, 255, 255, 0.05);
+  --brand-row-hover: rgba(255, 255, 255, 0.04);
+  --brand-kpi-label: #a1a1aa;
+  --brand-kpi-sub: #d4d4d8;
+  --brand-th-fg: #a1a1aa;
+  --brand-th-active-bg: rgba(255, 255, 255, 0.08);
+  --brand-select-bg: #27272a;
+  --brand-select-hover-bg: rgba(255, 255, 255, 0.08);
+  --brand-select-checked-bg: #52525b;
+  --chart-1: #60a5fa;
+  --chart-2: #4ade80;
+  --chart-3: #fbbf24;
+  --chart-4: #c084fc;
+  --chart-5: #f87171;
+}

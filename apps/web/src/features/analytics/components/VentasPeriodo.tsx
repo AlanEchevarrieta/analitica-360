@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { SelectorPeriodo } from "@/components/shared/selector-periodo";
@@ -9,7 +10,13 @@ import { formatoNumero, formatoPesos } from "@/lib/formato";
 import { etiquetaFecha, fechasDe, type Rango } from "@/lib/periodos";
 import { FORMAS_PAGO } from "@/features/ventas/types/nueva-venta";
 import { usePeriodo } from "../hooks/use-analytics";
-import { Kpi, TOOLTIP_ESTILO } from "./comunes";
+import { Kpi } from "./comunes";
+
+const GRAFICO_EVOLUCION = {
+  total: { label: "Este período", color: "var(--chart-1)" },
+  anterior: { label: "Período anterior", color: "var(--muted-foreground)" },
+} satisfies ChartConfig;
+const GRAFICO_PAGOS = { total: { label: "Total", color: "var(--chart-2)" } } satisfies ChartConfig;
 
 const GRANULARIDAD: Record<Rango, "dia" | "semana" | "mes"> = { mes: "dia", mesPasado: "dia", "90dias": "semana", anio: "mes" };
 const etiquetaPago = (v: string) => FORMAS_PAGO.find((f) => f.valor === v)?.etiqueta ?? v;
@@ -43,17 +50,17 @@ export function VentasPeriodo() {
               <CardDescription>Comparado con el período anterior de la misma duración</CardDescription>
             </CardHeader>
             <CardContent className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
+              <ChartContainer config={GRAFICO_EVOLUCION} className="aspect-auto h-full w-full">
                 <LineChart data={data.data.evolucion} margin={{ left: 8, right: 8 }}>
-                  <CartesianGrid vertical={false} strokeOpacity={0.15} />
+                  <CartesianGrid vertical={false} />
                   <XAxis dataKey="fecha" tickFormatter={etiquetaFecha} tickLine={false} axisLine={false} fontSize={12} />
                   <YAxis tickFormatter={(v: number) => formatoPesos(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
-                  <Tooltip formatter={(v) => formatoPesos(Number(v))} labelFormatter={(l) => etiquetaFecha(String(l))} contentStyle={TOOLTIP_ESTILO} />
-                  <Legend />
-                  <Line type="monotone" dataKey="total" name="Este período" stroke="var(--chart-1)" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="anterior" name="Período anterior" stroke="var(--muted-foreground)" strokeDasharray="4 4" dot={false} />
+                  <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} labelFormatter={(l) => etiquetaFecha(String(l))} />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line type="monotone" dataKey="total" stroke="var(--color-total)" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="anterior" stroke="var(--color-anterior)" strokeDasharray="4 4" dot={false} />
                 </LineChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             </CardContent>
           </Card>
 
@@ -63,14 +70,14 @@ export function VentasPeriodo() {
                 <CardTitle>Medios de pago</CardTitle>
               </CardHeader>
               <CardContent className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer config={GRAFICO_PAGOS} className="aspect-auto h-full w-full">
                   <BarChart data={data.data.formasPago.map((f) => ({ ...f, nombre: etiquetaPago(f.nombre) }))} layout="vertical" margin={{ left: 16 }}>
                     <XAxis type="number" hide />
                     <YAxis type="category" dataKey="nombre" width={120} tickLine={false} axisLine={false} fontSize={12} />
-                    <Tooltip formatter={(v) => formatoPesos(Number(v))} contentStyle={TOOLTIP_ESTILO} cursor={{ fillOpacity: 0.08 }} />
-                    <Bar dataKey="total" name="Total" fill="var(--chart-2)" radius={[0, 4, 4, 0]} />
+                    <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} />} />
+                    <Bar dataKey="total" fill="var(--color-total)" radius={[0, 4, 4, 0]} />
                   </BarChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
             <Card>

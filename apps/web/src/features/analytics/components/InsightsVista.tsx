@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CartesianGrid, Line, LineChart, PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, PolarAngleAxis, PolarGrid, Radar, RadarChart, XAxis, YAxis } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { SelectorPeriodo } from "@/components/shared/selector-periodo";
@@ -9,7 +10,12 @@ import { formatoPesos } from "@/lib/formato";
 import { etiquetaFecha, fechasDe, type Rango } from "@/lib/periodos";
 import { useInsights } from "../hooks/use-analytics";
 import { InsightsMercado } from "./InsightsMercado";
-import { TOOLTIP_ESTILO } from "./comunes";
+
+const GRAFICO_SALUD = { valor: { label: "Puntaje", color: "var(--chart-1)" } } satisfies ChartConfig;
+const GRAFICO_PRONOSTICO = {
+  historico: { label: "Real", color: "var(--chart-1)" },
+  proyeccion: { label: "Proyección", color: "var(--chart-3)" },
+} satisfies ChartConfig;
 
 const BADGE: Record<string, { etiqueta: string; clase: string }> = {
   inelastica: { etiqueta: "Poco sensible al precio", clase: "bg-emerald-500/15 text-emerald-600" },
@@ -42,14 +48,14 @@ export function InsightsVista() {
               <CardContent className="flex flex-col gap-3">
                 {data.salud && (
                   <div className="h-60">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ChartContainer config={GRAFICO_SALUD} className="aspect-auto h-full w-full">
                       <RadarChart data={data.salud.ejes} outerRadius="75%">
-                        <PolarGrid strokeOpacity={0.3} />
+                        <PolarGrid />
                         <PolarAngleAxis dataKey="eje" fontSize={12} />
-                        <Radar dataKey="valor" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.35} />
-                        <Tooltip contentStyle={TOOLTIP_ESTILO} />
+                        <Radar dataKey="valor" stroke="var(--color-valor)" fill="var(--color-valor)" fillOpacity={0.35} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
                       </RadarChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                   </div>
                 )}
                 <ul className="flex flex-col gap-1 text-sm">
@@ -71,16 +77,16 @@ export function InsightsVista() {
               </CardHeader>
               <CardContent className="h-64">
                 {data.forecast && (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ChartContainer config={GRAFICO_PRONOSTICO} className="aspect-auto h-full w-full">
                     <LineChart data={data.forecast.puntos} margin={{ left: 8, right: 8 }}>
-                      <CartesianGrid vertical={false} strokeOpacity={0.15} />
+                      <CartesianGrid vertical={false} />
                       <XAxis dataKey="clave" tickFormatter={etiquetaFecha} tickLine={false} axisLine={false} fontSize={12} />
                       <YAxis tickFormatter={(v: number) => formatoPesos(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
-                      <Tooltip formatter={(v) => formatoPesos(Number(v))} labelFormatter={(l) => `Semana del ${etiquetaFecha(String(l))}`} contentStyle={TOOLTIP_ESTILO} />
-                      <Line dataKey="historico" name="Real" stroke="var(--chart-1)" strokeWidth={2} dot={false} connectNulls={false} />
-                      <Line dataKey="proyeccion" name="Proyección" stroke="var(--chart-3)" strokeDasharray="5 5" strokeWidth={2} dot={false} />
+                      <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} labelFormatter={(l) => `Semana del ${etiquetaFecha(String(l))}`} />} />
+                      <Line dataKey="historico" stroke="var(--color-historico)" strokeWidth={2} dot={false} connectNulls={false} />
+                      <Line dataKey="proyeccion" stroke="var(--color-proyeccion)" strokeDasharray="5 5" strokeWidth={2} dot={false} />
                     </LineChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 )}
               </CardContent>
             </Card>

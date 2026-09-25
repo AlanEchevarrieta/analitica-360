@@ -5,6 +5,8 @@
 //
 // Uso (web en :3000 y API en :3001 levantadas):
 //   node scripts/recorrido-pantallas.mjs <clerkUserId> <carpetaCapturas> [ancho]
+// RUTAS=/inicio,/ventas limita el recorrido a esas rutas.
+// PALETA=acacia y MODO=light|dark eligen la apariencia (se guardan en localStorage).
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -41,6 +43,10 @@ fs.mkdirSync(carpeta, { recursive: true });
 const { token } = await clerk('/sign_in_tokens', { user_id: clerkUserId, expires_in_seconds: 600 });
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: Number(ancho), height: 900 }, locale: 'es-AR' });
+await context.addInitScript(([paleta, modo]) => {
+  if (paleta) localStorage.setItem('a360-paleta', paleta);
+  if (modo) localStorage.setItem('theme', modo);
+}, [process.env.PALETA, process.env.MODO]);
 const page = await context.newPage();
 
 const problemas = [];
@@ -87,7 +93,7 @@ const rutas = [
   ids.pedido && `/pedidos/${ids.pedido}/remito`,
   ids.proveedor && `/proveedores/${ids.proveedor}`,
   ids.cliente && `/clientes/${ids.cliente}`,
-].filter(Boolean);
+].filter(Boolean).filter((r) => !process.env.RUTAS || process.env.RUTAS.split(',').includes(r));
 
 const resumen = [];
 for (const ruta of rutas) {
@@ -98,7 +104,7 @@ for (const ruta of rutas) {
     // Esperar a que terminen las cargas (skeletons con aria-busy) y los fetch.
     await page.waitForLoadState('networkidle', { timeout: 60_000 }).catch(() => {});
     await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 60_000 }).catch(() => {});
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(Number(process.env.ESPERA_MS ?? 800));
     // Next agrega un role="alert" vacío (anunciador de rutas): solo cuentan los que tienen texto.
     const alerta = (await page.locator('[role="alert"]').allInnerTexts()).map((t) => t.trim()).filter(Boolean);
     if (alerta.length) problemas.push({ ruta, tipo: 'mensaje de error en pantalla', detalle: alerta.join(' | ').slice(0, 300) });
