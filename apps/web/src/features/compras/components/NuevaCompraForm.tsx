@@ -55,7 +55,9 @@ export function NuevaCompraForm() {
     setError(null);
 
     const nombreProveedor = proveedor.trim();
-    const existente = proveedores.data?.find((p) => p.nombre.toLowerCase() === nombreProveedor.toLowerCase());
+    // Sin distinguir mayúsculas ni tildes ("El Tío" = "El Tio"): si no, la compra queda sin vincular al proveedor.
+    const normalizar = (t: string) => t.trim().toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+    const existente = proveedores.data?.find((p) => normalizar(p.nombre) === normalizar(nombreProveedor));
     confirmar.mutate(
       {
         proveedorId: existente?.id ?? null,

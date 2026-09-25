@@ -13,6 +13,8 @@
 // 4. Stock en variantes borradas/inactivas (o a nivel producto cuando el
 //    producto usa variantes): si el producto tiene UNA sola variante activa,
 //    lo consolida ahí con ajustes; si tiene varias, solo lo informa.
+// 5. Compras con proveedor escrito a mano: se vinculan al proveedor cuyo
+//    nombre coincide (sin mayúsculas ni tildes).
 
 import 'dotenv/config';
 import pg from 'pg';
@@ -129,6 +131,25 @@ try {
   }
   console.log(`4. Stock consolidado en la variante activa: ${consolidados} baldes` +
     (aRevisar.size ? ` · revisar a mano (varias variantes activas): ${[...aRevisar].join(', ')}` : ''));
+
+  // 5. Compras con el proveedor escrito a mano pero sin vincular: se vinculan
+  //    si el nombre coincide sin importar mayúsculas ni tildes.
+  const norm = (col) => `translate(lower(trim(${col})), 'áéíóúüñ', 'aeiouun')`;
+  const vinculadas = await q(
+    `UPDATE compras c SET proveedor_id = p.id
+     FROM proveedores p
+     WHERE c.empresa_id = $1 AND p.empresa_id = $1 AND c.proveedor_id IS NULL AND c.proveedor IS NOT NULL
+       AND p.deleted_at IS NULL AND ${norm('c.proveedor')} = ${norm('p.nombre')}
+       AND (SELECT count(*) FROM proveedores p2 WHERE p2.empresa_id = $1 AND p2.deleted_at IS NULL AND ${norm('p2.nombre')} = ${norm('c.proveedor')}) = 1
+     RETURNING c.id`,
+    [empresa],
+  );
+  const sinVincular = await q(
+    `SELECT proveedor, count(*)::int AS n FROM compras WHERE empresa_id = $1 AND proveedor_id IS NULL AND trim(coalesce(proveedor, '')) <> '' GROUP BY 1`,
+    [empresa],
+  );
+  console.log(`5. Compras vinculadas a su proveedor: ${vinculadas.rowCount}` +
+    (sinVincular.rowCount ? ` · sin proveedor que coincida: ${sinVincular.rows.map((r) => `"${r.proveedor}" (${r.n})`).join(', ')}` : ''));
 
   await q(APLICAR ? 'COMMIT' : 'ROLLBACK');
   console.log(APLICAR ? '\nCorrecciones aplicadas.' : '\nDry run: no se guardó nada. Usá --aplicar para guardar.');
