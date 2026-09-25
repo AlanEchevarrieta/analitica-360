@@ -56,6 +56,7 @@ export class ProductosService {
       categoriaId: query.categoriaId ?? null,
       estado: query.estado,
       margen: query.margen,
+      orden: query.orden,
       pagina: query.pagina,
       pageSize: query.pageSize,
     });

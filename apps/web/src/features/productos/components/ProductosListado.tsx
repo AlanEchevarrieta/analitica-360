@@ -9,13 +9,17 @@ import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-
 import { Paginacion } from "@/components/shared/paginacion";
 import { formatoNumero, formatoPesos } from "@/lib/formato";
 import { useProductos } from "../hooks/use-productos";
-import type { EstadoProducto, FiltrosProductos } from "../types";
+import type { EstadoProducto, FiltrosProductos, OrdenProductos } from "../types";
 
 const POR_PAGINA = 25;
 const ESTADOS: { valor: EstadoProducto; etiqueta: string }[] = [
   { valor: "activos", etiqueta: "Activos" },
   { valor: "inactivos", etiqueta: "Inactivos" },
   { valor: "todos", etiqueta: "Todos" },
+];
+const ORDENES: { valor: OrdenProductos; etiqueta: string }[] = [
+  { valor: "demanda", etiqueta: "Más vendidos" },
+  { valor: "nombre", etiqueta: "A-Z" },
 ];
 
 function margen(precio: number | null, costo: number | null) {
@@ -29,6 +33,7 @@ export function ProductosListado() {
     pageSize: POR_PAGINA,
     busqueda: "",
     estado: "activos",
+    orden: "demanda",
   });
   const { data, isPending, isError, error, refetch, isFetching } = useProductos(filtros);
   const cambiar = (cambios: Partial<FiltrosProductos>) => setFiltros((f) => ({ ...f, pagina: 1, ...cambios }));
@@ -57,6 +62,19 @@ export function ProductosListado() {
               </Button>
             ))}
           </div>
+          <div className="flex gap-1" role="group" aria-label="Ordenar">
+            {ORDENES.map((o) => (
+              <Button
+                key={o.valor}
+                size="sm"
+                variant={filtros.orden === o.valor ? "secondary" : "ghost"}
+                aria-pressed={filtros.orden === o.valor}
+                onClick={() => cambiar({ orden: o.valor })}
+              >
+                {o.etiqueta}
+              </Button>
+            ))}
+          </div>
           {data && (
             <span className="ml-auto text-sm text-muted-foreground">{formatoNumero(data.activos)} productos activos</span>
           )}
@@ -78,6 +96,7 @@ export function ProductosListado() {
                   <TableHead className="text-right">Precio</TableHead>
                   <TableHead className="text-right">Costo</TableHead>
                   <TableHead className="text-right">Margen</TableHead>
+                  <TableHead className="text-right">Vendidos (90 días)</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
                 </TableRow>
               </TableHeader>
@@ -98,6 +117,7 @@ export function ProductosListado() {
                         {p.costo == null ? "—" : formatoPesos(p.costo)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{m == null ? "—" : `${m}%`}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatoNumero(p.vendidos)}</TableCell>
                       <TableCell
                         className={`text-right font-medium tabular-nums ${p.stock <= 0 ? "text-destructive" : ""}`}
                       >

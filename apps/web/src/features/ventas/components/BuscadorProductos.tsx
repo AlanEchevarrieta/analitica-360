@@ -12,16 +12,18 @@ import { useVariantes, type VarianteVenta } from "../hooks/use-nueva-venta";
 import { etiquetaVariante, type LineaVenta } from "../types/nueva-venta";
 
 const MAX_RESULTADOS = 8;
+const MAS_VENDIDOS = 8;
 
 /**
  * Busca por nombre o código de barras (un lector de código escribe el código
- * y manda Enter: si coincide exacto se agrega directo).
+ * y manda Enter: si coincide exacto se agrega directo). Resultados y accesos
+ * rápidos ordenados por demanda (más vendidos de los últimos 90 días primero).
  */
 export function BuscadorProductos({ onAgregar }: { onAgregar: (linea: Omit<LineaVenta, "cantidad">) => void }) {
   const [busqueda, setBusqueda] = useState("");
   const [eligiendo, setEligiendo] = useState<{ producto: ProductoFila; variantes: VarianteVenta[] } | null>(null);
   const [cargandoId, setCargandoId] = useState<string | null>(null);
-  const catalogo = useProductos({ pagina: 1, pageSize: 200, busqueda: "", estado: "activos" });
+  const catalogo = useProductos({ pagina: 1, pageSize: 200, busqueda: "", estado: "activos", orden: "demanda" });
   const variantesDe = useVariantes();
 
   const resultados = useMemo(() => {
@@ -31,6 +33,12 @@ export function BuscadorProductos({ onAgregar }: { onAgregar: (linea: Omit<Linea
       .filter((p) => p.nombre.toLowerCase().includes(q) || p.codigoBarra === busqueda.trim())
       .slice(0, MAX_RESULTADOS);
   }, [busqueda, catalogo.data]);
+
+  // El catálogo ya viene ordenado por demanda: los primeros son los más vendidos.
+  const masVendidos = useMemo(
+    () => (catalogo.data?.items ?? []).filter((p) => p.vendidos > 0).slice(0, MAS_VENDIDOS),
+    [catalogo.data],
+  );
 
   function agregar(producto: ProductoFila, variante: VarianteVenta | null) {
     onAgregar({
@@ -87,48 +95,67 @@ export function BuscadorProductos({ onAgregar }: { onAgregar: (linea: Omit<Linea
   }
 
   return (
-    <div className="relative">
-      <Search className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-muted-foreground" aria-hidden />
-      <Input
-        className="pl-8"
-        placeholder={catalogo.isPending ? "Cargando productos…" : "Buscar producto o escanear código de barras"}
-        aria-label="Buscar producto"
-        value={busqueda}
-        disabled={catalogo.isPending}
-        onChange={(e) => setBusqueda(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            onEnter();
-          }
-        }}
-        autoFocus
-      />
-      {busqueda.trim() && (
-        <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
-          {resultados.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-muted-foreground">Sin resultados</li>
-          ) : (
-            resultados.map((p) => (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted"
-                  onClick={() => void elegir(p)}
-                >
-                  <span className="truncate">{p.nombre}</span>
-                  <span className="flex shrink-0 items-center gap-3 tabular-nums">
-                    <span className={p.stock <= 0 ? "text-destructive" : "text-muted-foreground"}>
-                      stock {formatoNumero(p.stock)}
+    <div className="flex flex-col gap-3">
+      <div className="relative">
+        <Search className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-muted-foreground" aria-hidden />
+        <Input
+          className="pl-8"
+          placeholder={catalogo.isPending ? "Cargando productos…" : "Buscar producto o escanear código de barras"}
+          aria-label="Buscar producto"
+          value={busqueda}
+          disabled={catalogo.isPending}
+          onChange={(e) => setBusqueda(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              onEnter();
+            }
+          }}
+          autoFocus
+        />
+        {busqueda.trim() && (
+          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
+            {resultados.length === 0 ? (
+              <li className="px-3 py-2 text-sm text-muted-foreground">Sin resultados</li>
+            ) : (
+              resultados.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted"
+                    onClick={() => void elegir(p)}
+                  >
+                    <span className="truncate">{p.nombre}</span>
+                    <span className="flex shrink-0 items-center gap-3 tabular-nums">
+                      <span className={p.stock <= 0 ? "text-destructive" : "text-muted-foreground"}>
+                        stock {formatoNumero(p.stock)}
+                      </span>
+                      <span className="font-medium">{formatoPesos(p.precioVenta)}</span>
+                      {cargandoId === p.id && <Loader2 className="size-4 animate-spin" aria-label="Cargando" />}
                     </span>
-                    <span className="font-medium">{formatoPesos(p.precioVenta)}</span>
-                    {cargandoId === p.id && <Loader2 className="size-4 animate-spin" aria-label="Cargando" />}
-                  </span>
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+      </div>
+      {masVendidos.length > 0 && (
+        <div className="flex flex-wrap gap-2" aria-label="Más vendidos">
+          {masVendidos.map((p) => (
+            <Button
+              key={p.id}
+              size="sm"
+              variant="secondary"
+              disabled={cargandoId === p.id}
+              onClick={() => void elegir(p)}
+              title={`${p.vendidos} vendidos en 90 días · stock ${p.stock}`}
+            >
+              {cargandoId === p.id && <Loader2 className="animate-spin" aria-hidden />}
+              {p.nombre}
+            </Button>
+          ))}
+        </div>
       )}
     </div>
   );

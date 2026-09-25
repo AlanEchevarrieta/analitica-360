@@ -27,6 +27,7 @@ export interface ProductosFiltro {
   categoriaId: string | null;
   estado: 'todos' | 'activos' | 'inactivos';
   margen: 'todos' | 'alto' | 'medio' | 'bajo';
+  orden: 'nombre' | 'demanda';
   pagina: number;
   pageSize: number;
 }
@@ -34,6 +35,8 @@ export interface ProductosFiltro {
 /** Fila del listado: el producto más su stock actual (SUM(cantidad*signo) de MovimientoInventario, mismo criterio que el dashboard). */
 export interface ProductoListado extends ProductoRecord {
   stock: number;
+  /** Unidades vendidas en los últimos 90 días (sin anuladas). */
+  vendidos: number;
 }
 
 export interface ListaProductos {

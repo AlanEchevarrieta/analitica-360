@@ -8,6 +8,8 @@ export interface ProductoFila {
   costo: number | null;
   activo: boolean;
   stock: number;
+  /** Unidades vendidas en los últimos 90 días. */
+  vendidos: number;
 }
 
 export interface ListaProductos {
@@ -16,6 +18,8 @@ export interface ListaProductos {
   activos: number;
 }
 
+export type OrdenProductos = "demanda" | "nombre";
+
 export type EstadoProducto = "todos" | "activos" | "inactivos";
 
 export interface FiltrosProductos {
@@ -23,4 +27,5 @@ export interface FiltrosProductos {
   pageSize: number;
   busqueda: string;
   estado: EstadoProducto;
+  orden: OrdenProductos;
 }

@@ -97,12 +97,14 @@ describe('ProductosService', () => {
       busqueda: '',
       estado: 'todos',
       margen: 'todos',
+      orden: 'demanda',
     });
     expect(repository.listar).toHaveBeenCalledWith('empresa-1', {
       busqueda: '',
       categoriaId: null,
       estado: 'todos',
       margen: 'todos',
+      orden: 'demanda',
       pagina: 1,
       pageSize: 20,
     });

@@ -13,6 +13,9 @@ import type {
 } from './productos.repository.js';
 import { coincideMargen, esBusquedaCodigoBarras } from './productos.util.js';
 
+/** Ventana para medir la demanda de cada producto. */
+const DIAS_DEMANDA = 90;
+
 type ProductoConCategoria = Producto & { categoriaRel: { nombre: string } | null };
 
 @Injectable()
@@ -135,12 +138,13 @@ export class PrismaProductosRepository implements ProductosRepository {
     const from = (filtro.pagina - 1) * filtro.pageSize;
     const activosPromise = this.prisma.producto.count({ where: { empresaId, deletedAt: null, activo: true } });
 
-    // Camino rápido (el caso común: sin filtro de margen) - paginación real
-    // en Postgres via skip/take. El margen (precioVenta/costo) no es
-    // filtrable en SQL de forma simple, así que solo en ese caso se cae al
-    // camino lento: traer todo lo filtrado por DB y filtrar/paginar en
-    // memoria, igual que hacía listarProductosPaginado() en el legacy.
-    if (filtro.margen === 'todos') {
+    // Camino rápido (el caso común: sin filtro de margen y orden por nombre) -
+    // paginación real en Postgres via skip/take. El margen (precioVenta/costo)
+    // no es filtrable en SQL de forma simple y la demanda depende de las
+    // ventas, así que en esos casos se cae al camino lento: traer todo lo
+    // filtrado por DB y filtrar/ordenar/paginar en memoria, igual que hacía
+    // listarProductosPaginado() en el legacy.
+    if (filtro.margen === 'todos' && filtro.orden === 'nombre') {
       const [filas, total, activos] = await Promise.all([
         this.prisma.producto.findMany({
           where,
@@ -152,7 +156,7 @@ export class PrismaProductosRepository implements ProductosRepository {
         this.prisma.producto.count({ where }),
         activosPromise,
       ]);
-      return { items: await this.conStock(empresaId, filas.map((p) => this.toRecord(p))), total, activos };
+      return { items: await this.conStockYDemanda(empresaId, filas.map((p) => this.toRecord(p))), total, activos };
     }
 
     const [filas, activos] = await Promise.all([
@@ -164,27 +168,51 @@ export class PrismaProductosRepository implements ProductosRepository {
       activosPromise,
     ]);
 
-    const registros = filas.map((p) => this.toRecord(p));
-    const filtrados = registros.filter((p) => coincideMargen(filtro.margen, p.precioVenta, p.costo));
+    const filtrados = filas
+      .map((p) => this.toRecord(p))
+      .filter((p) => coincideMargen(filtro.margen, p.precioVenta, p.costo));
+
+    if (filtro.orden === 'demanda') {
+      const conDemanda = await this.conStockYDemanda(empresaId, filtrados);
+      conDemanda.sort((a, b) => b.vendidos - a.vendidos || a.nombre.localeCompare(b.nombre, 'es'));
+      return { items: conDemanda.slice(from, from + filtro.pageSize), total: conDemanda.length, activos };
+    }
 
     return {
-      items: await this.conStock(empresaId, filtrados.slice(from, from + filtro.pageSize)),
+      items: await this.conStockYDemanda(empresaId, filtrados.slice(from, from + filtro.pageSize)),
       total: filtrados.length,
       activos,
     };
   }
 
-  private async conStock(empresaId: string, productos: ProductoRecord[]): Promise<ProductoListado[]> {
+  /**
+   * Stock actual (SUM(cantidad*signo), mismo criterio que el dashboard) y
+   * demanda: unidades vendidas en los últimos DIAS_DEMANDA días, sin contar
+   * ventas anuladas (deleted_at).
+   */
+  private async conStockYDemanda(empresaId: string, productos: ProductoRecord[]): Promise<ProductoListado[]> {
     if (productos.length === 0) return [];
-    const filas = await this.prisma.$queryRaw<{ producto_id: string; stock: string }[]>(Prisma.sql`
-      SELECT producto_id, SUM(cantidad * signo) AS stock
-      FROM movimientos_inventario
-      WHERE empresa_id = ${empresaId}::uuid AND deleted_at IS NULL
-        AND producto_id IN (${Prisma.join(productos.map((p) => Prisma.sql`${p.id}::uuid`))})
-      GROUP BY producto_id
-    `);
-    const stock = new Map(filas.map((f) => [f.producto_id, Number(f.stock)]));
-    return productos.map((p) => ({ ...p, stock: stock.get(p.id) ?? 0 }));
+    const ids = Prisma.join(productos.map((p) => Prisma.sql`${p.id}::uuid`));
+    const desde = new Date(Date.now() - DIAS_DEMANDA * 24 * 60 * 60 * 1000);
+    const [stocks, ventas] = await Promise.all([
+      this.prisma.$queryRaw<{ producto_id: string; stock: string }[]>(Prisma.sql`
+        SELECT producto_id, SUM(cantidad * signo) AS stock
+        FROM movimientos_inventario
+        WHERE empresa_id = ${empresaId}::uuid AND deleted_at IS NULL AND producto_id IN (${ids})
+        GROUP BY producto_id
+      `),
+      this.prisma.$queryRaw<{ producto_id: string; vendidos: string }[]>(Prisma.sql`
+        SELECT i.producto_id, SUM(i.cantidad) AS vendidos
+        FROM ventas_items i
+        JOIN ventas v ON v.id = i.venta_id
+        WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL AND v.fecha >= ${desde}
+          AND i.producto_id IN (${ids})
+        GROUP BY i.producto_id
+      `),
+    ]);
+    const stock = new Map(stocks.map((f) => [f.producto_id, Number(f.stock)]));
+    const vendidos = new Map(ventas.map((f) => [f.producto_id, Number(f.vendidos)]));
+    return productos.map((p) => ({ ...p, stock: stock.get(p.id) ?? 0, vendidos: vendidos.get(p.id) ?? 0 }));
   }
 
   async listarNombres(empresaId: string): Promise<{ id: string; nombre: string }[]> {

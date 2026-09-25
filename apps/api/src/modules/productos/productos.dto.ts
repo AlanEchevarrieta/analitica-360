@@ -23,6 +23,8 @@ export const listarProductosQuerySchema = z.object({
   categoriaId: z.uuid().optional(),
   estado: estadoProductoSchema.default('todos'),
   margen: margenProductoSchema.default('todos'),
+  /** 'demanda': más vendidos primero (unidades de los últimos 90 días). */
+  orden: z.enum(['nombre', 'demanda']).default('nombre'),
 });
 export type ListarProductosQuery = z.infer<typeof listarProductosQuerySchema>;
 
