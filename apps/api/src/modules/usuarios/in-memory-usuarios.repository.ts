@@ -53,6 +53,10 @@ export class InMemoryUsuariosRepository implements UsuariosRepository {
     return this.usuariosPorClerkUserId.get(clerkUserId) ?? null;
   }
 
+  async findAccesoColaborador(): Promise<null> {
+    return null;
+  }
+
   async removeUsuario(clerkUserId: string): Promise<void> {
     this.usuariosPorClerkUserId.delete(clerkUserId);
   }

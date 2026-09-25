@@ -35,10 +35,14 @@ export const USUARIOS_REPOSITORY = Symbol('USUARIOS_REPOSITORY');
  * concreta, solo de esta interfaz — InMemoryUsuariosRepository queda
  * disponible como test double.
  */
+import type { AccesoColaborador } from '../../common/auth/rol.types.js';
+
 export interface UsuariosRepository {
   upsertEmpresa(input: UpsertEmpresaInput): Promise<EmpresaRecord>;
   upsertUsuario(input: UpsertUsuarioInput): Promise<UsuarioRecord>;
   findEmpresaByClerkOrgId(clerkOrgId: string): Promise<EmpresaRecord | null>;
   findUsuarioByClerkUserId(clerkUserId: string): Promise<UsuarioRecord | null>;
   removeUsuario(clerkUserId: string): Promise<void>;
+  /** Módulos/acciones habilitados por el dueño para un colaborador (colaborador_permisos). */
+  findAccesoColaborador(usuarioId: string): Promise<AccesoColaborador | null>;
 }

@@ -65,15 +65,17 @@ export class EmpresaScopeGuard implements CanActivate {
     }
 
     request.empresa = { id: empresa.id, clerkOrgId: empresa.clerkOrgId, nombre: empresa.nombre };
+    const rol = normalizarRol(usuario.rolCrudo);
+    // Solo los colaboradores (operador) tienen permisos configurables; sin
+    // esta carga PermissionsGuard los rechazaba en todos los módulos.
+    const acceso = rol === 'operador' ? ((await this.usuariosRepository.findAccesoColaborador(usuario.id)) ?? undefined) : undefined;
     request.usuario = {
       id: usuario.id,
       clerkUserId: usuario.clerkUserId,
       empresaId: usuario.empresaId,
       email: usuario.email,
-      rol: normalizarRol(usuario.rolCrudo),
-      // TODO Fase 3: cargar AccesoColaborador real (tabla colaborador_permisos
-      // migrada) para roles 'operador' — hoy dueño/contador ya resuelven sin
-      // necesitarlo (ver tieneModulo/tieneAccion en rol.types.ts).
+      rol,
+      acceso,
     };
     return true;
   }

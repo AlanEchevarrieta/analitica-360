@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
+import type { AccesoColaborador } from '../../common/auth/rol.types.js';
 import type {
   EmpresaRecord,
   UpsertEmpresaInput,
@@ -54,6 +55,15 @@ export class PrismaUsuariosRepository implements UsuariosRepository {
     const empresa = await this.prisma.empresa.findUnique({ where: { clerkOrgId } });
     if (!empresa) return null;
     return { id: empresa.id, clerkOrgId, nombre: empresa.nombre };
+  }
+
+  async findAccesoColaborador(usuarioId: string): Promise<AccesoColaborador | null> {
+    const fila = await this.prisma.colaboradorPermiso.findUnique({ where: { usuarioId } });
+    if (!fila) return null;
+    return {
+      modulos: (fila.modulos ?? {}) as AccesoColaborador['modulos'],
+      acciones: (fila.acciones ?? {}) as AccesoColaborador['acciones'],
+    };
   }
 
   async findUsuarioByClerkUserId(clerkUserId: string): Promise<UsuarioRecord | null> {

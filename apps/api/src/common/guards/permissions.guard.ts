@@ -25,6 +25,11 @@ export class PermissionsGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<Request>();
     const usuario = request.usuario;
+    // El contador es de solo lectura: varios módulos que ve (compras,
+    // contabilidad) no exigen una acción para escribir, así que se corta acá.
+    if (usuario?.rol === 'contador' && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+      throw new ForbiddenException('El rol contador es de solo lectura');
+    }
 
     const moduloRequerido = this.reflector.getAllAndOverride<ModuloClave | undefined>(PERMISO_MODULO_KEY, [
       context.getHandler(),
