@@ -12,7 +12,7 @@ import { aNumero } from "@/lib/numeros";
 import { hoyAR } from "@/lib/periodos";
 import { useAccionesGastos, useGastos } from "../hooks/use-analytics";
 
-const CATEGORIAS: Record<string, string> = {
+export const CATEGORIAS_GASTO: Record<string, string> = {
   alquiler: "Alquiler",
   sueldos: "Sueldos",
   servicios: "Servicios",
@@ -55,7 +55,7 @@ export function GastosPanel({ desde, hasta }: { desde: string; hasta: string }) 
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-wrap items-end gap-2">
           <select className="h-8 rounded-lg border bg-transparent px-2 text-sm" aria-label="Categoría" value={g.categoria} onChange={(e) => setG({ ...g, categoria: e.target.value })}>
-            {Object.entries(CATEGORIAS).map(([v, l]) => (
+            {Object.entries(CATEGORIAS_GASTO).map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
               </option>
@@ -84,7 +84,7 @@ export function GastosPanel({ desde, hasta }: { desde: string; hasta: string }) 
             {lista.map((x) => (
               <li key={x.id} className="flex items-center gap-3 py-2">
                 <span className="w-24 tabular-nums text-muted-foreground">{fechaCorta(x.fecha)}</span>
-                <span className="w-28 text-muted-foreground">{CATEGORIAS[x.categoria] ?? x.categoria}</span>
+                <span className="w-28 text-muted-foreground">{CATEGORIAS_GASTO[x.categoria] ?? x.categoria}</span>
                 <span className="flex-1 truncate">
                   {x.descripcion}
                   {x.frecuencia && <span className="ml-2 rounded bg-muted px-1.5 text-xs">{FRECUENCIAS[x.frecuencia]}</span>}

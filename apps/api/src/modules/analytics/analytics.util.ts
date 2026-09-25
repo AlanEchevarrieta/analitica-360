@@ -39,7 +39,7 @@ export function etiquetaDiaEs(iso: string): string {
   return DIAS_ABREV[dow];
 }
 
-/** Fecha (YYYY-MM-DD) de un Date en huso AR - mismo criterio que `(fecha AT TIME ZONE v_tz)::date` en el SQL. */
+/** Fecha (YYYY-MM-DD) de un Date en huso AR - mismo criterio que diaAR() (fecha-sql.ts) en el SQL. */
 export function fechaLocalAR(fecha: Date): string {
   return fecha.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
 }

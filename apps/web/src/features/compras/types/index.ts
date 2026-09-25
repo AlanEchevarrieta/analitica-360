@@ -8,6 +8,8 @@ export interface CompraFila {
   anulada: boolean;
   totalCostosAdicionales: number;
   totalReal: number;
+  /** Se paga después: deuda con el proveedor. */
+  aCredito: boolean;
 }
 
 export interface ListaCompras {
@@ -34,4 +36,5 @@ export interface ConfirmarCompraInput {
     costoUnitario: number;
   }[];
   costosAdicionales: { flete: number; impuestos: number; otros: number; descripcion: string | null };
+  aCredito: boolean;
 }

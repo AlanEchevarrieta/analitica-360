@@ -62,7 +62,10 @@ export function ComprasListado() {
                     <TableCell className="text-right tabular-nums text-muted-foreground">
                       {c.totalCostosAdicionales > 0 ? formatoPesos(c.totalCostosAdicionales) : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">{formatoPesos(c.totalReal)}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {c.aCredito && <span className="mr-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-xs font-normal text-amber-600">A crédito</span>}
+                      {formatoPesos(c.totalReal)}
+                    </TableCell>
                     <TableCell className="max-w-64 truncate text-muted-foreground" title={c.notas ?? undefined}>
                       {c.notas ?? ""}
                     </TableCell>

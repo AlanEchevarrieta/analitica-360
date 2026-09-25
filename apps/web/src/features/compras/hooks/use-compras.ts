@@ -40,7 +40,7 @@ export function useConfirmarCompra() {
     mutationFn: (input: ConfirmarCompraInput) =>
       api<CompraFila>("/compras", { method: "POST", body: JSON.stringify(input) }),
     onSuccess: () => {
-      for (const key of ["compras", "productos", "dashboard", "ganancia-productos"]) {
+      for (const key of ["compras", "productos", "dashboard", "ganancia-productos", "estados-contables"]) {
         void queryClient.invalidateQueries({ queryKey: [key] });
       }
     },

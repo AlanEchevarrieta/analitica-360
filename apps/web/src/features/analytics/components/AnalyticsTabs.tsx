@@ -8,6 +8,7 @@ const TABS = [
   { href: "/analytics/ventas", etiqueta: "Ventas" },
   { href: "/analytics/productos", etiqueta: "Ganancia por producto" },
   { href: "/analytics/contabilidad", etiqueta: "Contabilidad" },
+  { href: "/analytics/estados", etiqueta: "Estados contables" },
   { href: "/analytics/insights", etiqueta: "Insights" },
 ];
 

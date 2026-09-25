@@ -37,6 +37,7 @@ export class PrismaComprasRepository implements ComprasRepository {
       descripcionOtros: c.descripcionOtros,
       totalCostosAdicionales: c.totalCostosAdicionales?.toNumber() ?? 0,
       totalReal: c.totalReal.toNumber(),
+      aCredito: c.aCredito,
       imagenFacturaUrl: c.imagenFacturaUrl,
     };
   }
@@ -120,6 +121,7 @@ export class PrismaComprasRepository implements ComprasRepository {
           descripcionOtros: input.costosAdicionales?.descripcion ?? null,
           totalCostosAdicionales,
           totalReal: total + totalCostosAdicionales,
+          aCredito: input.aCredito ?? false,
           notas: input.notas,
           items: {
             create: input.items.map((i) => ({

@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { diaAR } from './fecha-sql.js';
 import type { PrismaService } from '../../database/prisma.service.js';
 
 export interface DineroDevolucionProducto {
@@ -69,7 +70,7 @@ export async function dineroDevolucionesPorDia(
 ): Promise<{ fecha: string; ingreso: number; costo: number }[]> {
   const filas = await prisma.$queryRaw<{ fecha: string; ingreso: string; costo: string }[]>(Prisma.sql`
     SELECT
-      (date(d.fecha AT TIME ZONE 'America/Argentina/Mendoza'))::text AS fecha,
+      (${diaAR(Prisma.raw('d.fecha'))})::text AS fecha,
       SUM(CASE WHEN di.tipo = 'devuelto' THEN -1 ELSE 1 END * di.cantidad * di.precio_unitario) AS ingreso,
       SUM(CASE WHEN di.tipo = 'devuelto' THEN -1 ELSE 1 END * di.cantidad * COALESCE(
         CASE WHEN di.tipo = 'devuelto' THEN (

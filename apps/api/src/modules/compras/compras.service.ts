@@ -45,6 +45,7 @@ export class ComprasService {
       costosAdicionales: input.costosAdicionales
         ? { ...input.costosAdicionales, descripcion: input.costosAdicionales.descripcion ?? null }
         : undefined,
+      aCredito: input.aCredito,
     });
     if (!resultado.ok) throw new BadRequestException(MOTIVO_MENSAJE[resultado.motivo]);
     return resultado.compra;

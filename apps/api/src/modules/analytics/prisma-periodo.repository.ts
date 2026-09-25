@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { diaAR } from './fecha-sql.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { dineroDevoluciones, sumarDinero } from './devoluciones-dinero.js';
 import type {
@@ -12,7 +13,7 @@ import type {
 } from './periodo.repository.js';
 import { sumarDiasIso } from './analytics.util.js';
 
-const DIA_VENTA = Prisma.sql`date(v.fecha AT TIME ZONE 'America/Argentina/Mendoza')`;
+const DIA_VENTA = diaAR(Prisma.raw('v.fecha'));
 
 /** Puerto de monto_venta() (068_senias.sql): cobrado con fallback total_con_interes > total_sin_interes > (items - descuento), menos saldo pendiente, piso en 0. */
 const MONTO_VENTA = Prisma.sql`

@@ -14,6 +14,8 @@ export interface CompraRecord {
   descripcionOtros: string | null;
   totalCostosAdicionales: number;
   totalReal: number;
+  /** Se paga después: queda como deuda con el proveedor. */
+  aCredito: boolean;
   imagenFacturaUrl: string | null;
 }
 
@@ -44,6 +46,7 @@ export interface ConfirmarCompraInput {
   ubicacionDestino?: string | null;
   items: CompraItemInput[];
   costosAdicionales?: { flete: number; impuestos: number; otros: number; descripcion: string | null };
+  aCredito?: boolean;
 }
 
 export type ResultadoConfirmarCompra =

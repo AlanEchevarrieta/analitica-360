@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { diaAR } from './fecha-sql.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { InsightsRepository } from './insights.repository.js';
 import type { HistorialPrecio, InsightProducto, ItemInsight, PuntoSerieDia, VarianteInsight, VentaInsight } from './insights.util.js';
 import { fechaLocalAR, sumarDiasIso } from './analytics.util.js';
 
-const DIA_VENTA = Prisma.sql`date(fecha AT TIME ZONE 'America/Argentina/Mendoza')`;
+const DIA_VENTA = diaAR(Prisma.raw('fecha'));
 
 function rangoAR(iso: string): { desde: Date; hasta: Date } {
   return { desde: new Date(`${iso}T00:00:00.000-03:00`), hasta: new Date(`${iso}T23:59:59.999-03:00`) };

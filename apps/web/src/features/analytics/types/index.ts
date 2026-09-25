@@ -87,3 +87,86 @@ export interface Inflacion {
   resumen: { inflacionAcumuladaPct: number | null; variacionPreciosPct: number | null; diferenciaPct: number | null; valorRealDe100: number | null };
   errorInflacion: string | null;
 }
+
+// Espejo de EstadosContablesRespuesta (apps/api modules/contabilidad/estados-contables.service.ts).
+export interface Balance {
+  fecha: string;
+  activo: {
+    caja: number;
+    cajaEstimada: boolean;
+    creditosPorVentas: number;
+    bienesDeCambio: number;
+    corriente: number;
+    bienesDeUsoOrigen: number;
+    amortizacionAcumulada: number;
+    bienesDeUso: number;
+    noCorriente: number;
+    total: number;
+  };
+  pasivo: { deudasComerciales: number; prestamos: number; total: number };
+  patrimonioNeto: { aportes: number; retiros: number; resultadosAcumulados: number; capitalInicialYAjustes: number; total: number };
+}
+
+export type ConceptoCaja =
+  | "cobros_ventas"
+  | "devoluciones"
+  | "pagos_compras"
+  | "pagos_proveedores"
+  | "gastos"
+  | "bienes_uso"
+  | "aportes"
+  | "retiros"
+  | "prestamos_recibidos"
+  | "prestamos_pagados";
+
+export interface EstadosContables {
+  desde: string;
+  hasta: string;
+  resultados: {
+    ventasBrutas: number;
+    devoluciones: number;
+    ventasNetas: number;
+    costoMercaderia: number;
+    resultadoBruto: number;
+    gastosPorCategoria: { categoria: string; monto: number }[];
+    gastosTotal: number;
+    amortizaciones: number;
+    resultadoNeto: number;
+    cantidadVentas: number;
+  };
+  balanceInicio: Balance;
+  balanceCierre: Balance;
+  evolucion: { inicio: number; aportes: number; retiros: number; resultado: number; ajustes: number; cierre: number };
+  flujo: {
+    saldoInicial: number;
+    lineas: { concepto: ConceptoCaja; actividad: "operativa" | "inversion" | "financiacion"; monto: number }[];
+    operativas: number;
+    inversion: number;
+    financiacion: number;
+    diferenciasArqueo: number;
+    saldoFinal: number;
+  };
+  indicadores: {
+    liquidez: number | null;
+    pruebaAcida: number | null;
+    solvencia: number | null;
+    endeudamiento: number | null;
+    rentabilidadPatrimonioPct: number | null;
+  };
+  deudaPorProveedor: { proveedorId: string | null; nombre: string; comprado: number; pagado: number; saldo: number }[];
+  notas: { criterios: string[]; avisos: string[] };
+}
+
+export type TipoMovimientoFinanciero = "arqueo" | "aporte" | "retiro" | "prestamo_recibido" | "prestamo_pago" | "bien_uso" | "pago_proveedor";
+
+export interface MovimientoFinanciero {
+  id: string;
+  tipo: TipoMovimientoFinanciero;
+  monto: number;
+  fecha: string;
+  descripcion: string;
+  proveedorId: string | null;
+  proveedorNombre: string | null;
+  vidaUtilMeses: number | null;
+  conCaja: boolean;
+}

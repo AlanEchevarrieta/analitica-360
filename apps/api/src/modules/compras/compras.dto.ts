@@ -25,6 +25,8 @@ export const confirmarCompraSchema = z.object({
   ubicacionDestino: z.string().trim().nullable().optional(),
   items: z.array(itemCompraSchema).min(1, 'Agregá al menos un producto'),
   costosAdicionales: costosAdicionalesSchema.optional(),
+  /** true = compra en cuenta corriente: no sale plata hoy, queda deuda con el proveedor. */
+  aCredito: z.boolean().default(false),
 });
 export type ConfirmarCompraInput = z.infer<typeof confirmarCompraSchema>;
 

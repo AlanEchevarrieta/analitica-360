@@ -7,14 +7,20 @@ import { ContabilidadController } from './contabilidad.controller.js';
 import { ContabilidadService } from './contabilidad.service.js';
 import { CONTABILIDAD_REPOSITORY } from './contabilidad.repository.js';
 import { PrismaContabilidadRepository } from './prisma-contabilidad.repository.js';
+import { EstadosContablesController, MovimientosFinancierosController } from './estados-contables.controller.js';
+import { EstadosContablesService } from './estados-contables.service.js';
+import { ESTADOS_CONTABLES_REPOSITORY } from './estados-contables.repository.js';
+import { PrismaEstadosContablesRepository } from './prisma-estados-contables.repository.js';
 
 @Module({
-  controllers: [GastoController, ContabilidadController],
+  controllers: [GastoController, ContabilidadController, EstadosContablesController, MovimientosFinancierosController],
   providers: [
     GastoService,
     { provide: GASTO_REPOSITORY, useClass: PrismaGastoRepository },
     ContabilidadService,
     { provide: CONTABILIDAD_REPOSITORY, useClass: PrismaContabilidadRepository },
+    EstadosContablesService,
+    { provide: ESTADOS_CONTABLES_REPOSITORY, useClass: PrismaEstadosContablesRepository },
   ],
 })
 export class ContabilidadModule {}

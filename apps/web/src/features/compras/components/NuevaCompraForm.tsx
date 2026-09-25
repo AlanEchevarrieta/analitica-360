@@ -30,6 +30,7 @@ export function NuevaCompraForm() {
   const [ubicacion, setUbicacion] = useState("");
   const [notas, setNotas] = useState("");
   const [adicionales, setAdicionales] = useState<DatosAdicionales>(ADICIONALES_VACIOS);
+  const [aCredito, setACredito] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const proveedores = useProveedores();
   const ubicaciones = useUbicaciones();
@@ -78,6 +79,7 @@ export function NuevaCompraForm() {
           otros: aNumero(adicionales.otros),
           descripcion: adicionales.descripcion.trim() || null,
         },
+        aCredito,
       },
       {
         onSuccess: (compra) => {
@@ -167,6 +169,30 @@ export function NuevaCompraForm() {
                   ))}
                 </select>
               </div>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">¿Cómo la pagás?</span>
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Forma de pago de la compra">
+              {[
+                { valor: false, titulo: "Ya la pagué", detalle: "Sale plata hoy" },
+                { valor: true, titulo: "La pago después", detalle: "Queda como deuda" },
+              ].map((o) => (
+                <button
+                  key={o.titulo}
+                  type="button"
+                  role="radio"
+                  aria-checked={aCredito === o.valor}
+                  onClick={() => setACredito(o.valor)}
+                  className={`rounded-lg p-2 text-left text-sm ring-1 transition-colors hover:bg-muted ${aCredito === o.valor ? "ring-2 ring-primary" : "ring-foreground/10"}`}
+                >
+                  <span className="block font-medium">{o.titulo}</span>
+                  <span className="block text-xs text-muted-foreground">{o.detalle}</span>
+                </button>
+              ))}
+            </div>
+            {aCredito && (
+              <p className="text-xs text-muted-foreground">Cuando le pagues al proveedor, registralo en Analytics → Estados contables → Pago a proveedor.</p>
             )}
           </div>
           <div className="flex flex-col gap-1.5">

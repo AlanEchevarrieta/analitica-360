@@ -19,6 +19,7 @@ const compraBase: CompraRecord = {
   descripcionOtros: null,
   totalCostosAdicionales: 0,
   totalReal: 1000,
+  aCredito: false,
   imagenFacturaUrl: null,
 };
 
@@ -46,6 +47,7 @@ describe('ComprasService', () => {
     const resultado = await service.confirmar('empresa-1', 'user-1', {
       fecha: '2026-09-22',
       items: [itemBase],
+      aCredito: false,
     });
     expect(resultado).toEqual(compraBase);
   });
@@ -55,7 +57,7 @@ describe('ComprasService', () => {
     async (motivo) => {
       repository.confirmar.mockResolvedValue({ ok: false, motivo });
       await expect(
-        service.confirmar('empresa-1', 'user-1', { fecha: '2026-09-22', items: [itemBase] }),
+        service.confirmar('empresa-1', 'user-1', { fecha: '2026-09-22', items: [itemBase], aCredito: false }),
       ).rejects.toThrow(BadRequestException);
     },
   );
