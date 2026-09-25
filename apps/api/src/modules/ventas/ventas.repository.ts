@@ -108,6 +108,8 @@ export interface ConfiguracionVenta {
   ubicacionDefault: string | null;
   /** Configuración > Flujo de ventas: si el cliente se pide siempre, es opcional o no se muestra. */
   mostrarCliente: 'siempre' | 'opcional' | 'no_mostrar';
+  /** Si un cliente escrito que no existe se crea al registrar la venta. */
+  crearClienteDesdeVenta: boolean;
 }
 
 export const VENTAS_REPOSITORY = Symbol('VENTAS_REPOSITORY');

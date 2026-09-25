@@ -20,6 +20,8 @@ export interface ConfiguracionVenta {
   mediosPago: string[];
   cuotas: { cuotas: number; tasa: number; etiqueta: string }[];
   ubicacionDefault: string | null;
+  mostrarCliente: "siempre" | "opcional" | "no_mostrar";
+  crearClienteDesdeVenta: boolean;
 }
 
 export interface ItemVentaInput {

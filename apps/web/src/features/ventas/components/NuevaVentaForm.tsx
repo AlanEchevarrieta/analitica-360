@@ -85,6 +85,7 @@ export function NuevaVentaForm() {
   function validar(): string | null {
     if (lineas.length === 0) return "Agregá al menos un producto.";
     if (totales.total <= 0) return "El total tiene que ser mayor a $0.";
+    if (config.data?.mostrarCliente === "siempre" && !cobro.cliente.trim()) return "Cargá el cliente (lo pide la configuración de ventas).";
     const senia = aNumero(cobro.montoSenia);
     if (cobro.esSenia && (senia <= 0 || senia >= totales.total)) {
       return "La seña tiene que ser mayor a $0 y menor que el total.";
@@ -101,7 +102,7 @@ export function NuevaVentaForm() {
     const nombreCliente = cobro.cliente.trim();
     try {
       let clienteId = clientes.data?.find((c) => c.nombre.toLowerCase() === nombreCliente.toLowerCase())?.id ?? null;
-      if (esClienteNuevo(nombreCliente, clientes.data ?? [])) {
+      if (config.data?.crearClienteDesdeVenta !== false && esClienteNuevo(nombreCliente, clientes.data ?? [])) {
         const nuevo = await crearCliente.mutateAsync({ nombre: nombreCliente, telefono: cobro.telefono.trim() || null });
         clienteId = nuevo.id;
       }
@@ -115,7 +116,7 @@ export function NuevaVentaForm() {
         })),
         formaPago: cobro.formaPago,
         descuento: totales.descuento,
-        clienteNombre: nombreCliente || null,
+        clienteNombre: config.data?.mostrarCliente === "no_mostrar" ? null : nombreCliente || null,
         clienteId,
         cuotas: totales.cuotas,
         coeficienteInteres: cobro.formaPago === "credito" ? aNumero(cobro.interes) : 0,

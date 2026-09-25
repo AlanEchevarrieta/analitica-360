@@ -30,7 +30,8 @@ export class PrismaTiendaRepository implements TiendaRepository {
         { id: string; nombre: string; categoria: string | null; precio: string; stock: string; vendidos: string }[]
       >(Prisma.sql`
         SELECT
-          p.id, p.nombre, p.categoria,
+          -- La categoría real (categorias) manda; el texto legacy queda de respaldo.
+          p.id, p.nombre, COALESCE(cat.nombre, p.categoria) AS categoria,
           COALESCE(p.precio_venta, 0) AS precio,
           COALESCE((
             SELECT SUM(m.signo * m.cantidad) FROM movimientos_inventario m
@@ -43,6 +44,7 @@ export class PrismaTiendaRepository implements TiendaRepository {
             WHERE vi.producto_id = p.id AND v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL
           ), 0) AS vendidos
         FROM productos p
+        LEFT JOIN categorias cat ON cat.id = p.categoria_id
         WHERE p.empresa_id = ${empresaId}::uuid AND p.activo = TRUE AND p.deleted_at IS NULL
         ORDER BY p.nombre
       `),

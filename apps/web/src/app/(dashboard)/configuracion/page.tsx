@@ -1,5 +1,10 @@
-// Placeholder de la ruta /configuracion — se implementa en Fase 5 del plan de reescritura,
-// consumiendo la API de apps/api y reusando features/configuracion.
+import { ConfiguracionVista } from "@/features/configuracion/components/ConfiguracionVista";
+
 export default function Page() {
-  return <div>configuracion (placeholder — Fase 5)</div>;
+  return (
+    <div className="flex flex-col gap-4">
+      <h1 className="text-xl font-semibold">Configuración</h1>
+      <ConfiguracionVista />
+    </div>
+  );
 }

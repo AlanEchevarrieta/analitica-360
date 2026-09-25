@@ -246,6 +246,7 @@ export class PrismaVentasRepository implements VentasRepository {
     return {
       ...configuracionVentaDesde(config?.mediosPago, config?.tasasCuotas, config?.ubicacionVentaDefault ?? null),
       mostrarCliente: mostrar === 'siempre' || mostrar === 'no_mostrar' ? mostrar : 'opcional',
+      crearClienteDesdeVenta: flujo.crear_desde_venta !== false,
     };
   }
 }

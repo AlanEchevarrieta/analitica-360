@@ -178,8 +178,9 @@ export function CobroVenta({
         )}
       </div>
 
+      {config?.mostrarCliente !== "no_mostrar" && (
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="cobro-cliente">Cliente (opcional)</Label>
+        <Label htmlFor="cobro-cliente">{config?.mostrarCliente === "siempre" ? "Cliente" : "Cliente (opcional)"}</Label>
         <Input
           id="cobro-cliente"
           list="clientes-venta"
@@ -192,7 +193,7 @@ export function CobroVenta({
             <option key={c.id} value={c.nombre} />
           ))}
         </datalist>
-        {esClienteNuevo(cobro.cliente, clientes) && (
+        {esClienteNuevo(cobro.cliente, clientes) && config?.crearClienteDesdeVenta !== false && (
           <div className="flex flex-col gap-1.5">
             <p className="text-xs text-muted-foreground">Cliente nuevo: se guarda en Clientes al registrar la venta.</p>
             <Input
@@ -205,6 +206,7 @@ export function CobroVenta({
           </div>
         )}
       </div>
+      )}
 
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={cobro.esSenia} onChange={(e) => onCambiar({ esSenia: e.target.checked })} />
