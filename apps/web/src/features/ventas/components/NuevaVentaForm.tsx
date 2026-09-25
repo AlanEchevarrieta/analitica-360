@@ -15,8 +15,8 @@ import {
   useUbicaciones,
 } from "../hooks/use-nueva-venta";
 import type { LineaVenta } from "../types/nueva-venta";
-import { BuscadorProductos } from "./BuscadorProductos";
-import { LineasVenta } from "./LineasVenta";
+import { BuscadorProductos } from "@/features/productos/components/BuscadorProductos";
+import { LineasProductos } from "@/features/productos/components/LineasProductos";
 import { aNumero, calcularTotales, COBRO_INICIAL, CobroVenta, esClienteNuevo, type DatosCobro } from "./CobroVenta";
 
 // Medio de pago y ubicación se recuerdan por dispositivo (localStorage): en
@@ -152,7 +152,7 @@ export function NuevaVentaForm() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <BuscadorProductos onAgregar={agregar} />
-          <LineasVenta
+          <LineasProductos
             lineas={lineas}
             onCambiar={(clave, cambios) =>
               setLineas((prev) => prev.map((l) => (l.clave === clave ? { ...l, ...cambios } : l)))

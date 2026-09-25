@@ -5,18 +5,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SinDatos } from "@/components/shared/estado-datos";
 import { formatoPesos } from "@/lib/formato";
-import type { LineaVenta } from "../types/nueva-venta";
+import type { LineaProducto } from "../types";
 
-export function LineasVenta({
+export function LineasProductos({
   lineas,
   onCambiar,
   onQuitar,
+  etiquetaPrecio = "Precio unitario",
+  avisarStock = true,
+  vacio = "Buscá un producto para agregarlo a la venta.",
 }: {
-  lineas: LineaVenta[];
-  onCambiar: (clave: string, cambios: Partial<Pick<LineaVenta, "cantidad" | "precioUnitario">>) => void;
+  /** "Precio unitario" en ventas, "Costo unitario" en compras. */
+  etiquetaPrecio?: string;
+  /** Avisar si la cantidad supera el stock (solo tiene sentido al vender). */
+  avisarStock?: boolean;
+  vacio?: string;
+  lineas: LineaProducto[];
+  onCambiar: (clave: string, cambios: Partial<Pick<LineaProducto, "cantidad" | "precioUnitario">>) => void;
   onQuitar: (clave: string) => void;
 }) {
-  if (lineas.length === 0) return <SinDatos mensaje="Buscá un producto para agregarlo a la venta." />;
+  if (lineas.length === 0) return <SinDatos mensaje={vacio} />;
 
   return (
     <ul className="flex flex-col divide-y">
@@ -25,7 +33,7 @@ export function LineasVenta({
           <div className="min-w-40 flex-1">
             <p className="font-medium">{l.nombre}</p>
             {l.variante && <p className="text-xs text-muted-foreground">{l.variante}</p>}
-            {l.cantidad > l.stock && (
+            {avisarStock && l.cantidad > l.stock && (
               <p className="text-xs text-amber-500">
                 Stock disponible: {l.stock}. La venta igual se puede registrar.
               </p>
@@ -65,7 +73,7 @@ export function LineasVenta({
             <Input
               className="w-28 text-right tabular-nums"
               inputMode="decimal"
-              aria-label={`Precio unitario de ${l.nombre}`}
+              aria-label={`${etiquetaPrecio} de ${l.nombre}`}
               value={l.precioUnitario}
               onChange={(e) => {
                 const n = Number(e.target.value.replace(",", "."));

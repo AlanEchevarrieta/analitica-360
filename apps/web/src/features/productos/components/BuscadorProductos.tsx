@@ -6,10 +6,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatoNumero, formatoPesos } from "@/lib/formato";
-import { useProductos } from "@/features/productos/hooks/use-productos";
-import type { ProductoFila } from "@/features/productos/types";
-import { useVariantes, type VarianteVenta } from "../hooks/use-nueva-venta";
-import { etiquetaVariante, type LineaVenta } from "../types/nueva-venta";
+import { useProductos } from "../hooks/use-productos";
+import { useVariantes } from "../hooks/use-variantes";
+import { etiquetaVariante, type LineaProducto, type ProductoFila, type VarianteProducto } from "../types";
 import { EscanerCamara } from "./EscanerCamara";
 
 const MAX_RESULTADOS = 8;
@@ -20,9 +19,19 @@ const MAS_VENDIDOS = 8;
  * y manda Enter: si coincide exacto se agrega directo). Resultados y accesos
  * rápidos ordenados por demanda (más vendidos de los últimos 90 días primero).
  */
-export function BuscadorProductos({ onAgregar }: { onAgregar: (linea: Omit<LineaVenta, "cantidad">) => void }) {
+export function BuscadorProductos({
+  onAgregar,
+  precioDe = (producto, variante) => variante?.precioVenta ?? producto.precioVenta ?? 0,
+  mostrar = "precio",
+}: {
+  onAgregar: (linea: Omit<LineaProducto, "cantidad">) => void;
+  /** Precio inicial de la línea: venta por defecto; en compras, el costo. */
+  precioDe?: (producto: ProductoFila, variante: VarianteProducto | null) => number;
+  /** Qué valor mostrar en los resultados de búsqueda. */
+  mostrar?: "precio" | "costo";
+}) {
   const [busqueda, setBusqueda] = useState("");
-  const [eligiendo, setEligiendo] = useState<{ producto: ProductoFila; variantes: VarianteVenta[] } | null>(null);
+  const [eligiendo, setEligiendo] = useState<{ producto: ProductoFila; variantes: VarianteProducto[] } | null>(null);
   const [cargandoId, setCargandoId] = useState<string | null>(null);
   // Opcional: la cámara solo se abre si alguien toca "Escanear".
   const [camara, setCamara] = useState(false);
@@ -43,14 +52,14 @@ export function BuscadorProductos({ onAgregar }: { onAgregar: (linea: Omit<Linea
     [catalogo.data],
   );
 
-  function agregar(producto: ProductoFila, variante: VarianteVenta | null) {
+  function agregar(producto: ProductoFila, variante: VarianteProducto | null) {
     onAgregar({
       clave: `${producto.id}:${variante?.id ?? ""}`,
       productoId: producto.id,
       varianteId: variante?.id ?? null,
       nombre: producto.nombre,
       variante: variante ? etiquetaVariante(variante.atributos) : null,
-      precioUnitario: variante?.precioVenta ?? producto.precioVenta ?? 0,
+      precioUnitario: precioDe(producto, variante),
       stock: producto.stock,
     });
     setBusqueda("");
@@ -141,7 +150,9 @@ export function BuscadorProductos({ onAgregar }: { onAgregar: (linea: Omit<Linea
                         <span className={p.stock <= 0 ? "text-destructive" : "text-muted-foreground"}>
                           stock {formatoNumero(p.stock)}
                         </span>
-                        <span className="font-medium">{formatoPesos(p.precioVenta)}</span>
+                        <span className="font-medium">
+                        {mostrar === "costo" ? `costo ${formatoPesos(p.costo)}` : formatoPesos(p.precioVenta)}
+                      </span>
                         {cargandoId === p.id && <Loader2 className="size-4 animate-spin" aria-label="Cargando" />}
                       </span>
                     </button>

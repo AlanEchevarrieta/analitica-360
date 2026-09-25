@@ -29,3 +29,32 @@ export interface FiltrosProductos {
   estado: EstadoProducto;
   orden: OrdenProductos;
 }
+
+/** GET /productos/:id/variantes (VarianteRecord). */
+export interface VarianteProducto {
+  id: string;
+  sku: string | null;
+  atributos: Record<string, string>;
+  precioVenta: number | null;
+  costo: number | null;
+  activo: boolean;
+}
+
+/** Línea de un comprobante (venta o compra) armado con el buscador de productos. */
+export interface LineaProducto {
+  /** productoId + varianteId: una línea por combinación. */
+  clave: string;
+  productoId: string;
+  varianteId: string | null;
+  nombre: string;
+  variante: string | null;
+  /** Precio de venta o costo de compra, según el comprobante. */
+  precioUnitario: number;
+  cantidad: number;
+  /** Stock del producto al momento de agregarlo. */
+  stock: number;
+}
+
+export function etiquetaVariante(atributos: Record<string, string>) {
+  return Object.values(atributos).filter(Boolean).join(" / ");
+}

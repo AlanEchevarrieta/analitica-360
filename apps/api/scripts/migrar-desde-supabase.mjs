@@ -179,6 +179,14 @@ async function main() {
   await db.query(`
     UPDATE productos p SET usa_variantes = TRUE
     WHERE EXISTS (SELECT 1 FROM producto_variantes v WHERE v.producto_id = p.id AND v.deleted_at IS NULL)`);
+  // En el legacy total_costos_adicionales era GENERATED y total_real no se
+  // guardaba: se recalculan para que listados y reportes no muestren $0.
+  await db.query(`
+    UPDATE compras SET
+      total_costos_adicionales = COALESCE(costo_flete, 0) + COALESCE(costo_impuestos, 0) + COALESCE(costo_otros, 0),
+      total_real = COALESCE(total, 0) + COALESCE(costo_flete, 0) + COALESCE(costo_impuestos, 0) + COALESCE(costo_otros, 0)
+    WHERE total_real = 0 AND COALESCE(total, 0) > 0`);
+
   // Numerador global de tickets (en el legacy era una secuencia): arranca
   // después del mayor número ya usado para no repetir numero_ticket (UNIQUE).
   await db.query(`

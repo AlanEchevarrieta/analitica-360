@@ -4,14 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
 import { useApiFetch } from "@/hooks/use-api";
 
-export interface VarianteVenta {
-  id: string;
-  sku: string | null;
-  atributos: Record<string, string>;
-  precioVenta: number | null;
-  activo: boolean;
-}
-
 export interface UbicacionVenta {
   id: string;
   nombre: string;
@@ -48,19 +40,6 @@ export interface ConfirmarVentaInput {
   ubicacionOrigen: string | null;
   esSenia: boolean;
   montoSenia: number;
-}
-
-/** GET /productos/:id/variantes — se pide al elegir el producto, no para todo el catálogo. */
-export function useVariantes() {
-  const api = useApiFetch();
-  const queryClient = useQueryClient();
-  const { orgId } = useAuth();
-  return (productoId: string) =>
-    queryClient.fetchQuery({
-      queryKey: ["variantes", orgId, productoId],
-      queryFn: () => api<VarianteVenta[]>(`/productos/${productoId}/variantes`),
-      staleTime: 60_000,
-    });
 }
 
 export function useUbicaciones() {
