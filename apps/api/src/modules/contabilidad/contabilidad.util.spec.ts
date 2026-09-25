@@ -134,3 +134,12 @@ describe('expandirRecurrentes', () => {
     expect(expandirRecurrentes([g('2026-09-01', null, false)], '2026-12-31')).toHaveLength(1);
   });
 });
+
+describe('ratiosFinancieros: días de inventario', () => {
+  it('usa la duración real del período (no siempre 30 días)', () => {
+    const base = { ingresos: 0, cogs: 90_000, gastos: 0, cantidadVentas: 0, valorInventario: 30_000, gastosFijos: 0 };
+    // Costo diario 90.000/90 = 1.000 -> el stock de 30.000 dura 30 días.
+    expect(ratiosFinancieros({ ...base, diasPeriodo: 90 }).diasInventario).toBeCloseTo(30);
+    expect(ratiosFinancieros(base).diasInventario).toBeCloseTo(10);
+  });
+});

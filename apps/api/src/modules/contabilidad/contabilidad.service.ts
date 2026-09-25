@@ -66,6 +66,8 @@ export class ContabilidadService {
       cantidadVentas: totales.cantidadVentas,
       valorInventario: valorStock.invertido,
       gastosFijos: gastosFijos > 0 ? gastosFijos : totales.gastos,
+      // Días transcurridos del período (hasta hoy si el período sigue abierto).
+      diasPeriodo: Math.round((Date.parse(hasta < hoy ? hasta : hoy) - Date.parse(desde)) / 86_400_000) + 1,
     });
 
     const proyeccion = proyectarFlujo(serie6, 3);

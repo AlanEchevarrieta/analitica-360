@@ -1,5 +1,6 @@
-// Placeholder de la ruta /insights — se implementa en Fase 5 del plan de reescritura,
-// consumiendo la API de apps/api y reusando features/insights.
+import { redirect } from "next/navigation";
+
+// Vive como pestaña de Analytics.
 export default function Page() {
-  return <div>insights (placeholder — Fase 5)</div>;
+  redirect("/analytics/insights");
 }

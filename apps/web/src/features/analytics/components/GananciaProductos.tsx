@@ -2,53 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { Info } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { formatoNumero, formatoPesos } from "@/lib/formato";
+import { fechasDe, type Rango } from "@/lib/periodos";
+import { SelectorPeriodo } from "@/components/shared/selector-periodo";
+import { Kpi } from "./comunes";
 import { useGananciaProductos, type GananciaProducto } from "../hooks/use-ganancia-productos";
 
-type Rango = "mes" | "mesPasado" | "90dias" | "anio";
-
-const RANGOS: { valor: Rango; etiqueta: string }[] = [
-  { valor: "mes", etiqueta: "Este mes" },
-  { valor: "mesPasado", etiqueta: "Mes pasado" },
-  { valor: "90dias", etiqueta: "Últimos 90 días" },
-  { valor: "anio", etiqueta: "Este año" },
-];
-
 type Orden = "margen" | "total" | "unidades" | "margenPct";
-
-const iso = (d: Date) => d.toISOString().slice(0, 10);
-
-function fechasDe(rango: Rango): { desde: string; hasta: string } {
-  const hoy = new Date();
-  const y = hoy.getFullYear();
-  const m = hoy.getMonth();
-  switch (rango) {
-    case "mes":
-      return { desde: iso(new Date(Date.UTC(y, m, 1))), hasta: iso(hoy) };
-    case "mesPasado":
-      return { desde: iso(new Date(Date.UTC(y, m - 1, 1))), hasta: iso(new Date(Date.UTC(y, m, 0))) };
-    case "90dias":
-      return { desde: iso(new Date(hoy.getTime() - 89 * 86_400_000)), hasta: iso(hoy) };
-    case "anio":
-      return { desde: `${y}-01-01`, hasta: iso(hoy) };
-  }
-}
-
-function Kpi({ titulo, valor, detalle }: { titulo: string; valor: string; detalle?: string }) {
-  return (
-    <Card size="sm">
-      <CardHeader>
-        <CardDescription>{titulo}</CardDescription>
-        <CardTitle className="text-2xl tabular-nums">{valor}</CardTitle>
-        {detalle && <p className="text-xs text-muted-foreground">{detalle}</p>}
-      </CardHeader>
-    </Card>
-  );
-}
 
 export function GananciaProductos() {
   const [rango, setRango] = useState<Rango>("mes");
@@ -81,19 +44,7 @@ export function GananciaProductos() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-1" role="group" aria-label="Período">
-        {RANGOS.map((r) => (
-          <Button
-            key={r.valor}
-            size="sm"
-            variant={rango === r.valor ? "secondary" : "ghost"}
-            aria-pressed={rango === r.valor}
-            onClick={() => setRango(r.valor)}
-          >
-            {r.etiqueta}
-          </Button>
-        ))}
-      </div>
+      <SelectorPeriodo valor={rango} onCambiar={setRango} />
 
       {isPending ? (
         <CargandoFilas filas={8} />

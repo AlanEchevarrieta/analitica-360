@@ -1,5 +1,6 @@
-// Placeholder de la ruta /contabilidad — se implementa en Fase 5 del plan de reescritura,
-// consumiendo la API de apps/api y reusando features/contabilidad.
+import { redirect } from "next/navigation";
+
+// Vive como pestaña de Analytics.
 export default function Page() {
-  return <div>contabilidad (placeholder — Fase 5)</div>;
+  redirect("/analytics/contabilidad");
 }

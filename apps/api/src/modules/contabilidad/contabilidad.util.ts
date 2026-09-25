@@ -161,8 +161,11 @@ export function ratiosFinancieros(input: {
   cantidadVentas: number;
   valorInventario: number;
   gastosFijos: number;
+  /** Días que abarca el período (para el costo diario); antes se asumía siempre 30. */
+  diasPeriodo?: number;
 }): RatiosFinancieros {
   const { ingresos, cogs, gastos, cantidadVentas, valorInventario, gastosFijos } = input;
+  const diasPeriodo = input.diasPeriodo && input.diasPeriodo > 0 ? input.diasPeriodo : 30;
   const margenBrutoPct = ingresos > 0 ? ((ingresos - cogs) / ingresos) * 100 : 0;
   const neto = ingresos - cogs - gastos;
   const margenNetoPct = ingresos > 0 ? (neto / ingresos) * 100 : 0;
@@ -170,7 +173,7 @@ export function ratiosFinancieros(input: {
   const puntoEquilibrio = mbFrac > 0 ? gastosFijos / mbFrac : 0;
   const invertido = cogs + gastos;
   const roiPct = invertido > 0 ? (neto / invertido) * 100 : 0;
-  const cogsDia = cogs / 30;
+  const cogsDia = cogs / diasPeriodo;
   const diasInventario = cogsDia > 0 ? valorInventario / cogsDia : 0;
   const ticket = cantidadVentas > 0 ? ingresos / cantidadVentas : 0;
   return { margenBrutoPct, margenNetoPct, puntoEquilibrio, roiPct, diasInventario, ticket, neto };
