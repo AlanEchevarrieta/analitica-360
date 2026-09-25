@@ -6,6 +6,7 @@ import {
   type MotivoRechazoPedido,
   type OrigenPedido,
   type PedidoFicha,
+  type RemitentePedido,
   type PedidosRepository,
   type ResultadoTransicion,
 } from './pedidos.repository.js';
@@ -36,6 +37,10 @@ export class PedidosService {
       origen: query.origen as OrigenPedido | '',
       asignadoA: query.asignadoA ?? null,
     });
+  }
+
+  remitente(empresaId: string): Promise<RemitentePedido> {
+    return this.pedidosRepository.remitente(empresaId);
   }
 
   async ficha(empresaId: string, id: string): Promise<PedidoFicha> {

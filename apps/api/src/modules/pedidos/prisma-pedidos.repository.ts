@@ -9,6 +9,7 @@ import type {
   ListaPedidos,
   OrigenPedido,
   PedidoFicha,
+  RemitentePedido,
   PedidosRepository,
   ResultadoAsignar,
   ResultadoCrearPedido,
@@ -68,6 +69,7 @@ export class PrismaPedidosRepository implements PedidosRepository {
       numeroSeguimiento: p.numeroSeguimiento,
       transportista: p.transportista,
       notas: p.notas,
+      ventaId: p.ventaId,
       items: p.items.map((i) => ({
         id: i.id,
         productoId: i.productoId,
@@ -155,6 +157,18 @@ export class PrismaPedidosRepository implements PedidosRepository {
         createdAt: p.createdAt,
       })),
       total,
+    };
+  }
+
+  async remitente(empresaId: string): Promise<RemitentePedido> {
+    const config = await this.prisma.configuracionEmpresa.findUnique({ where: { empresaId } });
+    const inv = (config?.inventario ?? {}) as Record<string, unknown>;
+    const texto = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+    return {
+      nombre: texto(inv.remitente_nombre),
+      direccion: texto(inv.remitente_direccion),
+      telefono: texto(inv.remitente_telefono),
+      email: texto(inv.remitente_email),
     };
   }
 

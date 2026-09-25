@@ -83,7 +83,7 @@ export function AppSidebar() {
   const activo = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="print:hidden">
       <SidebarHeader>
         <div className="flex flex-col gap-0.5 overflow-hidden px-2 py-1.5 group-data-[collapsible=icon]:hidden">
           <span className="text-sm font-semibold">Analítica 360</span>

@@ -36,6 +36,11 @@ export class PedidosController {
     return this.pedidosService.colaboradoresActivos(empresa.id);
   }
 
+  @Get('remitente')
+  remitente(@CurrentEmpresa() empresa: EmpresaContext) {
+    return this.pedidosService.remitente(empresa.id);
+  }
+
   @Get(':id')
   ficha(@CurrentEmpresa() empresa: EmpresaContext, @Param('id') id: string) {
     return this.pedidosService.ficha(empresa.id, id);

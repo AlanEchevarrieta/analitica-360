@@ -52,7 +52,17 @@ export interface PedidoFicha extends PedidoRecord {
   numeroSeguimiento: string | null;
   transportista: string | null;
   notas: string | null;
+  /** Venta registrada al despachar (null antes del despacho o en pedidos del legacy). */
+  ventaId: string | null;
   items: PedidoItemRecord[];
+}
+
+/** Datos del remitente para el remito (configuracion_empresa.inventario.remitente_*). */
+export interface RemitentePedido {
+  nombre: string | null;
+  direccion: string | null;
+  telefono: string | null;
+  email: string | null;
 }
 
 export interface ItemPedidoInput {
@@ -142,5 +152,6 @@ export interface PedidosRepository {
   marcarEntregado(empresaId: string, id: string): Promise<ResultadoTransicion>;
   /** Solo permitido antes del despacho (no movió stock todavía). */
   cancelar(empresaId: string, id: string): Promise<ResultadoTransicion>;
+  remitente(empresaId: string): Promise<RemitentePedido>;
   colaboradoresActivos(empresaId: string): Promise<{ id: string; nombre: string }[]>;
 }

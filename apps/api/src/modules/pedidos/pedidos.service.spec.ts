@@ -24,6 +24,7 @@ const fichaBase: PedidoFicha = {
   numeroSeguimiento: null,
   transportista: null,
   notas: null,
+  ventaId: null,
   items: [],
 };
 
@@ -47,6 +48,7 @@ describe('PedidosService', () => {
       marcarEntregado: vi.fn(),
       cancelar: vi.fn(),
       colaboradoresActivos: vi.fn(),
+      remitente: vi.fn(),
     };
     const module = await Test.createTestingModule({
       providers: [PedidosService, { provide: PEDIDOS_REPOSITORY, useValue: repository }],
