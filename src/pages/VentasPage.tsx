@@ -47,6 +47,14 @@ import {
 } from '../lib/ventas'
 import { theme } from '../theme'
 
+function detalleVentaMeta(fila: VentaFila) {
+  const partes = [
+    fila.cargadoPor ? `👤 ${fila.cargadoPor}` : null,
+    fila.ubicacion ? `📍 ${fila.ubicacion}` : null,
+  ].filter(Boolean)
+  return partes.length > 0 ? partes.join(' · ') : null
+}
+
 function rangoAnio() {
   return rangoPreset('anio')
 }
@@ -443,6 +451,14 @@ export function VentasPage() {
                     <Link className="text-[#A5B4FC] hover:underline" to={`/ventas/${fila.id}`}>
                       {fila.numeroVenta ?? '—'}
                     </Link>
+                    {(() => {
+                      const meta = detalleVentaMeta(fila)
+                      return meta ? (
+                        <p className="mt-0.5 text-xs font-normal" style={{ color: 'var(--text-muted)' }}>
+                          {meta}
+                        </p>
+                      ) : null
+                    })()}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <span className="inline-flex flex-wrap items-center gap-2">
@@ -507,6 +523,11 @@ export function VentasPage() {
                       {formatoFechaVenta(fila.fecha)}
                       {fila.anulada ? ' · Anulada' : ''}
                     </p>
+                    {detalleVentaMeta(fila) ? (
+                      <p className="mt-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {detalleVentaMeta(fila)}
+                      </p>
+                    ) : null}
                     <BadgePago forma={fila.forma_pago} />
                   </div>
                   <p className="mt-1 text-sm font-medium">{fila.productos || '—'}</p>

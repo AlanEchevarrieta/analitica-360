@@ -121,6 +121,13 @@ export function VentaFichaPage() {
                 {ficha.cliente ? ` · ${ficha.cliente}` : ''}
                 {` · ${etiquetaFormaPago(ficha.forma_pago)}`}
               </p>
+              {ficha.cargadoPor || ficha.ubicacion ? (
+                <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {ficha.cargadoPor ? `Cargada por ${ficha.cargadoPor}` : ''}
+                  {ficha.cargadoPor && ficha.ubicacion ? ' · ' : ''}
+                  {ficha.ubicacion ? ficha.ubicacion : ''}
+                </p>
+              ) : null}
               <p className="mt-3 text-lg font-bold text-[#4ADE80]">{formatoARS(ficha.total)}</p>
               <table className="mt-4 w-full text-left text-sm">
                 <thead>

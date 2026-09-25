@@ -39,6 +39,8 @@ function filasExcel(ventas: VentaFila[]) {
     'Forma de pago': etiquetaFormaPago(v.forma_pago),
     Cuotas: etiquetaCuotas(v.cuotas),
     Cliente: v.cliente ?? '',
+    'Cargada por': v.cargadoPor ?? '',
+    Ubicación: v.ubicacion ?? '',
     Descuento: v.descuento,
     Notas: v.notas ?? '',
   }))
@@ -77,7 +79,7 @@ export async function exportarVentasPdf(input: {
 
   autoTable(doc, {
     startY: 84,
-    head: [['N° Venta', 'Fecha', 'Productos', 'Total', 'Forma de pago', 'Cuotas', 'Cliente', 'Descuento', 'Notas']],
+    head: [['N° Venta', 'Fecha', 'Productos', 'Total', 'Forma de pago', 'Cuotas', 'Cliente', 'Cargada por', 'Ubicación', 'Descuento', 'Notas']],
     body: input.ventas.map((v) => [
       v.numeroVenta ?? '—',
       formatoFechaVenta(v.fecha),
@@ -86,6 +88,8 @@ export async function exportarVentasPdf(input: {
       etiquetaFormaPago(v.forma_pago),
       etiquetaCuotas(v.cuotas),
       v.cliente ?? '—',
+      v.cargadoPor ?? '—',
+      v.ubicacion ?? '—',
       formatoARS(v.descuento),
       v.notas ?? '',
     ]),
