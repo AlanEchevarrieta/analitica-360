@@ -19,7 +19,7 @@ const ETIQUETA_FORMA: Record<string, string> = {
   transferencia: "Transferencia",
   debito: "Débito",
   credito: "Crédito",
-  qr: "QR",
+  qr: "Mercado Pago QR",
 };
 
 function EstadoVenta({ venta }: { venta: VentaFila }) {

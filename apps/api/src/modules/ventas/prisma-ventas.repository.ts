@@ -4,6 +4,7 @@ import type { Venta, VentaItem } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import { esViolacionUnica } from '../../common/prisma-errors.util.js';
 import type {
+  ConfiguracionVenta,
   ConfirmarVentaInput,
   EstadoCobro,
   FiltrosVentas,
@@ -15,7 +16,7 @@ import type {
   VentaRecord,
   VentasRepository,
 } from './ventas.repository.js';
-import { calcularTotalesCredito } from './ventas.util.js';
+import { calcularTotalesCredito, configuracionVentaDesde } from './ventas.util.js';
 
 type VentaConItemsNombre = Venta & { items: (VentaItem & { producto: { nombre: string } })[] };
 
@@ -314,5 +315,10 @@ export class PrismaVentasRepository implements VentasRepository {
       });
       return { ok: true, venta: this.toRecord(actualizada) };
     });
+  }
+
+  async configuracion(empresaId: string): Promise<ConfiguracionVenta> {
+    const config = await this.prisma.configuracionEmpresa.findUnique({ where: { empresaId } });
+    return configuracionVentaDesde(config?.mediosPago, config?.tasasCuotas, config?.ubicacionVentaDefault ?? null);
   }
 }

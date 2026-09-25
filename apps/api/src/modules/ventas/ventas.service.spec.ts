@@ -41,6 +41,7 @@ describe('VentasService', () => {
       confirmar: vi.fn(),
       anular: vi.fn(),
       cobrarSaldo: vi.fn(),
+      configuracion: vi.fn(),
     };
     const module = await Test.createTestingModule({
       providers: [VentasService, { provide: VENTAS_REPOSITORY, useValue: repository }],

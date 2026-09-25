@@ -1,6 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   VENTAS_REPOSITORY,
+  type ConfiguracionVenta,
   type FiltrosVentas,
   type ListaVentas,
   type MotivoRechazoVenta,
@@ -93,5 +94,9 @@ export class VentasService {
       throw new BadRequestException('El monto tiene que ser mayor a 0 y no superar el saldo pendiente');
     }
     return resultado.venta;
+  }
+
+  configuracion(empresaId: string): Promise<ConfiguracionVenta> {
+    return this.ventasRepository.configuracion(empresaId);
   }
 }

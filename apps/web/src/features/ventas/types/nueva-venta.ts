@@ -16,7 +16,7 @@ export const FORMAS_PAGO = [
   { valor: "transferencia", etiqueta: "Transferencia" },
   { valor: "debito", etiqueta: "Débito" },
   { valor: "credito", etiqueta: "Crédito" },
-  { valor: "qr", etiqueta: "QR" },
+  { valor: "qr", etiqueta: "Mercado Pago QR" },
 ] as const;
 
 export function etiquetaVariante(atributos: Record<string, string>) {

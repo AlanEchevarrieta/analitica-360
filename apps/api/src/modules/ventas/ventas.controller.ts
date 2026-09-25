@@ -34,6 +34,12 @@ export class VentasController {
     return this.ventasService.rango(empresa.id);
   }
 
+  /** Medios de pago, cuotas con tasa y ubicación por defecto para la pantalla de nueva venta. */
+  @Get('configuracion')
+  configuracion(@CurrentEmpresa() empresa: EmpresaContext) {
+    return this.ventasService.configuracion(empresa.id);
+  }
+
   @Get(':id')
   ficha(@CurrentEmpresa() empresa: EmpresaContext, @Param('id') id: string) {
     return this.ventasService.ficha(empresa.id, id);

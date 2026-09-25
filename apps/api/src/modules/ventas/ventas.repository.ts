@@ -91,6 +91,15 @@ export interface FiltrosVentas {
   mostrarAnuladas: boolean;
 }
 
+/** Lo que la pantalla de nueva venta necesita de configuracion_empresa. */
+export interface ConfiguracionVenta {
+  /** Medios habilitados, ya traducidos a los valores de formaPago de Venta. */
+  mediosPago: string[];
+  /** Planes de cuotas activos con su tasa de interés (%). */
+  cuotas: { cuotas: number; tasa: number; etiqueta: string }[];
+  ubicacionDefault: string | null;
+}
+
 export const VENTAS_REPOSITORY = Symbol('VENTAS_REPOSITORY');
 
 /**
@@ -116,4 +125,5 @@ export interface VentasRepository {
     formaPago: string,
     fecha: Date,
   ): Promise<ResultadoCobrarSaldo>;
+  configuracion(empresaId: string): Promise<ConfiguracionVenta>;
 }

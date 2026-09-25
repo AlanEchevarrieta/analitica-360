@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatoPesos } from "@/lib/formato";
-import type { ClienteVenta, UbicacionVenta } from "../hooks/use-nueva-venta";
+import type { ClienteVenta, ConfiguracionVenta, UbicacionVenta } from "../hooks/use-nueva-venta";
 import { FORMAS_PAGO } from "../types/nueva-venta";
 
 export interface DatosCobro {
@@ -64,21 +64,26 @@ export function CobroVenta({
   subtotal,
   clientes,
   ubicaciones,
+  config,
 }: {
   cobro: DatosCobro;
   onCambiar: (cambios: Partial<DatosCobro>) => void;
   subtotal: number;
   clientes: ClienteVenta[];
   ubicaciones: UbicacionVenta[];
+  /** Medios y cuotas de la empresa; sin configuración se muestran todos los medios y cuotas a mano. */
+  config: ConfiguracionVenta | undefined;
 }) {
   const t = calcularTotales(subtotal, cobro);
+  const medios = config ? FORMAS_PAGO.filter((f) => config.mediosPago.includes(f.valor)) : FORMAS_PAGO;
+  const planes = config?.cuotas ?? [];
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <Label>Medio de pago</Label>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Medio de pago">
-          {FORMAS_PAGO.map((f) => (
+          {medios.map((f) => (
             <Button
               key={f.valor}
               size="sm"
@@ -112,7 +117,29 @@ export function CobroVenta({
         </div>
       )}
 
-      {cobro.formaPago === "credito" && (
+      {cobro.formaPago === "credito" && planes.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <Label>Cuotas</Label>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Cuotas">
+            {planes.map((p) => {
+              const elegido = aNumero(cobro.cuotas) === p.cuotas && aNumero(cobro.interes) === p.tasa;
+              return (
+                <Button
+                  key={p.cuotas}
+                  size="sm"
+                  variant={elegido ? "default" : "outline"}
+                  aria-pressed={elegido}
+                  onClick={() => onCambiar({ cuotas: String(p.cuotas), interes: String(p.tasa) })}
+                >
+                  {p.cuotas} {p.tasa > 0 ? `(+${p.tasa}%)` : "sin interés"}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {cobro.formaPago === "credito" && planes.length === 0 && (
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="cobro-cuotas">Cuotas</Label>

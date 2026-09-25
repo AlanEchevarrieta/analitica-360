@@ -7,7 +7,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatoPesos } from "@/lib/formato";
-import { useClientes, useConfirmarVenta, useCrearCliente, useUbicaciones } from "../hooks/use-nueva-venta";
+import {
+  useClientes,
+  useConfiguracionVenta,
+  useConfirmarVenta,
+  useCrearCliente,
+  useUbicaciones,
+} from "../hooks/use-nueva-venta";
 import type { LineaVenta } from "../types/nueva-venta";
 import { BuscadorProductos } from "./BuscadorProductos";
 import { LineasVenta } from "./LineasVenta";
@@ -48,12 +54,14 @@ function recordar(cobro: DatosCobro) {
 export function NuevaVentaForm() {
   const router = useRouter();
   const [lineas, setLineas] = useState<LineaVenta[]>([]);
+  const config = useConfiguracionVenta();
   const [eleccion, setCobro] = useState<DatosCobro>(COBRO_VACIO);
   const preferencias = useSyncExternalStore(sinSuscripcion, leerPreferencias, () => SIN_PREFERENCIAS);
   const cobro: DatosCobro = {
     ...eleccion,
     formaPago: eleccion.formaPago || preferencias.formaPago || COBRO_INICIAL.formaPago,
-    ubicacion: eleccion.ubicacion || preferencias.ubicacion || "",
+    // Elegida ahora > la última usada en este dispositivo > la default de la empresa.
+    ubicacion: eleccion.ubicacion || preferencias.ubicacion || config.data?.ubicacionDefault || "",
   };
   const [error, setError] = useState<string | null>(null);
   const clientes = useClientes();
@@ -165,6 +173,7 @@ export function NuevaVentaForm() {
             subtotal={subtotal}
             clientes={clientes.data ?? []}
             ubicaciones={ubicaciones.data ?? []}
+            config={config.data}
           />
           {error && (
             <p role="alert" className="text-sm text-destructive">

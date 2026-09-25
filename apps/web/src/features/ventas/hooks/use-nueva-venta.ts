@@ -23,6 +23,13 @@ export interface ClienteVenta {
   telefono: string | null;
 }
 
+/** GET /ventas/configuracion (configuracion_empresa). */
+export interface ConfiguracionVenta {
+  mediosPago: string[];
+  cuotas: { cuotas: number; tasa: number; etiqueta: string }[];
+  ubicacionDefault: string | null;
+}
+
 export interface ItemVentaInput {
   productoId: string;
   varianteId: string | null;
@@ -62,6 +69,17 @@ export function useUbicaciones() {
   return useQuery({
     queryKey: ["ubicaciones", orgId],
     queryFn: () => api<UbicacionVenta[]>("/ubicaciones"),
+    enabled: Boolean(orgId),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useConfiguracionVenta() {
+  const api = useApiFetch();
+  const { orgId } = useAuth();
+  return useQuery({
+    queryKey: ["ventas-configuracion", orgId],
+    queryFn: () => api<ConfiguracionVenta>("/ventas/configuracion"),
     enabled: Boolean(orgId),
     staleTime: 5 * 60_000,
   });
