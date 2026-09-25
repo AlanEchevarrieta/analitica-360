@@ -78,6 +78,17 @@ export function useClientes() {
   });
 }
 
+/** POST /clientes: alta rápida desde la venta (solo nombre y teléfono). */
+export function useCrearCliente() {
+  const api = useApiFetch();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { nombre: string; telefono: string | null }) =>
+      api<ClienteVenta>("/clientes", { method: "POST", body: JSON.stringify(input) }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["clientes"] }),
+  });
+}
+
 /** POST /ventas: registra la venta y descuenta stock (VentasService.confirmar). */
 export function useConfirmarVenta() {
   const api = useApiFetch();

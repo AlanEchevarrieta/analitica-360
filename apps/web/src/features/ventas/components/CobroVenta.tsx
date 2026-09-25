@@ -15,7 +15,11 @@ export interface DatosCobro {
   esSenia: boolean;
   montoSenia: string;
   cliente: string;
+  /** Solo para un cliente nuevo: se guarda en su ficha (CRM, difusiones, cumpleaños). */
+  telefono: string;
   ubicacion: string;
+  /** Efectivo: con cuánto paga, para calcular el vuelto (no se guarda). */
+  pagaCon: string;
 }
 
 export const COBRO_INICIAL: DatosCobro = {
@@ -26,8 +30,16 @@ export const COBRO_INICIAL: DatosCobro = {
   esSenia: false,
   montoSenia: "",
   cliente: "",
+  telefono: "",
   ubicacion: "",
+  pagaCon: "",
 };
+
+/** El cliente escrito no existe todavía: se va a crear al registrar la venta. */
+export function esClienteNuevo(nombre: string, clientes: ClienteVenta[]) {
+  const n = nombre.trim().toLowerCase();
+  return n.length > 0 && !clientes.some((c) => c.nombre.toLowerCase() === n);
+}
 
 /** Número de un input de texto ("1.500,50" o "1500.5"); vacío o inválido = 0. */
 export function aNumero(texto: string) {
@@ -79,6 +91,26 @@ export function CobroVenta({
           ))}
         </div>
       </div>
+
+      {cobro.formaPago === "efectivo" && (
+        <div className="grid grid-cols-2 items-end gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="cobro-paga-con">Paga con $</Label>
+            <Input
+              id="cobro-paga-con"
+              inputMode="decimal"
+              placeholder="Opcional"
+              value={cobro.pagaCon}
+              onChange={(e) => onCambiar({ pagaCon: e.target.value })}
+            />
+          </div>
+          {aNumero(cobro.pagaCon) > t.total && (
+            <p className="pb-1.5 text-sm">
+              Vuelto: <span className="font-semibold tabular-nums">{formatoPesos(aNumero(cobro.pagaCon) - t.total)}</span>
+            </p>
+          )}
+        </div>
+      )}
 
       {cobro.formaPago === "credito" && (
         <div className="grid grid-cols-2 gap-3">
@@ -137,6 +169,18 @@ export function CobroVenta({
             <option key={c.id} value={c.nombre} />
           ))}
         </datalist>
+        {esClienteNuevo(cobro.cliente, clientes) && (
+          <div className="flex flex-col gap-1.5">
+            <p className="text-xs text-muted-foreground">Cliente nuevo: se guarda en Clientes al registrar la venta.</p>
+            <Input
+              aria-label="Teléfono del cliente (opcional)"
+              inputMode="tel"
+              placeholder="Teléfono (opcional)"
+              value={cobro.telefono}
+              onChange={(e) => onCambiar({ telefono: e.target.value })}
+            />
+          </div>
+        )}
       </div>
 
       <label className="flex items-center gap-2 text-sm">

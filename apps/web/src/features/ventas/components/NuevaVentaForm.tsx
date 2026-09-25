@@ -1,29 +1,70 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatoPesos } from "@/lib/formato";
-import { useClientes, useConfirmarVenta, useUbicaciones } from "../hooks/use-nueva-venta";
+import { useClientes, useConfirmarVenta, useCrearCliente, useUbicaciones } from "../hooks/use-nueva-venta";
 import type { LineaVenta } from "../types/nueva-venta";
 import { BuscadorProductos } from "./BuscadorProductos";
 import { LineasVenta } from "./LineasVenta";
-import { aNumero, calcularTotales, COBRO_INICIAL, CobroVenta, type DatosCobro } from "./CobroVenta";
+import { aNumero, calcularTotales, COBRO_INICIAL, CobroVenta, esClienteNuevo, type DatosCobro } from "./CobroVenta";
+
+// Medio de pago y ubicación se recuerdan por dispositivo (localStorage): en
+// un stand casi siempre se repiten, así no hay que elegirlos en cada venta.
+const CLAVE_PREFERENCIAS = "a360-nueva-venta";
+
+type Preferencias = Pick<DatosCobro, "formaPago" | "ubicacion">;
+const SIN_PREFERENCIAS: Partial<Preferencias> = {};
+let cache: { raw: string | null; valor: Partial<Preferencias> } = { raw: null, valor: SIN_PREFERENCIAS };
+
+// Leído con useSyncExternalStore (snapshot estable, vacío en el servidor)
+// para no romper la hidratación con valores que solo existen en el browser.
+function leerPreferencias(): Partial<Preferencias> {
+  try {
+    const raw = localStorage.getItem(CLAVE_PREFERENCIAS);
+    if (raw !== cache.raw) cache = { raw, valor: raw ? (JSON.parse(raw) as Partial<Preferencias>) : SIN_PREFERENCIAS };
+    return cache.valor;
+  } catch {
+    return SIN_PREFERENCIAS;
+  }
+}
+const sinSuscripcion = () => () => {};
+
+/** Estado inicial sin medio de pago ni ubicación: si no se eligen, valen las preferencias guardadas. */
+const COBRO_VACIO: DatosCobro = { ...COBRO_INICIAL, formaPago: "", ubicacion: "" };
+
+function recordar(cobro: DatosCobro) {
+  try {
+    localStorage.setItem(CLAVE_PREFERENCIAS, JSON.stringify({ formaPago: cobro.formaPago, ubicacion: cobro.ubicacion }));
+  } catch {
+    /* sin storage: solo no se recuerda */
+  }
+}
 
 export function NuevaVentaForm() {
   const router = useRouter();
   const [lineas, setLineas] = useState<LineaVenta[]>([]);
-  const [cobro, setCobro] = useState<DatosCobro>(COBRO_INICIAL);
+  const [eleccion, setCobro] = useState<DatosCobro>(COBRO_VACIO);
+  const preferencias = useSyncExternalStore(sinSuscripcion, leerPreferencias, () => SIN_PREFERENCIAS);
+  const cobro: DatosCobro = {
+    ...eleccion,
+    formaPago: eleccion.formaPago || preferencias.formaPago || COBRO_INICIAL.formaPago,
+    ubicacion: eleccion.ubicacion || preferencias.ubicacion || "",
+  };
   const [error, setError] = useState<string | null>(null);
   const clientes = useClientes();
   const ubicaciones = useUbicaciones();
   const confirmar = useConfirmarVenta();
+  const crearCliente = useCrearCliente();
+  const enviando = confirmar.isPending || crearCliente.isPending;
 
   const subtotal = lineas.reduce((acc, l) => acc + l.cantidad * l.precioUnitario, 0);
   const totales = calcularTotales(subtotal, cobro);
+  const unidades = lineas.reduce((acc, l) => acc + l.cantidad, 0);
 
   function agregar(nueva: Omit<LineaVenta, "cantidad">) {
     setLineas((prev) => {
@@ -43,17 +84,21 @@ export function NuevaVentaForm() {
     return null;
   }
 
-  function registrar() {
+  async function registrar() {
     const problema = validar();
     setError(problema);
     if (problema) return;
 
-    const nombreCliente = cobro.cliente.trim();
-    const cliente = clientes.data?.find((c) => c.nombre.toLowerCase() === nombreCliente.toLowerCase());
     const lista = ubicaciones.data ?? [];
+    const nombreCliente = cobro.cliente.trim();
+    try {
+      let clienteId = clientes.data?.find((c) => c.nombre.toLowerCase() === nombreCliente.toLowerCase())?.id ?? null;
+      if (esClienteNuevo(nombreCliente, clientes.data ?? [])) {
+        const nuevo = await crearCliente.mutateAsync({ nombre: nombreCliente, telefono: cobro.telefono.trim() || null });
+        clienteId = nuevo.id;
+      }
 
-    confirmar.mutate(
-      {
+      const venta = await confirmar.mutateAsync({
         items: lineas.map((l) => ({
           productoId: l.productoId,
           varianteId: l.varianteId,
@@ -63,26 +108,36 @@ export function NuevaVentaForm() {
         formaPago: cobro.formaPago,
         descuento: totales.descuento,
         clienteNombre: nombreCliente || null,
-        clienteId: cliente?.id ?? null,
+        clienteId,
         cuotas: totales.cuotas,
         coeficienteInteres: cobro.formaPago === "credito" ? aNumero(cobro.interes) : 0,
         // Igual que el legacy: la ubicación solo se manda si hay más de una.
         ubicacionOrigen: lista.length > 1 ? cobro.ubicacion || lista[0].nombre : null,
         esSenia: cobro.esSenia,
         montoSenia: cobro.esSenia ? aNumero(cobro.montoSenia) : 0,
-      },
-      {
-        onSuccess: (venta) => {
-          toast.success(`Venta ${venta.numeroVenta ?? ""} registrada por ${formatoPesos(venta.total)}`);
-          router.push("/ventas");
-        },
-        onError: (e) => setError(e instanceof Error ? e.message : "No se pudo registrar la venta."),
-      },
-    );
+      });
+
+      // Queda lista para la próxima venta, con el mismo medio de pago y ubicación.
+      recordar(cobro);
+      setLineas([]);
+      setCobro({ ...COBRO_VACIO, formaPago: cobro.formaPago, ubicacion: cobro.ubicacion });
+      toast.success(`Venta ${venta.numeroVenta ?? ""} registrada por ${formatoPesos(venta.total)}`, {
+        action: { label: "Ver ventas", onClick: () => router.push("/ventas") },
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo registrar la venta.");
+    }
   }
 
+  const botonRegistrar = (className?: string) => (
+    <Button size="lg" className={className} onClick={() => void registrar()} disabled={enviando}>
+      {enviando && <Loader2 className="animate-spin" aria-hidden />}
+      Registrar venta
+    </Button>
+  );
+
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
+    <div className="grid gap-4 pb-24 lg:grid-cols-[1fr_380px] lg:pb-0">
       <Card>
         <CardHeader>
           <CardTitle>Productos</CardTitle>
@@ -116,12 +171,20 @@ export function NuevaVentaForm() {
               {error}
             </p>
           )}
-          <Button size="lg" onClick={registrar} disabled={confirmar.isPending}>
-            {confirmar.isPending && <Loader2 className="animate-spin" aria-hidden />}
-            Registrar venta
-          </Button>
+          {botonRegistrar("hidden lg:inline-flex")}
         </CardContent>
       </Card>
+
+      {/* Celular/tablet: total y botón siempre a mano, sin bajar hasta el cobro. */}
+      <div className="fixed inset-x-0 bottom-0 z-20 flex items-center justify-between gap-3 border-t bg-background/95 p-3 backdrop-blur lg:hidden">
+        <div className="flex flex-col">
+          <span className="text-xs text-muted-foreground">
+            {unidades} {unidades === 1 ? "producto" : "productos"}
+          </span>
+          <span className="text-lg font-semibold tabular-nums">{formatoPesos(totales.total)}</span>
+        </div>
+        {botonRegistrar()}
+      </div>
     </div>
   );
 }

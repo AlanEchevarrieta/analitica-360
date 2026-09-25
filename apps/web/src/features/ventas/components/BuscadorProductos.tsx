@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, Search } from "lucide-react";
+import { Camera, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { useProductos } from "@/features/productos/hooks/use-productos";
 import type { ProductoFila } from "@/features/productos/types";
 import { useVariantes, type VarianteVenta } from "../hooks/use-nueva-venta";
 import { etiquetaVariante, type LineaVenta } from "../types/nueva-venta";
+import { EscanerCamara } from "./EscanerCamara";
 
 const MAX_RESULTADOS = 8;
 const MAS_VENDIDOS = 8;
@@ -23,6 +24,8 @@ export function BuscadorProductos({ onAgregar }: { onAgregar: (linea: Omit<Linea
   const [busqueda, setBusqueda] = useState("");
   const [eligiendo, setEligiendo] = useState<{ producto: ProductoFila; variantes: VarianteVenta[] } | null>(null);
   const [cargandoId, setCargandoId] = useState<string | null>(null);
+  // Opcional: la cámara solo se abre si alguien toca "Escanear".
+  const [camara, setCamara] = useState(false);
   const catalogo = useProductos({ pagina: 1, pageSize: 200, busqueda: "", estado: "activos", orden: "demanda" });
   const variantesDe = useVariantes();
 
@@ -67,6 +70,12 @@ export function BuscadorProductos({ onAgregar }: { onAgregar: (linea: Omit<Linea
     }
   }
 
+  function onCodigoCamara(codigo: string) {
+    const producto = catalogo.data?.items.find((p) => p.codigoBarra === codigo);
+    if (producto) void elegir(producto);
+    else toast.error(`El código ${codigo} no corresponde a ningún producto activo`);
+  }
+
   function onEnter() {
     const exacto = catalogo.data?.items.find((p) => p.codigoBarra && p.codigoBarra === busqueda.trim());
     const unico = resultados.length === 1 ? resultados[0] : undefined;
@@ -96,48 +105,56 @@ export function BuscadorProductos({ onAgregar }: { onAgregar: (linea: Omit<Linea
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative">
-        <Search className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-muted-foreground" aria-hidden />
-        <Input
-          className="pl-8"
-          placeholder={catalogo.isPending ? "Cargando productos…" : "Buscar producto o escanear código de barras"}
-          aria-label="Buscar producto"
-          value={busqueda}
-          disabled={catalogo.isPending}
-          onChange={(e) => setBusqueda(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              onEnter();
-            }
-          }}
-          autoFocus
-        />
-        {busqueda.trim() && (
-          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
-            {resultados.length === 0 ? (
-              <li className="px-3 py-2 text-sm text-muted-foreground">Sin resultados</li>
-            ) : (
-              resultados.map((p) => (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted"
-                    onClick={() => void elegir(p)}
-                  >
-                    <span className="truncate">{p.nombre}</span>
-                    <span className="flex shrink-0 items-center gap-3 tabular-nums">
-                      <span className={p.stock <= 0 ? "text-destructive" : "text-muted-foreground"}>
-                        stock {formatoNumero(p.stock)}
+      {camara && <EscanerCamara onCodigo={onCodigoCamara} onCerrar={() => setCamara(false)} />}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-muted-foreground" aria-hidden />
+          <Input
+            className="pl-8"
+            placeholder={catalogo.isPending ? "Cargando productos…" : "Buscar producto o escanear código de barras"}
+            aria-label="Buscar producto"
+            value={busqueda}
+            disabled={catalogo.isPending}
+            onChange={(e) => setBusqueda(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onEnter();
+              }
+            }}
+            autoFocus
+          />
+          {busqueda.trim() && (
+            <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
+              {resultados.length === 0 ? (
+                <li className="px-3 py-2 text-sm text-muted-foreground">Sin resultados</li>
+              ) : (
+                resultados.map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted"
+                      onClick={() => void elegir(p)}
+                    >
+                      <span className="truncate">{p.nombre}</span>
+                      <span className="flex shrink-0 items-center gap-3 tabular-nums">
+                        <span className={p.stock <= 0 ? "text-destructive" : "text-muted-foreground"}>
+                          stock {formatoNumero(p.stock)}
+                        </span>
+                        <span className="font-medium">{formatoPesos(p.precioVenta)}</span>
+                        {cargandoId === p.id && <Loader2 className="size-4 animate-spin" aria-label="Cargando" />}
                       </span>
-                      <span className="font-medium">{formatoPesos(p.precioVenta)}</span>
-                      {cargandoId === p.id && <Loader2 className="size-4 animate-spin" aria-label="Cargando" />}
-                    </span>
-                  </button>
-                </li>
-              ))
-            )}
-          </ul>
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
+        </div>
+        {!camara && (
+          <Button variant="outline" onClick={() => setCamara(true)} disabled={catalogo.isPending}>
+            <Camera aria-hidden /> Escanear
+          </Button>
         )}
       </div>
       {masVendidos.length > 0 && (
