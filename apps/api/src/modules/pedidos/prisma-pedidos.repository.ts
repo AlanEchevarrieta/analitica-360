@@ -199,7 +199,8 @@ export class PrismaPedidosRepository implements PedidosRepository {
       const creado = await tx.pedido.create({
         data: {
           empresaId,
-          numeroPedido: `PED-${numero}`,
+          // Mismo formato que el legacy (P-000007) para que la numeración siga igual tras la migración.
+          numeroPedido: `P-${String(numero).padStart(6, '0')}`,
           clienteId: input.clienteId ?? null,
           clienteNombre: input.clienteNombre,
           clienteEmail: input.clienteEmail,

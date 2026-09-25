@@ -6,14 +6,16 @@ import { PrismaClient } from '@prisma/client';
 // La configuración del CLI (migrate/db push) vive en prisma.config.ts.
 // Prisma 7 requiere un driver adapter explícito en runtime - ya no basta con
 // DATABASE_URL en el proceso (ver github.com/prisma/prisma driver adapters).
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
 
   constructor() {
-    super({ adapter });
+    // El adapter se arma acá y no a nivel de módulo: este archivo se importa
+    // antes de que ConfigModule.forRoot() cargue apps/api/.env, y entonces
+    // DATABASE_URL todavía era undefined (pg fallaba con "client password
+    // must be a string" en la primera query).
+    super({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
   }
 
   async onModuleInit() {
