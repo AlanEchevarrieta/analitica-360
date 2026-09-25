@@ -106,6 +106,8 @@ export interface ConfiguracionVenta {
   /** Planes de cuotas activos con su tasa de interés (%). */
   cuotas: { cuotas: number; tasa: number; etiqueta: string }[];
   ubicacionDefault: string | null;
+  /** Configuración > Flujo de ventas: si el cliente se pide siempre, es opcional o no se muestra. */
+  mostrarCliente: 'siempre' | 'opcional' | 'no_mostrar';
 }
 
 export const VENTAS_REPOSITORY = Symbol('VENTAS_REPOSITORY');

@@ -241,7 +241,12 @@ export class PrismaVentasRepository implements VentasRepository {
 
   async configuracion(empresaId: string): Promise<ConfiguracionVenta> {
     const config = await this.prisma.configuracionEmpresa.findUnique({ where: { empresaId } });
-    return configuracionVentaDesde(config?.mediosPago, config?.tasasCuotas, config?.ubicacionVentaDefault ?? null);
+    const flujo = (config?.flujoVentas ?? {}) as Record<string, unknown>;
+    const mostrar = flujo.mostrar_cliente;
+    return {
+      ...configuracionVentaDesde(config?.mediosPago, config?.tasasCuotas, config?.ubicacionVentaDefault ?? null),
+      mostrarCliente: mostrar === 'siempre' || mostrar === 'no_mostrar' ? mostrar : 'opcional',
+    };
   }
 }
 
