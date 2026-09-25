@@ -160,7 +160,10 @@ describe('preciosOptimos', () => {
     const res = preciosOptimos(productos, elasticidades, items, ventas, '2026-09-01');
     expect(res).toHaveLength(1);
     expect(res[0].precioSugerido).toBeGreaterThan(res[0].precioActual);
-    expect(res[0].extraMes).toBeCloseTo((res[0].precioSugerido - 100) * 3);
+    // Óptimo 120; con elasticidad -2 las 3 u pasan a 3·(1,2)^-2 = 2,083 u:
+    // ganancia (120-60)·2,083 - (100-60)·3 = 125 - 120 = +5 (no 60: se pierden ventas).
+    expect(res[0].precioSugerido).toBeCloseTo(120);
+    expect(res[0].extraMes).toBeCloseTo(5, 5);
   });
 });
 

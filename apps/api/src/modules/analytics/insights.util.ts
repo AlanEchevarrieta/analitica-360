@@ -491,7 +491,15 @@ export function preciosOptimos(
     const opt = costo / denom;
     if (!Number.isFinite(opt) || opt <= fila.precioActual) continue;
     const uds = udsMes.get(fila.productoId) ?? 0;
-    out.push({ producto: fila.producto, precioActual: fila.precioActual, precioSugerido: opt, extraMes: (opt - fila.precioActual) * uds });
+    // Ganancia extra real: con el precio sugerido se venden menos unidades
+    // (según la elasticidad); antes se multiplicaba la suba por las unidades
+    // actuales y se sobreestimaba.
+    const p = fila.precioActual;
+    // Mismo modelo que da el óptimo (elasticidad constante): q' = q · (p'/p)^e.
+    const udsNuevas = uds * Math.pow(opt / p, fila.elasticidad);
+    const extraMes = (opt - costo) * udsNuevas - (p - costo) * uds;
+    if (!(extraMes > 0)) continue;
+    out.push({ producto: fila.producto, precioActual: p, precioSugerido: opt, extraMes });
   }
   return out;
 }
