@@ -57,6 +57,8 @@ describe('AnalyticsPeriodoService', () => {
     expect(res.data?.diasSemana[6]).toEqual({ dia: 6, total: 900, cantidad: 3 });
     expect(res.data?.diasSemana.filter((d) => d.cantidad > 0)).toHaveLength(1);
     expect(res.data?.comprasDiarias).toEqual([]);
+    // 14:00 UTC = 11 h, 20:00 UTC = 17 h y 02:00 UTC = 23 h en Argentina.
+    expect(res.data?.horas.filter((h) => h.cantidad > 0).map((h) => h.hora)).toEqual([11, 17, 23]);
     expect(res.data?.top10).toEqual([{ nombre: 'Yerba', unidades: 5 }]);
     expect(res.data?.productos).toHaveLength(1);
   });

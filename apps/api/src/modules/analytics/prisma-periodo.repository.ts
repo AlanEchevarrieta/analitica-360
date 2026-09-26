@@ -15,6 +15,15 @@ import { sumarDiasIso } from './analytics.util.js';
 
 const DIA_VENTA = diaAR(Prisma.raw('v.fecha'));
 
+/**
+ * Las columnas timestamp (sin zona) guardan UTC, pero al pasar por JSON llegan
+ * sin la "Z" ("2026-09-16T15:00:00") y JavaScript las leería como hora local
+ * de la máquina: en una PC en Argentina corría todo 3 horas.
+ */
+export function fechaUtc(valor: string): Date {
+  return new Date(/(?:Z|[+-]\d{2}:?\d{2})$/i.test(valor) ? valor : `${valor}Z`);
+}
+
 /** Puerto de monto_venta() (068_senias.sql): cobrado con fallback total_con_interes > total_sin_interes > (items - descuento), menos saldo pendiente, piso en 0. */
 const MONTO_VENTA = Prisma.sql`
   GREATEST(
@@ -146,7 +155,7 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
       ticketPromedio: Number(fila.ticket_promedio),
       costo: Number(fila.costo) + netoDevoluciones.costo,
       porCobrar: Number(fila.por_cobrar),
-      ventas: fila.ventas.map((v) => ({ fecha: new Date(v.fecha), total: Number(v.total), formaPago: v.forma_pago })),
+      ventas: fila.ventas.map((v) => ({ fecha: fechaUtc(v.fecha), total: Number(v.total), formaPago: v.forma_pago })),
       productos,
       devoluciones: netoDevoluciones,
     };

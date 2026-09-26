@@ -9,6 +9,9 @@ export interface Periodo {
   evolucionDiaria: { fecha: string; total: number }[];
   /** 0 = domingo … 6 = sábado. */
   diasSemana: { dia: number; total: number; cantidad: number }[];
+  /** 0 a 23, hora de Argentina. */
+  horas: { hora: number; total: number; cantidad: number }[];
+  ventasSinHora: number;
   comprasDiarias: { fecha: string; total: number }[];
   formasPago: { nombre: string; total: number; cantidad: number }[];
   top10: { nombre: string; unidades: number }[];

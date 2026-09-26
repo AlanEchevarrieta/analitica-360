@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Label, Line, LineChart, Pie, PieChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,7 @@ const GRAFICO_EVOLUCION = {
   total: { label: "Este período", color: "var(--chart-1)" },
   anterior: { label: "Período anterior", color: "var(--muted-foreground)" },
 } satisfies ChartConfig;
-const GRAFICO_PAGOS = { total: { label: "Total", color: "var(--chart-2)" } } satisfies ChartConfig;
+const COLORES_PAGO = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 const GRAFICO_DIAS = { total: { label: "Vendido", color: "var(--chart-1)" } } satisfies ChartConfig;
 const GRAFICO_VC = {
   ventas: { label: "Ventas", color: "var(--chart-1)" },
@@ -70,6 +70,28 @@ export function VentasPeriodo() {
     const filas = ORDEN_DIAS.map((dia) => ({ dia: NOMBRE_DIA[dia].slice(0, 3), nombre: NOMBRE_DIA[dia], total: porDia.get(dia)?.total ?? 0, cantidad: porDia.get(dia)?.cantidad ?? 0 }));
     const max = Math.max(...filas.map((f) => f.total));
     return { filas, mejor: max > 0 ? filas.find((f) => f.total === max) : undefined, max };
+  }, [data]);
+
+  const [vistaCuando, setVistaCuando] = useState<"dias" | "horas">("dias");
+  const horas = useMemo(() => {
+    const todas = data?.data?.horas ?? [];
+    // Solo el tramo del día con ventas (sin las horas vacías de la madrugada).
+    const conVentas = todas.filter((h) => h.cantidad > 0);
+    const desdeH = conVentas[0]?.hora ?? 9;
+    const hastaH = conVentas.at(-1)?.hora ?? 20;
+    const filas = todas.filter((h) => h.hora >= desdeH && h.hora <= hastaH).map((h) => ({ ...h, etiqueta: `${h.hora} h` }));
+    const max = Math.max(0, ...filas.map((f) => f.total));
+    return { filas, mejor: max > 0 ? filas.find((f) => f.total === max) : undefined, max };
+  }, [data]);
+
+  const pagos = useMemo(() => {
+    const filas = (data?.data?.formasPago ?? [])
+      .map((f, i) => ({ ...f, nombre: etiquetaPago(f.nombre), fill: COLORES_PAGO[i % COLORES_PAGO.length] }))
+      .sort((a, b) => b.total - a.total)
+      .map((f, i) => ({ ...f, fill: COLORES_PAGO[i % COLORES_PAGO.length] }));
+    const total = filas.reduce((a, f) => a + f.total, 0);
+    const config = Object.fromEntries(filas.map((f) => [f.nombre, { label: f.nombre, color: f.fill }])) satisfies ChartConfig;
+    return { filas, total, config };
   }, [data]);
 
   const ventasVsCompras = useMemo(() => {
@@ -143,15 +165,48 @@ export function VentasPeriodo() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <CardHeader>
-                <CardTitle>¿Qué días vendés más?</CardTitle>
-                <CardDescription>
-                  {diasSemana.mejor
-                    ? `Tu mejor día es el ${diasSemana.mejor.nombre.toLowerCase()}: ${formatoPesos(diasSemana.mejor.total)} en ${formatoNumero(diasSemana.mejor.cantidad)} ventas.`
-                    : "Sin ventas en el período."}
-                </CardDescription>
+              <CardHeader className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <CardTitle>¿Cuándo vendés más?</CardTitle>
+                  <CardDescription>
+                    {vistaCuando === "dias"
+                      ? diasSemana.mejor
+                        ? `Tu mejor día es el ${diasSemana.mejor.nombre.toLowerCase()}: ${formatoPesos(diasSemana.mejor.total)} en ${formatoNumero(diasSemana.mejor.cantidad)} ventas.`
+                        : "Sin ventas en el período."
+                      : horas.mejor
+                        ? `Tu mejor horario es de ${horas.mejor.hora} a ${horas.mejor.hora + 1} h: ${formatoPesos(horas.mejor.total)} en ${formatoNumero(horas.mejor.cantidad)} ventas.`
+                        : "Sin ventas en el período."}
+                    {vistaCuando === "horas" && (data.data.ventasSinHora ?? 0) > 0 && (
+                      <span className="mt-1 block text-xs">
+                        Ojo: {formatoNumero(data.data.ventasSinHora)} ventas del sistema anterior se cargaron sin hora y figuran a las 12 h.
+                      </span>
+                    )}
+                  </CardDescription>
+                </div>
+                <div className="flex gap-1" role="group" aria-label="Ver por">
+                  {(["dias", "horas"] as const).map((v) => (
+                    <Button key={v} size="xs" variant={vistaCuando === v ? "secondary" : "ghost"} aria-pressed={vistaCuando === v} onClick={() => setVistaCuando(v)}>
+                      {v === "dias" ? "Días" : "Horas"}
+                    </Button>
+                  ))}
+                </div>
               </CardHeader>
               <CardContent className="h-64">
+                {vistaCuando === "horas" ? (
+                  <ChartContainer config={GRAFICO_DIAS} className="aspect-auto h-full w-full">
+                    <BarChart data={horas.filas} margin={{ left: 8, right: 8 }}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis dataKey="etiqueta" tickLine={false} axisLine={false} fontSize={12} interval="preserveStartEnd" minTickGap={8} />
+                      <YAxis tickFormatter={(v: number) => formatoPesos(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
+                      <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} labelFormatter={(_, p) => { const h = Number(p?.[0]?.payload?.hora ?? 0); return `De ${h} a ${h + 1} h`; }} />} />
+                      <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                        {horas.filas.map((f) => (
+                          <Cell key={f.hora} fill={f.total === horas.max && f.total > 0 ? "var(--chart-2)" : "var(--color-total)"} fillOpacity={f.total === horas.max ? 1 : 0.55} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                ) : (
                 <ChartContainer config={GRAFICO_DIAS} className="aspect-auto h-full w-full">
                   <BarChart data={diasSemana.filas} margin={{ left: 8, right: 8 }}>
                     <CartesianGrid vertical={false} />
@@ -165,6 +220,7 @@ export function VentasPeriodo() {
                     </Bar>
                   </BarChart>
                 </ChartContainer>
+                )}
               </CardContent>
             </Card>
 
@@ -219,16 +275,48 @@ export function VentasPeriodo() {
             <Card>
               <CardHeader>
                 <CardTitle>Medios de pago</CardTitle>
+                <CardDescription>Cuánto entró por cada medio en el período</CardDescription>
               </CardHeader>
-              <CardContent className="h-64">
-                <ChartContainer config={GRAFICO_PAGOS} className="aspect-auto h-full w-full">
-                  <BarChart data={data.data.formasPago.map((f) => ({ ...f, nombre: etiquetaPago(f.nombre) }))} layout="vertical" margin={{ left: 16 }}>
-                    <XAxis type="number" hide />
-                    <YAxis type="category" dataKey="nombre" width={120} tickLine={false} axisLine={false} fontSize={12} />
-                    <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} />} />
-                    <Bar dataKey="total" fill="var(--color-total)" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ChartContainer>
+              <CardContent>
+                {pagos.filas.length === 0 ? (
+                  <SinDatos mensaje="Sin ventas en el período." />
+                ) : (
+                  <div className="flex flex-col items-center gap-4 sm:flex-row">
+                    <ChartContainer config={pagos.config} className="aspect-square h-56 shrink-0">
+                      <PieChart>
+                        <ChartTooltip content={<ChartTooltipContent nameKey="nombre" hideLabel valueFormatter={(v) => formatoPesos(Number(v))} />} />
+                        <Pie data={pagos.filas} dataKey="total" nameKey="nombre" innerRadius="62%" outerRadius="92%" paddingAngle={2} cornerRadius={4} strokeWidth={0}>
+                          <Label
+                            content={({ viewBox }) => {
+                              if (!viewBox || !("cx" in viewBox)) return null;
+                              const { cx, cy } = viewBox as { cx: number; cy: number };
+                              return (
+                                <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
+                                  <tspan x={cx} y={cy - 8} className="fill-foreground text-lg font-semibold">
+                                    {formatoPesos(pagos.total)}
+                                  </tspan>
+                                  <tspan x={cx} y={cy + 14} className="fill-muted-foreground text-xs">
+                                    total cobrado
+                                  </tspan>
+                                </text>
+                              );
+                            }}
+                          />
+                        </Pie>
+                      </PieChart>
+                    </ChartContainer>
+                    <ul className="flex w-full flex-col gap-2 text-sm">
+                      {pagos.filas.map((f) => (
+                        <li key={f.nombre} className="flex items-center gap-2">
+                          <span className="size-2.5 shrink-0 rounded-full" style={{ background: f.fill }} aria-hidden />
+                          <span className="flex-1 truncate">{f.nombre}</span>
+                          <span className="text-muted-foreground tabular-nums">{pagos.total ? Math.round((f.total / pagos.total) * 100) : 0}%</span>
+                          <span className="w-28 text-right font-medium tabular-nums">{formatoPesos(f.total)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </CardContent>
             </Card>
             <Card>

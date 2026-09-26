@@ -21,6 +21,10 @@ export interface AnalyticsPeriodoResultado {
   evolucionDiaria: { fecha: string; total: number }[];
   /** Ventas por día de la semana (0 = domingo … 6 = sábado), día local AR. */
   diasSemana: { dia: number; total: number; cantidad: number }[];
+  /** Ventas por hora del día (0 a 23, hora AR). */
+  horas: { hora: number; total: number; cantidad: number }[];
+  /** Ventas cargadas sin hora en el sistema anterior (quedaron a las 12:00:00 en punto). */
+  ventasSinHora: number;
   /** Compras del período por día, para comparar contra las ventas. */
   comprasDiarias: { fecha: string; total: number }[];
   formasPago: AnalyticsFormaPago[];
@@ -43,6 +47,20 @@ function evolucionDiariaDesdeVentas(ventas: { fecha: Date; total: number }[]): {
     porDia.set(iso, (porDia.get(iso) ?? 0) + v.total);
   }
   return [...porDia.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([fecha, total]) => ({ fecha, total }));
+}
+
+const HORA_EXACTA_AR = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+const HORA_AR = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Argentina/Buenos_Aires', hour: 'numeric', hourCycle: 'h23' });
+
+/** Total y cantidad de ventas por hora del día (hora local AR). */
+export function ventasPorHora(ventas: { fecha: Date; total: number }[]): { hora: number; total: number; cantidad: number }[] {
+  const horas = Array.from({ length: 24 }, (_, hora) => ({ hora, total: 0, cantidad: 0 }));
+  for (const v of ventas) {
+    const h = horas[Number(HORA_AR.format(v.fecha)) % 24];
+    h.total += v.total;
+    h.cantidad += 1;
+  }
+  return horas;
 }
 
 /** Total y cantidad de ventas por día de la semana (día local AR). */
@@ -87,6 +105,8 @@ export class AnalyticsPeriodoService {
         evolucion,
         evolucionDiaria: evolucionDiariaDesdeVentas(base.ventas),
         diasSemana: ventasPorDiaSemana(base.ventas),
+        horas: ventasPorHora(base.ventas),
+        ventasSinHora: base.ventas.filter((v) => HORA_EXACTA_AR.format(v.fecha) === '12:00:00' && v.fecha.getUTCMilliseconds() === 0).length,
         comprasDiarias,
         formasPago,
         // analytics_top_productos siempre gana sobre el top_10 propio de analytics_periodo, igual que cargarAnalyticsPeriodo().
