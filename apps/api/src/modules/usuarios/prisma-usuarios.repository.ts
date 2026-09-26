@@ -23,6 +23,12 @@ export class PrismaUsuariosRepository implements UsuariosRepository {
   }
 
   async upsertUsuario(input: UpsertUsuarioInput): Promise<UsuarioRecord> {
+    // Cada usuario pertenece a UNA empresa: si ya es de otra (activo), una
+    // membresía nueva en Clerk no lo "muda" - perdería el acceso a sus datos.
+    const actual = await this.prisma.usuario.findUnique({ where: { clerkUserId: input.clerkUserId } });
+    if (actual && !actual.deletedAt && actual.empresaId !== input.empresaId) {
+      return { id: actual.id, clerkUserId: input.clerkUserId, empresaId: actual.empresaId, email: actual.email, rolCrudo: actual.rolCrudo };
+    }
     const usuario = await this.prisma.usuario.upsert({
       where: { clerkUserId: input.clerkUserId },
       // El webhook de Clerk (organizationMembership.created/updated) no manda un

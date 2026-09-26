@@ -11,7 +11,12 @@ import { SoloCliente } from "./solo-cliente";
 export function EmpresaSwitcher() {
   return (
     <SoloCliente reserva={<span className="block h-8 w-40 rounded-md bg-muted/50" aria-hidden />}>
-      <OrganizationSwitcher hidePersonal afterSelectOrganizationUrl="/inicio" afterCreateOrganizationUrl="/inicio" />
+      <OrganizationSwitcher
+        hidePersonal
+        afterSelectOrganizationUrl="/inicio"
+        // Un negocio nuevo se crea con el registro (prueba gratis), no desde acá.
+        appearance={{ elements: { organizationSwitcherPopoverActionButton__createOrganization: { display: "none" } } }}
+      />
     </SoloCliente>
   );
 }

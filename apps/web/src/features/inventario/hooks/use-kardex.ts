@@ -87,13 +87,13 @@ export function useKardex(productoId: string, desde: string, hasta: string, vari
   });
 }
 
-export function usePerdidas(desde: string, hasta: string) {
+export function usePerdidas(desde: string, hasta: string, habilitado = true) {
   const api = useApiFetch();
   const { orgId } = useAuth();
   return useQuery({
     queryKey: ["perdidas", orgId, desde, hasta],
     queryFn: () => api<Perdidas>(`/inventario/perdidas?desde=${desde}&hasta=${hasta}`),
-    enabled: Boolean(orgId),
+    enabled: Boolean(orgId) && habilitado,
   });
 }
 

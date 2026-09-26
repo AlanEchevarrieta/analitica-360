@@ -10,6 +10,7 @@ import { formatoNumero, formatoPesos } from "@/lib/formato";
 import { useProductos } from "@/features/productos/hooks/use-productos";
 import { useDashboard } from "@/features/dashboard/hooks/use-dashboard";
 import { fechasDe } from "@/lib/periodos";
+import { useAcceso } from "@/hooks/use-acceso";
 import { usePerdidas } from "../hooks/use-kardex";
 
 // La API pagina de a 200 como máximo; alcanza para el catálogo de una pyme.
@@ -24,7 +25,8 @@ export function StockListado() {
   const productos = useProductos({ pagina: 1, pageSize: MAXIMO, busqueda: "", estado: "activos", orden: "nombre" });
   const dashboard = useDashboard();
   const mes = fechasDe("mes");
-  const perdidas = usePerdidas(mes.desde, mes.hasta);
+  const { puedeHacer } = useAcceso();
+  const perdidas = usePerdidas(mes.desde, mes.hasta, puedeHacer("ver_costos"));
 
   const enAlerta = useMemo(
     () => new Set((dashboard.data?.alertasStock ?? []).map((a) => a.nombre)),

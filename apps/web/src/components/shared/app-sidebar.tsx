@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useOrganization, UserButton } from "@clerk/nextjs";
 import { SoloCliente } from "@/components/shared/solo-cliente";
+import { useAcceso } from "@/hooks/use-acceso";
 import {
   BarChart3,
   ClipboardList,
@@ -34,8 +35,7 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { SelectorTema } from "@/components/shared/selector-tema";
-import { useRol } from "@/hooks/use-rol";
-import { tieneModulo, type ModuloClave } from "@/lib/rol";
+import type { ModuloClave } from "@/lib/rol";
 import { useSuscripcion } from "@/hooks/use-suscripcion";
 import { useTicketsNoLeidos } from "@/hooks/use-tickets-no-leidos";
 import { useEsAdmin } from "@/features/admin/hooks/use-admin";
@@ -70,15 +70,15 @@ const NAV_OPERACIONES: NavItem[] = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const rol = useRol();
   const { organization } = useOrganization();
   const { data: suscripcion } = useSuscripcion();
   const { data: ticketsNoLeidos } = useTicketsNoLeidos();
   // Consola del dueño del producto: solo si la API confirma que es administrador.
   const esAdmin = useEsAdmin().data?.admin === true;
 
-  const puede = (modulo: ModuloClave) => tieneModulo(rol, modulo);
-  const verConfig = tieneModulo(rol, "configuracion");
+  // Permisos reales del colaborador (no solo el rol): no mostrar lo que la API rechaza.
+  const { puede } = useAcceso();
+  const verConfig = puede("configuracion");
   // Soporte se gatea solo por plan en el legacy (planOk('soporte'), sin tieneModulo).
   // Sin GET /empresas/actual todavía no hay plan_actual en el frontend - fuera del
   // trial asumimos acceso; el backend (SoporteModule) sigue siendo la autorización real.

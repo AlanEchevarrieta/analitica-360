@@ -34,6 +34,7 @@ export class InMemoryUsuariosRepository implements UsuariosRepository {
 
   async upsertUsuario(input: UpsertUsuarioInput): Promise<UsuarioRecord> {
     const existente = this.usuariosPorClerkUserId.get(input.clerkUserId);
+    if (existente && existente.empresaId !== input.empresaId) return existente;
     const registro: UsuarioRecord = {
       id: existente?.id ?? randomUUID(),
       clerkUserId: input.clerkUserId,

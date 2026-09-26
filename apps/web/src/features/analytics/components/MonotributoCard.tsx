@@ -1,5 +1,6 @@
 "use client";
 
+import { useAcceso } from "@/hooks/use-acceso";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
@@ -41,7 +42,9 @@ const G_MESES = { ingresos: { label: "Facturado", color: "var(--chart-1)" } } sa
 export function useMonotributo() {
   const api = useApiFetch();
   const { orgId } = useAuth();
-  return useQuery({ queryKey: ["monotributo", orgId], queryFn: () => api<Monotributo>("/monotributo"), enabled: Boolean(orgId), retry: false, staleTime: 5 * 60_000 });
+  // Solo quien tiene Contabilidad (a los demás la API les responde 403).
+  const { puede } = useAcceso();
+  return useQuery({ queryKey: ["monotributo", orgId], queryFn: () => api<Monotributo>("/monotributo"), enabled: Boolean(orgId) && puede("contabilidad"), retry: false, staleTime: 5 * 60_000 });
 }
 
 /** Mensajes para el dueño, del más urgente al informativo. */

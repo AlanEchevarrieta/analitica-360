@@ -13,7 +13,11 @@ export default async function Page() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16">
-      <OrganizationList hidePersonal afterSelectOrganizationUrl="/inicio" afterCreateOrganizationUrl="/inicio" />
+      <OrganizationList
+        hidePersonal
+        afterSelectOrganizationUrl="/inicio"
+        appearance={{ elements: { organizationListCreateOrganizationActionButton: { display: "none" } } }}
+      />
     </div>
   );
 }

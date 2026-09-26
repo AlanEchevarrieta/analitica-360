@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { AppSidebar } from "@/components/shared/app-sidebar";
 import { EmpresaSwitcher } from "@/components/shared/EmpresaSwitcher";
+import { GuardaDeRuta } from "@/components/shared/requiere-modulo";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
@@ -21,7 +22,9 @@ export default async function DashboardLayout({ children }: LayoutProps<"/">) {
             <EmpresaSwitcher />
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
+        <div className="flex flex-1 flex-col gap-4 p-4">
+          <GuardaDeRuta>{children}</GuardaDeRuta>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
