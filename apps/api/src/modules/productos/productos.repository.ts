@@ -5,6 +5,9 @@ export interface ProductoRecord {
   categoriaId: string | null;
   categoriaNombre: string | null;
   codigoBarra: string | null;
+  /** Código interno (productos sin variantes; con variantes, cada variante tiene el suyo). */
+  sku: string | null;
+  usaVariantes: boolean;
   precioVenta: number | null;
   costo: number | null;
   activo: boolean;

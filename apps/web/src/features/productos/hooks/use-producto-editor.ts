@@ -10,6 +10,8 @@ export interface ProductoDetalle {
   nombre: string;
   categoriaId: string | null;
   codigoBarra: string | null;
+  sku: string | null;
+  usaVariantes: boolean;
   precioVenta: number | null;
   costo: number | null;
   activo: boolean;
@@ -47,6 +49,10 @@ export interface GuardarProducto {
   datos: { nombre: string; categoriaId: string | null; precioVenta: number | null; costo: number | null; activo: boolean };
   /** undefined = no cambió (no se manda). */
   codigoBarra?: string | null;
+  /** undefined = no cambió; null = que lo genere el sistema. */
+  sku?: string | null;
+  /** A qué variante va el stock que el producto tenía sin variante. */
+  repartoSinVariante?: { atributos: Record<string, string>; cantidad: number }[];
   variantes?: {
     id?: string;
     sku: string | null;
@@ -74,6 +80,17 @@ export function useVariantesProducto(id: string | null) {
   return useQuery({
     queryKey: ["variantes", orgId, id],
     queryFn: () => api<VarianteDetalle[]>(`/productos/${id}/variantes`),
+    enabled: Boolean(orgId && id),
+  });
+}
+
+/** Unidades del producto que no están en ninguna variante (se reparten al agregar variantes). */
+export function useStockSinVariante(id: string | null) {
+  const api = useApiFetch();
+  const { orgId } = useAuth();
+  return useQuery({
+    queryKey: ["variantes", orgId, id, "sin-asignar"],
+    queryFn: () => api<{ stock: number }>(`/productos/${id}/variantes/sin-asignar`),
     enabled: Boolean(orgId && id),
   });
 }
@@ -135,9 +152,15 @@ export function useGuardarProducto() {
           api(`/productos/${producto.id}/codigo-barra`, { method: "PATCH", body: JSON.stringify({ codigoBarra: g.codigoBarra }) }),
         );
       }
+      if (g.sku !== undefined) {
+        await paso("el SKU", () => api(`/productos/${producto.id}/sku`, { method: "PATCH", body: JSON.stringify({ sku: g.sku }) }));
+      }
       if (g.variantes) {
         await paso("las variantes", () =>
-          api(`/productos/${producto.id}/variantes`, { method: "PUT", body: JSON.stringify({ variantes: g.variantes }) }),
+          api(`/productos/${producto.id}/variantes`, {
+            method: "PUT",
+            body: JSON.stringify({ variantes: g.variantes, ...(g.repartoSinVariante?.length ? { repartoSinVariante: g.repartoSinVariante } : {}) }),
+          }),
         );
       }
       if (g.dimensiones) {

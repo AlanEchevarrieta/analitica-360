@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Camera, Loader2, Search } from "lucide-react";
+import { Camera, Layers, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatoNumero, formatoPesos } from "@/lib/formato";
+import { useApiFetch } from "@/hooks/use-api";
 import { useProductos } from "../hooks/use-productos";
 import { useVariantes } from "../hooks/use-variantes";
 import { etiquetaVariante, type LineaProducto, type ProductoFila, type VarianteProducto } from "../types";
@@ -16,8 +17,9 @@ const MAX_RESULTADOS = 8;
 const MAS_VENDIDOS = 8;
 
 /**
- * Busca por nombre o código de barras (un lector de código escribe el código
- * y manda Enter: si coincide exacto se agrega directo). Resultados y accesos
+ * Busca por nombre, código de barras o SKU (un lector de código escribe el
+ * código y manda Enter: si coincide exacto se agrega directo; el SKU de una
+ * variante agrega directo esa variante). Resultados y accesos
  * rápidos ordenados por demanda (más vendidos de los últimos 90 días primero).
  */
 export function BuscadorProductos({
@@ -35,7 +37,9 @@ export function BuscadorProductos({
   permitirNuevaVariante?: boolean;
 }) {
   const [busqueda, setBusqueda] = useState("");
-  const [eligiendo, setEligiendo] = useState<{ producto: ProductoFila; variantes: VarianteProducto[] } | null>(null);
+  // convertir = producto sin variantes al que se le van a crear (desde una compra).
+  const [eligiendo, setEligiendo] = useState<{ producto: ProductoFila; variantes: VarianteProducto[]; convertir?: boolean } | null>(null);
+  const api = useApiFetch();
   const [cargandoId, setCargandoId] = useState<string | null>(null);
   // Opcional: la cámara solo se abre si alguien toca "Escanear".
   const [camara, setCamara] = useState(false);
@@ -46,7 +50,7 @@ export function BuscadorProductos({
     const q = busqueda.trim().toLowerCase();
     if (!q) return [];
     return (catalogo.data?.items ?? [])
-      .filter((p) => p.nombre.toLowerCase().includes(q) || p.codigoBarra === busqueda.trim())
+      .filter((p) => p.nombre.toLowerCase().includes(q) || p.codigoBarra === busqueda.trim() || p.sku?.toLowerCase() === q)
       .slice(0, MAX_RESULTADOS);
   }, [busqueda, catalogo.data]);
 
@@ -83,24 +87,45 @@ export function BuscadorProductos({
     }
   }
 
-  function onCodigoCamara(codigo: string) {
-    const producto = catalogo.data?.items.find((p) => p.codigoBarra === codigo);
-    if (producto) void elegir(producto);
-    else toast.error(`El código ${codigo} no corresponde a ningún producto activo`);
+  /** Código exacto (barras o SKU de producto o variante): lo resuelve la API. */
+  async function porCodigo(codigo: string): Promise<boolean> {
+    try {
+      const r = await api<{ productoId: string; varianteId: string | null }>(`/productos/por-codigo/${encodeURIComponent(codigo)}`);
+      const producto = catalogo.data?.items.find((p) => p.id === r.productoId);
+      if (!producto) return false;
+      if (!r.varianteId) {
+        void elegir(producto);
+        return true;
+      }
+      const variante = (await variantesDe(producto.id)).find((v) => v.id === r.varianteId);
+      if (variante) agregar(producto, variante);
+      else void elegir(producto);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  function onEnter() {
-    const exacto = catalogo.data?.items.find((p) => p.codigoBarra && p.codigoBarra === busqueda.trim());
+  async function onCodigoCamara(codigo: string) {
+    if (!(await porCodigo(codigo))) toast.error(`El código ${codigo} no corresponde a ningún producto activo`);
+  }
+
+  async function onEnter() {
+    const q = busqueda.trim();
+    const exacto = catalogo.data?.items.find((p) => (p.codigoBarra && p.codigoBarra === q) || p.sku?.toLowerCase() === q.toLowerCase());
+    if (exacto && !exacto.usaVariantes) return void elegir(exacto);
+    // Puede ser el SKU de una variante (o un código que el catálogo local no tiene).
+    if (q && (await porCodigo(q))) return;
     const unico = resultados.length === 1 ? resultados[0] : undefined;
-    const producto = exacto ?? unico;
-    if (producto) void elegir(producto);
+    if (unico) void elegir(unico);
   }
 
   if (eligiendo) {
     return (
       <div className="flex flex-col gap-2">
         <p className="text-sm">
-          Elegí la variante de <span className="font-medium">{eligiendo.producto.nombre}</span>
+          {eligiendo.convertir ? "Creá las variantes que llegaron de " : "Elegí la variante de "}
+          <span className="font-medium">{eligiendo.producto.nombre}</span>
         </p>
         <div className="flex flex-wrap gap-2">
           {eligiendo.variantes.map((v) => (
@@ -114,8 +139,10 @@ export function BuscadorProductos({
           {permitirNuevaVariante && (
             <NuevaVarianteInline
               productoId={eligiendo.producto.id}
-              atributoSugerido={Object.keys(eligiendo.variantes[0]?.atributos ?? {})[0] ?? ""}
+              atributoSugerido={Object.keys(eligiendo.variantes[0]?.atributos ?? {})[0] ?? "Color"}
+              abiertoInicial={eligiendo.convertir}
               onCreada={(v) => agregar(eligiendo.producto, v)}
+              onCancelar={eligiendo.convertir ? () => setEligiendo(null) : undefined}
             />
           )}
         </div>
@@ -125,7 +152,7 @@ export function BuscadorProductos({
 
   return (
     <div className="flex flex-col gap-3">
-      {camara && <EscanerCamara onCodigo={onCodigoCamara} onCerrar={() => setCamara(false)} />}
+      {camara && <EscanerCamara onCodigo={(c) => void onCodigoCamara(c)} onCerrar={() => setCamara(false)} />}
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-muted-foreground" aria-hidden />
@@ -139,7 +166,7 @@ export function BuscadorProductos({
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                onEnter();
+                void onEnter();
               }
             }}
             autoFocus
@@ -150,10 +177,10 @@ export function BuscadorProductos({
                 <li className="px-3 py-2 text-sm text-muted-foreground">Sin resultados</li>
               ) : (
                 resultados.map((p) => (
-                  <li key={p.id}>
+                  <li key={p.id} className="flex items-center">
                     <button
                       type="button"
-                      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted"
+                      className="flex min-w-0 flex-1 items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted"
                       onClick={() => void elegir(p)}
                     >
                       <span className="truncate">{p.nombre}</span>
@@ -167,6 +194,19 @@ export function BuscadorProductos({
                         {cargandoId === p.id && <Loader2 className="size-4 animate-spin" aria-label="Cargando" />}
                       </span>
                     </button>
+                    {permitirNuevaVariante && !p.usaVariantes && (
+                      <button
+                        type="button"
+                        className="flex shrink-0 items-center gap-1 self-stretch border-l px-3 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                        title="Llegó en distintos colores, talles…: crear variantes"
+                        onClick={() => {
+                          setBusqueda("");
+                          setEligiendo({ producto: p, variantes: [], convertir: true });
+                        }}
+                      >
+                        <Layers className="size-3.5" aria-hidden /> Con variantes
+                      </button>
+                    )}
                   </li>
                 ))
               )}

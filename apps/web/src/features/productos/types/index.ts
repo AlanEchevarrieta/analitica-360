@@ -4,6 +4,9 @@ export interface ProductoFila {
   nombre: string;
   categoriaNombre: string | null;
   codigoBarra: string | null;
+  /** SKU del producto (los que tienen variantes lo tienen en cada variante). */
+  sku: string | null;
+  usaVariantes: boolean;
   precioVenta: number | null;
   costo: number | null;
   activo: boolean;

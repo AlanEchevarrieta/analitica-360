@@ -111,6 +111,7 @@ export function ProductosListado() {
                           {p.nombre}
                         </Link>
                         {!p.activo && <span className="ml-2 text-xs text-muted-foreground">(inactivo)</span>}
+                        <span className="block text-xs font-normal text-muted-foreground">{p.usaVariantes ? "SKU por variante" : (p.sku ?? "")}</span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{p.categoriaNombre ?? "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">

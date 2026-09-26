@@ -20,6 +20,31 @@ export interface GuardarVarianteInput {
   activo: boolean;
 }
 
+export interface RepartoStock {
+  atributos: Record<string, string>;
+  cantidad: number;
+}
+
+/** El producto tiene stock sin variante y hay que decir a qué variantes va (o el reparto no cierra). */
+export class RepartoStockError extends Error {
+  constructor(
+    public readonly motivo: 'reparto_requerido' | 'reparto_no_suma' | 'reparto_variante_invalida' | 'stock_negativo',
+    public readonly stockSinVariante: number,
+  ) {
+    super(motivo);
+  }
+}
+
+/** Un SKU cargado a mano ya lo usa otro producto o variante. */
+export class SkuDuplicadoError extends Error {
+  constructor(
+    public readonly sku: string,
+    public readonly duplicadoDe: string,
+  ) {
+    super('SKU duplicado');
+  }
+}
+
 /** Se lanza (y revierte la transacción) al querer apagar variantes que todavía tienen stock. */
 export class VarianteConStockError extends Error {
   constructor(public readonly conStock: { etiqueta: string; stock: number }[]) {
@@ -48,5 +73,8 @@ export interface VariantesRepository {
     empresaId: string,
     productoId: string,
     variantes: GuardarVarianteInput[],
+    opciones: { usuarioId: string; reparto?: RepartoStock[] },
   ): Promise<VarianteRecord[] | null>;
+  /** Unidades del producto que no están en ninguna variante (stock "suelto"). */
+  stockSinVariante(empresaId: string, productoId: string): Promise<number | null>;
 }

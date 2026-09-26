@@ -9,6 +9,8 @@ import {
   dimensionesProductoSchema,
   guardarProductoSchema,
   listarProductosQuerySchema,
+  skuProductoSchema,
+  type SkuProductoInput,
   type CodigoBarraProductoInput,
   type DimensionesProductoInput,
   type GuardarProductoInput,
@@ -31,6 +33,19 @@ export class ProductosController {
   @Get('nombres')
   listarNombres(@CurrentEmpresa() empresa: EmpresaContext) {
     return this.productosService.listarNombres(empresa.id);
+  }
+
+  /** Escaneo / búsqueda exacta: código de barras o SKU (de producto o variante). */
+  @Get('por-codigo/:codigo')
+  buscarPorCodigo(@CurrentEmpresa() empresa: EmpresaContext, @Param('codigo') codigo: string) {
+    return this.productosService.buscarPorCodigo(empresa.id, codigo);
+  }
+
+  /** Genera el SKU de todos los productos y variantes que no tienen. */
+  @Post('sku/asignar')
+  @RequirePermiso('editar_productos')
+  async asignarSku(@CurrentEmpresa() empresa: EmpresaContext) {
+    return { asignados: await this.productosService.asignarSkuFaltantes(empresa.id) };
   }
 
   @Get(':id')
@@ -65,6 +80,16 @@ export class ProductosController {
     @Body(new ZodValidationPipe(codigoBarraProductoSchema)) body: CodigoBarraProductoInput,
   ) {
     return this.productosService.guardarCodigoBarra(empresa.id, id, body.codigoBarra);
+  }
+
+  @Patch(':id/sku')
+  @RequirePermiso('editar_productos')
+  guardarSku(
+    @CurrentEmpresa() empresa: EmpresaContext,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(skuProductoSchema)) body: SkuProductoInput,
+  ) {
+    return this.productosService.guardarSku(empresa.id, id, body.sku);
   }
 
   @Patch(':id/dimensiones')

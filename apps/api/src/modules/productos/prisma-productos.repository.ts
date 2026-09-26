@@ -30,6 +30,8 @@ export class PrismaProductosRepository implements ProductosRepository {
       categoriaId: producto.categoriaId,
       categoriaNombre: producto.categoriaRel?.nombre ?? null,
       codigoBarra: producto.codigoBarra,
+      sku: producto.sku,
+      usaVariantes: producto.usaVariantes,
       precioVenta: producto.precioVenta?.toNumber() ?? null,
       costo: producto.costo?.toNumber() ?? null,
       activo: producto.activo,
@@ -133,9 +135,13 @@ export class PrismaProductosRepository implements ProductosRepository {
       ...(filtro.estado === 'inactivos' ? { activo: false } : {}),
       ...(busqueda
         ? {
-            OR: esBarcode
-              ? [{ codigoBarra: busqueda }, { nombre: { contains: busqueda, mode: 'insensitive' } }]
-              : [{ nombre: { contains: busqueda, mode: 'insensitive' } }],
+            OR: [
+              ...(esBarcode ? [{ codigoBarra: busqueda }] : []),
+              { nombre: { contains: busqueda, mode: 'insensitive' } },
+              // SKU del producto o de alguna de sus variantes.
+              { sku: { equals: busqueda, mode: 'insensitive' } },
+              { variantes: { some: { deletedAt: null, sku: { equals: busqueda, mode: 'insensitive' } } } },
+            ],
           }
         : {}),
     };

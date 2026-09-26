@@ -1,3 +1,5 @@
+import { SKU_REPOSITORY } from './sku.repository.js';
+import { PrismaSkuRepository } from './prisma-sku.repository.js';
 import { Module } from '@nestjs/common';
 import { CategoriasController } from './categorias.controller.js';
 import { CategoriasService } from './categorias.service.js';
@@ -15,6 +17,7 @@ import { PrismaProductosRepository } from './prisma-productos.repository.js';
     CategoriasService,
     { provide: PRODUCTOS_REPOSITORY, useClass: PrismaProductosRepository },
     { provide: CATEGORIAS_REPOSITORY, useClass: PrismaCategoriasRepository },
+    { provide: SKU_REPOSITORY, useClass: PrismaSkuRepository },
   ],
 })
 export class ProductosModule {}

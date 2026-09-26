@@ -231,6 +231,8 @@ model Producto {
   categoria    String? // legado: texto libre, ver también CategoriaId
   categoriaId  String?   @map("categoria_id") @db.Uuid
   codigoBarra  String?   @map("codigo_barra")
+  /// Código interno único por empresa (entre productos y variantes). Lo genera el sistema si queda vacío.
+  sku          String?
   precioVenta  Decimal?  @map("precio_venta") @db.Decimal(12, 2) // valor "actual" cacheado; el histórico real vive en PrecioHistorial
   costo        Decimal?  @db.Decimal(12, 2)
   usaVariantes Boolean   @default(false) @map("usa_variantes")

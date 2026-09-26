@@ -4,6 +4,7 @@ import { Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Atributo } from "../hooks/use-producto-editor";
+import { GeneradorCombinaciones } from "./GeneradorCombinaciones";
 
 export interface VarianteEditable {
   /** Clave local de la fila (las nuevas no tienen id todavía). */
@@ -104,7 +105,7 @@ export function VariantesEditor({
             <span className="ml-auto text-sm text-muted-foreground tabular-nums">Stock: {v.stock}</span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Input className="w-36" placeholder="SKU (opcional)" aria-label="SKU" value={v.sku} onChange={(e) => actualizar(v.clave, { sku: e.target.value })} />
+            <Input className="w-44" placeholder="SKU automático" aria-label="SKU" value={v.sku} onChange={(e) => actualizar(v.clave, { sku: e.target.value })} />
             <Input
               className="w-32"
               inputMode="decimal"
@@ -145,11 +146,26 @@ export function VariantesEditor({
         </div>
       ))}
 
-      <Button variant="outline" className="self-start" onClick={() => onCambiar([...variantes, varianteNueva(primerAtributo)])}>
-        <Plus aria-hidden /> Agregar variante
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" onClick={() => onCambiar([...variantes, varianteNueva(primerAtributo)])}>
+          <Plus aria-hidden /> Agregar variante
+        </Button>
+        <GeneradorCombinaciones
+          atributos={atributos}
+          onGenerar={(combinaciones) => {
+            // Solo las combinaciones que todavía no existen.
+            const clave = (pares: { atributo: string; valor: string }[]) =>
+              JSON.stringify(pares.filter((p) => p.atributo.trim() && p.valor.trim()).map((p) => [p.atributo.trim().toLowerCase(), p.valor.trim().toLowerCase()]).sort());
+            const existentes = new Set(variantes.map((v) => clave(v.pares)));
+            const nuevas = combinaciones.filter((c) => !existentes.has(clave(c))).map((pares) => ({ ...varianteNueva(), pares }));
+            // Una fila nueva vacía (la de "Agregar variante" sin completar) se reemplaza.
+            const sinVacias = variantes.filter((v) => v.id || v.pares.some((p) => p.valor.trim()));
+            onCambiar([...sinVacias, ...nuevas]);
+          }}
+        />
+      </div>
       <p className="text-xs text-muted-foreground">
-        Precio y costo vacíos = los del producto. Las variantes con ventas no se borran: se desactivan.
+        Precio y costo vacíos = los del producto. SKU vacío = lo genera el sistema al guardar. Las variantes con ventas no se borran: se desactivan.
       </p>
     </div>
   );

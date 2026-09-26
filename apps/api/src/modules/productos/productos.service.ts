@@ -6,6 +6,7 @@ import {
   type ProductosRepository,
   type ResultadoGuardarProducto,
 } from './productos.repository.js';
+import { SKU_REPOSITORY, type CodigoEncontrado, type SkuRepository } from './sku.repository.js';
 import type {
   DimensionesProductoInput,
   GuardarProductoInput,
@@ -20,7 +21,34 @@ function desempacar(resultado: ResultadoGuardarProducto): ProductoRecord {
 
 @Injectable()
 export class ProductosService {
-  constructor(@Inject(PRODUCTOS_REPOSITORY) private readonly productosRepository: ProductosRepository) {}
+  constructor(
+    @Inject(PRODUCTOS_REPOSITORY) private readonly productosRepository: ProductosRepository,
+    @Inject(SKU_REPOSITORY) private readonly skuRepository: SkuRepository,
+  ) {}
+
+  /** Asigna el SKU automático si hace falta y devuelve el producto actualizado. */
+  private async conSku(empresaId: string, producto: ProductoRecord): Promise<ProductoRecord> {
+    if (producto.sku || producto.usaVariantes) return producto;
+    await this.skuRepository.asignarFaltantes(empresaId, producto.id);
+    return (await this.productosRepository.buscarPorId(empresaId, producto.id)) ?? producto;
+  }
+
+  asignarSkuFaltantes(empresaId: string): Promise<number> {
+    return this.skuRepository.asignarFaltantes(empresaId);
+  }
+
+  async buscarPorCodigo(empresaId: string, codigo: string): Promise<CodigoEncontrado> {
+    const encontrado = await this.skuRepository.buscarPorCodigo(empresaId, codigo);
+    if (!encontrado) throw new NotFoundException(`El código ${codigo} no corresponde a ningún producto`);
+    return encontrado;
+  }
+
+  async guardarSku(empresaId: string, id: string, sku: string | null): Promise<ProductoRecord> {
+    const r = await this.skuRepository.guardarSkuProducto(empresaId, id, sku);
+    if (r === 'no_encontrado') throw new NotFoundException('Producto no encontrado');
+    if (typeof r === 'object') throw new BadRequestException(`Ese SKU ya lo tiene "${r.duplicadoDe}"`);
+    return this.buscarPorId(empresaId, id);
+  }
 
   async crear(empresaId: string, input: GuardarProductoInput): Promise<ProductoRecord> {
     const resultado = await this.productosRepository.crear(empresaId, {
@@ -30,7 +58,7 @@ export class ProductosService {
       costo: input.costo ?? null,
       activo: input.activo,
     });
-    return desempacar(resultado);
+    return this.conSku(empresaId, desempacar(resultado));
   }
 
   async actualizar(empresaId: string, id: string, input: GuardarProductoInput): Promise<ProductoRecord> {
@@ -41,7 +69,7 @@ export class ProductosService {
       costo: input.costo ?? null,
       activo: input.activo,
     });
-    return desempacar(resultado);
+    return this.conSku(empresaId, desempacar(resultado));
   }
 
   async buscarPorId(empresaId: string, id: string): Promise<ProductoRecord> {

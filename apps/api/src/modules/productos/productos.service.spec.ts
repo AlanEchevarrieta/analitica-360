@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { ProductosService } from './productos.service.js';
 import { PRODUCTOS_REPOSITORY, type ProductoRecord, type ProductosRepository } from './productos.repository.js';
+import { SKU_REPOSITORY, type SkuRepository } from './sku.repository.js';
 
 const productoBase: ProductoRecord = {
   id: 'prod-1',
@@ -10,6 +11,8 @@ const productoBase: ProductoRecord = {
   categoriaId: null,
   categoriaNombre: null,
   codigoBarra: null,
+  sku: 'GEN-YER-001',
+  usaVariantes: false,
   precioVenta: 100,
   costo: 60,
   activo: true,
@@ -22,6 +25,7 @@ const productoBase: ProductoRecord = {
 describe('ProductosService', () => {
   let service: ProductosService;
   let repository: { [K in keyof ProductosRepository]: ReturnType<typeof vi.fn> };
+  let skus: { [K in keyof SkuRepository]: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     repository = {
@@ -33,8 +37,9 @@ describe('ProductosService', () => {
       guardarCodigoBarra: vi.fn(),
       guardarDimensiones: vi.fn(),
     };
+    skus = { asignarFaltantes: vi.fn().mockResolvedValue(1), enUso: vi.fn(), buscarPorCodigo: vi.fn(), guardarSkuProducto: vi.fn() };
     const module = await Test.createTestingModule({
-      providers: [ProductosService, { provide: PRODUCTOS_REPOSITORY, useValue: repository }],
+      providers: [ProductosService, { provide: PRODUCTOS_REPOSITORY, useValue: repository }, { provide: SKU_REPOSITORY, useValue: skus }],
     }).compile();
     service = module.get(ProductosService);
   });
@@ -109,5 +114,29 @@ describe('ProductosService', () => {
       pageSize: 20,
     });
     expect(resultado.total).toBe(1);
+  });
+
+  it('crear() sin SKU le genera uno automático', async () => {
+    repository.crear.mockResolvedValue({ ok: true, producto: { ...productoBase, sku: null } });
+    repository.buscarPorId.mockResolvedValue(productoBase);
+    const creado = await service.crear('empresa-1', { nombre: 'Yerba', activo: true });
+    expect(skus.asignarFaltantes).toHaveBeenCalledWith('empresa-1', 'prod-1');
+    expect(creado.sku).toBe('GEN-YER-001');
+  });
+
+  it('crear() con variantes no genera SKU de producto (lo tiene cada variante)', async () => {
+    repository.crear.mockResolvedValue({ ok: true, producto: { ...productoBase, sku: null, usaVariantes: true } });
+    await service.crear('empresa-1', { nombre: 'Yerba', activo: true });
+    expect(skus.asignarFaltantes).not.toHaveBeenCalled();
+  });
+
+  it('guardarSku() rechaza un SKU repetido', async () => {
+    skus.guardarSkuProducto.mockResolvedValue({ duplicadoDe: 'Mate Imperial' });
+    await expect(service.guardarSku('empresa-1', 'prod-1', 'MAT-001')).rejects.toThrow(BadRequestException);
+  });
+
+  it('buscarPorCodigo() da 404 si no existe', async () => {
+    skus.buscarPorCodigo.mockResolvedValue(null);
+    await expect(service.buscarPorCodigo('empresa-1', 'XX')).rejects.toThrow(NotFoundException);
   });
 });

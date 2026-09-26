@@ -12,11 +12,13 @@ import { aNumeroONull, aTexto } from "@/lib/numeros";
 import {
   useAtributos,
   useGuardarProducto,
+  useStockSinVariante,
   type ProductoDetalle,
   type VarianteDetalle,
 } from "../hooks/use-producto-editor";
 import { CampoCodigoBarra } from "./CampoCodigoBarra";
 import { CategoriaSelector } from "./CategoriaSelector";
+import { RepartoStock, repartoParaApi } from "./RepartoStock";
 import { VariantesEditor, type VarianteEditable } from "./VariantesEditor";
 
 function aEditable(v: VarianteDetalle): VarianteEditable {
@@ -56,6 +58,9 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
   const [costo, setCosto] = useState(aTexto(inicial?.costo));
   const [activo, setActivo] = useState(inicial?.activo ?? true);
   const [codigo, setCodigo] = useState(inicial?.codigoBarra ?? "");
+  const [sku, setSku] = useState(inicial?.sku ?? "");
+  const sinVariante = useStockSinVariante(inicial?.id ?? null);
+  const [reparto, setReparto] = useState<Record<string, string>>({});
   const [variantes, setVariantes] = useState<VarianteEditable[]>(() => variantesIniciales.map(aEditable));
   const [medidas, setMedidas] = useState({
     alto: aTexto(inicial?.altoCm),
@@ -64,6 +69,18 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
     peso: aTexto(inicial?.pesoGr),
   });
   const [error, setError] = useState<string | null>(null);
+
+  // Stock cargado sin variante: al guardar con variantes activas hay que repartirlo.
+  const stockSuelto = sinVariante.data?.stock ?? 0;
+  const variantesActivas = variantes
+    .filter((v) => v.activo)
+    .map((v) => ({ clave: v.clave, atributos: aApi(v).atributos }))
+    .filter((v) => Object.keys(v.atributos).length > 0);
+  const pideReparto = stockSuelto > 0 && variantesActivas.length > 0;
+  // Con una sola variante, todo el stock va a esa (se puede cambiar igual).
+  const repartoEfectivo =
+    variantesActivas.length === 1 && reparto[variantesActivas[0].clave] === undefined ? { [variantesActivas[0].clave]: String(stockSuelto) } : reparto;
+  const tieneVariantes = variantes.some((v) => v.activo);
 
   const precioN = aNumeroONull(precio);
   const costoN = aNumeroONull(costo);
@@ -79,6 +96,10 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
       if (combos.has(combo)) return `Hay dos variantes iguales: ${Object.values(a).join(" / ")}.`;
       combos.add(combo);
       if (!v.activo && v.stock !== 0) return `La variante ${Object.values(a).join(" / ")} tiene stock: no se puede desactivar.`;
+    }
+    if (pideReparto) {
+      const asignado = repartoParaApi(variantesActivas, repartoEfectivo).reduce((acc, r) => acc + r.cantidad, 0);
+      if (asignado !== stockSuelto) return `Repartí las ${stockSuelto} unidades sin variante entre las variantes (llevás ${asignado}).`;
     }
     return null;
   }
@@ -97,13 +118,16 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
     };
     const dimensionesAntes = { altoCm: inicial?.altoCm ?? null, largoCm: inicial?.largoCm ?? null, anchoCm: inicial?.anchoCm ?? null, pesoGr: inicial?.pesoGr ?? null };
     const codigoNuevo = codigo.trim() || null;
+    const skuNuevo = sku.trim().toUpperCase() || null;
 
     guardar.mutate(
       {
         id: inicial?.id ?? null,
         datos: { nombre: nombre.trim(), categoriaId, precioVenta: precioN, costo: costoN, activo },
         codigoBarra: codigoNuevo !== (inicial?.codigoBarra ?? null) ? codigoNuevo : undefined,
-        variantes: variantesCambiaron ? variantesApi : undefined,
+        sku: !tieneVariantes && skuNuevo && skuNuevo !== (inicial?.sku ?? null) ? skuNuevo : undefined,
+        variantes: variantesCambiaron || pideReparto ? variantesApi : undefined,
+        repartoSinVariante: pideReparto ? repartoParaApi(variantesActivas, repartoEfectivo) : undefined,
         dimensiones: JSON.stringify(dimensiones) !== JSON.stringify(dimensionesAntes) ? dimensiones : undefined,
       },
       {
@@ -162,8 +186,16 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
             <CardTitle>Variantes</CardTitle>
             <CardDescription>Colores, talles, materiales… cada combinación con su stock, precio y costo.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col gap-4">
             <VariantesEditor variantes={variantes} onCambiar={setVariantes} atributos={atributos.data ?? []} />
+            {pideReparto && (
+              <RepartoStock
+                total={stockSuelto}
+                variantes={variantesActivas.map((v) => ({ clave: v.clave, etiqueta: Object.values(v.atributos).join(" / ") }))}
+                cantidades={repartoEfectivo}
+                onCambiar={setReparto}
+              />
+            )}
           </CardContent>
         </Card>
       </div>
@@ -176,6 +208,17 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="producto-codigo">Código de barras</Label>
             <CampoCodigoBarra valor={codigo} onCambiar={setCodigo} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="producto-sku">SKU (código interno)</Label>
+            {tieneVariantes ? (
+              <p className="text-sm text-muted-foreground">Cada variante tiene su propio SKU (lo ves en la lista de variantes).</p>
+            ) : (
+              <>
+                <Input id="producto-sku" placeholder="Se genera solo al guardar" value={sku} onChange={(e) => setSku(e.target.value)} />
+                <p className="text-xs text-muted-foreground">Podés dejar el automático o escribir el tuyo. Sirve para buscar y escanear.</p>
+              </>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             {medida("alto", "Alto cm")}

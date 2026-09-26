@@ -16,6 +16,10 @@ export const guardarProductoSchema = z.object({
 });
 export type GuardarProductoInput = z.infer<typeof guardarProductoSchema>;
 
+/** null o vacío = que el sistema genere uno. */
+export const skuProductoSchema = z.object({ sku: z.string().trim().max(40).nullable() });
+export type SkuProductoInput = z.infer<typeof skuProductoSchema>;
+
 export const listarProductosQuerySchema = z.object({
   pagina: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(20),
