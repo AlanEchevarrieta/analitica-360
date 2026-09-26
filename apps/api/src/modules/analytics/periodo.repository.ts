@@ -1,4 +1,4 @@
-export type GranularidadPeriodo = 'dia' | 'semana' | 'mes';
+export type GranularidadPeriodo = 'dia' | 'semana' | 'mes' | 'anio';
 
 export interface AnalyticsPeriodoProducto {
   producto: string;
@@ -76,6 +76,8 @@ export interface AnalyticsPeriodoRepository {
   periodoBase(empresaId: string, desde: string, hasta: string): Promise<AnalyticsPeriodoBase>;
   /** Puerto de analytics_evolucion(): serie por día/semana/mes con comparación contra el período anterior de igual duración. */
   evolucion(empresaId: string, desde: string, hasta: string, granularidad: GranularidadPeriodo): Promise<AnalyticsEvolucionPunto[]>;
+  /** Compras del período por día (total real con flete e impuestos), para "Ventas vs Compras". */
+  comprasPorDia(empresaId: string, desde: string, hasta: string): Promise<{ fecha: string; total: number }[]>;
   /** Puerto de analytics_formas_pago(). */
   formasPago(empresaId: string, desde: string, hasta: string): Promise<AnalyticsFormaPago[]>;
   /** Puerto de analytics_top_productos(): top 10 por facturación (no por unidades). */

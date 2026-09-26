@@ -13,6 +13,7 @@ describe('AnalyticsPeriodoService', () => {
       evolucion: vi.fn(),
       formasPago: vi.fn(),
       topProductos: vi.fn(),
+      comprasPorDia: vi.fn().mockResolvedValue([]),
     };
     const module = await Test.createTestingModule({
       providers: [AnalyticsPeriodoService, { provide: ANALYTICS_PERIODO_REPOSITORY, useValue: repository }],
@@ -27,7 +28,7 @@ describe('AnalyticsPeriodoService', () => {
     expect(repository.periodoBase).not.toHaveBeenCalled();
   });
 
-  it('combina periodoBase + evolucion + formasPago + topProductos, evolucionDiaria agrupada por día UTC de las ventas', async () => {
+  it('combina periodoBase + evolucion + formasPago + topProductos, evolucionDiaria y días de semana por día local AR', async () => {
     repository.contarVentas.mockResolvedValue(3);
     repository.periodoBase.mockResolvedValue({
       totalVentas: 900,
@@ -50,10 +51,12 @@ describe('AnalyticsPeriodoService', () => {
 
     expect(res.avisoLimite).toBeNull();
     expect(res.data?.total).toBe(900);
-    expect(res.data?.evolucionDiaria).toEqual([
-      { fecha: '2026-01-10', total: 700 },
-      { fecha: '2026-01-11', total: 200 },
-    ]);
+    // La de las 02:00 UTC del 11/01 es del 10/01 a las 23 h en Argentina.
+    expect(res.data?.evolucionDiaria).toEqual([{ fecha: '2026-01-10', total: 900 }]);
+    // 10/01/2026 fue sábado (6).
+    expect(res.data?.diasSemana[6]).toEqual({ dia: 6, total: 900, cantidad: 3 });
+    expect(res.data?.diasSemana.filter((d) => d.cantidad > 0)).toHaveLength(1);
+    expect(res.data?.comprasDiarias).toEqual([]);
     expect(res.data?.top10).toEqual([{ nombre: 'Yerba', unidades: 5 }]);
     expect(res.data?.productos).toHaveLength(1);
   });

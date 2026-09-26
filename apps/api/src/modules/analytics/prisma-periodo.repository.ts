@@ -27,7 +27,7 @@ const MONTO_VENTA = Prisma.sql`
   )
 `;
 
-const UNIDAD_TRUNC: Record<GranularidadPeriodo, string> = { dia: 'day', semana: 'week', mes: 'month' };
+const UNIDAD_TRUNC: Record<GranularidadPeriodo, string> = { dia: 'day', semana: 'week', mes: 'month', anio: 'year' };
 
 @Injectable()
 export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoRepository {
@@ -150,6 +150,16 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
       productos,
       devoluciones: netoDevoluciones,
     };
+  }
+
+  async comprasPorDia(empresaId: string, desde: string, hasta: string): Promise<{ fecha: string; total: number }[]> {
+    const filas = await this.prisma.$queryRaw<{ fecha: string; total: string }[]>(Prisma.sql`
+      SELECT fecha::text AS fecha, SUM(COALESCE(NULLIF(total_real, 0), total, 0)) AS total
+      FROM compras
+      WHERE empresa_id = ${empresaId}::uuid AND deleted_at IS NULL AND fecha BETWEEN ${desde}::date AND ${hasta}::date
+      GROUP BY fecha ORDER BY fecha
+    `);
+    return filas.map((f) => ({ fecha: f.fecha, total: Number(f.total) }));
   }
 
   async evolucion(empresaId: string, desde: string, hasta: string, granularidad: GranularidadPeriodo): Promise<AnalyticsEvolucionPunto[]> {

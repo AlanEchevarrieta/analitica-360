@@ -6,7 +6,7 @@ export const periodoQuerySchema = z
   .object({
     desde: fechaIso,
     hasta: fechaIso,
-    granularidad: z.enum(['dia', 'semana', 'mes']).default('dia'),
+    granularidad: z.enum(['dia', 'semana', 'mes', 'anio']).default('dia'),
   })
   .refine((q) => q.hasta >= q.desde, { message: 'PERIODO_INVALIDO', path: ['hasta'] });
 export type PeriodoQuery = z.infer<typeof periodoQuerySchema>;

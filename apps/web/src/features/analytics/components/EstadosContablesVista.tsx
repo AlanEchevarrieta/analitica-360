@@ -5,9 +5,8 @@ import { AlertTriangle, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
-import { SelectorPeriodo } from "@/components/shared/selector-periodo";
+import { SelectorPeriodo, useRangoFechas } from "@/components/shared/selector-periodo";
 import { formatoPesos } from "@/lib/formato";
-import { fechasDe, type Rango } from "@/lib/periodos";
 import { cn } from "@/lib/utils";
 import { useEstadosContables } from "../hooks/use-analytics";
 import type { ConceptoCaja, EstadosContables } from "../types";
@@ -215,15 +214,15 @@ function FlujoCard({ e }: { e: EstadosContables }) {
 const veces = (v: number | null) => (v == null ? "—" : `${v.toLocaleString("es-AR")}×`);
 
 export function EstadosContablesVista() {
-  const [rango, setRango] = useState<Rango>("mes");
-  const { desde, hasta } = fechasDe(rango);
+  const periodo = useRangoFechas("mes");
+  const { desde, hasta } = periodo;
   const { data: e, isPending, isError, error, refetch } = useEstadosContables(desde, hasta);
   const [pagoSugerido, setPagoSugerido] = useState<PagoSugerido | null>(null);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <SelectorPeriodo valor={rango} onCambiar={setRango} />
+        <SelectorPeriodo periodo={periodo} />
         <Button variant="outline" size="sm" onClick={() => window.print()}>
           <Printer aria-hidden /> Imprimir / PDF
         </Button>

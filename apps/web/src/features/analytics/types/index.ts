@@ -6,6 +6,10 @@ export interface Periodo {
   costo: number;
   porCobrar: number;
   evolucion: { fecha: string; total: number; anterior: number; cantidad: number }[];
+  evolucionDiaria: { fecha: string; total: number }[];
+  /** 0 = domingo … 6 = sábado. */
+  diasSemana: { dia: number; total: number; cantidad: number }[];
+  comprasDiarias: { fecha: string; total: number }[];
   formasPago: { nombre: string; total: number; cantidad: number }[];
   top10: { nombre: string; unidades: number }[];
   devoluciones: { ingreso: number; costo: number };
@@ -74,11 +78,14 @@ export interface Insights {
 export interface Combo {
   nombreA: string;
   nombreB: string;
+  /** Solo en los combos de 3. */
+  nombreC?: string;
   vecesJuntos: number;
   soporte: number;
-  confianzaA: number;
-  confianzaB: number;
-  lift: number;
+  /** Solo en los pares. */
+  confianzaA?: number;
+  confianzaB?: number;
+  lift: number | null;
 }
 
 export interface Inflacion {

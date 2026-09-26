@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SinDatos } from "@/components/shared/estado-datos";
 import { etiquetaFecha } from "@/lib/periodos";
@@ -15,8 +17,18 @@ const GRAFICO_INFLACION = {
 
 const pct = (n: number | null) => (n == null ? "—" : `${n > 0 ? "+" : ""}${n.toFixed(1)}%`);
 
-export function InsightsMercado({ desde, hasta, variantes }: { desde: string; hasta: string; variantes: Insights["variantes"] }) {
-  const combos = useCombos(desde, hasta);
+/** Fuerza de un combo según el lift (cuántas veces más de lo esperable se compran juntos). */
+function fuerza(lift: number | null) {
+  if (lift == null) return null;
+  if (lift > 2) return { etiqueta: "🔥 Muy fuerte", clase: "bg-emerald-500/15 text-emerald-600" };
+  if (lift >= 1.5) return { etiqueta: "💪 Fuerte", clase: "bg-primary/15 text-primary" };
+  if (lift >= 1) return { etiqueta: "👍 Moderado", clase: "bg-amber-500/15 text-amber-600" };
+  return { etiqueta: "Débil", clase: "bg-muted text-muted-foreground" };
+}
+
+export function InsightsMercado({ hasta, variantes }: { hasta: string; variantes: Insights["variantes"] }) {
+  const [tamano, setTamano] = useState<2 | 3>(2);
+  const combos = useCombos(tamano);
   // Inflación: siempre desde enero para que el acumulado tenga sentido.
   const inflacion = useInflacion(`${hasta.slice(0, 4)}-01-01`, hasta);
   const r = inflacion.data?.resumen;
@@ -55,24 +67,39 @@ export function InsightsMercado({ desde, hasta, variantes }: { desde: string; ha
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Se venden juntos</CardTitle>
-            <CardDescription>Ideas de combos: pares que aparecen en la misma venta más de lo esperable (lift &gt; 1).</CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <CardTitle>Se venden juntos</CardTitle>
+              <div className="flex gap-1" role="group" aria-label="Tamaño del combo">
+                {([2, 3] as const).map((t) => (
+                  <Button key={t} size="xs" variant={tamano === t ? "secondary" : "ghost"} aria-pressed={tamano === t} onClick={() => setTamano(t)}>
+                    {t === 2 ? "De a 2" : "De a 3"}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <CardDescription>Ideas de combos: productos que aparecen en la misma venta más de lo esperable. La fuerza indica cuánto más.</CardDescription>
           </CardHeader>
           <CardContent>
             {(combos.data ?? []).length === 0 ? (
-              <SinDatos mensaje="No hay suficientes ventas con varios productos." />
+              <SinDatos mensaje={combos.isPending ? "Buscando combos…" : `No hay suficientes ventas con ${tamano} o más productos.`} />
             ) : (
               <ul className="flex flex-col divide-y text-sm">
-                {combos.data!.map((c) => (
-                  <li key={`${c.nombreA}-${c.nombreB}`} className="flex flex-wrap justify-between gap-2 py-2">
-                    <span className="font-medium">
-                      {c.nombreA} + {c.nombreB}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {c.vecesJuntos} veces · {c.confianzaB.toFixed(0)}% de quienes llevan {c.nombreB} lleva {c.nombreA} · lift {c.lift.toFixed(2)}
-                    </span>
-                  </li>
-                ))}
+                {combos.data!.map((c) => {
+                  const f = fuerza(c.lift);
+                  return (
+                    <li key={`${c.nombreA}-${c.nombreB}-${c.nombreC ?? ""}`} className="flex flex-col gap-1 py-2">
+                      <span className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-medium">{[c.nombreA, c.nombreB, c.nombreC].filter(Boolean).join(" + ")}</span>
+                        {f && <span className={`rounded px-1.5 py-0.5 text-xs ${f.clase}`}>{f.etiqueta}</span>}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {c.vecesJuntos} veces juntos
+                        {c.confianzaB != null ? ` · ${c.confianzaB.toFixed(0)}% de quienes llevan ${c.nombreB} lleva ${c.nombreA}` : ""}
+                        {c.lift != null ? ` · ${c.lift.toLocaleString("es-AR", { maximumFractionDigits: 2 })}× lo esperable` : ""}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </CardContent>

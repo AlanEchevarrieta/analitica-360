@@ -107,7 +107,13 @@ for (const ruta of rutas) {
     const alerta = (await page.locator('[role="alert"]').allInnerTexts()).map((t) => t.trim()).filter(Boolean);
     if (alerta.length) problemas.push({ ruta, tipo: 'mensaje de error en pantalla', detalle: alerta.join(' | ').slice(0, 300) });
     const archivo = `${ruta.replace(/^\//, '').replace(/[/[\]]/g, '_') || 'raiz'}.png`;
-    await page.screenshot({ path: path.join(carpeta, archivo), fullPage: true });
+    // Captura de toda la página: se agranda la ventana y se espera a que los
+    // gráficos se redibujen (con fullPage la foto salía al empezar la animación).
+    const alto = await page.evaluate(() => document.documentElement.scrollHeight);
+    await page.setViewportSize({ width: Number(ancho), height: Math.min(alto, 12000) });
+    await page.waitForTimeout(1800);
+    await page.screenshot({ path: path.join(carpeta, archivo) });
+    await page.setViewportSize({ width: Number(ancho), height: 900 });
     resumen.push({ ruta, ms: Date.now() - t0, archivo });
   } catch (e) {
     problemas.push({ ruta, tipo: 'no cargó', detalle: String(e.message ?? e).slice(0, 300) });

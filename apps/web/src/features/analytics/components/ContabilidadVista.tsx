@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
-import { SelectorPeriodo } from "@/components/shared/selector-periodo";
+import { SelectorPeriodo, useRangoFechas } from "@/components/shared/selector-periodo";
 import { formatoNumero, formatoPesos } from "@/lib/formato";
-import { etiquetaFecha, fechasDe, type Rango } from "@/lib/periodos";
+import { etiquetaFecha } from "@/lib/periodos";
 import { useContabilidad } from "../hooks/use-analytics";
 import { GastosPanel } from "./GastosPanel";
 import { Kpi } from "./comunes";
@@ -31,13 +30,13 @@ function Fila({ etiqueta, valor, fuerte, negativo }: { etiqueta: string; valor: 
 }
 
 export function ContabilidadVista() {
-  const [rango, setRango] = useState<Rango>("mes");
-  const { desde, hasta } = fechasDe(rango);
+  const periodo = useRangoFechas("mes");
+  const { desde, hasta } = periodo;
   const { data, isPending, isError, error, refetch } = useContabilidad(desde, hasta);
 
   return (
     <div className="flex flex-col gap-4">
-      <SelectorPeriodo valor={rango} onCambiar={setRango} />
+      <SelectorPeriodo periodo={periodo} />
       {isPending ? (
         <CargandoFilas filas={8} />
       ) : isError ? (

@@ -6,17 +6,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { formatoNumero, formatoPesos } from "@/lib/formato";
-import { fechasDe, type Rango } from "@/lib/periodos";
-import { SelectorPeriodo } from "@/components/shared/selector-periodo";
+import { diasEntre, hoyAR } from "@/lib/periodos";
+import { SelectorPeriodo, useRangoFechas } from "@/components/shared/selector-periodo";
 import { Kpi } from "./comunes";
+import { MatrizProductos } from "./MatrizProductos";
 import { useGananciaProductos, type GananciaProducto } from "../hooks/use-ganancia-productos";
 
 type Orden = "margen" | "total" | "unidades" | "margenPct";
 
 export function GananciaProductos() {
-  const [rango, setRango] = useState<Rango>("mes");
+  const periodo = useRangoFechas("mes");
   const [orden, setOrden] = useState<Orden>("margen");
-  const { desde, hasta } = fechasDe(rango);
+  const { desde, hasta, rango } = periodo;
   const { data, isPending, isError, error, refetch, isFetching } = useGananciaProductos(desde, hasta);
 
   const productos = useMemo(
@@ -28,6 +29,8 @@ export function GananciaProductos() {
     { total: 0, costo: 0, unidades: 0 },
   );
   const ganancia = totales.total - totales.costo;
+  // Rotación = unidades por día del período (hasta hoy). En "todos los datos" no tiene sentido.
+  const diasPeriodo = rango === "todo" ? null : diasEntre(desde, hasta < hoyAR() ? hasta : hoyAR());
   const margenPct = totales.total > 0 ? (ganancia / totales.total) * 100 : 0;
 
   const columna = (clave: Orden, etiqueta: string) => (
@@ -44,7 +47,7 @@ export function GananciaProductos() {
 
   return (
     <div className="flex flex-col gap-4">
-      <SelectorPeriodo valor={rango} onCambiar={setRango} />
+      <SelectorPeriodo periodo={periodo} />
 
       {isPending ? (
         <CargandoFilas filas={8} />
@@ -60,6 +63,8 @@ export function GananciaProductos() {
             <Kpi titulo="Ganancia bruta" valor={formatoPesos(ganancia)} />
             <Kpi titulo="Margen" valor={`${margenPct.toFixed(1)}%`} />
           </div>
+
+          <MatrizProductos productos={productos} />
 
           <Card>
             <CardHeader>
@@ -79,6 +84,7 @@ export function GananciaProductos() {
                     <TableRow>
                       <TableHead>Producto</TableHead>
                       {columna("unidades", "Unidades")}
+                      {diasPeriodo && <TableHead className="text-right">Rotación</TableHead>}
                       {columna("total", "Vendido")}
                       <TableHead className="text-right">Costo</TableHead>
                       {columna("margen", "Ganancia")}
@@ -90,6 +96,11 @@ export function GananciaProductos() {
                       <TableRow key={p.producto}>
                         <TableCell className="font-medium">{p.producto}</TableCell>
                         <TableCell className="text-right tabular-nums">{formatoNumero(p.unidades)}</TableCell>
+                        {diasPeriodo && (
+                          <TableCell className="text-right tabular-nums text-muted-foreground">
+                            {(p.unidades / diasPeriodo).toLocaleString("es-AR", { maximumFractionDigits: 1 })} u/día
+                          </TableCell>
+                        )}
                         <TableCell className="text-right tabular-nums">{formatoPesos(p.total)}</TableCell>
                         <TableCell className="text-right tabular-nums text-muted-foreground">{formatoPesos(p.costo)}</TableCell>
                         <TableCell className={`text-right font-medium tabular-nums ${p.margen < 0 ? "text-destructive" : ""}`}>

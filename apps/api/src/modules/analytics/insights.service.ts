@@ -32,7 +32,7 @@ const VACIO: InsightsPayload = {
 export class InsightsService {
   constructor(@Inject(INSIGHTS_REPOSITORY) private readonly repository: InsightsRepository) {}
 
-  async insights(empresaId: string): Promise<InsightsPayload> {
+  async insights(empresaId: string, pronostico: 'semana' | 'mes' = 'semana'): Promise<InsightsPayload> {
     const errores: InsightsErrores = {};
     const hoy = fechaHoyAR();
     const mesIni = inicioMesIso(hoy);
@@ -94,7 +94,7 @@ export class InsightsService {
 
     let forecast = null;
     try {
-      if (diasHistorial >= 30) forecast = armarForecast(serieDiaria, 'semana', diasHistorial, hoy);
+      if (diasHistorial >= 30) forecast = armarForecast(serieDiaria, pronostico, diasHistorial, hoy);
     } catch (e) {
       errores.forecast = e instanceof Error ? e.message : 'No se pudo calcular la proyección';
     }

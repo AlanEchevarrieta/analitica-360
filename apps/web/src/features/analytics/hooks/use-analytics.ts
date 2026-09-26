@@ -16,7 +16,7 @@ function useConsulta<T>(clave: unknown[], ruta: string | null) {
   });
 }
 
-export const usePeriodo = (desde: string, hasta: string, granularidad: "dia" | "semana" | "mes") =>
+export const usePeriodo = (desde: string, hasta: string, granularidad: "dia" | "semana" | "mes" | "anio") =>
   useConsulta<{ avisoLimite: number | null; data: Periodo | null }>(
     ["periodo", desde, hasta, granularidad],
     `/analytics/periodo?desde=${desde}&hasta=${hasta}&granularidad=${granularidad}`,
@@ -28,11 +28,13 @@ export const useContabilidad = (desde: string, hasta: string) =>
 export const useGastos = (desde: string, hasta: string) =>
   useConsulta<Gasto[]>(["gastos", desde, hasta], `/gastos?desde=${desde}&hasta=${hasta}`);
 
-export const useInsights = (desde: string, hasta: string) =>
-  useConsulta<Insights>(["insights", desde, hasta], `/analytics/insights?desde=${desde}&hasta=${hasta}`);
+/** Insights usa todo el historial; solo se elige cómo agrupar el pronóstico. */
+export const useInsights = (pronostico: "semana" | "mes") =>
+  useConsulta<Insights>(["insights", pronostico], `/analytics/insights?pronostico=${pronostico}`);
 
-export const useCombos = (desde: string, hasta: string) =>
-  useConsulta<Combo[]>(["combos", desde, hasta], `/analytics/insights/combos?desde=${desde}&hasta=${hasta}`);
+/** Productos que se compran juntos (de a 2 o de a 3), con todo el historial. */
+export const useCombos = (tamano: 2 | 3) =>
+  useConsulta<Combo[]>(["combos", tamano], tamano === 2 ? "/analytics/insights/combos" : "/analytics/insights/combos-3");
 
 export const useInflacion = (desde: string, hasta: string) =>
   useConsulta<Inflacion>(["inflacion", desde, hasta], `/analytics/inflacion?desde=${desde}&hasta=${hasta}`);

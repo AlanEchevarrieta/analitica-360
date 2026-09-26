@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, PolarAngleAxis, PolarGrid, Radar, RadarChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
-import { SelectorPeriodo } from "@/components/shared/selector-periodo";
 import { formatoPesos } from "@/lib/formato";
-import { etiquetaFecha, fechasDe, type Rango } from "@/lib/periodos";
+import { etiquetaFecha, hoyAR } from "@/lib/periodos";
 import { useInsights } from "../hooks/use-analytics";
 import { InsightsMercado } from "./InsightsMercado";
 
@@ -26,13 +26,13 @@ const BADGE: Record<string, { etiqueta: string; clase: string }> = {
 const TENDENCIA = { positiva: "📈 en alza", negativa: "📉 en baja", neutra: "➡️ estable" } as const;
 
 export function InsightsVista() {
-  const [rango, setRango] = useState<Rango>("90dias");
-  const { desde, hasta } = fechasDe(rango);
-  const { data, isPending, isError, error, refetch } = useInsights(desde, hasta);
+  const [pronostico, setPronostico] = useState<"semana" | "mes">("semana");
+  const { data, isPending, isError, error, refetch, isFetching } = useInsights(pronostico);
+  const hasta = hoyAR();
 
   return (
-    <div className="flex flex-col gap-4">
-      <SelectorPeriodo valor={rango} onCambiar={setRango} />
+    <div className={`flex flex-col gap-4 ${isFetching && data ? "opacity-80 transition-opacity" : ""}`}>
+      <p className="text-sm text-muted-foreground">Los insights se calculan con todo tu historial de ventas.</p>
       {isPending ? (
         <CargandoFilas filas={8} />
       ) : isError ? (
@@ -68,10 +68,19 @@ export function InsightsVista() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Pronóstico de ventas {data.forecast ? TENDENCIA[data.forecast.tendencia] : ""}</CardTitle>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <CardTitle>Pronóstico de ventas {data.forecast ? TENDENCIA[data.forecast.tendencia] : ""}</CardTitle>
+                  <div className="flex gap-1" role="group" aria-label="Pronóstico por">
+                    {(["semana", "mes"] as const).map((g) => (
+                      <Button key={g} size="xs" variant={pronostico === g ? "secondary" : "ghost"} aria-pressed={pronostico === g} onClick={() => setPronostico(g)}>
+                        {g === "semana" ? "Semanal" : "Mensual"}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
                 <CardDescription>
                   {data.forecast
-                    ? `${data.forecast.etiquetaProyeccion}: ${formatoPesos(data.forecast.totalProyeccion)} (tendencia de las últimas semanas completas)`
+                    ? `${data.forecast.etiquetaProyeccion}: ${formatoPesos(data.forecast.totalProyeccion)} (tendencia de ${pronostico === "semana" ? "las últimas semanas completas" : "los últimos meses completos"})`
                     : (data.errores.forecast ?? "Hacen falta al menos 30 días de ventas para proyectar.")}
                 </CardDescription>
               </CardHeader>
@@ -82,7 +91,7 @@ export function InsightsVista() {
                       <CartesianGrid vertical={false} />
                       <XAxis dataKey="clave" tickFormatter={etiquetaFecha} tickLine={false} axisLine={false} fontSize={12} />
                       <YAxis tickFormatter={(v: number) => formatoPesos(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
-                      <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} labelFormatter={(l) => `Semana del ${etiquetaFecha(String(l))}`} />} />
+                      <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} labelFormatter={(l) => (pronostico === "semana" ? `Semana del ${etiquetaFecha(String(l))}` : etiquetaFecha(String(l).slice(0, 7)))} />} />
                       <Line dataKey="historico" stroke="var(--color-historico)" strokeWidth={2} dot={false} connectNulls={false} />
                       <Line dataKey="proyeccion" stroke="var(--color-proyeccion)" strokeDasharray="5 5" strokeWidth={2} dot={false} />
                     </LineChart>
@@ -130,7 +139,7 @@ export function InsightsVista() {
             </CardContent>
           </Card>
 
-          <InsightsMercado desde={desde} hasta={hasta} variantes={data.variantes} />
+          <InsightsMercado hasta={hasta} variantes={data.variantes} />
         </>
       )}
     </div>
