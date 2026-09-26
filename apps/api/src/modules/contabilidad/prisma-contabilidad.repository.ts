@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import { dineroDevolucionesPorDia } from '../analytics/devoluciones-dinero.js';
-import { fechaLocalAR } from '../analytics/analytics.util.js';
+import { diaAR } from '../analytics/fecha-sql.js';
 import type { ContabilidadRepository, ValorStock } from './contabilidad.repository.js';
 import type { ItemCogs, VentaConCogs } from './contabilidad.util.js';
 import { sumarDiasIso } from '../analytics/analytics.util.js';
@@ -14,27 +14,25 @@ export class PrismaContabilidadRepository implements ContabilidadRepository {
   async ventasConItems(empresaId: string, desde: string, hasta: string): Promise<{ ventas: VentaConCogs[]; items: ItemCogs[] }> {
     const desdeDate = new Date(`${desde}T00:00:00.000-03:00`);
     const hastaDate = new Date(`${sumarDiasIso(hasta, 1)}T00:00:00.000-03:00`);
-    const ventas = await this.prisma.venta.findMany({
-      where: { empresaId, deletedAt: null, fecha: { gte: desdeDate, lt: hastaDate } },
-      select: { id: true, fecha: true, totalConInteres: true },
-    });
-    // Fecha local AR: con toISOString() una venta del 31/08 a las 22 h caía en septiembre.
-    const ventasOut: VentaConCogs[] = ventas.map((v) => ({ id: v.id, fecha: fechaLocalAR(v.fecha), total: v.totalConInteres?.toNumber() ?? 0 }));
-    const ajustes = await dineroDevolucionesPorDia(this.prisma, empresaId, desdeDate, hastaDate);
-
-    const ids = ventasOut.map((v) => v.id);
-    const itemsAjuste: ItemCogs[] = ajustes.map((a) => ({ ventaId: `devoluciones-${a.fecha}`, cogs: a.costo }));
+    // Una sola consulta con el costo ya sumado por venta (antes se traían los ítems
+    // en tandas de 200 ventas: con 21.000 ventas eran 106 consultas).
+    const [filas, ajustes] = await Promise.all([
+      this.prisma.$queryRaw<{ id: string; fecha: string; total: string | null; cogs: string }[]>(Prisma.sql`
+        SELECT v.id, ${diaAR(Prisma.raw('v.fecha'))}::text AS fecha, v.total_con_interes AS total,
+               COALESCE(SUM(vi.cantidad * vi.costo_unitario), 0) AS cogs
+        FROM ventas v
+        LEFT JOIN ventas_items vi ON vi.venta_id = v.id
+        WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL AND v.fecha >= ${desdeDate} AND v.fecha < ${hastaDate}
+        GROUP BY v.id
+      `),
+      dineroDevolucionesPorDia(this.prisma, empresaId, desdeDate, hastaDate),
+    ]);
+    // Fecha local AR (diaAR): una venta del 31/08 a las 22 h es de agosto.
+    const ventasOut: VentaConCogs[] = filas.map((v) => ({ id: v.id, fecha: v.fecha, total: Number(v.total ?? 0) }));
+    const items: ItemCogs[] = filas.map((v) => ({ ventaId: v.id, cogs: Number(v.cogs) }));
     ventasOut.push(...ajustes.map((a) => ({ id: `devoluciones-${a.fecha}`, fecha: a.fecha, total: a.ingreso, esAjuste: true })));
-    if (ids.length === 0) return { ventas: ventasOut, items: itemsAjuste };
-    const slices: string[][] = [];
-    for (let i = 0; i < ids.length; i += 200) slices.push(ids.slice(i, i + 200));
-    const paginas = await Promise.all(
-      slices.map((slice) =>
-        this.prisma.ventaItem.findMany({ where: { empresaId, ventaId: { in: slice } }, select: { ventaId: true, cantidad: true, costoUnitario: true } }),
-      ),
-    );
-    const items: ItemCogs[] = paginas.flat().map((it) => ({ ventaId: it.ventaId, cogs: it.cantidad * it.costoUnitario.toNumber() }));
-    return { ventas: ventasOut, items: [...items, ...itemsAjuste] };
+    items.push(...ajustes.map((a) => ({ ventaId: `devoluciones-${a.fecha}`, cogs: a.costo })));
+    return { ventas: ventasOut, items };
   }
 
   async valorStock(empresaId: string): Promise<ValorStock> {

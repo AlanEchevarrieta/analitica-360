@@ -74,7 +74,7 @@ export function ClienteFichaVista({ id }: { id: string }) {
               <ul className="flex flex-col divide-y text-sm">
                 {c.ventas.map((v) => (
                   <li key={v.id} className="flex gap-3 py-2">
-                    <Link href={`/ventas/${v.id}`} className="w-36 shrink-0 tabular-nums hover:underline">
+                    <Link prefetch={false} href={`/ventas/${v.id}`} className="w-36 shrink-0 tabular-nums hover:underline">
                       {formatoFechaHora(v.fecha)}
                     </Link>
                     <span className="flex-1 truncate text-muted-foreground">{v.productos}</span>

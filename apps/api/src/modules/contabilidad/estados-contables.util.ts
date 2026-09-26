@@ -52,6 +52,8 @@ export interface ResultadoDia {
   cogs: number;
   /** true = devoluciones/cambios del día (no es una venta). */
   esAjuste: boolean;
+  /** Cantidad de ventas del día (se usa para contar ventas del período). */
+  ventas?: number;
 }
 
 export interface GastoDato {

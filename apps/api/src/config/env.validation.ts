@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(3001),
+  /** Orígenes web que pueden llamar a la API, separados por coma (ej. https://analitica360.app,https://www.analitica360.app). */
+  CORS_ORIGINS: z.string().default('http://localhost:3000'),
   CLERK_SECRET_KEY: z.string().min(1, 'CLERK_SECRET_KEY es obligatoria'),
   CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
   // La firma svix del webhook de Clerk se verifica en apps/web (que es

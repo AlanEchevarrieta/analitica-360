@@ -176,6 +176,19 @@ try {
   console.log(`6. Productos vinculados a su categoría: ${categorizados.rowCount}` +
     (creadas.rowCount ? ` · categorías creadas: ${creadas.rows.map((r) => r.nombre).join(', ')}` : ''));
 
+  // 7. Solo informa: movimientos de stock de esta empresa que apuntan a productos
+  //    de OTRA empresa (datos del legacy). No suman en ningún cálculo (las consultas
+  //    filtran por empresa), pero hay que decidir a mano a qué producto corresponden.
+  const ajenos = await q(
+    `SELECT p.nombre, e.nombre AS duena, COUNT(*)::int AS movimientos, SUM(m.cantidad * m.signo)::int AS stock
+     FROM movimientos_inventario m JOIN productos p ON p.id = m.producto_id JOIN empresas e ON e.id = p.empresa_id
+     WHERE m.empresa_id = $1 AND p.empresa_id <> $1 AND m.deleted_at IS NULL
+     GROUP BY p.nombre, e.nombre ORDER BY p.nombre`,
+    [empresa],
+  );
+  console.log(`7. Movimientos que apuntan a productos de otra empresa: ${ajenos.rows.reduce((a, r) => a + r.movimientos, 0)}` +
+    (ajenos.rowCount ? ` · revisar a mano: ${ajenos.rows.map((r) => `${r.nombre} de "${r.duena}" (${r.movimientos} mov., stock ${r.stock})`).join(', ')}` : ''));
+
   await q(APLICAR ? 'COMMIT' : 'ROLLBACK');
   console.log(APLICAR ? '\nCorrecciones aplicadas.' : '\nDry run: no se guardó nada. Usá --aplicar para guardar.');
 } catch (error) {

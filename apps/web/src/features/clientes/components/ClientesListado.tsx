@@ -47,7 +47,7 @@ export function ClientesListado() {
               {filas.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">
-                    <Link href={`/clientes/${c.id}`} className="hover:underline">
+                    <Link prefetch={false} href={`/clientes/${c.id}`} className="hover:underline">
                       {c.nombre}
                     </Link>
                   </TableCell>

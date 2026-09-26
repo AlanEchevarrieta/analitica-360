@@ -86,17 +86,17 @@ export function SoporteAdminVista() {
               {lista.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="tabular-nums">
-                    <Link href={`/admin/soporte/${t.id}`} className="font-medium hover:underline">
+                    <Link prefetch={false} href={`/admin/soporte/${t.id}`} className="font-medium hover:underline">
                       {t.numeroTicket ?? "—"}
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Link href={`/admin/clientes/${t.empresaId}`} className="hover:underline">
+                    <Link prefetch={false} href={`/admin/clientes/${t.empresaId}`} className="hover:underline">
                       {t.empresaNombre}
                     </Link>
                   </TableCell>
                   <TableCell className="max-w-80 truncate">
-                    <Link href={`/admin/soporte/${t.id}`} className="hover:underline">
+                    <Link prefetch={false} href={`/admin/soporte/${t.id}`} className="hover:underline">
                       {t.asunto}
                     </Link>
                     <span className="block text-xs text-muted-foreground">{CATEGORIAS[t.categoria as keyof typeof CATEGORIAS] ?? t.categoria}</span>

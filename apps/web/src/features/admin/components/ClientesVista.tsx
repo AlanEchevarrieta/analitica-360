@@ -77,7 +77,7 @@ export function ClientesVista() {
                 return (
                   <TableRow key={e.id} className={cn(e.baja && "opacity-50")}>
                     <TableCell>
-                      <Link href={`/admin/clientes/${e.id}`} className="font-medium hover:underline">
+                      <Link prefetch={false} href={`/admin/clientes/${e.id}`} className="font-medium hover:underline">
                         {e.nombre}
                       </Link>
                       <span className="ml-2 space-x-1">

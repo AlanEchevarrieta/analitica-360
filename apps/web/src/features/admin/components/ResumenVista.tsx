@@ -71,7 +71,7 @@ export function ResumenVista() {
             <ul className="flex flex-col divide-y text-sm">
               {conAlertas.slice(0, 8).map((e) => (
                 <li key={e.id} className="flex flex-col gap-1 py-2">
-                  <Link href={`/admin/clientes/${e.id}`} className="font-medium hover:underline">
+                  <Link prefetch={false} href={`/admin/clientes/${e.id}`} className="font-medium hover:underline">
                     {e.nombre}
                   </Link>
                   <span className="flex flex-wrap gap-1">
@@ -149,7 +149,7 @@ export function ResumenVista() {
               {top.map((e, i) => (
                 <li key={e.id} className="flex items-center gap-2">
                   <span className="w-4 text-muted-foreground tabular-nums">{i + 1}</span>
-                  <Link href={`/admin/clientes/${e.id}`} className="flex-1 truncate hover:underline">
+                  <Link prefetch={false} href={`/admin/clientes/${e.id}`} className="flex-1 truncate hover:underline">
                     {e.nombre}
                   </Link>
                   <span className="font-medium tabular-nums">{formatoPesos(e.monto30)}</span>

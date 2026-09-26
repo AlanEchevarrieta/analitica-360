@@ -1,6 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
-import { CONTABILIDAD_REPOSITORY, type ContabilidadRepository } from './contabilidad.repository.js';
 import { expandirRecurrentes } from './contabilidad.util.js';
 import { GASTO_REPOSITORY, type GastoRepository } from './gasto.repository.js';
 import {
@@ -55,22 +54,24 @@ const CRITERIOS = [
 export class EstadosContablesService {
   constructor(
     @Inject(ESTADOS_CONTABLES_REPOSITORY) private readonly repository: EstadosContablesRepository,
-    @Inject(CONTABILIDAD_REPOSITORY) private readonly contabilidadRepository: ContabilidadRepository,
     @Inject(GASTO_REPOSITORY) private readonly gastoRepository: GastoRepository,
   ) {}
 
   private async datos(empresaId: string, hasta: string): Promise<DatosContables> {
-    const [{ ventas, items }, gastos, cobros, senias, compras, movimientos] = await Promise.all([
-      this.contabilidadRepository.ventasConItems(empresaId, '2000-01-01', hasta),
+    const [ventasDia, devoluciones, gastos, cobros, senias, compras, movimientos] = await Promise.all([
+      this.repository.ventasPorDia(empresaId, hasta),
+      this.repository.devolucionesPorDia(empresaId, hasta),
       this.gastoRepository.listar(empresaId, '2000-01-01', hasta),
       this.repository.cobrosPorDia(empresaId, hasta),
       this.repository.senias(empresaId, hasta),
       this.repository.compras(empresaId, hasta),
       this.repository.movimientosDatos(empresaId, hasta),
     ]);
-    const cogsPorVenta = new Map<string, number>();
-    for (const it of items) cogsPorVenta.set(it.ventaId, (cogsPorVenta.get(it.ventaId) ?? 0) + it.cogs);
-    const resultados: ResultadoDia[] = ventas.map((v) => ({ fecha: v.fecha, ingreso: v.total, cogs: cogsPorVenta.get(v.id) ?? 0, esAjuste: !!v.esAjuste }));
+    // Totales por día (agregados en la base) y, aparte, el ajuste de devoluciones de cada día.
+    const resultados: ResultadoDia[] = [
+      ...ventasDia.map((v) => ({ fecha: v.fecha, ingreso: v.ingreso, cogs: v.cogs, esAjuste: false, ventas: v.ventas })),
+      ...devoluciones.map((d) => ({ fecha: d.fecha, ingreso: d.ingreso, cogs: d.costo, esAjuste: true })),
+    ];
     return {
       cobros,
       resultados,
@@ -94,7 +95,7 @@ export class EstadosContablesService {
       this.repository.deudaPorProveedor(empresaId, hasta),
     ]);
     const caja = movimientosDeCaja(d);
-    const cantidadVentas = d.resultados.filter((r) => !r.esAjuste && r.fecha >= desde && r.fecha <= hasta).length;
+    const cantidadVentas = d.resultados.filter((r) => !r.esAjuste && r.fecha >= desde && r.fecha <= hasta).reduce((a, r) => a + (r.ventas ?? 1), 0);
     const resultados = estadoResultados(d, desde, hasta, cantidadVentas);
     const balanceInicio = balanceAl(d, antesDeDesde, stockInicio, caja);
     const balanceCierre = balanceAl(d, hasta, stockCierre, caja);

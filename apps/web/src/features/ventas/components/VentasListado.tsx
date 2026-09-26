@@ -92,7 +92,7 @@ export function VentasListado() {
                 {data.items.map((v) => (
                   <TableRow key={v.id} className={v.anulada ? "opacity-60" : undefined}>
                     <TableCell className="tabular-nums">
-                      <Link href={`/ventas/${v.id}`} className="font-medium hover:underline">
+                      <Link prefetch={false} href={`/ventas/${v.id}`} className="font-medium hover:underline">
                         {v.numeroVenta ?? "Ver"}
                       </Link>
                     </TableCell>

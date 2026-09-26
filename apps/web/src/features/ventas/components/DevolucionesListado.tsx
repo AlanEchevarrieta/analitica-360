@@ -47,7 +47,7 @@ export function DevolucionesListado() {
                   <TableCell>{d.tipo === "cambio" ? "Cambio" : "Devolución"}</TableCell>
                   <TableCell>
                     {d.ventaId ? (
-                      <Link href={`/ventas/${d.ventaId}`} className="hover:underline">
+                      <Link prefetch={false} href={`/ventas/${d.ventaId}`} className="hover:underline">
                         {d.ventaLabel ?? "Ver venta"}
                       </Link>
                     ) : (

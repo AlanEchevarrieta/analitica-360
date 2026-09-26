@@ -42,7 +42,7 @@ export function ProveedoresListado() {
                 return (
                   <TableRow key={p.id} className={p.activo ? undefined : "opacity-50"}>
                     <TableCell className="font-medium">
-                      <Link href={`/proveedores/${p.id}`} className="hover:underline">
+                      <Link prefetch={false} href={`/proveedores/${p.id}`} className="hover:underline">
                         {p.nombre}
                       </Link>
                       {!p.activo && <span className="ml-2 text-xs text-muted-foreground">(inactivo)</span>}

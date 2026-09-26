@@ -122,7 +122,7 @@ export function PagosVista() {
                 <TableRow key={p.id}>
                   <TableCell className="tabular-nums">{fechaCorta(p.createdAt)}</TableCell>
                   <TableCell>
-                    <Link href={`/admin/clientes/${p.empresaId}`} className="hover:underline">
+                    <Link prefetch={false} href={`/admin/clientes/${p.empresaId}`} className="hover:underline">
                       {p.empresaNombre}
                     </Link>
                     {p.notas && <span className="block text-xs text-muted-foreground">{p.notas}</span>}

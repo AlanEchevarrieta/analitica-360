@@ -200,7 +200,7 @@ export function ClienteFichaVista({ id }: { id: string }) {
           <ul className="flex flex-col divide-y text-sm">
             {data.tickets.map((t) => (
               <li key={t.id} className="py-2">
-                <Link href={`/admin/soporte/${t.id}`} className="font-medium hover:underline">
+                <Link prefetch={false} href={`/admin/soporte/${t.id}`} className="font-medium hover:underline">
                   {t.numeroTicket} · {t.asunto}
                 </Link>
                 <span className="block text-xs text-muted-foreground">

@@ -80,7 +80,7 @@ export function PedidosListado() {
                 {data.items.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium tabular-nums">
-                      <Link href={`/pedidos/${p.id}`} className="hover:underline">
+                      <Link prefetch={false} href={`/pedidos/${p.id}`} className="hover:underline">
                         {p.numeroPedido}
                       </Link>
                     </TableCell>

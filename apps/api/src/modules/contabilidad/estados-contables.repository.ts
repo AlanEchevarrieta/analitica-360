@@ -36,6 +36,13 @@ export const ESTADOS_CONTABLES_REPOSITORY = Symbol('ESTADOS_CONTABLES_REPOSITORY
 
 /** Lectura de lo que hace falta para los estados contables, todo hasta el cierre de `hasta` (día AR). */
 export interface EstadosContablesRepository {
+  /**
+   * Ventas por día (ingreso, costo y cantidad) hasta el cierre de `hasta`.
+   * Agregado en la base: con 21.000 ventas eran 21.000 filas procesadas en el servidor.
+   */
+  ventasPorDia(empresaId: string, hasta: string): Promise<{ fecha: string; ingreso: number; cogs: number; ventas: number }[]>;
+  /** Efecto de devoluciones y cambios por día (ingreso y costo netos), hasta el cierre de `hasta`. */
+  devolucionesPorDia(empresaId: string, hasta: string): Promise<{ fecha: string; ingreso: number; costo: number }[]>;
   /** Plata cobrada por ventas por día: la seña (o el total) al vender y el saldo cuando se cobra. */
   cobrosPorDia(empresaId: string, hasta: string): Promise<MontoDia[]>;
   senias(empresaId: string, hasta: string): Promise<SeniaDato[]>;

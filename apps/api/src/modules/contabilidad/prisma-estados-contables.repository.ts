@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import { sumarDiasIso } from '../analytics/analytics.util.js';
 import { diaAR } from '../analytics/fecha-sql.js';
+import { dineroDevolucionesPorDia } from '../analytics/devoluciones-dinero.js';
 import type {
   CrearMovimientoFinancieroInput,
   DeudaProveedor,
@@ -34,6 +35,26 @@ function toMovimiento(m: FilaMovimiento): MovimientoFinanciero {
 @Injectable()
 export class PrismaEstadosContablesRepository implements EstadosContablesRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  async ventasPorDia(empresaId: string, hasta: string) {
+    const filas = await this.prisma.$queryRaw<{ fecha: string; ingreso: string; cogs: string; ventas: bigint }[]>(Prisma.sql`
+      -- Primero por venta (el total de la venta una sola vez) y después por día.
+      SELECT t.fecha::text, SUM(t.total) AS ingreso, SUM(t.cogs) AS cogs, COUNT(*) AS ventas FROM (
+        SELECT ${diaAR(Prisma.raw('v.fecha'))} AS fecha, COALESCE(v.total_con_interes, 0) AS total,
+               COALESCE(SUM(vi.cantidad * vi.costo_unitario), 0) AS cogs
+        FROM ventas v
+        LEFT JOIN ventas_items vi ON vi.venta_id = v.id
+        WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL AND v.fecha < ${finDelDia(hasta)}
+        GROUP BY v.id
+      ) t
+      GROUP BY t.fecha
+    `);
+    return filas.map((f) => ({ fecha: f.fecha, ingreso: Number(f.ingreso), cogs: Number(f.cogs), ventas: Number(f.ventas) }));
+  }
+
+  devolucionesPorDia(empresaId: string, hasta: string) {
+    return dineroDevolucionesPorDia(this.prisma, empresaId, new Date('2000-01-01T00:00:00.000-03:00'), finDelDia(hasta));
+  }
 
   async cobrosPorDia(empresaId: string, hasta: string): Promise<MontoDia[]> {
     const fin = finDelDia(hasta);
@@ -104,18 +125,19 @@ export class PrismaEstadosContablesRepository implements EstadosContablesReposit
     // fecha de la compra (la misma que usa la caja): el legacy cargaba compras viejas con
     // movimientos de stock fechados el día de la carga.
     const filas = await this.prisma.$queryRaw<{ valor: string }[]>(Prisma.sql`
-      SELECT COALESCE(SUM(t.stock * t.costo), 0) AS valor FROM (
-        SELECT COALESCE(p.costo, 0) AS costo,
-               COALESCE((
-                 SELECT SUM(m.cantidad * m.signo) FROM movimientos_inventario m
-                 LEFT JOIN compras c ON m.tipo = 'compra' AND c.id = m.referencia_id
-                 WHERE m.producto_id = p.id AND m.empresa_id = ${empresaId}::uuid AND m.deleted_at IS NULL
-                   AND COALESCE(c.fecha, ${diaAR(Prisma.raw('m.fecha'))}) <= ${fecha}::date
-               ), 0) AS stock
-        FROM productos p
-        WHERE p.empresa_id = ${empresaId}::uuid AND p.deleted_at IS NULL
-      ) t
-      WHERE t.stock > 0
+      SELECT COALESCE(SUM(s.stock * COALESCE(p.costo, 0)), 0) AS valor
+      FROM (
+        SELECT m.producto_id, SUM(m.cantidad * m.signo) AS stock
+        FROM movimientos_inventario m
+        LEFT JOIN compras c ON m.tipo = 'compra' AND c.id = m.referencia_id
+        WHERE m.empresa_id = ${empresaId}::uuid AND m.deleted_at IS NULL
+          AND COALESCE(c.fecha, ${diaAR(Prisma.raw('m.fecha'))}) <= ${fecha}::date
+        GROUP BY m.producto_id
+      ) s
+      -- El producto también tiene que ser de la empresa: hay movimientos migrados del sistema
+      -- anterior que apuntan a productos de otra empresa y no deben sumar.
+      JOIN productos p ON p.id = s.producto_id AND p.empresa_id = ${empresaId}::uuid AND p.deleted_at IS NULL
+      WHERE s.stock > 0
     `);
     return Number(filas[0]?.valor ?? 0);
   }

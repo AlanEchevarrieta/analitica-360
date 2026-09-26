@@ -49,12 +49,12 @@ export function TicketsListado() {
                 {data.map((t) => (
                   <TableRow key={t.id}>
                     <TableCell className="font-medium tabular-nums">
-                      <Link href={`/soporte/${t.id}`} className="hover:underline">
+                      <Link prefetch={false} href={`/soporte/${t.id}`} className="hover:underline">
                         {t.numeroTicket ?? "—"}
                       </Link>
                     </TableCell>
                     <TableCell className="max-w-80 truncate">
-                      <Link href={`/soporte/${t.id}`} className="hover:underline">
+                      <Link prefetch={false} href={`/soporte/${t.id}`} className="hover:underline">
                         {t.asunto}
                       </Link>
                     </TableCell>
