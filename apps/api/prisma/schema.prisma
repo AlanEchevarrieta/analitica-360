@@ -74,6 +74,7 @@ model Empresa {
   movimientosFinancieros    MovimientoFinanciero[]
   tickets                   Ticket[]
   pagos                     Pago[]
+  listasPrecios             ListaPrecio[]
 
   @@map("empresas")
 }
@@ -174,22 +175,22 @@ model Usuario {
   createdAt           DateTime  @default(now()) @map("created_at")
   deletedAt           DateTime? @map("deleted_at")
 
-  empresa            Empresa                @relation(fields: [empresaId], references: [id])
-  invitadoPor        Usuario?               @relation("UsuarioInvitadoPor", fields: [invitadoPorId], references: [id])
-  invitados          Usuario[]              @relation("UsuarioInvitadoPor")
-  movimientos        MovimientoInventario[]
-  ventas             Venta[]
-  anulaciones        Anulacion[]
-  devoluciones       Devolucion[]
-  compras            Compra[]
-  difusiones         Difusion[]
-  pedidosAsignados   Pedido[]               @relation("PedidoAsignadoA")
-  colaboradorPermiso ColaboradorPermiso?
-  gastos             Gasto[]
+  empresa                Empresa                @relation(fields: [empresaId], references: [id])
+  invitadoPor            Usuario?               @relation("UsuarioInvitadoPor", fields: [invitadoPorId], references: [id])
+  invitados              Usuario[]              @relation("UsuarioInvitadoPor")
+  movimientos            MovimientoInventario[]
+  ventas                 Venta[]
+  anulaciones            Anulacion[]
+  devoluciones           Devolucion[]
+  compras                Compra[]
+  difusiones             Difusion[]
+  pedidosAsignados       Pedido[]               @relation("PedidoAsignadoA")
+  colaboradorPermiso     ColaboradorPermiso?
+  gastos                 Gasto[]
   movimientosFinancieros MovimientoFinanciero[]
-  tickets            Ticket[]
-  ticketsRespuestas  TicketRespuesta[]
-  asignacionFijaDe   ConfiguracionEmpresa[] @relation("AsignacionFijaUsuario")
+  tickets                Ticket[]
+  ticketsRespuestas      TicketRespuesta[]
+  asignacionFijaDe       ConfiguracionEmpresa[] @relation("AsignacionFijaUsuario")
 
   @@index([empresaId])
   @@map("usuarios")
@@ -451,11 +452,14 @@ model Venta {
   saldoPendiente     Decimal   @default(0) @map("saldo_pendiente") @db.Decimal(12, 2)
   estadoCobro        String    @default("pagado") @map("estado_cobro") // pagado | señado | saldo_pendiente
   fechaCobroSaldo    DateTime? @map("fecha_cobro_saldo")
+  /// Lista de precios con la que se vendió (null = precio normal).
+  listaPrecioId      String?   @map("lista_precio_id") @db.Uuid
   deletedAt          DateTime? @map("deleted_at")
 
   empresa      Empresa      @relation(fields: [empresaId], references: [id])
   usuario      Usuario      @relation(fields: [usuarioId], references: [id])
   cliente      Cliente?     @relation(fields: [clienteId], references: [id])
+  listaPrecio  ListaPrecio? @relation(fields: [listaPrecioId], references: [id])
   items        VentaItem[]
   anulacion    Anulacion?
   devoluciones Devolucion[]
@@ -569,7 +573,7 @@ model Proveedor {
   deletedAt           DateTime? @map("deleted_at")
   createdAt           DateTime  @default(now()) @map("created_at")
 
-  empresa       Empresa       @relation(fields: [empresaId], references: [id])
+  empresa       Empresa                @relation(fields: [empresaId], references: [id])
   compras       Compra[]
   ordenesCompra OrdenCompra[]
   pagos         MovimientoFinanciero[]
@@ -756,18 +760,21 @@ model PedidoItem {
 // ==== Clientes / CRM ====
 
 model Cliente {
-  id          String    @id @default(uuid()) @db.Uuid
-  empresaId   String    @map("empresa_id") @db.Uuid
-  nombre      String
-  telefono    String?
-  email       String?
-  cumpleanos  DateTime? @db.Date
-  notasLibres String?   @map("notas_libres")
-  etiquetas   String[]  @default([])
-  deletedAt   DateTime? @map("deleted_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id            String    @id @default(uuid()) @db.Uuid
+  empresaId     String    @map("empresa_id") @db.Uuid
+  nombre        String
+  telefono      String?
+  email         String?
+  cumpleanos    DateTime? @db.Date
+  notasLibres   String?   @map("notas_libres")
+  etiquetas     String[]  @default([])
+  /// Lista de precios que se le aplica al venderle (null = precio normal).
+  listaPrecioId String?   @map("lista_precio_id") @db.Uuid
+  deletedAt     DateTime? @map("deleted_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
 
   empresa       Empresa              @relation(fields: [empresaId], references: [id])
+  listaPrecio   ListaPrecio?         @relation(fields: [listaPrecioId], references: [id])
   interacciones ClienteInteraccion[]
   ventas        Venta[]
   pedidos       Pedido[]
@@ -977,4 +984,24 @@ model ColaboradorPermiso {
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 
   @@map("colaborador_permisos")
+}
+
+/// Lista de precios (ej. Mayorista -15%): ajuste sobre el precio de venta normal.
+model ListaPrecio {
+  id        String    @id @default(uuid()) @db.Uuid
+  empresaId String    @map("empresa_id") @db.Uuid
+  nombre    String
+  /// % sobre el precio normal: -15 = 15% menos, +10 = 10% más.
+  ajustePct Decimal   @map("ajuste_pct") @db.Decimal(6, 2)
+  /// Redondear hacia arriba a este múltiplo (0 = sin redondeo).
+  redondeo  Int       @default(0)
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  empresa  Empresa   @relation(fields: [empresaId], references: [id])
+  clientes Cliente[]
+  ventas   Venta[]
+
+  @@index([empresaId])
+  @@map("listas_precios")
 }

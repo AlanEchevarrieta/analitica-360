@@ -4,6 +4,7 @@ import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { RequireModulo, RequirePermiso } from '../../common/decorators/permiso.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
+import { ListasPreciosService } from '../listas-precios/listas-precios.service.js';
 import { ClientesService } from './clientes.service.js';
 import {
   agregarInteraccionSchema,
@@ -17,7 +18,10 @@ import {
 @Controller('clientes')
 @RequireModulo('clientes')
 export class ClientesController {
-  constructor(private readonly clientesService: ClientesService) {}
+  constructor(
+    private readonly clientesService: ClientesService,
+    private readonly listasPrecios: ListasPreciosService,
+  ) {}
 
   @Get()
   listar(@CurrentEmpresa() empresa: EmpresaContext) {
@@ -44,20 +48,22 @@ export class ClientesController {
 
   @Post()
   @RequirePermiso('gestionar_clientes')
-  crear(
+  async crear(
     @CurrentEmpresa() empresa: EmpresaContext,
     @Body(new ZodValidationPipe(guardarClienteSchema)) body: GuardarClienteInput,
   ) {
+    await this.listasPrecios.validar(empresa.id, body.listaPrecioId);
     return this.clientesService.crear(empresa.id, body);
   }
 
   @Patch(':id')
   @RequirePermiso('gestionar_clientes')
-  actualizar(
+  async actualizar(
     @CurrentEmpresa() empresa: EmpresaContext,
     @Param('id') id: string,
     @Body(new ZodValidationPipe(guardarClienteSchema)) body: GuardarClienteInput,
   ) {
+    await this.listasPrecios.validar(empresa.id, body.listaPrecioId);
     return this.clientesService.actualizar(empresa.id, id, body);
   }
 

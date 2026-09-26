@@ -37,6 +37,7 @@ export class ClientesService {
       cumpleanos: input.cumpleanos ?? null,
       notasLibres: input.notasLibres ?? null,
       etiquetas: input.etiquetas,
+      listaPrecioId: input.listaPrecioId ?? null,
     });
   }
 
@@ -48,6 +49,7 @@ export class ClientesService {
       cumpleanos: input.cumpleanos ?? null,
       notasLibres: input.notasLibres ?? null,
       etiquetas: input.etiquetas,
+      listaPrecioId: input.listaPrecioId,
     });
     if (!cliente) throw new NotFoundException('Cliente no encontrado');
     return cliente;

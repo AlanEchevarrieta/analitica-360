@@ -10,6 +10,7 @@ export interface ClienteRecord {
   cumpleanos: string | null;
   notasLibres: string | null;
   etiquetas: string[];
+  listaPrecioId: string | null;
   ultimaCompra: string | null;
   totalGastado: number;
   cantidadCompras: number;
@@ -43,6 +44,8 @@ export interface GuardarClienteInput {
   cumpleanos: string | null;
   notasLibres: string | null;
   etiquetas: string[];
+  /** undefined = no cambiar. */
+  listaPrecioId?: string | null;
 }
 
 export interface AgregarInteraccionInput {

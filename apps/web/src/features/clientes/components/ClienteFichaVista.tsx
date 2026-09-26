@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { formatoFechaHora, formatoPesos } from "@/lib/formato";
+import { useListasPrecios } from "@/features/listas-precios/listas-precios";
 import { TIPOS_INTERACCION, linkWhatsApp, useAccionesClientes, useCliente } from "../hooks/use-clientes";
 import { ClienteForm } from "./ClienteForm";
 
@@ -18,15 +19,18 @@ export function ClienteFichaVista({ id }: { id: string }) {
   const [editando, setEditando] = useState(false);
   const [tipo, setTipo] = useState<keyof typeof TIPOS_INTERACCION>("nota");
   const [texto, setTexto] = useState("");
+  const listas = useListasPrecios();
 
   if (isPending) return <CargandoFilas filas={6} />;
   if (isError) return <ErrorDatos error={error} onReintentar={() => refetch()} />;
   const wa = linkWhatsApp(c.telefono, `Hola ${c.nombre.split(" ")[0]}!`);
+  const lista = listas.data?.find((l) => l.id === c.listaPrecioId);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-semibold">{c.nombre}</h1>
+        {lista && <span className="rounded bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">Lista {lista.nombre}</span>}
         {c.etiquetas.map((e) => (
           <span key={e} className="rounded bg-muted px-2 py-0.5 text-xs">
             {e}

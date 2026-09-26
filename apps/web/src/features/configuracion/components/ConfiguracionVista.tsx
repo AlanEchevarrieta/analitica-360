@@ -5,6 +5,7 @@ import { useConfiguracion } from "../hooks/use-configuracion";
 import { AparienciaConfig } from "./AparienciaConfig";
 import { EquipoConfig, ExportarConfig } from "./EquipoExportarConfig";
 import { AtributosConfig, CategoriasConfig, UbicacionesConfig } from "./ListasConfig";
+import { ListasPreciosConfig } from "./ListasPreciosConfig";
 import { CuotasConfig, MediosConfig } from "./MediosCuotasConfig";
 import { FlujoVentasConfig, InventarioPedidosConfig } from "./OperacionConfig";
 import { FiscalConfig, RemitenteConfig } from "./RemitenteFiscalConfig";
@@ -28,6 +29,9 @@ export function ConfiguracionVista() {
       </Seccion>
       <Seccion icono="📦" titulo="Inventario y pedidos" subtitulo="Stock bajo, ubicación de venta y asignación de pedidos">
         <InventarioPedidosConfig config={config} />
+      </Seccion>
+      <Seccion icono="💲" titulo="Listas de precios" subtitulo="Mayorista, revendedor: precios distintos por cliente">
+        <ListasPreciosConfig />
       </Seccion>
       <Seccion icono="📍" titulo="Ubicaciones" subtitulo="Depósitos, locales y stands">
         <UbicacionesConfig />

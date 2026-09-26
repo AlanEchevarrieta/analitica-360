@@ -40,6 +40,8 @@ export interface VentaItemRecord {
 
 export interface VentaFicha extends VentaRecord {
   items: VentaItemRecord[];
+  /** Nombre de la lista de precios con la que se vendió (null = precio normal). */
+  listaPrecio: string | null;
 }
 
 export interface ItemVentaInput {
@@ -57,6 +59,7 @@ export interface ConfirmarVentaInput {
   descuento: number;
   clienteNombre: string | null;
   clienteId?: string | null;
+  listaPrecioId?: string | null;
   cuotas: number;
   coeficienteInteres: number;
   ubicacionOrigen?: string | null;
@@ -70,6 +73,7 @@ export type MotivoRechazoVenta =
   | 'producto_invalido'
   | 'variante_invalida'
   | 'cliente_invalido'
+  | 'lista_invalida'
   | 'ubicacion_invalida'
   | 'senia_invalida'
   | 'descuento_invalido';

@@ -12,6 +12,8 @@ export interface Cliente {
   cumpleanos: string | null;
   notasLibres: string | null;
   etiquetas: string[];
+  /** Lista de precios que se le aplica al venderle (null = precio normal). */
+  listaPrecioId: string | null;
   ultimaCompra: string | null;
   totalGastado: number;
   cantidadCompras: number;
@@ -54,6 +56,7 @@ export interface DatosCliente {
   cumpleanos: string | null;
   notasLibres: string | null;
   etiquetas: string[];
+  listaPrecioId: string | null;
 }
 
 function useGet<T>(clave: unknown[], ruta: string | null) {

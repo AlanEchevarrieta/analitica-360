@@ -16,6 +16,8 @@ export interface VentaItemDetalle {
 }
 
 export interface VentaDetalle extends VentaFila {
+  /** Lista de precios con la que se vendió (null = precio normal). */
+  listaPrecio: string | null;
   descuento: number;
   cuotas: number;
   coeficienteInteres: number;

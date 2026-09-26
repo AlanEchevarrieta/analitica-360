@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { formatoNumero, formatoPesos } from "@/lib/formato";
+import { useListasPrecios } from "@/features/listas-precios/listas-precios";
 import { useClientesLista } from "../hooks/use-clientes";
 
 const fecha = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : "—");
@@ -14,6 +15,8 @@ const fecha = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") 
 export function ClientesListado() {
   const { data, isPending, isError, error, refetch } = useClientesLista();
   const [busqueda, setBusqueda] = useState("");
+  const listasPrecios = useListasPrecios();
+  const listas = useMemo(() => new Map((listasPrecios.data ?? []).map((l) => [l.id, l.nombre])), [listasPrecios.data]);
   const filas = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
     return (data ?? []).filter(
@@ -55,7 +58,10 @@ export function ClientesListado() {
                   <TableCell className="text-right tabular-nums">{formatoNumero(c.cantidadCompras)}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatoPesos(c.totalGastado)}</TableCell>
                   <TableCell className="tabular-nums">{fecha(c.ultimaCompra)}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{c.etiquetas.join(", ")}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {c.listaPrecioId && listas.has(c.listaPrecioId) && <span className="mr-1.5 rounded bg-primary/15 px-1.5 py-0.5 font-medium text-primary">{listas.get(c.listaPrecioId)}</span>}
+                    {c.etiquetas.join(", ")}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -12,6 +12,7 @@ const clienteBase: ClienteRecord = {
   cumpleanos: null,
   notasLibres: null,
   etiquetas: [],
+  listaPrecioId: null,
   ultimaCompra: null,
   totalGastado: 0,
   cantidadCompras: 0,
@@ -94,6 +95,7 @@ describe('ClientesService', () => {
       cumpleanos: null,
       notasLibres: null,
       etiquetas: [],
+      listaPrecioId: null,
     });
   });
 });

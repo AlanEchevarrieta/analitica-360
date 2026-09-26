@@ -80,6 +80,7 @@ export class PrismaClientesRepository implements ClientesRepository {
         cumpleanos: isoDate(c.cumpleanos),
         notasLibres: c.notasLibres,
         etiquetas: c.etiquetas,
+        listaPrecioId: c.listaPrecioId,
         ultimaCompra: agg ? fechaLocalAR(agg.ultima) : null,
         totalGastado: agg?.total ?? 0,
         cantidadCompras: agg?.cantidad ?? 0,
@@ -127,6 +128,7 @@ export class PrismaClientesRepository implements ClientesRepository {
       cumpleanos: isoDate(cliente.cumpleanos),
       notasLibres: cliente.notasLibres,
       etiquetas: cliente.etiquetas,
+      listaPrecioId: cliente.listaPrecioId,
       ultimaCompra: fechas.length > 0 ? isoDate(fechas[fechas.length - 1]) : null,
       totalGastado: total,
       cantidadCompras: ventasResumen.length,
@@ -153,6 +155,7 @@ export class PrismaClientesRepository implements ClientesRepository {
         cumpleanos: aFechaSolo(input.cumpleanos),
         notasLibres: input.notasLibres,
         etiquetas: input.etiquetas,
+        listaPrecioId: input.listaPrecioId,
       },
     });
     return {
@@ -164,6 +167,7 @@ export class PrismaClientesRepository implements ClientesRepository {
       cumpleanos: isoDate(creado.cumpleanos),
       notasLibres: creado.notasLibres,
       etiquetas: creado.etiquetas,
+      listaPrecioId: creado.listaPrecioId,
       ultimaCompra: null,
       totalGastado: 0,
       cantidadCompras: 0,
@@ -180,6 +184,7 @@ export class PrismaClientesRepository implements ClientesRepository {
         cumpleanos: aFechaSolo(input.cumpleanos),
         notasLibres: input.notasLibres,
         etiquetas: input.etiquetas,
+        listaPrecioId: input.listaPrecioId,
       },
     });
     if (count === 0) return null;
@@ -203,6 +208,7 @@ export class PrismaClientesRepository implements ClientesRepository {
       cumpleanos: isoDate(cliente.cumpleanos),
       notasLibres: cliente.notasLibres,
       etiquetas: cliente.etiquetas,
+      listaPrecioId: cliente.listaPrecioId,
       ultimaCompra: ultima ? fechaLocalAR(ultima) : null,
       totalGastado: total,
       cantidadCompras: ventas.length,

@@ -16,6 +16,7 @@ export const confirmarVentaSchema = z.object({
   descuento: z.number().nonnegative().default(0),
   clienteNombre: z.string().trim().nullable().optional(),
   clienteId: z.uuid().nullable().optional(),
+  listaPrecioId: z.uuid().nullable().optional(),
   cuotas: z.number().int().positive().default(1),
   coeficienteInteres: z.number().nonnegative().default(0),
   ubicacionOrigen: z.string().trim().nullable().optional(),

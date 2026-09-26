@@ -6,12 +6,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { etiquetaAjuste, useListasPrecios } from "@/features/listas-precios/listas-precios";
 import { useAccionesClientes, type Cliente } from "../hooks/use-clientes";
 
 /** Alta (inicial = null) o edición de un cliente. */
 export function ClienteForm({ inicial, onHecho }: { inicial: Cliente | null; onHecho?: () => void }) {
   const router = useRouter();
   const { guardar } = useAccionesClientes();
+  const listas = useListasPrecios();
   const [d, setD] = useState({
     nombre: inicial?.nombre ?? "",
     telefono: inicial?.telefono ?? "",
@@ -19,6 +21,7 @@ export function ClienteForm({ inicial, onHecho }: { inicial: Cliente | null; onH
     cumpleanos: inicial?.cumpleanos ?? "",
     etiquetas: inicial?.etiquetas.join(", ") ?? "",
     notas: inicial?.notasLibres ?? "",
+    lista: inicial?.listaPrecioId ?? "",
   });
   const set = (k: keyof typeof d, v: string) => setD((x) => ({ ...x, [k]: v }));
 
@@ -35,6 +38,7 @@ export function ClienteForm({ inicial, onHecho }: { inicial: Cliente | null; onH
           cumpleanos: d.cumpleanos || null,
           notasLibres: d.notas.trim() || null,
           etiquetas: d.etiquetas.split(",").map((e) => e.trim()).filter(Boolean),
+          listaPrecioId: d.lista || null,
         },
       },
       {
@@ -67,6 +71,20 @@ export function ClienteForm({ inicial, onHecho }: { inicial: Cliente | null; onH
         {campo("etiquetas", "Etiquetas", { placeholder: "mayorista, feria, instagram" })}
       </div>
       {campo("notas", "Notas", { placeholder: "Preferencias, talle, cómo nos conoció…" })}
+      {(listas.data?.length ?? 0) > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="cliente-lista">Lista de precios</Label>
+          <select id="cliente-lista" className="h-8 max-w-xs rounded-lg border bg-transparent px-2 text-sm" value={d.lista} onChange={(e) => set("lista", e.target.value)}>
+            <option value="">Precio normal</option>
+            {listas.data!.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.nombre} ({etiquetaAjuste(l.ajustePct)})
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-muted-foreground">Al venderle, los precios se ajustan solos con esta lista.</span>
+        </div>
+      )}
       <Button className="self-start" onClick={enviar} disabled={guardar.isPending}>
         {inicial ? "Guardar cambios" : "Crear cliente"}
       </Button>

@@ -17,6 +17,7 @@ import {
 import type { LineaVenta } from "../types/nueva-venta";
 import { BuscadorProductos } from "@/features/productos/components/BuscadorProductos";
 import { LineasProductos } from "@/features/productos/components/LineasProductos";
+import { etiquetaAjuste, precioConLista, useListasPrecios } from "@/features/listas-precios/listas-precios";
 import { aNumero, calcularTotales, COBRO_INICIAL, CobroVenta, esClienteNuevo, type DatosCobro } from "./CobroVenta";
 
 // Medio de pago y ubicación se recuerdan por dispositivo (localStorage): en
@@ -40,6 +41,12 @@ function leerPreferencias(): Partial<Preferencias> {
 }
 const sinSuscripcion = () => () => {};
 
+/**
+ * Línea del carrito: el precio sigue a la lista de precios elegida mientras
+ * no se edite a mano (precioBase = precio normal del producto).
+ */
+type LineaCarrito = LineaVenta & { precioBase: number; precioEditado: boolean };
+
 /** Estado inicial sin medio de pago ni ubicación: si no se eligen, valen las preferencias guardadas. */
 const COBRO_VACIO: DatosCobro = { ...COBRO_INICIAL, formaPago: "", ubicacion: "" };
 
@@ -53,7 +60,9 @@ function recordar(cobro: DatosCobro) {
 
 export function NuevaVentaForm() {
   const router = useRouter();
-  const [lineas, setLineas] = useState<LineaVenta[]>([]);
+  const [carrito, setCarrito] = useState<LineaCarrito[]>([]);
+  // undefined = la lista la define el cliente elegido; null = precio normal a mano.
+  const [listaElegida, setListaElegida] = useState<string | null | undefined>(undefined);
   const config = useConfiguracionVenta();
   const [eleccion, setCobro] = useState<DatosCobro>(COBRO_VACIO);
   const preferencias = useSyncExternalStore(sinSuscripcion, leerPreferencias, () => SIN_PREFERENCIAS);
@@ -65,6 +74,11 @@ export function NuevaVentaForm() {
   };
   const [error, setError] = useState<string | null>(null);
   const clientes = useClientes();
+  const listas = useListasPrecios();
+  const clienteElegido = clientes.data?.find((c) => c.nombre.toLowerCase() === cobro.cliente.trim().toLowerCase());
+  const listaId = listaElegida !== undefined ? listaElegida : (clienteElegido?.listaPrecioId ?? null);
+  const lista = listas.data?.find((l) => l.id === listaId) ?? null;
+  const lineas: LineaCarrito[] = carrito.map((l) => (l.precioEditado ? l : { ...l, precioUnitario: precioConLista(l.precioBase, lista) }));
   const ubicaciones = useUbicaciones();
   const confirmar = useConfirmarVenta();
   const crearCliente = useCrearCliente();
@@ -75,10 +89,10 @@ export function NuevaVentaForm() {
   const unidades = lineas.reduce((acc, l) => acc + l.cantidad, 0);
 
   function agregar(nueva: Omit<LineaVenta, "cantidad">) {
-    setLineas((prev) => {
+    setCarrito((prev) => {
       const existente = prev.find((l) => l.clave === nueva.clave);
       if (existente) return prev.map((l) => (l.clave === nueva.clave ? { ...l, cantidad: l.cantidad + 1 } : l));
-      return [...prev, { ...nueva, cantidad: 1 }];
+      return [...prev, { ...nueva, cantidad: 1, precioBase: nueva.precioUnitario, precioEditado: false }];
     });
   }
 
@@ -98,7 +112,7 @@ export function NuevaVentaForm() {
     setError(problema);
     if (problema) return;
 
-    const lista = ubicaciones.data ?? [];
+    const lugares = ubicaciones.data ?? [];
     const nombreCliente = cobro.cliente.trim();
     try {
       let clienteId = clientes.data?.find((c) => c.nombre.toLowerCase() === nombreCliente.toLowerCase())?.id ?? null;
@@ -118,17 +132,19 @@ export function NuevaVentaForm() {
         descuento: totales.descuento,
         clienteNombre: config.data?.mostrarCliente === "no_mostrar" ? null : nombreCliente || null,
         clienteId,
+        listaPrecioId: lista?.id ?? null,
         cuotas: totales.cuotas,
         coeficienteInteres: cobro.formaPago === "credito" ? aNumero(cobro.interes) : 0,
         // Igual que el legacy: la ubicación solo se manda si hay más de una.
-        ubicacionOrigen: lista.length > 1 ? cobro.ubicacion || lista[0].nombre : null,
+        ubicacionOrigen: lugares.length > 1 ? cobro.ubicacion || lugares[0].nombre : null,
         esSenia: cobro.esSenia,
         montoSenia: cobro.esSenia ? aNumero(cobro.montoSenia) : 0,
       });
 
       // Queda lista para la próxima venta, con el mismo medio de pago y ubicación.
       recordar(cobro);
-      setLineas([]);
+      setCarrito([]);
+      setListaElegida(undefined);
       setCobro({ ...COBRO_VACIO, formaPago: cobro.formaPago, ubicacion: cobro.ubicacion });
       toast.success(`Venta ${venta.numeroVenta ?? ""} registrada por ${formatoPesos(venta.total)}`, {
         action: { label: "Ver ventas", onClick: () => router.push("/ventas") },
@@ -152,13 +168,45 @@ export function NuevaVentaForm() {
           <CardTitle>Productos</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
+          {(listas.data?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <label htmlFor="venta-lista" className="text-muted-foreground">
+                Precios:
+              </label>
+              <select
+                id="venta-lista"
+                className="h-8 rounded-lg border bg-transparent px-2"
+                value={listaId ?? ""}
+                onChange={(e) => {
+                  setListaElegida(e.target.value || null);
+                  // Al cambiar de lista, todos los precios vuelven a seguirla.
+                  setCarrito((prev) => prev.map((l) => ({ ...l, precioEditado: false })));
+                }}
+              >
+                <option value="">Precio normal</option>
+                {listas.data!.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.nombre} ({etiquetaAjuste(l.ajustePct)})
+                  </option>
+                ))}
+              </select>
+              {lista && listaElegida === undefined && clienteElegido && <span className="text-xs text-muted-foreground">Lista de {clienteElegido.nombre}</span>}
+            </div>
+          )}
           <BuscadorProductos onAgregar={agregar} />
           <LineasProductos
             lineas={lineas}
             onCambiar={(clave, cambios) =>
-              setLineas((prev) => prev.map((l) => (l.clave === clave ? { ...l, ...cambios } : l)))
+              setCarrito((prev) =>
+                prev.map((l) => {
+                  if (l.clave !== clave) return l;
+                  // Precio escrito a mano: queda fijo aunque cambie la lista.
+                  if (cambios.precioUnitario !== undefined) return { ...l, ...cambios, precioEditado: true };
+                  return { ...l, ...cambios };
+                }),
+              )
             }
-            onQuitar={(clave) => setLineas((prev) => prev.filter((l) => l.clave !== clave))}
+            onQuitar={(clave) => setCarrito((prev) => prev.filter((l) => l.clave !== clave))}
           />
         </CardContent>
       </Card>

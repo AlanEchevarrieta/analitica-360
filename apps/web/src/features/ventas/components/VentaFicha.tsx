@@ -121,6 +121,7 @@ export function VentaFichaVista({ id }: { id: string }) {
           </CardHeader>
           <CardContent className="flex flex-col gap-3 text-sm">
             <p>Cliente: {v.clienteNombre ?? "—"}</p>
+            {v.listaPrecio && <p>Lista de precios: {v.listaPrecio}</p>}
             <p>Pago: {formaPago(v.formaPago)}</p>
             {v.esSenia && <p>Seña: {formatoPesos(v.montoSenia)} · Debe: {formatoPesos(v.saldoPendiente)}</p>}
             {v.notas && <p className="whitespace-pre-line rounded-md bg-muted/50 p-2 text-xs">{v.notas}</p>}

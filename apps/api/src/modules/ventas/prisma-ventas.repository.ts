@@ -95,6 +95,7 @@ export class PrismaVentasRepository implements VentasRepository {
       where: { id, empresaId },
       include: {
         items: { include: { producto: { select: { nombre: true } }, variante: { select: { atributos: true } } } },
+        listaPrecio: { select: { nombre: true } },
       },
     });
     if (!venta) return null;
@@ -107,6 +108,7 @@ export class PrismaVentasRepository implements VentasRepository {
       devueltas.find((d) => d.productoId === productoId && d.varianteId === varianteId)?._sum.cantidad?.toNumber() ?? 0;
     return {
       ...this.toRecord(venta),
+      listaPrecio: venta.listaPrecio?.nombre ?? null,
       items: venta.items.map((i) => ({
         productoNombre: i.producto.nombre,
         cantidad: i.cantidad,
@@ -284,11 +286,13 @@ export async function confirmarVentaEnTx(
 
     // Chequeos independientes en paralelo, no en serie (confirmar() es el
     // endpoint de escritura más llamado del módulo).
-    const [cliente, ubicacion] = await Promise.all([
+    const [cliente, ubicacion, lista] = await Promise.all([
       input.clienteId ? tx.cliente.findFirst({ where: { id: input.clienteId, empresaId } }) : null,
       input.ubicacionOrigen ? tx.ubicacion.findFirst({ where: { empresaId, nombre: input.ubicacionOrigen } }) : null,
+      input.listaPrecioId ? tx.listaPrecio.findFirst({ where: { id: input.listaPrecioId, empresaId, deletedAt: null }, select: { id: true } }) : null,
     ]);
     if (input.clienteId && !cliente) return { ok: false, motivo: 'cliente_invalido' };
+    if (input.listaPrecioId && !lista) return { ok: false, motivo: 'lista_invalida' };
     if (input.ubicacionOrigen && !ubicacion) return { ok: false, motivo: 'ubicacion_invalida' };
 
     // Los totales se recalculan siempre acá - nunca se confía en un monto
@@ -316,6 +320,7 @@ export async function confirmarVentaEnTx(
         empresaId,
         usuarioId: input.usuarioId,
         clienteId: input.clienteId ?? null,
+        listaPrecioId: input.listaPrecioId ?? null,
         clienteNombre: input.clienteNombre,
         // Mismo formato que el legacy (V-000569).
         numeroVenta: `V-${String(numeracion.ultimo).padStart(6, '0')}`,

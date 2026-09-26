@@ -13,6 +13,7 @@ export interface ClienteVenta {
   id: string;
   nombre: string;
   telefono: string | null;
+  listaPrecioId?: string | null;
 }
 
 /** GET /ventas/configuracion (configuracion_empresa). */
@@ -37,6 +38,7 @@ export interface ConfirmarVentaInput {
   descuento: number;
   clienteNombre: string | null;
   clienteId: string | null;
+  listaPrecioId: string | null;
   cuotas: number;
   coeficienteInteres: number;
   ubicacionOrigen: string | null;

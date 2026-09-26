@@ -9,6 +9,7 @@ export const guardarClienteSchema = z.object({
   cumpleanos: fechaSoloSchema.nullable().optional(),
   notasLibres: z.string().trim().nullable().optional(),
   etiquetas: z.array(z.string().trim().min(1)).default([]),
+  listaPrecioId: z.uuid().nullable().optional(),
 });
 export type GuardarClienteInput = z.infer<typeof guardarClienteSchema>;
 
