@@ -222,17 +222,31 @@ export function BuscadorProductos({
       {masVendidos.length > 0 && (
         <div className="flex flex-wrap gap-2" aria-label="Más vendidos">
           {masVendidos.map((p) => (
-            <Button
-              key={p.id}
-              size="sm"
-              variant="secondary"
-              disabled={cargandoId === p.id}
-              onClick={() => void elegir(p)}
-              title={`${p.vendidos} vendidos en 90 días · stock ${p.stock}`}
-            >
-              {cargandoId === p.id && <Loader2 className="animate-spin" aria-hidden />}
-              {p.nombre}
-            </Button>
+            <div key={p.id} className="flex">
+              <Button
+                size="sm"
+                variant="secondary"
+                className={permitirNuevaVariante && !p.usaVariantes ? "rounded-r-none" : undefined}
+                disabled={cargandoId === p.id}
+                onClick={() => void elegir(p)}
+                title={`${p.vendidos} vendidos en 90 días · stock ${p.stock}`}
+              >
+                {cargandoId === p.id && <Loader2 className="animate-spin" aria-hidden />}
+                {p.nombre}
+              </Button>
+              {permitirNuevaVariante && !p.usaVariantes && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="rounded-l-none border-l border-background/40 px-2"
+                  aria-label={`${p.nombre} con variantes`}
+                  title="Llegó en distintos colores, talles…: crear variantes"
+                  onClick={() => setEligiendo({ producto: p, variantes: [], convertir: true })}
+                >
+                  <Layers aria-hidden />
+                </Button>
+              )}
+            </div>
           ))}
         </div>
       )}
