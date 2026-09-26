@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Percent, Plus } from "lucide-react";
+import { FileSpreadsheet, Percent, Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { ProductosListado } from "@/features/productos/components/ProductosListado";
 
@@ -9,6 +9,9 @@ export default function Page() {
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Productos</h1>
         <div className="flex flex-wrap gap-2">
+          <Link href="/productos/importar" className={buttonVariants({ variant: "outline" })}>
+            <FileSpreadsheet aria-hidden /> Importar Excel
+          </Link>
           <Link href="/productos/precios" className={buttonVariants({ variant: "outline" })}>
             <Percent aria-hidden /> Actualizar precios
           </Link>

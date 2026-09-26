@@ -32,6 +32,8 @@ describe('alertasEmpresa', () => {
   it('sin vender hace más de 14 días', () => {
     expect(alertasEmpresa({ ...base, ultimaVenta: '2026-09-01' }, HOY).alertas).toEqual(['sin_actividad']);
     expect(alertasEmpresa({ ...base, ultimaVenta: null }, HOY)).toEqual({ alertas: ['sin_actividad'], diasSinVender: null });
+    // Registrado hace 2 días y sin ventas todavía: no es inactivo.
+    expect(alertasEmpresa({ ...base, alta: '2026-09-24', ultimaVenta: null }, '2026-09-26').alertas).not.toContain('sin_actividad');
   });
 
   it('ventas que caen a menos de la mitad', () => {

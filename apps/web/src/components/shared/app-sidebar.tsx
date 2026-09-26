@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useOrganization, UserButton } from "@clerk/nextjs";
+import { SoloCliente } from "@/components/shared/solo-cliente";
 import {
   BarChart3,
   ClipboardList,
@@ -204,7 +205,9 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <div className="flex items-center justify-between gap-2 px-1 py-1">
-          <UserButton />
+          <SoloCliente reserva={<span className="size-7 rounded-full bg-muted" aria-hidden />}>
+            <UserButton />
+          </SoloCliente>
           <SelectorTema />
         </div>
       </SidebarFooter>

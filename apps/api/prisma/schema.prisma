@@ -38,6 +38,10 @@ model Empresa {
   activo             Boolean   @default(true)
   esDemo             Boolean   @default(false) @map("es_demo")
   umbralConfirmacion Decimal?  @map("umbral_confirmacion") @db.Decimal(12, 2)
+  /// WhatsApp de contacto que dejó al registrarse.
+  telefono           String?
+  /// Cómo nos conoció (registro propio).
+  origenRegistro     String?   @map("origen_registro")
   createdAt          DateTime  @default(now()) @map("created_at")
   deletedAt          DateTime? @map("deleted_at")
 
@@ -75,6 +79,7 @@ model Empresa {
   tickets                   Ticket[]
   pagos                     Pago[]
   listasPrecios             ListaPrecio[]
+  avisosAdmin               AvisoAdmin[]
 
   @@map("empresas")
 }
@@ -1004,4 +1009,21 @@ model ListaPrecio {
 
   @@index([empresaId])
   @@map("listas_precios")
+}
+
+/// Avisos para la consola de administración (registros nuevos, etc.).
+model AvisoAdmin {
+  id        String   @id @default(uuid()) @db.Uuid
+  /// registro | ...
+  tipo      String
+  titulo    String
+  detalle   Json     @default("{}")
+  empresaId String?  @map("empresa_id") @db.Uuid
+  leido     Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  empresa Empresa? @relation(fields: [empresaId], references: [id])
+
+  @@index([leido, createdAt])
+  @@map("avisos_admin")
 }

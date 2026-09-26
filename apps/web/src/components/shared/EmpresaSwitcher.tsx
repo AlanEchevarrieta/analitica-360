@@ -1,6 +1,7 @@
 "use client";
 
 import { OrganizationSwitcher } from "@clerk/nextjs";
+import { SoloCliente } from "./solo-cliente";
 
 /**
  * Cada Organization de Clerk = una "empresa" del sistema (ver plan, sección
@@ -9,10 +10,8 @@ import { OrganizationSwitcher } from "@clerk/nextjs";
  */
 export function EmpresaSwitcher() {
   return (
-    <OrganizationSwitcher
-      hidePersonal
-      afterSelectOrganizationUrl="/inicio"
-      afterCreateOrganizationUrl="/inicio"
-    />
+    <SoloCliente reserva={<span className="block h-8 w-40 rounded-md bg-muted/50" aria-hidden />}>
+      <OrganizationSwitcher hidePersonal afterSelectOrganizationUrl="/inicio" afterCreateOrganizationUrl="/inicio" />
+    </SoloCliente>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { cookies } from "next/headers";
 import { ClerkProvider } from "@clerk/nextjs";
+import { esES } from "@clerk/localizations";
 import { Providers } from "@/components/providers";
 import { COOKIE_PALETA, esPaleta } from "@/lib/paletas";
 import "./globals.css";
@@ -21,7 +22,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Paleta elegida por el usuario (cookie): el HTML ya sale con sus colores.
   const paleta = (await cookies()).get(COOKIE_PALETA)?.value;
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      localization={esES}
+      // Cuenta nueva sin empresa: Clerk pide elegir/crear organización; ese paso es nuestra bienvenida (registro con prueba gratis).
+      taskUrls={{ "choose-organization": "/bienvenida" }}
+    >
       <html lang="es" className={`${inter.variable} h-full antialiased`} data-paleta={esPaleta(paleta) ? paleta : undefined} suppressHydrationWarning>
         <body className="min-h-full flex flex-col">
           <Providers>{children}</Providers>

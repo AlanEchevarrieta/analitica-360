@@ -15,6 +15,13 @@ const envSchema = z.object({
   // Clave compartida con las tiendas online para reenviar la IP del cliente
   // (límite de requests por cliente, ver TiendaThrottlerGuard). Opcional.
   TIENDA_PROXY_KEY: z.string().min(16).optional(),
+  // Aviso por email de registros nuevos (opcional; sin esto el aviso queda solo
+  // en la consola de administración). Resend: resend.com, plan gratis.
+  RESEND_API_KEY: z.string().min(1).optional(),
+  /** A quién avisar (si falta, a los emails de admin_emails). */
+  AVISOS_EMAIL: z.string().optional(),
+  /** Remitente verificado en Resend (ej. avisos@analitica360.app). */
+  AVISOS_EMAIL_DESDE: z.string().default('Analítica 360 <onboarding@resend.dev>'),
 });
 
 export type Env = z.infer<typeof envSchema>;

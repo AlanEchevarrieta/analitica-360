@@ -9,6 +9,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
+import { SIN_EMPRESA_KEY } from '../decorators/sin-empresa.decorator.js';
 import { normalizarRol } from '../auth/rol.types.js';
 import { USUARIOS_REPOSITORY, type UsuariosRepository } from '../../modules/usuarios/usuarios.repository.js';
 
@@ -42,6 +43,8 @@ export class EmpresaScopeGuard implements CanActivate {
     if (!clerkAuth) {
       throw new UnauthorizedException('EmpresaScopeGuard corrió antes que ClerkAuthGuard');
     }
+    // Alta de empresa nueva: hay usuario de Clerk pero todavía no empresa.
+    if (this.reflector.getAllAndOverride<boolean>(SIN_EMPRESA_KEY, [context.getHandler(), context.getClass()])) return true;
     if (!clerkAuth.clerkOrgId) {
       throw new ForbiddenException(
         'La sesión no tiene una organización (empresa) activa. Seleccioná una empresa en el OrganizationSwitcher.',

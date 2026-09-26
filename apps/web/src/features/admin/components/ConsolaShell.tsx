@@ -8,7 +8,7 @@ import { ArrowLeft, ShieldAlert } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useEsAdmin, useTicketsAdmin } from "../hooks/use-admin";
+import { useAvisosAdmin, useEsAdmin, useTicketsAdmin } from "../hooks/use-admin";
 
 const SECCIONES = [
   { href: "/admin", etiqueta: "Resumen" },
@@ -22,6 +22,7 @@ function Navegacion() {
   const pathname = usePathname();
   const tickets = useTicketsAdmin();
   const abiertos = (tickets.data ?? []).filter((t) => t.estado === "abierto").length;
+  const nuevos = useAvisosAdmin().data?.sinLeer ?? 0;
   return (
     <nav className="flex gap-1 overflow-x-auto" aria-label="Secciones de la consola">
       {SECCIONES.map((s) => {
@@ -37,6 +38,11 @@ function Navegacion() {
             )}
           >
             {s.etiqueta}
+            {s.href === "/admin" && nuevos > 0 && (
+              <span className="rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground tabular-nums" aria-label={`${nuevos} registros nuevos`}>
+                {nuevos}
+              </span>
+            )}
             {s.href === "/admin/soporte" && abiertos > 0 && (
               <span className="rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground tabular-nums">{abiertos}</span>
             )}

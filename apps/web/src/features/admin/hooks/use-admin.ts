@@ -130,6 +130,16 @@ export const useCapacidadAdmin = () => useConsulta<CapacidadAdmin>(["capacidad"]
 export const usePlanesAdmin = () => useConsulta<{ id: string; nombre: string }[]>(["planes"], "/admin/planes");
 export const usePagosAdmin = (estado: string, periodo: string) =>
   useConsulta<PagoAdmin[]>(["pagos", estado, periodo], `/admin/pagos?estado=${estado}&periodo=${periodo}`);
+export interface AvisoAdmin {
+  id: string;
+  tipo: string;
+  titulo: string;
+  detalle: { nombre?: string; rubro?: string; telefono?: string; origen?: string | null; dueno?: string; email?: string; finPrueba?: string };
+  empresaId: string | null;
+  leido: boolean;
+  createdAt: string;
+}
+export const useAvisosAdmin = () => useConsulta<{ sinLeer: number; avisos: AvisoAdmin[] }>(["avisos"], "/admin/avisos", { staleTime: 60_000 });
 export const useTicketsAdmin = () => useConsulta<TicketAdmin[]>(["tickets"], "/tickets/admin");
 export const useTicketAdmin = (id: string) => useConsulta<TicketAdminFicha>(["ticket", id], `/tickets/admin/${id}`);
 
@@ -153,6 +163,10 @@ export function useAccionesAdmin() {
     }),
     marcarDemo: useMutation({
       mutationFn: ({ empresaId, esDemo }: { empresaId: string; esDemo: boolean }) => post(`/admin/empresas/${empresaId}/demo`, { esDemo }, "PATCH"),
+      onSuccess: refrescar,
+    }),
+    marcarAvisos: useMutation({
+      mutationFn: (ids?: string[]) => post("/admin/avisos/leidos", { ids }),
       onSuccess: refrescar,
     }),
     responderTicket: useMutation({

@@ -19,7 +19,9 @@ export function alertasEmpresa(e: AdminEmpresaFila, hoy: string): { alertas: Ale
   else if (e.estado === 'periodo_prueba' && diasParaVencer != null && diasParaVencer <= 3) alertas.push('prueba_termina');
   else if (e.estado === 'activa' && diasParaVencer != null && diasParaVencer <= 7) alertas.push('vence_pronto');
 
-  if (diasSinVender == null || diasSinVender > DIAS_SIN_ACTIVIDAD) alertas.push('sin_actividad');
+  // Recién registrado: todavía está cargando productos, no es "inactivo".
+  const reciente = diasEntre(e.alta, hoy) < 7;
+  if (!reciente && (diasSinVender == null || diasSinVender > DIAS_SIN_ACTIVIDAD)) alertas.push('sin_actividad');
   else if (e.montoPrevio30 > 0 && e.monto30 < e.montoPrevio30 * 0.5) alertas.push('ventas_bajan');
 
   return { alertas, diasSinVender };

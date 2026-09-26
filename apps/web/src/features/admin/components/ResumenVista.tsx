@@ -7,6 +7,7 @@ import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-
 import { formatoNumero, formatoPesos } from "@/lib/formato";
 import { etiquetaGranularidad } from "@/lib/periodos";
 import { useEmpresasAdmin, useEvolucionAdmin, useMetricasAdmin, NOMBRE_PLAN, type AlertaEmpresa } from "../hooks/use-admin";
+import { AvisosRegistro } from "./AvisosRegistro";
 import { EtiquetaAlerta, Indicador, Panel, variacion } from "./comunes";
 
 const G_CLIENTES = {
@@ -53,6 +54,8 @@ export function ResumenVista() {
         <h1 className="text-xl font-semibold">Cómo va el negocio</h1>
         <p className="text-sm text-muted-foreground">Sin contar empresas marcadas como DEMO ni dadas de baja.</p>
       </div>
+
+      <AvisosRegistro />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <Indicador etiqueta="Facturación mensual" valor={formatoPesos(m.mrr)} detalle="Planes activos (MRR)" />
