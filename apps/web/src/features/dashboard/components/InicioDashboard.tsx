@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { formatoNumero, formatoPesos } from "@/lib/formato";
 import { useDashboard } from "../hooks/use-dashboard";
+import { AvisoMonotributo } from "@/features/analytics/components/MonotributoCard";
 
 const GRAFICO_7_DIAS = { total: { label: "Total", color: "var(--chart-1)" } } satisfies ChartConfig;
 
@@ -41,6 +42,7 @@ export function InicioDashboard() {
 
   return (
     <div className="flex flex-col gap-4">
+      <AvisoMonotributo />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi
           titulo="Ventas de hoy"

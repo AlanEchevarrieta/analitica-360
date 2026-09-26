@@ -29,6 +29,8 @@ export interface Configuracion {
   alicuotaIva: number;
   nombreIva: string;
   mostrarIvaVentas: boolean;
+  condicionFiscal: string;
+  categoriaMonotributo: string | null;
 }
 
 export interface Ubicacion {
@@ -66,7 +68,7 @@ export function useGuardarConfiguracion() {
   return useMutation({
     mutationFn: (cambios: Partial<Configuracion>) => api<Configuracion>("/configuracion", { method: "PATCH", body: JSON.stringify(cambios) }),
     onSuccess: () => {
-      for (const k of ["configuracion", "ventas-configuracion", "dashboard", "pedidos-remitente"]) void queryClient.invalidateQueries({ queryKey: [k] });
+      for (const k of ["configuracion", "ventas-configuracion", "dashboard", "pedidos-remitente", "monotributo"]) void queryClient.invalidateQueries({ queryKey: [k] });
     },
   });
 }

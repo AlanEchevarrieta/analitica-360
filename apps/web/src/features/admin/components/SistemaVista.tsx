@@ -5,6 +5,7 @@ import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { formatoNumero } from "@/lib/formato";
 import { useCapacidadAdmin } from "../hooks/use-admin";
 import { Indicador, Panel } from "./comunes";
+import { TopesMonotributo } from "./TopesMonotributo";
 
 function tamano(bytes: number) {
   if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toLocaleString("es-AR", { maximumFractionDigits: 2 })} GB`;
@@ -72,6 +73,7 @@ export function SistemaVista() {
           </Table>
         </Panel>
       </div>
+      <TopesMonotributo />
     </>
   );
 }

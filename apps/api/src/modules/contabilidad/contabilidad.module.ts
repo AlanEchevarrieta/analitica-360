@@ -9,17 +9,20 @@ import { CONTABILIDAD_REPOSITORY } from './contabilidad.repository.js';
 import { PrismaContabilidadRepository } from './prisma-contabilidad.repository.js';
 import { EstadosContablesController, MovimientosFinancierosController } from './estados-contables.controller.js';
 import { EstadosContablesService } from './estados-contables.service.js';
+import { AdminMonotributoController, MonotributoController } from './monotributo.controller.js';
+import { MonotributoService } from './monotributo.service.js';
 import { ESTADOS_CONTABLES_REPOSITORY } from './estados-contables.repository.js';
 import { PrismaEstadosContablesRepository } from './prisma-estados-contables.repository.js';
 
 @Module({
-  controllers: [GastoController, ContabilidadController, EstadosContablesController, MovimientosFinancierosController],
+  controllers: [GastoController, ContabilidadController, EstadosContablesController, MovimientosFinancierosController, MonotributoController, AdminMonotributoController],
   providers: [
     GastoService,
     { provide: GASTO_REPOSITORY, useClass: PrismaGastoRepository },
     ContabilidadService,
     { provide: CONTABILIDAD_REPOSITORY, useClass: PrismaContabilidadRepository },
     EstadosContablesService,
+    MonotributoService,
     { provide: ESTADOS_CONTABLES_REPOSITORY, useClass: PrismaEstadosContablesRepository },
   ],
 })

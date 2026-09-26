@@ -33,6 +33,8 @@ export const actualizarConfiguracionSchema = z
     alicuotaIva: z.number().min(0).max(100).optional(),
     nombreIva: z.string().trim().min(1).max(20).optional(),
     mostrarIvaVentas: z.boolean().optional(),
+    condicionFiscal: z.enum(['monotributo', 'responsable_inscripto', 'exento', 'otro']).optional(),
+    categoriaMonotributo: z.enum(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']).nullable().optional(),
   })
   .refine((c) => !c.tasasCuotas || new Set(c.tasasCuotas.map((t) => t.cuotas)).size === c.tasasCuotas.length, {
     message: 'Hay dos planes con la misma cantidad de cuotas',

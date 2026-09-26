@@ -9,6 +9,7 @@ import { formatoNumero, formatoPesos } from "@/lib/formato";
 import { etiquetaFecha } from "@/lib/periodos";
 import { useContabilidad } from "../hooks/use-analytics";
 import { GastosPanel } from "./GastosPanel";
+import { MonotributoCard } from "./MonotributoCard";
 import { Kpi } from "./comunes";
 
 const GRAFICO_MESES = {
@@ -37,6 +38,7 @@ export function ContabilidadVista() {
   return (
     <div className="flex flex-col gap-4">
       <SelectorPeriodo periodo={periodo} />
+      <MonotributoCard />
       {isPending ? (
         <CargandoFilas filas={8} />
       ) : isError ? (

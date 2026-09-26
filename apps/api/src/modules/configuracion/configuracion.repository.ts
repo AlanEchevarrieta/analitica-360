@@ -26,6 +26,8 @@ export interface ConfiguracionRecord {
   alicuotaIva: number;
   nombreIva: string;
   mostrarIvaVentas: boolean;
+  condicionFiscal: string;
+  categoriaMonotributo: string | null;
 }
 
 export type ResultadoActualizarConfiguracion =

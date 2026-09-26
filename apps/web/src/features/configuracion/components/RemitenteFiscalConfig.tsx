@@ -51,9 +51,43 @@ export function RemitenteConfig({ config }: { config: Configuracion }) {
 
 export function FiscalConfig({ config }: { config: Configuracion }) {
   const guardar = useGuardarConfiguracion();
-  const [f, setF] = useState({ pais: config.pais, moneda: config.moneda, simbolo: config.simboloMoneda, iva: String(config.alicuotaIva), nombreIva: config.nombreIva, mostrarIva: config.mostrarIvaVentas });
+  const [f, setF] = useState({
+    pais: config.pais,
+    moneda: config.moneda,
+    simbolo: config.simboloMoneda,
+    iva: String(config.alicuotaIva),
+    nombreIva: config.nombreIva,
+    mostrarIva: config.mostrarIvaVentas,
+    condicion: config.condicionFiscal,
+    categoria: config.categoriaMonotributo ?? "",
+  });
   return (
     <div className="grid max-w-xl gap-3 sm:grid-cols-3">
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="fis-condicion">Condición fiscal</Label>
+        <select id="fis-condicion" className="h-8 rounded-lg border bg-transparent px-2 text-sm" value={f.condicion} onChange={(e) => setF({ ...f, condicion: e.target.value })}>
+          <option value="monotributo">Monotributo</option>
+          <option value="responsable_inscripto">Responsable inscripto</option>
+          <option value="exento">Exento</option>
+          <option value="otro">Otra</option>
+        </select>
+      </div>
+      {f.condicion === "monotributo" && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="fis-categoria">Categoría</Label>
+          <select id="fis-categoria" className="h-8 rounded-lg border bg-transparent px-2 text-sm" value={f.categoria} onChange={(e) => setF({ ...f, categoria: e.target.value })}>
+            <option value="">Elegí…</option>
+            {["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"].map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground sm:col-span-3">
+        Con la categoría, el sistema te avisa si te acercás al tope de facturación o si en la próxima recategorización te corresponde otra.
+      </p>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="fis-pais">País</Label>
         <select id="fis-pais" className="h-8 rounded-lg border bg-transparent px-2 text-sm" value={f.pais} onChange={(e) => setF({ ...f, pais: e.target.value })}>
@@ -76,7 +110,16 @@ export function FiscalConfig({ config }: { config: Configuracion }) {
         disabled={guardar.isPending}
         onClick={() =>
           guardar.mutate(
-            { pais: f.pais, moneda: f.moneda, simboloMoneda: f.simbolo, alicuotaIva: Number(f.iva.replace(",", ".")) || 0, nombreIva: f.nombreIva, mostrarIvaVentas: f.mostrarIva },
+            {
+              pais: f.pais,
+              moneda: f.moneda,
+              simboloMoneda: f.simbolo,
+              alicuotaIva: Number(f.iva.replace(",", ".")) || 0,
+              nombreIva: f.nombreIva,
+              mostrarIvaVentas: f.mostrarIva,
+              condicionFiscal: f.condicion,
+              categoriaMonotributo: f.condicion === "monotributo" && f.categoria ? f.categoria : null,
+            },
             aviso,
           )
         }
