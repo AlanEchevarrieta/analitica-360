@@ -86,6 +86,8 @@ export interface DatosContables {
   compras: CompraDato[];
   senias: SeniaDato[];
   movimientos: MovimientoFinancieroDato[];
+  /** Mermas, roturas, pérdidas y consumo interno valuados a costo, por día. */
+  perdidas: MontoDia[];
 }
 
 export function sumarDias(iso: string, dias: number): string {
@@ -224,6 +226,8 @@ export interface EstadoResultados {
   resultadoBruto: number;
   gastosPorCategoria: { categoria: string; monto: number }[];
   gastosTotal: number;
+  /** Mercadería perdida (mermas, roturas, pérdidas, consumo interno), a costo. */
+  perdidasMercaderia: number;
   amortizaciones: number;
   resultadoNeto: number;
   cantidadVentas: number;
@@ -240,6 +244,7 @@ export function estadoResultados(d: DatosContables, desde: string, hastaIncl: st
   const gastosPorCategoria = [...porCategoria].map(([categoria, monto]) => ({ categoria, monto })).sort((a, b) => b.monto - a.monto);
   const gastosTotal = suma(gastosPorCategoria, (g) => g.monto);
   const amortizaciones = amortizacionAcumulada(d.movimientos, hastaIncl) - amortizacionAcumulada(d.movimientos, sumarDias(desde, -1));
+  const perdidasMercaderia = redondear(suma(entre(d.perdidas, desde, hastaIncl), (p) => p.monto));
   const ventasNetas = ventasBrutas + devoluciones;
   const resultadoBruto = ventasNetas - costoMercaderia;
   return {
@@ -250,8 +255,9 @@ export function estadoResultados(d: DatosContables, desde: string, hastaIncl: st
     resultadoBruto,
     gastosPorCategoria,
     gastosTotal,
+    perdidasMercaderia,
     amortizaciones,
-    resultadoNeto: resultadoBruto - gastosTotal - amortizaciones,
+    resultadoNeto: resultadoBruto - gastosTotal - perdidasMercaderia - amortizaciones,
     cantidadVentas,
   };
 }
@@ -259,7 +265,10 @@ export function estadoResultados(d: DatosContables, desde: string, hastaIncl: st
 /** Resultado acumulado desde el primer registro hasta el cierre de `fecha`. */
 export function resultadoAcumuladoAl(d: DatosContables, fecha: string): number {
   return (
-    suma(hasta(d.resultados, fecha), (r) => r.ingreso - r.cogs) - suma(hasta(d.gastos, fecha), (g) => g.monto) - amortizacionAcumulada(d.movimientos, fecha)
+    suma(hasta(d.resultados, fecha), (r) => r.ingreso - r.cogs) -
+    suma(hasta(d.gastos, fecha), (g) => g.monto) -
+    suma(hasta(d.perdidas, fecha), (p) => p.monto) -
+    amortizacionAcumulada(d.movimientos, fecha)
   );
 }
 
@@ -340,7 +349,7 @@ export interface EvolucionPatrimonio {
   aportes: number;
   retiros: number;
   resultado: number;
-  /** Ajustes de stock (roturas, inventarios), arqueos de caja y diferencias de valuación. */
+  /** Recuentos de stock (sobrantes/faltantes sin motivo), arqueos de caja y diferencias de valuación. */
   ajustes: number;
   cierre: number;
 }

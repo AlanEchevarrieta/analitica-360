@@ -50,6 +50,8 @@ export interface EstadosContablesRepository {
   movimientosDatos(empresaId: string, hasta: string): Promise<MovimientoFinancieroDato[]>;
   /** Mercadería valuada al costo actual con las unidades que había al cierre de `fecha`. */
   valorStockAl(empresaId: string, fecha: string): Promise<number>;
+  /** Mermas, roturas, pérdidas y consumo interno valuados a costo, por día. */
+  perdidasPorDia(empresaId: string, hasta: string): Promise<MontoDia[]>;
   deudaPorProveedor(empresaId: string, hasta: string): Promise<DeudaProveedor[]>;
 
   listarMovimientos(empresaId: string, desde: string, hasta: string): Promise<MovimientoFinanciero[]>;

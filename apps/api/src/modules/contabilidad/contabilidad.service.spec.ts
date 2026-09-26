@@ -9,7 +9,7 @@ describe('ContabilidadService', () => {
   let gastoRepository: { [K in keyof GastoRepository]: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    repository = { ventasConItems: vi.fn(), valorStock: vi.fn() };
+    repository = { ventasConItems: vi.fn(), valorStock: vi.fn(), perdidasPorDia: vi.fn().mockResolvedValue([]) };
     gastoRepository = { listar: vi.fn(), crear: vi.fn(), anular: vi.fn() };
     const module = await Test.createTestingModule({
       providers: [
@@ -19,6 +19,15 @@ describe('ContabilidadService', () => {
       ],
     }).compile();
     service = module.get(ContabilidadService);
+  });
+
+  it('la mercadería perdida (mermas, roturas) resta como gasto', async () => {
+    repository.ventasConItems.mockResolvedValue({ ventas: [{ id: 'v1', fecha: '2026-09-10', total: 1000 }], items: [{ ventaId: 'v1', cogs: 400 }] });
+    gastoRepository.listar.mockResolvedValue([]);
+    repository.valorStock.mockResolvedValue({ invertido: 500, valorVenta: 900, gananciaPotencial: 400 });
+    repository.perdidasPorDia.mockResolvedValue([{ fecha: '2026-09-12', monto: 150 }]);
+    const res = await service.contabilidad('empresa-1', '2026-09-01', '2026-09-30');
+    expect(res.totales).toEqual({ ingresos: 1000, cogs: 400, gastos: 150, neto: 450, cantidadVentas: 1 });
   });
 
   it('combina ventas+gastos+stock en totales, serie, ratios y proyección', async () => {

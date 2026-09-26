@@ -42,14 +42,19 @@ export class ContabilidadService {
     const claves6 = mesesAtras(hoy, 6);
     const desdeHist = `${claves6[0]}-01`;
 
-    const [{ ventas, items }, gastosCargados, valorStock] = await Promise.all([
+    const [{ ventas, items }, gastosCargados, valorStock, perdidas] = await Promise.all([
       this.repository.ventasConItems(empresaId, desdeHist, hoy),
       // Desde el principio: un recurrente cargado hace un año sigue generando gasto este mes.
       this.gastoRepository.listar(empresaId, '2000-01-01', hoy),
       this.repository.valorStock(empresaId),
+      this.repository.perdidasPorDia(empresaId, desdeHist, hoy),
     ]);
 
-    const gastosHist = expandirRecurrentes(gastosCargados, hoy).filter((g) => g.fecha >= desdeHist);
+    // La mercadería perdida (mermas, roturas…) cuenta como un gasto más, igual que en el estado de resultados.
+    const gastosHist = [
+      ...expandirRecurrentes(gastosCargados, hoy).filter((g) => g.fecha >= desdeHist),
+      ...perdidas.map((p) => ({ fecha: p.fecha, monto: p.monto, recurrente: false })),
+    ];
     const serie6 = serieMensual(claves6, ventas, items, gastosHist);
     const totales = sumarPeriodo(ventas, items, gastosHist, desde, hasta);
 

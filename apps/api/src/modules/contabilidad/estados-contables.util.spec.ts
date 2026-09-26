@@ -40,6 +40,7 @@ function datos(): DatosContables {
       mov({ tipo: 'bien_uso', monto: 12_000, fecha: '2026-01-02', vidaUtilMeses: 12 }),
       mov({ tipo: 'prestamo_recibido', monto: 10_000, fecha: '2026-01-03' }),
     ],
+    perdidas: [],
   };
 }
 
@@ -125,6 +126,19 @@ describe('estados contables', () => {
     expect(creditosPorVentasAl(senias, '2026-01-31')).toBe(7_000);
     expect(creditosPorVentasAl(senias, '2026-02-05')).toBe(0);
     expect(creditosPorVentasAl(senias, '2026-01-09')).toBe(0);
+  });
+
+  it('una rotura es pérdida del período y no queda como ajuste del patrimonio', () => {
+    const d = datos();
+    // Se rompe mercadería que costaba 2.000: el stock a costo baja de 30.000 a 28.000.
+    d.perdidas.push({ fecha: '2026-01-20', monto: 2_000 });
+    const r = estadoResultados(d, '2026-01-01', '2026-01-31', 1);
+    expect(r.perdidasMercaderia).toBe(2_000);
+    const sin = estadoResultados(datos(), '2026-01-01', '2026-01-31', 1);
+    expect(r.resultadoNeto).toBe(sin.resultadoNeto - 2_000);
+    const b = balanceAl(d, '2026-01-31', 28_000);
+    expect(b.activo.total).toBe(b.pasivo.total + b.patrimonioNeto.total);
+    expect(b.patrimonioNeto.capitalInicialYAjustes).toBe(0);
   });
 
   it('evolución del patrimonio: inicio + aportes - retiros + resultado + ajustes = cierre', () => {

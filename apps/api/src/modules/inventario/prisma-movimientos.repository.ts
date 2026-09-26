@@ -10,7 +10,7 @@ import type {
   ResultadoCrearMovimiento,
   ResultadoTraslado,
 } from './movimientos.repository.js';
-import { deltaStockKardex } from './inventario.util.js';
+import { deltaStockKardex, TIPOS_AJUSTE } from './inventario.util.js';
 
 function etiquetaCombo(atributos: Record<string, string>): string {
   return Object.values(atributos ?? {})
@@ -45,12 +45,18 @@ export class PrismaMovimientosRepository implements MovimientosRepository {
   async crear(empresaId: string, input: CrearMovimientoInput): Promise<ResultadoCrearMovimiento> {
     const producto = await this.prisma.producto.findFirst({ where: { id: input.productoId, empresaId } });
     if (!producto) return { ok: false, motivo: 'producto_no_encontrado' };
-    if (input.varianteId) {
-      const variante = await this.prisma.productoVariante.findFirst({
-        where: { id: input.varianteId, productoId: input.productoId, empresaId },
-      });
-      if (!variante) return { ok: false, motivo: 'variante_invalida' };
+    const variante = input.varianteId
+      ? await this.prisma.productoVariante.findFirst({ where: { id: input.varianteId, productoId: input.productoId, empresaId } })
+      : null;
+    if (input.varianteId && !variante) return { ok: false, motivo: 'variante_invalida' };
+    const ubicacion = input.ubicacionOrigen ?? input.ubicacionDestino;
+    if (ubicacion && !(await this.prisma.ubicacion.findFirst({ where: { empresaId, nombre: ubicacion }, select: { id: true } }))) {
+      return { ok: false, motivo: 'ubicacion_invalida' };
     }
+    // Un ajuste (merma, rotura…) queda valuado al costo vigente: así el estado de
+    // resultados lo cuenta como pérdida aunque después cambie el costo del producto.
+    const esAjuste = (TIPOS_AJUSTE as readonly string[]).includes(input.tipo);
+    const costoVigente = esAjuste ? ((variante?.costo ?? producto.costo)?.toNumber() ?? null) : null;
     const creado = await this.prisma.movimientoInventario.create({
       data: {
         empresaId,
@@ -61,7 +67,7 @@ export class PrismaMovimientosRepository implements MovimientosRepository {
         tipo: input.tipo,
         cantidad: input.cantidad,
         signo: input.signo,
-        costoUnitario: input.costoUnitario ?? null,
+        costoUnitario: input.costoUnitario ?? costoVigente,
         precioUnitario: input.precioUnitario ?? null,
         motivo: input.motivo ?? null,
         ubicacionOrigen: input.ubicacionOrigen ?? null,

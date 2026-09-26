@@ -140,6 +140,8 @@ export interface EstadosContables {
     resultadoBruto: number;
     gastosPorCategoria: { categoria: string; monto: number }[];
     gastosTotal: number;
+    /** Mermas, roturas, pérdidas y consumo interno, a costo. */
+    perdidasMercaderia: number;
     amortizaciones: number;
     resultadoNeto: number;
     cantidadVentas: number;

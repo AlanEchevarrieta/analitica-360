@@ -58,7 +58,7 @@ export class EstadosContablesService {
   ) {}
 
   private async datos(empresaId: string, hasta: string): Promise<DatosContables> {
-    const [ventasDia, devoluciones, gastos, cobros, senias, compras, movimientos] = await Promise.all([
+    const [ventasDia, devoluciones, gastos, cobros, senias, compras, movimientos, perdidas] = await Promise.all([
       this.repository.ventasPorDia(empresaId, hasta),
       this.repository.devolucionesPorDia(empresaId, hasta),
       this.gastoRepository.listar(empresaId, '2000-01-01', hasta),
@@ -66,6 +66,7 @@ export class EstadosContablesService {
       this.repository.senias(empresaId, hasta),
       this.repository.compras(empresaId, hasta),
       this.repository.movimientosDatos(empresaId, hasta),
+      this.repository.perdidasPorDia(empresaId, hasta),
     ]);
     // Totales por día (agregados en la base) y, aparte, el ajuste de devoluciones de cada día.
     const resultados: ResultadoDia[] = [
@@ -79,6 +80,7 @@ export class EstadosContablesService {
       compras,
       senias,
       movimientos,
+      perdidas,
     };
   }
 
@@ -113,7 +115,7 @@ export class EstadosContablesService {
     }
     if (Math.abs(balanceCierre.patrimonioNeto.capitalInicialYAjustes) >= 1) {
       avisos.push(
-        '"Capital inicial y ajustes" es lo que el negocio ya tenía antes de empezar a registrar (stock y plata iniciales) más ajustes de stock (roturas, recuentos) y diferencias de caja. Se achica a medida que cargás arqueos y aportes.',
+        '"Capital inicial y ajustes" es lo que el negocio ya tenía antes de empezar a registrar (stock y plata iniciales) más recuentos de stock (sobrantes y faltantes; las roturas y mermas ya van como pérdida en resultados) y diferencias de caja. Se achica a medida que cargás arqueos y aportes.',
       );
     }
     if (d.compras.every((c) => !c.aCredito) && !d.movimientos.some((m) => m.tipo === 'pago_proveedor')) {

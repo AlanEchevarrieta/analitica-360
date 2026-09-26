@@ -42,7 +42,7 @@ export interface MovimientoKardexRecord extends MovimientoRecord {
 
 export type ResultadoCrearMovimiento =
   | { ok: true; movimiento: MovimientoRecord }
-  | { ok: false; motivo: 'producto_no_encontrado' | 'variante_invalida' };
+  | { ok: false; motivo: 'producto_no_encontrado' | 'variante_invalida' | 'ubicacion_invalida' };
 
 export type ResultadoTraslado =
   | { ok: true; movimientos: [MovimientoRecord, MovimientoRecord] }

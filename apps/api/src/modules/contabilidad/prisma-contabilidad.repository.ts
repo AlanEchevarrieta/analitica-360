@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { perdidasPorDia } from '../inventario/perdidas.sql.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { dineroDevolucionesPorDia } from '../analytics/devoluciones-dinero.js';
 import { diaAR } from '../analytics/fecha-sql.js';
@@ -10,6 +11,10 @@ import { sumarDiasIso } from '../analytics/analytics.util.js';
 @Injectable()
 export class PrismaContabilidadRepository implements ContabilidadRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  perdidasPorDia(empresaId: string, desde: string, hasta: string) {
+    return perdidasPorDia(this.prisma, empresaId, desde, hasta);
+  }
 
   async ventasConItems(empresaId: string, desde: string, hasta: string): Promise<{ ventas: VentaConCogs[]; items: ItemCogs[] }> {
     const desdeDate = new Date(`${desde}T00:00:00.000-03:00`);

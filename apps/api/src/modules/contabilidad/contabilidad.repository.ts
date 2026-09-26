@@ -17,4 +17,6 @@ export interface ContabilidadRepository {
   ventasConItems(empresaId: string, desde: string, hasta: string): Promise<{ ventas: VentaConCogs[]; items: ItemCogs[] }>;
   /** Valorización del stock activo (solo productos con stock > 0), mismo criterio que dashboard/insights: SUM(cantidad*signo). */
   valorStock(empresaId: string): Promise<ValorStock>;
+  /** Mermas, roturas, pérdidas y consumo interno valuados a costo, por día. */
+  perdidasPorDia(empresaId: string, desde: string, hasta: string): Promise<{ fecha: string; monto: number }[]>;
 }

@@ -99,7 +99,7 @@ function BalanceCard({ e }: { e: EstadosContables }) {
             concepto="Capital inicial y ajustes"
             valores={par((x) => x.patrimonioNeto.capitalInicialYAjustes)}
             nivel={1}
-            ayuda="Lo que el negocio ya tenía antes de empezar a registrar, más ajustes de stock y diferencias de caja"
+            ayuda="Lo que el negocio ya tenía antes de empezar a registrar, más recuentos de stock (sobrantes y faltantes) y diferencias de caja"
           />
           <Fila concepto="Total patrimonio neto" valores={par((x) => x.patrimonioNeto.total)} total />
           <Fila concepto="Pasivo + patrimonio neto" valores={par((x) => x.pasivo.total + x.patrimonioNeto.total)} total />
@@ -129,6 +129,7 @@ function ResultadosCard({ e }: { e: EstadosContables }) {
           {r.gastosPorCategoria.map((g) => (
             <Fila key={g.categoria} concepto={`Gastos de ${(CATEGORIAS_GASTO[g.categoria] ?? g.categoria).toLowerCase()}`} valores={[-g.monto]} nivel={1} />
           ))}
+          {r.perdidasMercaderia > 0 && <Fila concepto="Mermas, roturas y pérdidas de mercadería" valores={[-r.perdidasMercaderia]} nivel={1} />}
           {r.amortizaciones > 0 && <Fila concepto="Amortización de bienes de uso" valores={[-r.amortizaciones]} nivel={1} />}
           <Fila concepto={r.resultadoNeto >= 0 ? "Ganancia del período" : "Pérdida del período"} valores={[r.resultadoNeto]} total />
         </Tabla>

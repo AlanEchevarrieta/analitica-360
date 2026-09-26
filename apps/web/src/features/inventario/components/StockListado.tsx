@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,6 +9,8 @@ import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-
 import { formatoNumero, formatoPesos } from "@/lib/formato";
 import { useProductos } from "@/features/productos/hooks/use-productos";
 import { useDashboard } from "@/features/dashboard/hooks/use-dashboard";
+import { fechasDe } from "@/lib/periodos";
+import { usePerdidas } from "../hooks/use-kardex";
 
 // La API pagina de a 200 como máximo; alcanza para el catálogo de una pyme.
 const MAXIMO = 200;
@@ -20,6 +23,8 @@ export function StockListado() {
   const [busqueda, setBusqueda] = useState("");
   const productos = useProductos({ pagina: 1, pageSize: MAXIMO, busqueda: "", estado: "activos", orden: "nombre" });
   const dashboard = useDashboard();
+  const mes = fechasDe("mes");
+  const perdidas = usePerdidas(mes.desde, mes.hasta);
 
   const enAlerta = useMemo(
     () => new Set((dashboard.data?.alertasStock ?? []).map((a) => a.nombre)),
@@ -40,7 +45,7 @@ export function StockListado() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card size="sm">
           <CardHeader>
             <CardDescription>Productos activos</CardDescription>
@@ -62,12 +67,25 @@ export function StockListado() {
             <CardTitle className="text-2xl tabular-nums">{formatoPesos(valorStock)}</CardTitle>
           </CardHeader>
         </Card>
+        {perdidas.data && (
+          <Card size="sm">
+            <CardHeader>
+              <CardDescription>Mermas y roturas (este mes)</CardDescription>
+              <CardTitle className={`text-2xl tabular-nums ${perdidas.data.total > 0 ? "text-destructive" : ""}`}>{formatoPesos(perdidas.data.total)}</CardTitle>
+              {perdidas.data.porProducto[0] && (
+                <p className="text-xs text-muted-foreground">
+                  La mayor: {perdidas.data.porProducto[0].nombre} ({formatoPesos(perdidas.data.porProducto[0].valor)})
+                </p>
+              )}
+            </CardHeader>
+          </Card>
+        )}
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Stock por producto</CardTitle>
-          <CardDescription>Ordenado de menor a mayor stock</CardDescription>
+          <CardDescription>Ordenado de menor a mayor stock. Tocá un producto para ver su kardex (entradas, salidas y valor) o registrar una merma.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <Input
@@ -92,7 +110,11 @@ export function StockListado() {
               <TableBody>
                 {filas.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.nombre}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link href={`/inventario/${p.id}`} prefetch={false} className="hover:underline">
+                        {p.nombre}
+                      </Link>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{p.categoriaNombre ?? "—"}</TableCell>
                     <TableCell className="text-right font-medium tabular-nums">{formatoNumero(p.stock)}</TableCell>
                     <TableCell>

@@ -32,9 +32,12 @@ export class MovimientosService {
       cantidad: input.cantidad,
       signo: signoDeAjuste(input.tipo),
       motivo: input.motivo ?? null,
+      ubicacionOrigen: signoDeAjuste(input.tipo) < 0 ? (input.ubicacion ?? null) : null,
+      ubicacionDestino: signoDeAjuste(input.tipo) > 0 ? (input.ubicacion ?? null) : null,
     });
     if (!resultado.ok) {
       if (resultado.motivo === 'producto_no_encontrado') throw new NotFoundException('Producto no encontrado');
+      if (resultado.motivo === 'ubicacion_invalida') throw new BadRequestException('Esa ubicación no existe en tu empresa');
       throw new BadRequestException('La variante no existe o no pertenece a este producto');
     }
     return resultado.movimiento;

@@ -53,7 +53,17 @@ describe('MovimientosService', () => {
       cantidad: 3,
       signo: -1,
       motivo: null,
+      ubicacionOrigen: null,
+      ubicacionDestino: null,
     });
+  });
+
+  it('registrarAjuste() descuenta de la ubicación en una salida y suma en una entrada', async () => {
+    repository.crear.mockResolvedValue({ ok: true, movimiento: movimientoBase });
+    await service.registrarAjuste('empresa-1', 'user-1', { productoId: 'prod-1', tipo: 'rotura', cantidad: 1, ubicacion: 'Local' });
+    expect(repository.crear).toHaveBeenLastCalledWith('empresa-1', expect.objectContaining({ signo: -1, ubicacionOrigen: 'Local', ubicacionDestino: null }));
+    await service.registrarAjuste('empresa-1', 'user-1', { productoId: 'prod-1', tipo: 'ajuste_positivo', cantidad: 1, ubicacion: 'Local' });
+    expect(repository.crear).toHaveBeenLastCalledWith('empresa-1', expect.objectContaining({ signo: 1, ubicacionOrigen: null, ubicacionDestino: 'Local' }));
   });
 
   it('registrarAjuste() lanza NotFoundException cuando el producto no existe', async () => {

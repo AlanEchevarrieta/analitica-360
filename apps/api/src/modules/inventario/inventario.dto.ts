@@ -8,6 +8,8 @@ export const registrarAjusteSchema = z.object({
   tipo: z.enum(TIPOS_AJUSTE),
   cantidad: z.number().positive('La cantidad tiene que ser un número positivo'),
   motivo: z.string().trim().nullable().optional(),
+  /** Dónde estaba/está la mercadería (si la empresa usa varias ubicaciones). */
+  ubicacion: z.string().trim().min(1).nullable().optional(),
 });
 export type RegistrarAjusteInput = z.infer<typeof registrarAjusteSchema>;
 
@@ -41,6 +43,18 @@ export const kardexQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(200).default(20),
 });
 export type KardexQuery = z.infer<typeof kardexQuerySchema>;
+
+const fechaIso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida (AAAA-MM-DD)');
+
+export const kardexValorizadoQuerySchema = z
+  .object({ desde: fechaIso, hasta: fechaIso, varianteId: z.uuid().optional() })
+  .refine((q) => q.desde <= q.hasta, { message: 'El período empieza después de terminar', path: ['desde'] });
+export type KardexValorizadoQuery = z.infer<typeof kardexValorizadoQuerySchema>;
+
+export const periodoQuerySchema = z
+  .object({ desde: fechaIso, hasta: fechaIso })
+  .refine((q) => q.desde <= q.hasta, { message: 'El período empieza después de terminar', path: ['desde'] });
+export type PeriodoQuery = z.infer<typeof periodoQuerySchema>;
 
 export const crearLoteSchema = z.object({
   varianteId: z.uuid().nullable().optional(),

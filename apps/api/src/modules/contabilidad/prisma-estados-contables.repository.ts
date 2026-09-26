@@ -1,3 +1,4 @@
+import { perdidasPorDia } from '../inventario/perdidas.sql.js';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
@@ -140,6 +141,10 @@ export class PrismaEstadosContablesRepository implements EstadosContablesReposit
       WHERE s.stock > 0
     `);
     return Number(filas[0]?.valor ?? 0);
+  }
+
+  perdidasPorDia(empresaId: string, hasta: string): Promise<MontoDia[]> {
+    return perdidasPorDia(this.prisma, empresaId, '2000-01-01', hasta);
   }
 
   async deudaPorProveedor(empresaId: string, hasta: string): Promise<DeudaProveedor[]> {
