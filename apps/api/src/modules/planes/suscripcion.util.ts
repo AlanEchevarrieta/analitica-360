@@ -2,6 +2,8 @@ export interface SuscripcionActiva {
   id: string;
   estado: string;
   fechaVencimiento: string | null;
+  /** Nombre del plan contratado (starter, basico, pro, premium, ecommerce). */
+  planNombre?: string | null;
 }
 
 /** Puerto de diasRestantes (src/lib/suscripcion.ts). */

@@ -1,5 +1,10 @@
-// Placeholder de la ruta /soporte — se implementa en Fase 5 del plan de reescritura,
-// consumiendo la API de apps/api y reusando features/soporte.
+import { TicketsListado } from "@/features/soporte/components/TicketsListado";
+
 export default function Page() {
-  return <div>soporte (placeholder — Fase 5)</div>;
+  return (
+    <div className="flex flex-col gap-4">
+      <h1 className="text-xl font-semibold">Soporte</h1>
+      <TicketsListado />
+    </div>
+  );
 }

@@ -38,9 +38,15 @@ export class PrismaSuscripcionRepository implements SuscripcionRepository {
       const fila = await tx.suscripcion.findFirst({
         where: { empresaId },
         orderBy: [{ fechaVencimiento: { sort: 'desc', nulls: 'last' } }],
+        include: { plan: { select: { nombre: true } } },
       });
       if (!fila) return null;
-      return { id: fila.id, estado: fila.estado, fechaVencimiento: fila.fechaVencimiento?.toISOString().slice(0, 10) ?? null };
+      return {
+        id: fila.id,
+        estado: fila.estado,
+        fechaVencimiento: fila.fechaVencimiento?.toISOString().slice(0, 10) ?? null,
+        planNombre: fila.plan?.nombre ?? null,
+      };
     });
   }
 

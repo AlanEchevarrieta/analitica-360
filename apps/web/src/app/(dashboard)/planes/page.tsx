@@ -1,7 +1,13 @@
-// Placeholder de la ruta /planes — faltaba en el scaffold de Fase 1 (no tenía
-// carpeta propia bajo (dashboard)/ a pesar de ser un ítem fijo del menú en
-// src/components/AppNav.tsx). Se implementa en Fase 5, consumiendo
-// GET /suscripcion y /admin/planes de apps/api.
+import { PlanesVista } from "@/features/planes/components/PlanesVista";
+
 export default function Page() {
-  return <div>planes (placeholder — Fase 5)</div>;
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-xl font-semibold">Planes</h1>
+        <p className="text-sm text-muted-foreground">Elegí el que mejor se adapte a tu negocio.</p>
+      </div>
+      <PlanesVista />
+    </div>
+  );
 }

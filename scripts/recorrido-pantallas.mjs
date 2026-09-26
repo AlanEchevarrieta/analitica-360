@@ -36,7 +36,7 @@ const RUTAS_FIJAS = [
   '/inicio', '/ventas', '/ventas/nueva', '/ventas/devoluciones', '/productos', '/productos/nuevo', '/inventario',
   '/compras', '/compras/nueva', '/pedidos', '/pedidos/nuevo', '/clientes', '/clientes/segmentos', '/clientes/nuevo',
   '/proveedores', '/proveedores/nuevo', '/analytics/ventas', '/analytics/productos', '/analytics/contabilidad',
-  '/analytics/insights', '/analytics/estados', '/configuracion',
+  '/analytics/insights', '/analytics/estados', '/configuracion', '/planes', '/soporte', '/soporte/nuevo',
 ];
 
 fs.mkdirSync(carpeta, { recursive: true });

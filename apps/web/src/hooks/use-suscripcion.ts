@@ -8,6 +8,7 @@ export interface SuscripcionActiva {
   id: string;
   estado: string;
   fechaVencimiento: string | null;
+  planNombre?: string | null;
 }
 
 export interface EstadoSuscripcionRespuesta {
