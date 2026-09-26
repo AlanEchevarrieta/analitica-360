@@ -57,6 +57,16 @@ export class TicketController {
     return this.ticketService.fichaAdmin(id);
   }
 
+  @Post('admin/:id/respuestas')
+  @RequireAdminApp()
+  responderAdmin(
+    @CurrentUser() usuario: UsuarioContext,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(responderTicketSchema)) body: ResponderTicketDto,
+  ) {
+    return this.ticketService.responderAdmin(usuario.id, id, body.contenido);
+  }
+
   @Patch('admin/:id/estado')
   @RequireAdminApp()
   @HttpCode(204)

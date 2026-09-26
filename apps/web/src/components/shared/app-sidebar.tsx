@@ -10,6 +10,7 @@ import {
   Home,
   Package,
   Settings,
+  Shield,
   ShoppingCart,
   Star,
   Ticket,
@@ -36,6 +37,7 @@ import { useRol } from "@/hooks/use-rol";
 import { tieneModulo, type ModuloClave } from "@/lib/rol";
 import { useSuscripcion } from "@/hooks/use-suscripcion";
 import { useTicketsNoLeidos } from "@/hooks/use-tickets-no-leidos";
+import { useEsAdmin } from "@/features/admin/hooks/use-admin";
 
 interface NavItem {
   href: string;
@@ -71,6 +73,8 @@ export function AppSidebar() {
   const { organization } = useOrganization();
   const { data: suscripcion } = useSuscripcion();
   const { data: ticketsNoLeidos } = useTicketsNoLeidos();
+  // Consola del dueño del producto: solo si la API confirma que es administrador.
+  const esAdmin = useEsAdmin().data?.admin === true;
 
   const puede = (modulo: ModuloClave) => tieneModulo(rol, modulo);
   const verConfig = tieneModulo(rol, "configuracion");
@@ -179,6 +183,14 @@ export function AppSidebar() {
                 <span>Planes</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            {esAdmin && (
+              <SidebarMenuItem>
+                <SidebarMenuButton render={<Link href="/admin" />} tooltip="Consola">
+                  <Shield />
+                  <span>Consola</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             {verConfig && (
               <SidebarMenuItem>
                 <SidebarMenuButton render={<Link href="/configuracion" />} isActive={activo("/configuracion")} tooltip="Configuración">

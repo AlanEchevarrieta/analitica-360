@@ -65,6 +65,15 @@ export class TicketService {
     return ficha;
   }
 
+  async responderAdmin(usuarioId: string, id: string, contenido: string): Promise<TicketRespuesta> {
+    const resultado = await this.repository.responderAdmin(usuarioId, id, contenido);
+    if (!resultado.ok) {
+      if (resultado.motivo === 'ticket_cerrado') throw new ConflictException('El ticket está cerrado, no se pueden agregar respuestas');
+      throw new NotFoundException('Ticket no encontrado');
+    }
+    return resultado.valor;
+  }
+
   async cambiarEstado(id: string, estado: EstadoTicket): Promise<void> {
     const resultado = await this.repository.cambiarEstado(id, estado);
     if (!resultado.ok) throw new NotFoundException('Ticket no encontrado');

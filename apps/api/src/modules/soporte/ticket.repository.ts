@@ -88,6 +88,8 @@ export interface TicketRepository {
   bannerHome(empresaId: string): Promise<BannerTicketHome | null>;
   /** Cross-empresa - puerto de admin_listar_tickets(). Fiel al SQL real: no filtra deleted_at (ni el original lo hacía). */
   listarAdmin(): Promise<TicketFilaAdmin[]>;
+  /** Respuesta del equipo de soporte (es_admin); un ticket abierto pasa a "en proceso". */
+  responderAdmin(usuarioId: string, ticketId: string, contenido: string): Promise<ResultadoTicket<TicketRespuesta>>;
   /** Cross-empresa - puerto del bypass de empresa en ficha_ticket() cuando es_admin_app(). */
   fichaAdmin(id: string): Promise<TicketFicha | null>;
   cambiarEstado(id: string, estado: EstadoTicket): Promise<ResultadoTicket<true>>;

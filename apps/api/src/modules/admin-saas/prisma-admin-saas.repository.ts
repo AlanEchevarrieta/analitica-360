@@ -24,19 +24,22 @@ export class PrismaAdminSaasRepository implements AdminSaasRepository {
     >(Prisma.sql`
       WITH mes AS (
         SELECT date_trunc('month', CURRENT_DATE)::date AS inicio, date_trunc('month', CURRENT_DATE - interval '1 month')::date AS anterior
-      )
+      ),
+      -- Las empresas demo (propias, de prueba) y las dadas de baja no cuentan para el negocio.
+      reales AS (SELECT id, created_at FROM empresas WHERE deleted_at IS NULL AND NOT es_demo),
+      suscripciones AS (SELECT s.* FROM suscripciones s JOIN reales r ON r.id = s.empresa_id)
       SELECT
         COALESCE((
           SELECT SUM(pl.precio_ars) FROM suscripciones s JOIN planes pl ON pl.id = s.plan_id
           WHERE s.estado = 'activa' AND COALESCE(pl.precio_ars, 0) > 0
         ), 0) AS mrr,
-        (SELECT COUNT(*) FROM empresas WHERE deleted_at IS NULL) AS total_empresas,
+        (SELECT COUNT(*) FROM reales) AS total_empresas,
         (SELECT COUNT(*) FROM suscripciones WHERE estado = 'activa') AS activas,
         (SELECT COUNT(*) FROM suscripciones WHERE estado = 'periodo_prueba') AS en_prueba,
         (SELECT COUNT(*) FROM suscripciones WHERE estado IN ('vencida', 'pendiente_pago')) AS vencidas,
-        (SELECT COUNT(*) FROM empresas, mes WHERE created_at >= mes.inicio AND deleted_at IS NULL) AS nuevas_este_mes,
-        (SELECT COUNT(*) FROM empresas, mes WHERE created_at >= mes.anterior AND created_at < mes.inicio AND deleted_at IS NULL) AS nuevas_mes_anterior,
-        COALESCE((SELECT SUM(monto_ars) FROM pagos, mes WHERE estado = 'confirmado' AND created_at >= mes.inicio), 0) AS pagos_este_mes,
+        (SELECT COUNT(*) FROM reales, mes WHERE created_at >= mes.inicio) AS nuevas_este_mes,
+        (SELECT COUNT(*) FROM reales, mes WHERE created_at >= mes.anterior AND created_at < mes.inicio) AS nuevas_mes_anterior,
+        COALESCE((SELECT SUM(monto_ars) FROM pagos, mes WHERE estado = 'confirmado' AND created_at >= mes.inicio AND empresa_id IN (SELECT id FROM reales)), 0) AS pagos_este_mes,
         COALESCE((
           SELECT jsonb_agg(jsonb_build_object('plan', ep.plan, 'cantidad', ep.cantidad) ORDER BY ep.cantidad DESC)
           FROM (

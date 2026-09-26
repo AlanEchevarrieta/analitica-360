@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { PrismaAdminClientesRepository } from './prisma-admin-clientes.repository.js';
 import { AdminSaasService } from './admin-saas.service.js';
 import { ADMIN_SAAS_REPOSITORY, type AdminSaasRepository } from './admin-saas.repository.js';
 
@@ -10,7 +11,7 @@ describe('AdminSaasService', () => {
   beforeEach(async () => {
     repository = { metrics: vi.fn(), capacidad: vi.fn(), listarPagos: vi.fn(), registrarPago: vi.fn() };
     const module = await Test.createTestingModule({
-      providers: [AdminSaasService, { provide: ADMIN_SAAS_REPOSITORY, useValue: repository }],
+      providers: [AdminSaasService, { provide: ADMIN_SAAS_REPOSITORY, useValue: repository }, { provide: PrismaAdminClientesRepository, useValue: {} }],
     }).compile();
     service = module.get(AdminSaasService);
   });

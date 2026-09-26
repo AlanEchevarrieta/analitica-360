@@ -183,6 +183,18 @@ export class PrismaTicketRepository implements TicketRepository {
     return tickets.map((t) => ({ ...toFila(t), empresaId: t.empresaId, empresaNombre: t.empresa.nombre }));
   }
 
+  async responderAdmin(usuarioId: string, ticketId: string, contenido: string): Promise<ResultadoTicket<TicketRespuesta>> {
+    const ticket = await this.prisma.ticket.findFirst({ where: { id: ticketId, deletedAt: null }, select: { estado: true } });
+    if (!ticket) return { ok: false, motivo: 'no_encontrado' };
+    if (ticket.estado === 'cerrado') return { ok: false, motivo: 'ticket_cerrado' };
+    const respuesta = await this.prisma.$transaction(async (tx) => {
+      const creada = await tx.ticketRespuesta.create({ data: { ticketId, autorId: usuarioId, esAdmin: true, contenido } });
+      if (ticket.estado === 'abierto') await tx.ticket.update({ where: { id: ticketId }, data: { estado: 'en_proceso' } });
+      return creada;
+    });
+    return { ok: true, valor: toRespuesta(respuesta) };
+  }
+
   async cambiarEstado(id: string, estado: EstadoTicket): Promise<ResultadoTicket<true>> {
     const { count } = await this.prisma.ticket.updateMany({ where: { id }, data: { estado } });
     if (count === 0) return { ok: false, motivo: 'no_encontrado' };

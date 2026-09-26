@@ -20,6 +20,7 @@ describe('TicketService', () => {
       listarAdmin: vi.fn(),
       fichaAdmin: vi.fn(),
       cambiarEstado: vi.fn(),
+      responderAdmin: vi.fn(),
     };
     const module = await Test.createTestingModule({
       providers: [TicketService, { provide: TICKET_REPOSITORY, useValue: repository }],
@@ -75,5 +76,10 @@ describe('TicketService', () => {
     repository.cambiarEstado.mockResolvedValue({ ok: true, valor: true });
     await service.cambiarEstado('t1', 'cerrado');
     expect(repository.cambiarEstado).toHaveBeenCalledWith('t1', 'cerrado');
+  });
+
+  it('responderAdmin() rechaza responder un ticket cerrado', async () => {
+    repository.responderAdmin.mockResolvedValue({ ok: false, motivo: 'ticket_cerrado' });
+    await expect(service.responderAdmin('admin-1', 't1', 'Hola')).rejects.toThrow('cerrado');
   });
 });

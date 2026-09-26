@@ -7,17 +7,45 @@ import {
   type AdminSaasRepository,
 } from './admin-saas.repository.js';
 import type { RegistrarPagoDto } from './admin-saas.dto.js';
+import { PrismaAdminClientesRepository } from './prisma-admin-clientes.repository.js';
+import type { AdminEmpresaDetalle, AdminEmpresaFila, AdminEvolucionMes, AdminTablaTamano } from './admin-clientes.types.js';
+import { alertasEmpresa } from './admin-clientes.util.js';
+import { fechaHoyAR } from '../analytics/analytics.util.js';
 
 @Injectable()
 export class AdminSaasService {
-  constructor(@Inject(ADMIN_SAAS_REPOSITORY) private readonly repository: AdminSaasRepository) {}
+  constructor(
+    @Inject(ADMIN_SAAS_REPOSITORY) private readonly repository: AdminSaasRepository,
+    private readonly clientes: PrismaAdminClientesRepository,
+  ) {}
+
+  private conAlertas(filas: AdminEmpresaFila[]): AdminEmpresaFila[] {
+    const hoy = fechaHoyAR();
+    return filas.map((f) => ({ ...f, ...alertasEmpresa(f, hoy) }));
+  }
+
+  async empresas(): Promise<AdminEmpresaFila[]> {
+    return this.conAlertas(await this.clientes.empresas());
+  }
+
+  async empresa(id: string): Promise<AdminEmpresaDetalle> {
+    const [fila] = await this.clientes.empresas(id);
+    const detalle = fila ? await this.clientes.detalle(id) : null;
+    if (!fila || !detalle) throw new NotFoundException('Empresa no encontrada');
+    return { empresa: this.conAlertas([fila])[0], ...detalle };
+  }
+
+  evolucion(): Promise<AdminEvolucionMes[]> {
+    return this.clientes.evolucion();
+  }
 
   metrics(): Promise<AdminSaasMetrics> {
     return this.repository.metrics();
   }
 
-  capacidad(): Promise<AdminCapacidad> {
-    return this.repository.capacidad();
+  async capacidad(): Promise<AdminCapacidad & { baseBytes: number; tablas: AdminTablaTamano[] }> {
+    const [capacidad, base] = await Promise.all([this.repository.capacidad(), this.clientes.tamanoBase()]);
+    return { ...capacidad, baseBytes: base.bytes, tablas: base.tablas };
   }
 
   listarPagos(estado: string, periodo: string): Promise<AdminPago[]> {
