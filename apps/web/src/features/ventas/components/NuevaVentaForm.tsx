@@ -100,6 +100,7 @@ export function NuevaVentaForm() {
     if (lineas.length === 0) return "Agregá al menos un producto.";
     if (totales.total <= 0) return "El total tiene que ser mayor a $0.";
     if (config.data?.mostrarCliente === "siempre" && !cobro.cliente.trim()) return "Cargá el cliente (lo pide la configuración de ventas).";
+    if (cobro.formaPago === "cuenta_corriente" && !cobro.cliente.trim()) return "Para vender a cuenta, elegí o cargá el cliente.";
     const senia = aNumero(cobro.montoSenia);
     if (cobro.esSenia && (senia <= 0 || senia >= totales.total)) {
       return "La seña tiene que ser mayor a $0 y menor que el total.";

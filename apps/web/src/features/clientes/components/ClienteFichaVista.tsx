@@ -12,6 +12,7 @@ import { formatoFechaHora, formatoPesos } from "@/lib/formato";
 import { useListasPrecios } from "@/features/listas-precios/listas-precios";
 import { TIPOS_INTERACCION, linkWhatsApp, useAccionesClientes, useCliente } from "../hooks/use-clientes";
 import { ClienteForm } from "./ClienteForm";
+import { CuentaCliente } from "./CuentaCliente";
 
 export function ClienteFichaVista({ id }: { id: string }) {
   const { data: c, isPending, isError, error, refetch } = useCliente(id);
@@ -65,6 +66,8 @@ export function ClienteFichaVista({ id }: { id: string }) {
           {c.notasLibres && <p className="sm:col-span-4 rounded-md bg-muted/50 p-2">{c.notasLibres}</p>}
         </div>
       )}
+
+      <CuentaCliente clienteId={c.id} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

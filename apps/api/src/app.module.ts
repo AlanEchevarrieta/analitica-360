@@ -15,6 +15,7 @@ import { ComprasModule } from './modules/compras/compras.module.js';
 import { VentasModule } from './modules/ventas/ventas.module.js';
 import { DevolucionesModule } from './modules/devoluciones/devoluciones.module.js';
 import { PedidosModule } from './modules/pedidos/pedidos.module.js';
+import { CuentaCorrienteModule } from './modules/cuenta-corriente/cuenta-corriente.module.js';
 import { ProduccionModule } from './modules/produccion/produccion.module.js';
 import { RegistroModule } from './modules/registro/registro.module.js';
 import { ListasPreciosModule } from './modules/listas-precios/listas-precios.module.js';
@@ -48,6 +49,7 @@ import { ConfiguracionModule } from './modules/configuracion/configuracion.modul
     ListasPreciosModule,
     RegistroModule,
     ProduccionModule,
+    CuentaCorrienteModule,
     AnalyticsModule,
     ContabilidadModule,
     ImportExportModule,

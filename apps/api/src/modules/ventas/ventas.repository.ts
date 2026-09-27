@@ -73,6 +73,7 @@ export type MotivoRechazoVenta =
   | 'producto_invalido'
   | 'variante_invalida'
   | 'cliente_invalido'
+  | 'cliente_requerido'
   | 'lista_invalida'
   | 'ubicacion_invalida'
   | 'senia_invalida'
@@ -80,7 +81,7 @@ export type MotivoRechazoVenta =
 
 export type ResultadoConfirmarVenta = { ok: true; venta: VentaRecord } | { ok: false; motivo: MotivoRechazoVenta };
 
-export type ResultadoAnularVenta = 'ok' | 'no_encontrada' | 'ya_anulada' | 'tiene_devoluciones';
+export type ResultadoAnularVenta = 'ok' | 'no_encontrada' | 'ya_anulada' | 'tiene_devoluciones' | 'tiene_cobros';
 
 export type ResultadoCobrarSaldo =
   | { ok: true; venta: VentaRecord }
@@ -140,6 +141,7 @@ export interface VentasRepository {
     monto: number,
     formaPago: string,
     fecha: Date,
+    usuarioId: string,
   ): Promise<ResultadoCobrarSaldo>;
   configuracion(empresaId: string): Promise<ConfiguracionVenta>;
 }

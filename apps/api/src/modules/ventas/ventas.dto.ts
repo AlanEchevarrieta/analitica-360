@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { booleanQuery } from '../../common/zod/boolean-query.js';
-import { FORMAS_PAGO } from './ventas.util.js';
+import { FORMAS_PAGO, FORMAS_VENTA } from './ventas.util.js';
 
 const itemVentaSchema = z.object({
   productoId: z.uuid(),
@@ -12,7 +12,7 @@ const itemVentaSchema = z.object({
 
 export const confirmarVentaSchema = z.object({
   items: z.array(itemVentaSchema).min(1, 'Agregá al menos un producto'),
-  formaPago: z.enum(FORMAS_PAGO),
+  formaPago: z.enum(FORMAS_VENTA),
   descuento: z.number().nonnegative().default(0),
   clienteNombre: z.string().trim().nullable().optional(),
   clienteId: z.uuid().nullable().optional(),

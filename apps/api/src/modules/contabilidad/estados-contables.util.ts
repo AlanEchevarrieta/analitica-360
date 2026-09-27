@@ -69,6 +69,8 @@ export interface SeniaDato {
   saldoPendiente: number;
   /** Día en que se terminó de cobrar el saldo (null = sin cobrar del todo). */
   fechaCobroSaldo: string | null;
+  /** Pagos registrados uno por uno (cuenta corriente), con su día. */
+  cobros?: { fecha: string; monto: number }[];
 }
 
 export interface CompraDato {
@@ -195,9 +197,13 @@ export function cajaAl(d: DatosContables, fecha: string, caja = movimientosDeCaj
 export function creditosPorVentasAl(senias: SeniaDato[], fecha: string): number {
   return suma(hasta(senias, fecha), (s) => {
     const saldoOriginal = s.total - s.montoSenia;
-    const cobradoDespues = saldoOriginal - s.saldoPendiente;
+    const cobros = s.cobros ?? [];
+    // Pagos registrados: cada uno cuenta desde su día.
+    const registradoHasta = suma(cobros.filter((c) => c.fecha <= fecha), (c) => c.monto);
+    // Lo cobrado sin detalle (sistema anterior) cuenta el día en que se terminó de cobrar.
+    const sinDetalle = saldoOriginal - s.saldoPendiente - suma(cobros, (c) => c.monto);
     const fechaCobro = s.fechaCobroSaldo ?? s.fecha;
-    return saldoOriginal - (fechaCobro <= fecha ? cobradoDespues : 0);
+    return saldoOriginal - registradoHasta - (fechaCobro <= fecha ? sinDetalle : 0);
   });
 }
 

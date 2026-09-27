@@ -1,5 +1,8 @@
 export const FORMAS_PAGO = ['efectivo', 'transferencia', 'debito', 'credito', 'qr'] as const;
 
+/** Al vender, además: 'cuenta_corriente' = no paga ahora, queda debiendo (fiado). */
+export const FORMAS_VENTA = [...FORMAS_PAGO, 'cuenta_corriente'] as const;
+
 /** Puerto de src/lib/ventas.ts::calcularTotalesCredito. */
 export function calcularTotalesCredito(totalSinInteres: number, coeficiente: number, cuotas: number) {
   const coef = Math.max(0, Number.isFinite(coeficiente) ? coeficiente : 0);

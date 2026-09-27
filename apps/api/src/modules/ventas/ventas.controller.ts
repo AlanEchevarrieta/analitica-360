@@ -70,9 +70,10 @@ export class VentasController {
   @RequirePermiso('registrar_ventas')
   cobrarSaldo(
     @CurrentEmpresa() empresa: EmpresaContext,
+    @CurrentUser() usuario: UsuarioContext,
     @Param('id') id: string,
     @Body(new ZodValidationPipe(cobrarSaldoVentaSchema)) body: CobrarSaldoVentaInput,
   ) {
-    return this.ventasService.cobrarSaldo(empresa.id, id, body);
+    return this.ventasService.cobrarSaldo(empresa.id, id, body, usuario.id);
   }
 }

@@ -10,10 +10,10 @@ import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { formatoFechaHora, formatoPesos } from "@/lib/formato";
 import { aNumero } from "@/lib/numeros";
 import { useAccionesDevolucion, useAccionesVenta, useDevoluciones, useVenta } from "../hooks/use-venta";
-import { FORMAS_PAGO } from "../types/nueva-venta";
+import { etiquetaPago, FORMAS_PAGO } from "../types/nueva-venta";
 import { DevolucionForm } from "./DevolucionForm";
 
-const formaPago = (v: string) => FORMAS_PAGO.find((f) => f.valor === v)?.etiqueta ?? v;
+const formaPago = etiquetaPago;
 const hoy = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Mendoza" });
 
 function CobrarSaldo({ ventaId, saldo }: { ventaId: string; saldo: number }) {

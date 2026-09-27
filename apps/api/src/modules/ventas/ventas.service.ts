@@ -22,6 +22,7 @@ const MOTIVO_MENSAJE: Record<MotivoRechazoVenta, string> = {
   variante_invalida: 'Hay una variante que no existe o no pertenece a ese producto',
   cliente_invalido: 'Ese cliente no existe o no pertenece a esta empresa',
   lista_invalida: 'Esa lista de precios no existe en tu empresa',
+  cliente_requerido: 'Para vender a cuenta corriente elegí o cargá el cliente',
   ubicacion_invalida: 'Esa ubicación no existe o no pertenece a esta empresa',
   senia_invalida: 'La seña tiene que ser mayor a 0 y menor que el total',
   descuento_invalido: 'El descuento no puede ser mayor que el total de los productos',
@@ -79,18 +80,20 @@ export class VentasService {
     const resultado = await this.ventasRepository.anular(empresaId, usuarioId, id, input.motivo);
     if (resultado === 'no_encontrada') throw new NotFoundException('Venta no encontrada');
     if (resultado === 'ya_anulada') throw new BadRequestException('Esa venta ya fue anulada');
+    if (resultado === 'tiene_cobros') throw new BadRequestException('Esta venta tiene cobros registrados: anulá primero esos cobros (en la cuenta corriente del cliente).');
     if (resultado === 'tiene_devoluciones') {
       throw new BadRequestException('La venta tiene devoluciones o cambios: cancelalos antes de anularla');
     }
   }
 
-  async cobrarSaldo(empresaId: string, id: string, input: CobrarSaldoVentaInput): Promise<VentaRecord> {
+  async cobrarSaldo(empresaId: string, id: string, input: CobrarSaldoVentaInput, usuarioId: string): Promise<VentaRecord> {
     const resultado = await this.ventasRepository.cobrarSaldo(
       empresaId,
       id,
       input.monto,
       input.formaPago,
       new Date(input.fecha),
+      usuarioId,
     );
     if (!resultado.ok) {
       if (resultado.motivo === 'no_encontrada') throw new NotFoundException('Venta no encontrada');

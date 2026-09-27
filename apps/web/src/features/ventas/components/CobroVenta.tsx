@@ -90,7 +90,18 @@ export function CobroVenta({
               {f.etiqueta}
             </Button>
           ))}
+          <Button
+            size="sm"
+            variant={cobro.formaPago === "cuenta_corriente" ? "default" : "outline"}
+            aria-pressed={cobro.formaPago === "cuenta_corriente"}
+            onClick={() => onCambiar({ formaPago: "cuenta_corriente", esSenia: false })}
+          >
+            A cuenta (fiado)
+          </Button>
         </div>
+        {cobro.formaPago === "cuenta_corriente" && (
+          <p className="text-xs text-muted-foreground">No paga ahora: queda en la cuenta corriente del cliente y lo cobrás después desde Clientes → Cuenta corriente. Elegí o cargá el cliente.</p>
+        )}
       </div>
 
       {cobro.formaPago === "efectivo" && (
@@ -209,7 +220,7 @@ export function CobroVenta({
       )}
 
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={cobro.esSenia} onChange={(e) => onCambiar({ esSenia: e.target.checked })} />
+        <input type="checkbox" checked={cobro.esSenia} disabled={cobro.formaPago === "cuenta_corriente"} onChange={(e) => onCambiar({ esSenia: e.target.checked })} />
         Es una seña (paga una parte ahora)
       </label>
       {cobro.esSenia && (

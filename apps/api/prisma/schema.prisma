@@ -82,6 +82,7 @@ model Empresa {
   avisosAdmin               AvisoAdmin[]
   recetas                   Receta[]
   ordenesProduccion         OrdenProduccion[]
+  cobrosClientes            CobroCliente[]
 
   @@map("empresas")
 }
@@ -472,13 +473,14 @@ model Venta {
   listaPrecioId      String?   @map("lista_precio_id") @db.Uuid
   deletedAt          DateTime? @map("deleted_at")
 
-  empresa      Empresa      @relation(fields: [empresaId], references: [id])
-  usuario      Usuario      @relation(fields: [usuarioId], references: [id])
-  cliente      Cliente?     @relation(fields: [clienteId], references: [id])
-  listaPrecio  ListaPrecio? @relation(fields: [listaPrecioId], references: [id])
-  items        VentaItem[]
-  anulacion    Anulacion?
-  devoluciones Devolucion[]
+  empresa         Empresa           @relation(fields: [empresaId], references: [id])
+  usuario         Usuario           @relation(fields: [usuarioId], references: [id])
+  cliente         Cliente?          @relation(fields: [clienteId], references: [id])
+  listaPrecio     ListaPrecio?      @relation(fields: [listaPrecioId], references: [id])
+  items           VentaItem[]
+  anulacion       Anulacion?
+  devoluciones    Devolucion[]
+  cobrosAplicados CobroAplicacion[]
 
   pedido Pedido?
 
@@ -793,6 +795,7 @@ model Cliente {
   listaPrecio   ListaPrecio?         @relation(fields: [listaPrecioId], references: [id])
   interacciones ClienteInteraccion[]
   ventas        Venta[]
+  cobros        CobroCliente[]
   pedidos       Pedido[]
 
   @@index([empresaId])
@@ -1106,4 +1109,41 @@ model OrdenProduccion {
   @@unique([empresaId, numero])
   @@index([empresaId, fecha])
   @@map("ordenes_produccion")
+}
+
+/// Cobro de un saldo (cuenta corriente / seña): lo que pagó el cliente, cuándo y cómo.
+model CobroCliente {
+  id        String    @id @default(uuid()) @db.Uuid
+  empresaId String    @map("empresa_id") @db.Uuid
+  clienteId String?   @map("cliente_id") @db.Uuid
+  monto     Decimal   @db.Decimal(12, 2)
+  formaPago String    @map("forma_pago")
+  fecha     DateTime
+  notas     String?
+  usuarioId String    @map("usuario_id") @db.Uuid
+  anuladoAt DateTime? @map("anulado_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  empresa      Empresa           @relation(fields: [empresaId], references: [id])
+  cliente      Cliente?          @relation(fields: [clienteId], references: [id])
+  aplicaciones CobroAplicacion[]
+
+  @@index([empresaId, fecha])
+  @@index([clienteId])
+  @@map("cobros_clientes")
+}
+
+/// A qué ventas se aplicó cada cobro (las más viejas primero).
+model CobroAplicacion {
+  id      String  @id @default(uuid()) @db.Uuid
+  cobroId String  @map("cobro_id") @db.Uuid
+  ventaId String  @map("venta_id") @db.Uuid
+  monto   Decimal @db.Decimal(12, 2)
+
+  cobro CobroCliente @relation(fields: [cobroId], references: [id])
+  venta Venta        @relation(fields: [ventaId], references: [id])
+
+  @@index([cobroId])
+  @@index([ventaId])
+  @@map("cobros_aplicaciones")
 }

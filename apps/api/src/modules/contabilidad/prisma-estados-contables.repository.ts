@@ -67,9 +67,17 @@ export class PrismaEstadosContablesRepository implements EstadosContablesReposit
         FROM ventas v
         WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL AND v.fecha < ${fin}
         UNION ALL
-        -- El saldo de una seña, el día que se terminó de cobrar (si se cobró en partes, lo cobrado).
+        -- Pagos de saldos registrados (cuenta corriente / señas), el día de cada pago.
+        SELECT ${diaAR(Prisma.raw('c.fecha'))}, a.monto
+        FROM cobros_aplicaciones a
+        JOIN cobros_clientes c ON c.id = a.cobro_id AND c.empresa_id = ${empresaId}::uuid AND c.anulado_at IS NULL
+        JOIN ventas v ON v.id = a.venta_id AND v.deleted_at IS NULL
+        WHERE c.fecha < ${fin}
+        UNION ALL
+        -- Lo cobrado de una seña sin detalle (sistema anterior): el día que se terminó de cobrar.
         SELECT ${diaAR(Prisma.raw('COALESCE(v.fecha_cobro_saldo, v.fecha)'))},
                COALESCE(v.total_con_interes, 0) - v.monto_senia - v.saldo_pendiente
+               - COALESCE((SELECT SUM(a.monto) FROM cobros_aplicaciones a JOIN cobros_clientes c ON c.id = a.cobro_id AND c.anulado_at IS NULL WHERE a.venta_id = v.id), 0)
         FROM ventas v
         WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL AND v.es_senia
           AND COALESCE(v.fecha_cobro_saldo, v.fecha) < ${fin}
@@ -81,19 +89,27 @@ export class PrismaEstadosContablesRepository implements EstadosContablesReposit
   }
 
   async senias(empresaId: string, hasta: string): Promise<SeniaDato[]> {
-    const filas = await this.prisma.$queryRaw<{ fecha: string; total: string; monto_senia: string; saldo: string; fecha_cobro: string | null }[]>(Prisma.sql`
-      SELECT ${diaAR(Prisma.raw('v.fecha'))}::text AS fecha,
+    const filas = await this.prisma.$queryRaw<{ id: string; fecha: string; total: string; monto_senia: string; saldo: string; fecha_cobro: string | null }[]>(Prisma.sql`
+      SELECT v.id, ${diaAR(Prisma.raw('v.fecha'))}::text AS fecha,
              COALESCE(v.total_con_interes, 0) AS total, v.monto_senia, v.saldo_pendiente AS saldo,
              CASE WHEN v.fecha_cobro_saldo IS NULL THEN NULL ELSE ${diaAR(Prisma.raw('v.fecha_cobro_saldo'))}::text END AS fecha_cobro
       FROM ventas v
       WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL AND v.es_senia AND v.fecha < ${finDelDia(hasta)}
     `);
+    const cobros = await this.prisma.$queryRaw<{ venta_id: string; fecha: string; monto: string }[]>(Prisma.sql`
+      SELECT a.venta_id, ${diaAR(Prisma.raw('c.fecha'))}::text AS fecha, a.monto
+      FROM cobros_aplicaciones a
+      JOIN cobros_clientes c ON c.id = a.cobro_id AND c.empresa_id = ${empresaId}::uuid AND c.anulado_at IS NULL
+    `);
+    const porVenta = new Map<string, { fecha: string; monto: number }[]>();
+    for (const c of cobros) porVenta.set(c.venta_id, [...(porVenta.get(c.venta_id) ?? []), { fecha: c.fecha, monto: Number(c.monto) }]);
     return filas.map((f) => ({
       fecha: f.fecha,
       total: Number(f.total),
       montoSenia: Number(f.monto_senia),
       saldoPendiente: Number(f.saldo),
       fechaCobroSaldo: f.fecha_cobro,
+      cobros: porVenta.get(f.id) ?? [],
     }));
   }
 

@@ -103,21 +103,21 @@ describe('VentasService', () => {
   it('cobrarSaldo() lanza NotFoundException cuando la venta no existe', async () => {
     repository.cobrarSaldo.mockResolvedValue({ ok: false, motivo: 'no_encontrada' });
     await expect(
-      service.cobrarSaldo('empresa-1', 'venta-x', { monto: 100, formaPago: 'efectivo', fecha: '2026-09-22' }),
+      service.cobrarSaldo('empresa-1', 'venta-x', { monto: 100, formaPago: 'efectivo', fecha: '2026-09-22' }, 'usuario-1'),
     ).rejects.toThrow(NotFoundException);
   });
 
   it('cobrarSaldo() lanza BadRequestException cuando no hay saldo pendiente', async () => {
     repository.cobrarSaldo.mockResolvedValue({ ok: false, motivo: 'sin_saldo_pendiente' });
     await expect(
-      service.cobrarSaldo('empresa-1', 'venta-1', { monto: 100, formaPago: 'efectivo', fecha: '2026-09-22' }),
+      service.cobrarSaldo('empresa-1', 'venta-1', { monto: 100, formaPago: 'efectivo', fecha: '2026-09-22' }, 'usuario-1'),
     ).rejects.toThrow(BadRequestException);
   });
 
   it('cobrarSaldo() lanza BadRequestException cuando el monto es inválido', async () => {
     repository.cobrarSaldo.mockResolvedValue({ ok: false, motivo: 'monto_invalido' });
     await expect(
-      service.cobrarSaldo('empresa-1', 'venta-1', { monto: 999999, formaPago: 'efectivo', fecha: '2026-09-22' }),
+      service.cobrarSaldo('empresa-1', 'venta-1', { monto: 999999, formaPago: 'efectivo', fecha: '2026-09-22' }, 'usuario-1'),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -127,7 +127,7 @@ describe('VentasService', () => {
       monto: 100,
       formaPago: 'efectivo',
       fecha: '2026-09-22',
-    });
+    }, 'usuario-1');
     expect(resultado).toEqual(ventaBase);
   });
 });

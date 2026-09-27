@@ -156,6 +156,9 @@ export class PrismaVentasRepository implements VentasRepository {
       // volverían dos veces al stock. Primero hay que cancelar la devolución.
       const devolucionActiva = await tx.devolucion.findFirst({ where: { ventaId: id, empresaId, estado: { not: 'cancelado' } } });
       if (devolucionActiva) return 'tiene_devoluciones';
+      // Con cobros registrados, anular la venta dejaría plata cobrada sin venta.
+      const cobro = await tx.cobroAplicacion.findFirst({ where: { ventaId: id, cobro: { empresaId, anuladoAt: null } }, select: { id: true } });
+      if (cobro) return 'tiene_cobros';
 
       // "Reclama" la anulación de forma atómica antes de revertir
       // movimientos - cierra la carrera de dos anulaciones concurrentes
@@ -209,6 +212,7 @@ export class PrismaVentasRepository implements VentasRepository {
     monto: number,
     formaPago: string,
     fecha: Date,
+    usuarioId: string,
   ): Promise<ResultadoCobrarSaldo> {
     const venta = await this.prisma.venta.findFirst({ where: { id, empresaId, deletedAt: null } });
     if (!venta) return { ok: false, motivo: 'no_encontrada' };
@@ -227,6 +231,10 @@ export class PrismaVentasRepository implements VentasRepository {
       if (count === 0) return { ok: false, motivo: 'monto_invalido' };
 
       const actual = await tx.venta.findFirstOrThrow({ where: { id } });
+      // Cada cobro queda registrado (fecha, monto, medio): cuenta corriente y caja.
+      await tx.cobroCliente.create({
+        data: { empresaId, clienteId: actual.clienteId, monto, formaPago, fecha, usuarioId, aplicaciones: { create: { ventaId: id, monto } } },
+      });
       const pagado = actual.saldoPendiente.toNumber() <= 0;
       const nota = `Saldo cobrado el ${fecha.toISOString().slice(0, 10)}: $${monto} (${formaPago})`;
       const actualizada = await tx.venta.update({
@@ -293,6 +301,9 @@ export async function confirmarVentaEnTx(
       input.listaPrecioId ? tx.listaPrecio.findFirst({ where: { id: input.listaPrecioId, empresaId, deletedAt: null }, select: { id: true } }) : null,
     ]);
     if (input.clienteId && !cliente) return { ok: false, motivo: 'cliente_invalido' };
+    // A cuenta corriente (fiado): queda debiendo todo; hace falta saber quién.
+    const aCuenta = input.formaPago === 'cuenta_corriente';
+    if (aCuenta && !input.clienteId) return { ok: false, motivo: 'cliente_requerido' };
     if (input.listaPrecioId && !lista) return { ok: false, motivo: 'lista_invalida' };
     if (input.ubicacionOrigen && !ubicacion) return { ok: false, motivo: 'ubicacion_invalida' };
 
@@ -303,7 +314,7 @@ export async function confirmarVentaEnTx(
     const totalSinInteres = itemsTotal - input.descuento;
     const { totalConInteres } = calcularTotalesCredito(totalSinInteres, input.coeficienteInteres, input.cuotas);
 
-    if (input.esSenia && !(input.montoSenia > 0 && input.montoSenia < totalConInteres)) {
+    if (input.esSenia && !aCuenta && !(input.montoSenia > 0 && input.montoSenia < totalConInteres)) {
       return { ok: false, motivo: 'senia_invalida' };
     }
 
@@ -316,8 +327,10 @@ export async function confirmarVentaEnTx(
     // Kits que se arman al vender: el stock sale de sus componentes y su costo es la suma de ellos.
     const expandidos = await salidasConKits(tx, empresaId, input.items.map((i) => ({ productoId: i.productoId, varianteId: i.varianteId ?? null, cantidad: i.cantidad })));
 
-    const saldoPendiente = input.esSenia ? totalConInteres - input.montoSenia : 0;
-    const estadoCobro: EstadoCobro = input.esSenia ? 'señado' : 'pagado';
+    const esSenia = input.esSenia || aCuenta;
+    const montoSenia = aCuenta ? 0 : input.esSenia ? input.montoSenia : 0;
+    const saldoPendiente = esSenia ? totalConInteres - montoSenia : 0;
+    const estadoCobro: EstadoCobro = aCuenta ? 'saldo_pendiente' : esSenia ? 'señado' : 'pagado';
 
     const venta = await tx.venta.create({
       data: {
@@ -334,8 +347,8 @@ export async function confirmarVentaEnTx(
         coeficienteInteres: input.coeficienteInteres,
         totalSinInteres,
         totalConInteres,
-        esSenia: input.esSenia,
-        montoSenia: input.esSenia ? input.montoSenia : 0,
+        esSenia,
+        montoSenia,
         notas: input.notas ?? null,
         saldoPendiente,
         estadoCobro,

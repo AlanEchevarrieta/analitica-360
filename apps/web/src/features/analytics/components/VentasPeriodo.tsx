@@ -9,7 +9,7 @@ import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-
 import { SelectorPeriodo, useRangoFechas } from "@/components/shared/selector-periodo";
 import { formatoNumero, formatoPesos } from "@/lib/formato";
 import { claveGranularidad, diasEntre, etiquetaGranularidad, granularidadPara, type Granularidad } from "@/lib/periodos";
-import { FORMAS_PAGO } from "@/features/ventas/types/nueva-venta";
+import { etiquetaPago as etiquetaMedio } from "@/features/ventas/types/nueva-venta";
 import { usePeriodo } from "../hooks/use-analytics";
 import { Kpi } from "./comunes";
 
@@ -35,7 +35,7 @@ const NOMBRE_PERIODO: Record<Granularidad, string> = { dia: "día", semana: "sem
 const ORDEN_DIAS = [1, 2, 3, 4, 5, 6, 0];
 const NOMBRE_DIA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-const etiquetaPago = (v: string) => FORMAS_PAGO.find((f) => f.valor === v)?.etiqueta ?? v;
+const etiquetaPago = etiquetaMedio;
 
 function Chips({ valor, opciones, onCambiar }: { valor: Granularidad; opciones: Granularidad[]; onCambiar: (g: Granularidad) => void }) {
   return (

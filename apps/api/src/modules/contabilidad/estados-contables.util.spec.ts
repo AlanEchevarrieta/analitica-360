@@ -122,6 +122,11 @@ describe('estados contables', () => {
   });
 
   it('seña: lo que falta cobrar es crédito hasta el día que se cobra', () => {
+    // Seña cobrada en dos pagos registrados: cada uno baja la deuda el día que se pagó.
+    const enPartes = [{ fecha: '2026-03-01', total: 10_000, montoSenia: 0, saldoPendiente: 3_000, fechaCobroSaldo: null, cobros: [{ fecha: '2026-03-05', monto: 4_000 }, { fecha: '2026-03-20', monto: 3_000 }] }];
+    expect(creditosPorVentasAl(enPartes, '2026-03-02')).toBe(10_000);
+    expect(creditosPorVentasAl(enPartes, '2026-03-10')).toBe(6_000);
+    expect(creditosPorVentasAl(enPartes, '2026-03-31')).toBe(3_000);
     const senias = [{ fecha: '2026-01-10', total: 10_000, montoSenia: 3_000, saldoPendiente: 0, fechaCobroSaldo: '2026-02-05' }];
     expect(creditosPorVentasAl(senias, '2026-01-31')).toBe(7_000);
     expect(creditosPorVentasAl(senias, '2026-02-05')).toBe(0);
