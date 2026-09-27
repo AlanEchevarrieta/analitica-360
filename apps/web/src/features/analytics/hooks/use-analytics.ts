@@ -22,6 +22,23 @@ export const usePeriodo = (desde: string, hasta: string, granularidad: "dia" | "
     `/analytics/periodo?desde=${desde}&hasta=${hasta}&granularidad=${granularidad}`,
   );
 
+export interface FilaRendimiento {
+  clave: string;
+  nombre: string;
+  ventas: number;
+  total: number;
+  pct: number;
+  ticket: number;
+  totalAnterior: number;
+  variacion: number | null;
+}
+/** Ventas por stand y por vendedor (participación, ticket promedio, variación). */
+export const useRendimiento = (desde: string, hasta: string) =>
+  useConsulta<{ periodoAnterior: { desde: string; hasta: string }; porUbicacion: FilaRendimiento[]; porVendedor: FilaRendimiento[] }>(
+    ["rendimiento", desde, hasta],
+    `/analytics/rendimiento?desde=${desde}&hasta=${hasta}`,
+  );
+
 export const useContabilidad = (desde: string, hasta: string) =>
   useConsulta<Contabilidad>(["contabilidad", desde, hasta], `/contabilidad?desde=${desde}&hasta=${hasta}`);
 

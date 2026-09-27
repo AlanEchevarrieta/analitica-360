@@ -12,6 +12,7 @@ import { claveGranularidad, diasEntre, etiquetaGranularidad, granularidadPara, t
 import { etiquetaPago as etiquetaMedio } from "@/features/ventas/types/nueva-venta";
 import { usePeriodo } from "../hooks/use-analytics";
 import { Kpi } from "./comunes";
+import { RendimientoVentas } from "./RendimientoVentas";
 
 const GRAFICO_EVOLUCION = {
   total: { label: "Este período", color: "var(--chart-1)" },
@@ -343,6 +344,7 @@ export function VentasPeriodo() {
               </CardContent>
             </Card>
           </div>
+          <RendimientoVentas desde={desde} hasta={hasta} />
         </div>
       )}
     </div>

@@ -4,7 +4,8 @@ import { DashboardController } from './dashboard.controller.js';
 import { DashboardService } from './dashboard.service.js';
 import { DASHBOARD_REPOSITORY } from './dashboard.repository.js';
 import { PrismaDashboardRepository } from './prisma-dashboard.repository.js';
-import { AnalyticsPeriodoController } from './periodo.controller.js';
+import { AnalyticsPeriodoController, AnalyticsRendimientoController } from './periodo.controller.js';
+import { RendimientoService } from './rendimiento.service.js';
 import { AnalyticsPeriodoService } from './periodo.service.js';
 import { ANALYTICS_PERIODO_REPOSITORY } from './periodo.repository.js';
 import { PrismaAnalyticsPeriodoRepository } from './prisma-periodo.repository.js';
@@ -24,8 +25,9 @@ import { BcraInflacionClient } from './bcra-inflacion.client.js';
 
 @Module({
   imports: [ClientesModule],
-  controllers: [DashboardController, AnalyticsPeriodoController, InsightsCombosController, InsightsController, InflacionController],
+  controllers: [DashboardController, AnalyticsPeriodoController, AnalyticsRendimientoController, InsightsCombosController, InsightsController, InflacionController],
   providers: [
+    RendimientoService,
     DashboardService,
     { provide: DASHBOARD_REPOSITORY, useClass: PrismaDashboardRepository },
     AnalyticsPeriodoService,
