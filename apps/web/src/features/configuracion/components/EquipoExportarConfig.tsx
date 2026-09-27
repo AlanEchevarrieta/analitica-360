@@ -8,15 +8,24 @@ import { Button } from "@/components/ui/button";
 import { useApiFetch } from "@/hooks/use-api";
 import { hoyAR } from "@/lib/periodos";
 import { descargarCsv } from "@/lib/csv";
+import { PermisosEquipo } from "./PermisosEquipo";
 
 /** Usuarios de la empresa: invitaciones, roles y bajas los maneja Clerk (organización = empresa). */
 export function EquipoConfig() {
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-sm text-muted-foreground">
-        Invitá por email: la persona recibe un link, crea su cuenta y entra a esta empresa. Rol <b>admin</b> = dueño (ve y configura todo); <b>member</b> = colaborador.
-      </p>
-      <OrganizationProfile routing="hash" />
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <h3 className="font-medium">Permisos de cada persona</h3>
+        <PermisosEquipo />
+      </div>
+      <div className="flex flex-col gap-2">
+        <h3 className="font-medium">Invitar al equipo</h3>
+        <p className="text-sm text-muted-foreground">
+          Invitá por email: la persona recibe un link, crea su cuenta y entra a esta empresa. Rol <b>admin</b> = dueño (ve y configura todo); <b>member</b> = colaborador: arranca como vendedor y
+          arriba le ajustás qué ve.
+        </p>
+        <OrganizationProfile routing="hash" />
+      </div>
     </div>
   );
 }

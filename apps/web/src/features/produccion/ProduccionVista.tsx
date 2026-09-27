@@ -10,12 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { formatoFechaHora, formatoNumero, formatoPesos } from "@/lib/formato";
 import { cn } from "@/lib/utils";
+import { useAcceso } from "@/hooks/use-acceso";
 import { useAccionesProduccion, useOrdenes, useRecetas } from "./hooks";
 
 /** Producción: órdenes (lo que se fabricó) y recetas (cómo se fabrica cada cosa). */
 export function ProduccionVista() {
   const router = useRouter();
   const tab = useSearchParams().get("tab") === "recetas" ? "recetas" : "ordenes";
+  const { puedeHacer } = useAcceso();
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -23,9 +25,11 @@ export function ProduccionVista() {
           <h1 className="text-xl font-semibold">Producción</h1>
           <p className="text-sm text-muted-foreground">Lo que fabricás, con qué insumos y cuánto te cuesta.</p>
         </div>
-        <Link href="/produccion/receta" className={buttonVariants({ variant: "outline" })}>
-          <Plus aria-hidden /> Nueva receta
-        </Link>
+        {puedeHacer("editar_productos") && puedeHacer("ver_costos") && (
+          <Link href="/produccion/receta" className={buttonVariants({ variant: "outline" })}>
+            <Plus aria-hidden /> Nueva receta
+          </Link>
+        )}
         <Link href="/produccion/nueva" className={buttonVariants()}>
           <Hammer aria-hidden /> Fabricar
         </Link>
@@ -81,8 +85,8 @@ function Ordenes() {
                   <span className="block text-xs text-muted-foreground">{[formatoFechaHora(o.fecha), o.usuario, o.notas].filter(Boolean).join(" · ")}</span>
                 </TableCell>
                 <TableCell className="text-right font-medium tabular-nums">{formatoNumero(o.cantidad)}</TableCell>
-                <TableCell className="hidden text-right tabular-nums sm:table-cell">{formatoPesos(o.costoUnitario)}</TableCell>
-                <TableCell className="hidden text-right tabular-nums text-muted-foreground md:table-cell">{formatoPesos(o.costoMateriales)}</TableCell>
+                <TableCell className="hidden text-right tabular-nums sm:table-cell">{o.costoUnitario == null ? "—" : formatoPesos(o.costoUnitario)}</TableCell>
+                <TableCell className="hidden text-right tabular-nums text-muted-foreground md:table-cell">{o.costoMateriales == null ? "—" : formatoPesos(o.costoMateriales)}</TableCell>
                 <TableCell className="text-right">
                   {o.estado === "terminada" && (
                     <Button
@@ -109,6 +113,8 @@ function Ordenes() {
 
 function Recetas() {
   const { data, isPending, isError, error, refetch } = useRecetas();
+  const { puedeHacer } = useAcceso();
+  const editar = puedeHacer("editar_productos") && puedeHacer("ver_costos");
   if (isPending) return <CargandoFilas filas={6} />;
   if (isError) return <ErrorDatos error={error} onReintentar={() => refetch()} />;
   if (data.length === 0) return <SinDatos mensaje="Todavía no hay recetas. Una receta dice qué insumos lleva cada producto que fabricás (o qué trae cada kit)." />;
@@ -128,17 +134,21 @@ function Recetas() {
             {data.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>
-                  <Link href={`/produccion/receta?productoId=${r.productoId}${r.varianteId ? `&varianteId=${r.varianteId}` : ""}`} className="font-medium hover:underline">
-                    {r.nombre}
-                  </Link>
+                  {editar ? (
+                    <Link href={`/produccion/receta?productoId=${r.productoId}${r.varianteId ? `&varianteId=${r.varianteId}` : ""}`} className="font-medium hover:underline">
+                      {r.nombre}
+                    </Link>
+                  ) : (
+                    <span className="font-medium">{r.nombre}</span>
+                  )}
                   <span className="block text-xs text-muted-foreground">
                     {r.armarAlVender ? "Kit · se arma al vender" : "Se fabrica"} · {r.componentes} {r.componentes === 1 ? "componente" : "componentes"}
-                    {r.costo.sinCosto > 0 && <span className="text-amber-600 dark:text-amber-400"> · {r.costo.sinCosto} sin costo cargado</span>}
+                    {r.costo && r.costo.sinCosto > 0 && <span className="text-amber-600 dark:text-amber-400"> · {r.costo.sinCosto} sin costo cargado</span>}
                   </span>
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {formatoPesos(r.costo.total)}
-                  {r.costo.manoObra > 0 && <span className="block text-xs text-muted-foreground">mano de obra {formatoPesos(r.costo.manoObra)}</span>}
+                  {r.costo ? formatoPesos(r.costo.total) : "—"}
+                  {r.costo && r.costo.manoObra > 0 && <span className="block text-xs text-muted-foreground">mano de obra {formatoPesos(r.costo.manoObra)}</span>}
                 </TableCell>
                 <TableCell className="hidden text-right tabular-nums sm:table-cell">{r.precio == null ? "—" : formatoPesos(r.precio)}</TableCell>
                 <TableCell className={cn("text-right font-medium tabular-nums", r.margen != null && r.margen < 20 && "text-destructive")}>{r.margen == null ? "—" : `${r.margen}%`}</TableCell>

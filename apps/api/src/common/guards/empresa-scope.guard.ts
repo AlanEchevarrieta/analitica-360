@@ -10,7 +10,7 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
 import { SIN_EMPRESA_KEY } from '../decorators/sin-empresa.decorator.js';
-import { normalizarRol } from '../auth/rol.types.js';
+import { ACCIONES_INICIALES, accesoDesde, MODULOS_INICIALES, normalizarRol } from '../auth/rol.types.js';
 import { USUARIOS_REPOSITORY, type UsuariosRepository } from '../../modules/usuarios/usuarios.repository.js';
 
 /**
@@ -71,7 +71,8 @@ export class EmpresaScopeGuard implements CanActivate {
     const rol = normalizarRol(usuario.rolCrudo);
     // Solo los colaboradores (operador) tienen permisos configurables; sin
     // esta carga PermissionsGuard los rechazaba en todos los módulos.
-    const acceso = rol === 'operador' ? ((await this.usuariosRepository.findAccesoColaborador(usuario.id)) ?? undefined) : undefined;
+    const acceso =
+      rol === 'operador' ? ((await this.usuariosRepository.findAccesoColaborador(usuario.id)) ?? accesoDesde(MODULOS_INICIALES, ACCIONES_INICIALES)) : undefined;
     request.usuario = {
       id: usuario.id,
       clerkUserId: usuario.clerkUserId,

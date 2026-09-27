@@ -45,7 +45,7 @@ export function NuevaOrden() {
       { productoId, varianteId: varianteId || null, cantidad: cant, ubicacion: lugares.length > 1 ? ubicacion || lugares[0].nombre : null, notas: notas.trim() || null, permitirFaltantes: igual },
       {
         onSuccess: (r) => {
-          toast.success(`Orden #${r.numero}: ${formatoNumero(cant)} ${elegida?.nombre ?? ""} al stock (costo ${formatoPesos(r.costoUnitario)} c/u)`);
+          toast.success(`Orden #${r.numero}: ${formatoNumero(cant)} ${elegida?.nombre ?? ""} al stock${r.costoUnitario != null ? ` (costo ${formatoPesos(r.costoUnitario)} c/u)` : ""}`);
           router.push("/produccion");
         },
         onError: (e) => toast.error(e instanceof Error ? e.message : "No se pudo registrar"),
@@ -130,17 +130,19 @@ export function NuevaOrden() {
                           {formatoNumero(l.necesita)} {abreviaturaUnidad(l.unidad)}
                         </TableCell>
                         <TableCell className={cn("text-right tabular-nums", l.falta > 0 && "text-destructive")}>{formatoNumero(l.stock)}</TableCell>
-                        <TableCell className="hidden text-right tabular-nums sm:table-cell">{formatoPesos(l.costo)}</TableCell>
+                        <TableCell className="hidden text-right tabular-nums sm:table-cell">{l.costo == null ? "—" : formatoPesos(l.costo)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+                {previa.data.costoMateriales != null && (
                 <div className="flex flex-wrap justify-between gap-2 rounded-lg bg-muted/40 p-3 text-sm">
                   <span>
                     Materiales: <b className="tabular-nums">{formatoPesos(previa.data.costoMateriales)}</b> · <b className="tabular-nums">{formatoPesos(previa.data.costoUnitario)}</b> c/u
                   </span>
-                  {previa.data.costoManoObra > 0 && <span className="text-muted-foreground">Mano de obra: {formatoPesos(previa.data.costoManoObra)}</span>}
+                  {Boolean(previa.data.costoManoObra) && <span className="text-muted-foreground">Mano de obra: {formatoPesos(previa.data.costoManoObra)}</span>}
                 </div>
+                )}
                 {previa.data.faltan > 0 && (
                   <div className="flex flex-col gap-2 rounded-lg bg-amber-500/10 p-3 text-sm ring-1 ring-amber-500/30">
                     <span className="flex items-center gap-2 font-medium">

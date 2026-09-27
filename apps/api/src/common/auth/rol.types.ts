@@ -103,6 +103,21 @@ export const MODULOS_CONTADOR: ModuloClave[] = [
 ];
 export const ACCIONES_CONTADOR: AccionClave[] = ['ver_costos', 'ver_reportes'];
 
+/** Arma un AccesoColaborador desde las listas de módulos y acciones habilitados. */
+export function accesoDesde(modulos: readonly ModuloClave[], acciones: readonly AccionClave[]): AccesoColaborador {
+  return {
+    modulos: Object.fromEntries(MODULOS.map((m) => [m, modulos.includes(m)])) as Record<ModuloClave, boolean>,
+    acciones: Object.fromEntries(ACCIONES.map((a) => [a, acciones.includes(a)])) as Record<AccionClave, boolean>,
+  };
+}
+
+/**
+ * Colaborador recién sumado que todavía no tiene permisos guardados: puede
+ * vender y atender (como un vendedor). Sin esto entraba y no veía nada.
+ */
+export const MODULOS_INICIALES: readonly ModuloClave[] = ['inicio', 'productos', 'ventas', 'clientes'];
+export const ACCIONES_INICIALES: readonly AccionClave[] = ['registrar_ventas', 'gestionar_clientes', 'crear_pedidos'];
+
 export type AccesoColaborador = {
   modulos: Record<ModuloClave, boolean>;
   acciones: Record<AccionClave, boolean>;

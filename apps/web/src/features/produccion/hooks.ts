@@ -19,7 +19,8 @@ export interface RecetaFila {
   armarAlVender: boolean;
   componentes: number;
   precio: number | null;
-  costo: CostoReceta;
+  /** null = sin permiso de ver costos. */
+  costo: CostoReceta | null;
   margen: number | null;
 }
 
@@ -60,15 +61,16 @@ export interface LineaOrden {
   necesita: number;
   stock: number;
   falta: number;
-  costoUnitario: number;
-  costo: number;
+  /** null = el usuario no tiene permiso de ver costos. */
+  costoUnitario: number | null;
+  costo: number | null;
 }
 
 export interface PreviaOrden {
   lineas: LineaOrden[];
-  costoMateriales: number;
-  costoManoObra: number;
-  costoUnitario: number;
+  costoMateriales: number | null;
+  costoManoObra: number | null;
+  costoUnitario: number | null;
   faltan: number;
 }
 
@@ -79,9 +81,9 @@ export interface OrdenFila {
   producto: string;
   productoId: string;
   cantidad: number;
-  costoMateriales: number;
-  costoManoObra: number;
-  costoUnitario: number;
+  costoMateriales: number | null;
+  costoManoObra: number | null;
+  costoUnitario: number | null;
   estado: "terminada" | "anulada";
   usuario: string | null;
   notas: string | null;
@@ -122,7 +124,7 @@ export function useAccionesProduccion() {
     eliminarReceta: useMutation({ mutationFn: (id: string) => api(`/produccion/recetas/${id}`, { method: "DELETE" }), onSuccess: refrescar }),
     crearOrden: useMutation({
       mutationFn: (o: { productoId: string; varianteId: string | null; cantidad: number; ubicacion: string | null; notas: string | null; permitirFaltantes: boolean }) =>
-        api<{ numero: number; costoUnitario: number }>("/produccion/ordenes", { method: "POST", body: JSON.stringify(o) }),
+        api<{ numero: number; costoUnitario: number | null }>("/produccion/ordenes", { method: "POST", body: JSON.stringify(o) }),
       onSuccess: refrescar,
     }),
     anularOrden: useMutation({ mutationFn: (id: string) => api(`/produccion/ordenes/${id}/anular`, { method: "POST" }), onSuccess: refrescar }),
