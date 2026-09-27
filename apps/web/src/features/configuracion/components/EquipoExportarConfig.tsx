@@ -24,7 +24,11 @@ export function EquipoConfig() {
           Invitá por email: la persona recibe un link, crea su cuenta y entra a esta empresa. Rol <b>admin</b> = dueño (ve y configura todo); <b>member</b> = colaborador: arranca como vendedor y
           arriba le ajustás qué ve.
         </p>
-        <OrganizationProfile routing="hash" />
+        <OrganizationProfile
+          routing="hash"
+          // Sin "Abandonar / Borrar organización": desconectaría la empresa de su cuenta (se hace por soporte).
+          appearance={{ elements: { profileSection__organizationDanger: { display: "none" } } }}
+        />
       </div>
     </div>
   );

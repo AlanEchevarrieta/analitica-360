@@ -131,5 +131,23 @@
   }
   html {
     @apply font-sans;
+    /* Controles nativos (listas desplegables, calendarios, barras) con el tema. */
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  /* Opciones de las listas desplegables: mismo fondo y letra que los menús de la app
+     (sin esto, en modo oscuro Chrome/Windows las dibujaba con letra clara sobre fondo blanco). */
+  select {
+    background-color: transparent;
+  }
+  select option,
+  select optgroup {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+  }
+  select option:disabled {
+    color: var(--muted-foreground);
   }
 }
