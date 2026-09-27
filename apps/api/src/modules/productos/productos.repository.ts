@@ -8,6 +8,8 @@ export interface ProductoRecord {
   /** Código interno (productos sin variantes; con variantes, cada variante tiene el suyo). */
   sku: string | null;
   usaVariantes: boolean;
+  esInsumo: boolean;
+  unidad: string;
   precioVenta: number | null;
   costo: number | null;
   activo: boolean;
@@ -23,6 +25,8 @@ export interface GuardarProductoInput {
   precioVenta: number | null;
   costo: number | null;
   activo: boolean;
+  esInsumo?: boolean;
+  unidad?: string;
 }
 
 export interface ProductosFiltro {
@@ -31,6 +35,7 @@ export interface ProductosFiltro {
   estado: 'todos' | 'activos' | 'inactivos';
   margen: 'todos' | 'alto' | 'medio' | 'bajo';
   orden: 'nombre' | 'demanda';
+  tipo?: 'todos' | 'venta' | 'insumos';
   pagina: number;
   pageSize: number;
 }
@@ -40,6 +45,8 @@ export interface ProductoListado extends ProductoRecord {
   stock: number;
   /** Unidades vendidas en los últimos 90 días (sin anuladas). */
   vendidos: number;
+  /** Kit que se arma al vender (no tiene stock propio). */
+  esKit: boolean;
 }
 
 export interface ListaProductos {

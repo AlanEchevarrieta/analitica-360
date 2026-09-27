@@ -13,6 +13,8 @@ export interface TasaCuota {
 }
 
 export interface Configuracion {
+  /** Costo de una hora de trabajo (Producción). */
+  valorHora: number | null;
   mediosPago: string[];
   tasasCuotas: TasaCuota[];
   mostrarCliente: "siempre" | "opcional" | "no_mostrar";

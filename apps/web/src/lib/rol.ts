@@ -22,6 +22,7 @@ export type ModuloClave =
   | "proveedores"
   | "pedidos"
   | "inventario"
+  | "produccion"
   | "analytics"
   | "contabilidad"
   | "insights"

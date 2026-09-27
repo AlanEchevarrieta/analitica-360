@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { abreviaturaUnidad } from "@/lib/unidades";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { Paginacion } from "@/components/shared/paginacion";
 import { formatoNumero, formatoPesos } from "@/lib/formato";
@@ -23,6 +24,12 @@ const ORDENES: { valor: OrdenProductos; etiqueta: string }[] = [
   { valor: "nombre", etiqueta: "A-Z" },
 ];
 
+const TIPOS = [
+  { valor: "todos", etiqueta: "Todos" },
+  { valor: "venta", etiqueta: "Para vender" },
+  { valor: "insumos", etiqueta: "Insumos" },
+] as const;
+
 function margen(precio: number | null, costo: number | null) {
   if (!precio || !costo) return null;
   return Math.round(((precio - costo) / precio) * 100);
@@ -35,6 +42,7 @@ export function ProductosListado() {
     busqueda: "",
     estado: "activos",
     orden: "demanda",
+    tipo: "todos",
   });
   const { data, isPending, isError, error, refetch, isFetching } = useProductos(filtros);
   const cambiar = (cambios: Partial<FiltrosProductos>) => setFiltros((f) => ({ ...f, pagina: 1, ...cambios }));
@@ -60,6 +68,13 @@ export function ProductosListado() {
                 onClick={() => cambiar({ estado: e.valor })}
               >
                 {e.etiqueta}
+              </Button>
+            ))}
+          </div>
+          <div className="flex gap-1" role="group" aria-label="Tipo">
+            {TIPOS.map((t) => (
+              <Button key={t.valor} size="sm" variant={filtros.tipo === t.valor ? "secondary" : "ghost"} aria-pressed={filtros.tipo === t.valor} onClick={() => cambiar({ tipo: t.valor })}>
+                {t.etiqueta}
               </Button>
             ))}
           </div>
@@ -111,6 +126,8 @@ export function ProductosListado() {
                           {p.nombre}
                         </Link>
                         {!p.activo && <span className="ml-2 text-xs text-muted-foreground">(inactivo)</span>}
+                        {p.esInsumo && <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">Insumo</span>}
+                        {p.esKit && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-[11px] font-normal text-primary">Kit</span>}
                         <span className="block text-xs font-normal text-muted-foreground">{p.usaVariantes ? "SKU por variante" : (p.sku ?? "")}</span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{p.categoriaNombre ?? "—"}</TableCell>
@@ -126,6 +143,7 @@ export function ProductosListado() {
                         className={`text-right font-medium tabular-nums ${p.stock <= 0 ? "text-destructive" : ""}`}
                       >
                         {formatoNumero(p.stock)}
+                        {p.unidad !== "unidad" && <span className="ml-1 text-xs font-normal text-muted-foreground">{abreviaturaUnidad(p.unidad)}</span>}
                       </TableCell>
                     </TableRow>
                   );

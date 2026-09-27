@@ -13,6 +13,8 @@ const productoBase: ProductoRecord = {
   codigoBarra: null,
   sku: 'GEN-YER-001',
   usaVariantes: false,
+  esInsumo: false,
+  unidad: 'unidad',
   precioVenta: 100,
   costo: 60,
   activo: true,
@@ -103,6 +105,7 @@ describe('ProductosService', () => {
       estado: 'todos',
       margen: 'todos',
       orden: 'demanda',
+      tipo: 'todos',
     });
     expect(repository.listar).toHaveBeenCalledWith('empresa-1', {
       busqueda: '',
@@ -110,6 +113,7 @@ describe('ProductosService', () => {
       estado: 'todos',
       margen: 'todos',
       orden: 'demanda',
+      tipo: 'todos',
       pagina: 1,
       pageSize: 20,
     });

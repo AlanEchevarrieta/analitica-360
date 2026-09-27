@@ -34,6 +34,8 @@ export const actualizarConfiguracionSchema = z
     nombreIva: z.string().trim().min(1).max(20).optional(),
     mostrarIvaVentas: z.boolean().optional(),
     condicionFiscal: z.enum(['monotributo', 'responsable_inscripto', 'exento', 'otro']).optional(),
+    /** Costo de una hora de trabajo (Producción). null = sin cargar. */
+    valorHora: z.number().min(0).max(10_000_000).nullable().optional(),
     categoriaMonotributo: z.enum(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']).nullable().optional(),
   })
   .refine((c) => !c.tasasCuotas || new Set(c.tasasCuotas.map((t) => t.cuotas)).size === c.tasasCuotas.length, {

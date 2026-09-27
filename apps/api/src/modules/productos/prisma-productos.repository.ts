@@ -32,6 +32,8 @@ export class PrismaProductosRepository implements ProductosRepository {
       codigoBarra: producto.codigoBarra,
       sku: producto.sku,
       usaVariantes: producto.usaVariantes,
+      esInsumo: producto.esInsumo,
+      unidad: producto.unidad,
       precioVenta: producto.precioVenta?.toNumber() ?? null,
       costo: producto.costo?.toNumber() ?? null,
       activo: producto.activo,
@@ -61,6 +63,8 @@ export class PrismaProductosRepository implements ProductosRepository {
           precioVenta: input.precioVenta,
           costo: input.costo,
           activo: input.activo,
+          esInsumo: input.esInsumo ?? false,
+          unidad: input.unidad ?? 'unidad',
         },
         include: { categoriaRel: { select: { nombre: true } } },
       });
@@ -97,6 +101,8 @@ export class PrismaProductosRepository implements ProductosRepository {
           precioVenta: input.precioVenta,
           costo: input.costo,
           activo: input.activo,
+          ...(input.esInsumo !== undefined ? { esInsumo: input.esInsumo } : {}),
+          ...(input.unidad ? { unidad: input.unidad } : {}),
         },
         include: { categoriaRel: { select: { nombre: true } } },
       });
@@ -133,6 +139,7 @@ export class PrismaProductosRepository implements ProductosRepository {
       ...(filtro.categoriaId ? { categoriaId: filtro.categoriaId } : {}),
       ...(filtro.estado === 'activos' ? { activo: true } : {}),
       ...(filtro.estado === 'inactivos' ? { activo: false } : {}),
+      ...(filtro.tipo === 'venta' ? { esInsumo: false } : filtro.tipo === 'insumos' ? { esInsumo: true } : {}),
       ...(busqueda
         ? {
             OR: [
@@ -223,7 +230,34 @@ export class PrismaProductosRepository implements ProductosRepository {
     ]);
     const stock = new Map(stocks.map((f) => [f.producto_id, Number(f.stock)]));
     const vendidos = new Map(ventas.map((f) => [f.producto_id, Number(f.vendidos)]));
-    return productos.map((p) => ({ ...p, stock: stock.get(p.id) ?? 0, vendidos: vendidos.get(p.id) ?? 0 }));
+    const kits = await this.disponibilidadKits(empresaId, productos.map((p) => p.id));
+    return productos.map((p) => ({ ...p, stock: kits.get(p.id) ?? stock.get(p.id) ?? 0, vendidos: vendidos.get(p.id) ?? 0, esKit: kits.has(p.id) }));
+  }
+
+  /**
+   * Kits que se arman al vender (receta del producto, sin variante): no tienen
+   * stock propio; "disponible" = cuántos se pueden armar con el stock de sus componentes.
+   */
+  private async disponibilidadKits(empresaId: string, ids: string[]): Promise<Map<string, number>> {
+    const recetas = await this.prisma.receta.findMany({ where: { empresaId, deletedAt: null, armarAlVender: true, varianteId: null, productoId: { in: ids } }, include: { items: true } });
+    if (recetas.length === 0) return new Map();
+    const compIds = [...new Set(recetas.flatMap((r) => r.items.map((i) => i.insumoId)))];
+    const filas = await this.prisma.movimientoInventario.groupBy({
+      by: ['productoId', 'varianteId', 'signo'],
+      where: { empresaId, deletedAt: null, productoId: { in: compIds }, tipo: { not: 'transferencia' } },
+      _sum: { cantidad: true },
+    });
+    const stock = new Map<string, number>();
+    for (const f of filas) {
+      const k = `${f.productoId}:${f.varianteId ?? ''}`;
+      stock.set(k, (stock.get(k) ?? 0) + (f._sum.cantidad?.toNumber() ?? 0) * f.signo);
+    }
+    return new Map(
+      recetas.map((r) => [
+        r.productoId,
+        r.items.length ? Math.max(0, Math.min(...r.items.map((i) => Math.floor((stock.get(`${i.insumoId}:${i.insumoVarianteId ?? ''}`) ?? 0) / i.cantidad.toNumber())))) : 0,
+      ]),
+    );
   }
 
   async listarNombres(empresaId: string): Promise<{ id: string; nombre: string }[]> {

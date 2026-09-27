@@ -57,6 +57,8 @@ export class ProductosService {
       precioVenta: input.precioVenta ?? null,
       costo: input.costo ?? null,
       activo: input.activo,
+      esInsumo: input.esInsumo,
+      unidad: input.unidad,
     });
     return this.conSku(empresaId, desempacar(resultado));
   }
@@ -68,6 +70,8 @@ export class ProductosService {
       precioVenta: input.precioVenta ?? null,
       costo: input.costo ?? null,
       activo: input.activo,
+      esInsumo: input.esInsumo,
+      unidad: input.unidad,
     });
     return this.conSku(empresaId, desempacar(resultado));
   }
@@ -85,6 +89,7 @@ export class ProductosService {
       estado: query.estado,
       margen: query.margen,
       orden: query.orden,
+      tipo: query.tipo,
       pagina: query.pagina,
       pageSize: query.pageSize,
     });

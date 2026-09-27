@@ -35,6 +35,7 @@ const MODULO_DE_RUTA: [string, ModuloClave][] = [
   ["/pedidos", "pedidos"],
   ["/proveedores", "proveedores"],
   ["/inventario", "inventario"],
+  ["/produccion", "produccion"],
   ["/configuracion", "configuracion"],
 ];
 

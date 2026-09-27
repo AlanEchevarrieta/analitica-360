@@ -17,6 +17,7 @@ import {
   type VarianteDetalle,
 } from "../hooks/use-producto-editor";
 import { CampoCodigoBarra } from "./CampoCodigoBarra";
+import { UNIDADES } from "@/lib/unidades";
 import { CategoriaSelector } from "./CategoriaSelector";
 import { RepartoStock, repartoParaApi } from "./RepartoStock";
 import { VariantesEditor, type VarianteEditable } from "./VariantesEditor";
@@ -57,6 +58,8 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
   const [precio, setPrecio] = useState(aTexto(inicial?.precioVenta));
   const [costo, setCosto] = useState(aTexto(inicial?.costo));
   const [activo, setActivo] = useState(inicial?.activo ?? true);
+  const [esInsumo, setEsInsumo] = useState(inicial?.esInsumo ?? false);
+  const [unidad, setUnidad] = useState(inicial?.unidad ?? "unidad");
   const [codigo, setCodigo] = useState(inicial?.codigoBarra ?? "");
   const [sku, setSku] = useState(inicial?.sku ?? "");
   const sinVariante = useStockSinVariante(inicial?.id ?? null);
@@ -123,7 +126,7 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
     guardar.mutate(
       {
         id: inicial?.id ?? null,
-        datos: { nombre: nombre.trim(), categoriaId, precioVenta: precioN, costo: costoN, activo },
+        datos: { nombre: nombre.trim(), categoriaId, precioVenta: precioN, costo: costoN, activo, esInsumo, unidad },
         codigoBarra: codigoNuevo !== (inicial?.codigoBarra ?? null) ? codigoNuevo : undefined,
         sku: !tieneVariantes && skuNuevo && skuNuevo !== (inicial?.sku ?? null) ? skuNuevo : undefined,
         variantes: variantesCambiaron || pideReparto ? variantesApi : undefined,
@@ -178,6 +181,22 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
               <input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />
               Activo (se puede vender y aparece en la tienda)
             </label>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-muted/40 p-3 text-sm">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={esInsumo} onChange={(e) => setEsInsumo(e.target.checked)} />
+                Es un insumo o materia prima (se usa para fabricar, no se vende)
+              </label>
+              <label className="flex items-center gap-2">
+                Se mide en
+                <select aria-label="Unidad de medida" className="h-8 rounded-lg border bg-transparent px-2" value={unidad} onChange={(e) => setUnidad(e.target.value)}>
+                  {UNIDADES.map((u) => (
+                    <option key={u.valor} value={u.valor}>
+                      {u.etiqueta}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </CardContent>
         </Card>
 

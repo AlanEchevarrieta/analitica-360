@@ -9,6 +9,7 @@ import {
   BarChart3,
   ClipboardList,
   Factory,
+  Hammer,
   Home,
   Package,
   Settings,
@@ -66,6 +67,7 @@ const NAV_OPERACIONES: NavItem[] = [
   { href: "/pedidos", label: "Pedidos", icon: Truck, modulo: "pedidos" },
   { href: "/proveedores", label: "Proveedores", icon: Factory, modulo: "proveedores" },
   { href: "/inventario", label: "Inventario", icon: ClipboardList, modulo: "inventario" },
+  { href: "/produccion", label: "Producción", icon: Hammer, modulo: "produccion" },
 ];
 
 export function AppSidebar() {

@@ -12,6 +12,8 @@ export interface ProductoDetalle {
   codigoBarra: string | null;
   sku: string | null;
   usaVariantes: boolean;
+  esInsumo: boolean;
+  unidad: string;
   precioVenta: number | null;
   costo: number | null;
   activo: boolean;
@@ -46,7 +48,7 @@ export interface Atributo {
 
 export interface GuardarProducto {
   id: string | null;
-  datos: { nombre: string; categoriaId: string | null; precioVenta: number | null; costo: number | null; activo: boolean };
+  datos: { nombre: string; categoriaId: string | null; precioVenta: number | null; costo: number | null; activo: boolean; esInsumo: boolean; unidad: string };
   /** undefined = no cambió (no se manda). */
   codigoBarra?: string | null;
   /** undefined = no cambió; null = que lo genere el sistema. */

@@ -80,6 +80,8 @@ model Empresa {
   pagos                     Pago[]
   listasPrecios             ListaPrecio[]
   avisosAdmin               AvisoAdmin[]
+  recetas                   Receta[]
+  ordenesProduccion         OrdenProduccion[]
 
   @@map("empresas")
 }
@@ -223,6 +225,8 @@ model ConfiguracionEmpresa {
   /// Letra de la categoría de monotributo (A a K), si corresponde.
   categoriaMonotributo    String?  @map("categoria_monotributo")
   usaVariantes            Boolean  @default(false) @map("usa_variantes")
+  /// Costo de una hora de trabajo (para el costo de fabricar; no suma al valor del stock).
+  valorHora               Decimal? @map("valor_hora") @db.Decimal(12, 2)
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -246,6 +250,10 @@ model Producto {
   precioVenta  Decimal?  @map("precio_venta") @db.Decimal(12, 2) // valor "actual" cacheado; el histórico real vive en PrecioHistorial
   costo        Decimal?  @db.Decimal(12, 2)
   usaVariantes Boolean   @default(false) @map("usa_variantes")
+  /// Insumo / materia prima: se compra y se usa para fabricar, no se vende tal cual.
+  esInsumo     Boolean   @default(false) @map("es_insumo")
+  /// unidad | kg | g | l | ml | m | cm
+  unidad       String    @default("unidad")
   altoCm       Decimal?  @map("alto_cm") @db.Decimal(8, 2)
   largoCm      Decimal?  @map("largo_cm") @db.Decimal(8, 2)
   anchoCm      Decimal?  @map("ancho_cm") @db.Decimal(8, 2)
@@ -265,6 +273,9 @@ model Producto {
   pedidosItems       PedidoItem[]
   ordenesCompraItems OrdenCompraItem[]
   devolucionesItems  DevolucionItem[]
+  recetas            Receta[]               @relation("RecetaProducto")
+  usadoEnRecetas     RecetaItem[]           @relation("RecetaInsumo")
+  ordenesProduccion  OrdenProduccion[]
 
   @@index([empresaId])
   @@index([categoriaId]) // productos de una categoría
@@ -1026,4 +1037,73 @@ model AvisoAdmin {
 
   @@index([leido, createdAt])
   @@map("avisos_admin")
+}
+
+/// Receta / ficha de fabricación de un producto (o variante): qué insumos lleva por unidad.
+model Receta {
+  id            String    @id @default(uuid()) @db.Uuid
+  empresaId     String    @map("empresa_id") @db.Uuid
+  productoId    String    @map("producto_id") @db.Uuid
+  varianteId    String?   @map("variante_id") @db.Uuid
+  /// Minutos de trabajo por unidad (costo = minutos × valor hora de la empresa).
+  minutos       Decimal   @default(0) @db.Decimal(8, 2)
+  /// Kit que se arma al vender: no tiene stock propio, la venta descuenta sus componentes.
+  armarAlVender Boolean   @default(false) @map("armar_al_vender")
+  notas         String?
+  deletedAt     DateTime? @map("deleted_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  empresa  Empresa           @relation(fields: [empresaId], references: [id])
+  producto Producto          @relation("RecetaProducto", fields: [productoId], references: [id])
+  items    RecetaItem[]
+  ordenes  OrdenProduccion[]
+
+  @@index([empresaId])
+  @@map("recetas")
+}
+
+model RecetaItem {
+  id               String  @id @default(uuid()) @db.Uuid
+  recetaId         String  @map("receta_id") @db.Uuid
+  insumoId         String  @map("insumo_id") @db.Uuid
+  insumoVarianteId String? @map("insumo_variante_id") @db.Uuid
+  /// Cantidad por unidad fabricada, en la unidad del insumo.
+  cantidad         Decimal @db.Decimal(12, 4)
+
+  receta Receta   @relation(fields: [recetaId], references: [id], onDelete: Cascade)
+  insumo Producto @relation("RecetaInsumo", fields: [insumoId], references: [id])
+
+  @@index([recetaId])
+  @@map("recetas_items")
+}
+
+/// Orden de producción: fabricar N unidades descuenta insumos y suma producto terminado.
+model OrdenProduccion {
+  id              String    @id @default(uuid()) @db.Uuid
+  empresaId       String    @map("empresa_id") @db.Uuid
+  numero          Int
+  recetaId        String    @map("receta_id") @db.Uuid
+  productoId      String    @map("producto_id") @db.Uuid
+  varianteId      String?   @map("variante_id") @db.Uuid
+  cantidad        Decimal   @db.Decimal(12, 2)
+  /// terminada | anulada
+  estado          String    @default("terminada")
+  /// Costo de materiales de toda la orden (lo que pasa al valor del stock).
+  costoMateriales Decimal   @map("costo_materiales") @db.Decimal(14, 2)
+  /// Mano de obra de toda la orden (informativo, para precios).
+  costoManoObra   Decimal   @default(0) @map("costo_mano_obra") @db.Decimal(14, 2)
+  ubicacion       String?
+  notas           String?
+  usuarioId       String    @map("usuario_id") @db.Uuid
+  fecha           DateTime  @default(now())
+  anuladaAt       DateTime? @map("anulada_at")
+
+  empresa  Empresa  @relation(fields: [empresaId], references: [id])
+  receta   Receta   @relation(fields: [recetaId], references: [id])
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@unique([empresaId, numero])
+  @@index([empresaId, fecha])
+  @@map("ordenes_produccion")
 }

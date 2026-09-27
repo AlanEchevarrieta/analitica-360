@@ -27,6 +27,7 @@ export function BuscadorProductos({
   precioDe = (producto, variante) => variante?.precioVenta ?? producto.precioVenta ?? 0,
   mostrar = "precio",
   permitirNuevaVariante = false,
+  tipo = "venta",
 }: {
   onAgregar: (linea: Omit<LineaProducto, "cantidad">) => void;
   /** Precio inicial de la línea: venta por defecto; en compras, el costo. */
@@ -35,6 +36,8 @@ export function BuscadorProductos({
   mostrar?: "precio" | "costo";
   /** Compras: permite crear una variante que todavía no existe (ej. un color nuevo). */
   permitirNuevaVariante?: boolean;
+  /** Qué productos ofrecer: para vender (sin insumos) o todos (compras). */
+  tipo?: "venta" | "todos";
 }) {
   const [busqueda, setBusqueda] = useState("");
   // convertir = producto sin variantes al que se le van a crear (desde una compra).
@@ -43,7 +46,7 @@ export function BuscadorProductos({
   const [cargandoId, setCargandoId] = useState<string | null>(null);
   // Opcional: la cámara solo se abre si alguien toca "Escanear".
   const [camara, setCamara] = useState(false);
-  const catalogo = useProductos({ pagina: 1, pageSize: 200, busqueda: "", estado: "activos", orden: "demanda" });
+  const catalogo = useProductos({ pagina: 1, pageSize: 200, busqueda: "", estado: "activos", orden: "demanda", tipo });
   const variantesDe = useVariantes();
 
   const resultados = useMemo(() => {
@@ -69,6 +72,7 @@ export function BuscadorProductos({
       variante: variante ? etiquetaVariante(variante.atributos) : null,
       precioUnitario: precioDe(producto, variante),
       stock: producto.stock,
+      unidad: producto.unidad,
     });
     setBusqueda("");
     setEligiendo(null);

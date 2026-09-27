@@ -34,7 +34,7 @@ export const PLANES: Record<PlanId, PlanDef> = {
   },
   pro: {
     nombre: 'Pro',
-    modulos: ['inicio', 'productos', 'ventas', 'clientes', 'compras', 'proveedores', 'inventario', 'soporte', 'analytics', 'pedidos'],
+    modulos: ['inicio', 'productos', 'ventas', 'clientes', 'compras', 'proveedores', 'inventario', 'soporte', 'analytics', 'pedidos', 'produccion'],
     maxUsuarios: 5,
     maxProductos: null,
   },
@@ -42,7 +42,7 @@ export const PLANES: Record<PlanId, PlanDef> = {
     nombre: 'Premium',
     modulos: [
       'inicio', 'productos', 'ventas', 'clientes', 'compras', 'proveedores', 'inventario', 'soporte',
-      'analytics', 'pedidos', 'insights', 'contabilidad',
+      'analytics', 'pedidos', 'produccion', 'insights', 'contabilidad',
     ],
     maxUsuarios: null,
     maxProductos: null,
@@ -51,7 +51,7 @@ export const PLANES: Record<PlanId, PlanDef> = {
     nombre: 'E-commerce',
     modulos: [
       'inicio', 'productos', 'ventas', 'clientes', 'compras', 'proveedores', 'inventario', 'soporte',
-      'analytics', 'pedidos', 'insights', 'contabilidad', 'tienda',
+      'analytics', 'pedidos', 'produccion', 'insights', 'contabilidad', 'tienda',
     ],
     maxUsuarios: null,
     maxProductos: null,

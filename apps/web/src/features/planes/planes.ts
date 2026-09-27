@@ -27,7 +27,7 @@ export interface PlanDef {
 
 const BASE = ["inicio", "productos", "ventas", "clientes"];
 const OPERACION = [...BASE, "compras", "proveedores", "inventario", "soporte"];
-const PRO = [...OPERACION, "analytics", "pedidos"];
+const PRO = [...OPERACION, "analytics", "pedidos", "produccion"];
 const PREMIUM = [...PRO, "insights", "contabilidad"];
 
 export const PLANES: Record<PlanId, PlanDef> = {
@@ -51,6 +51,7 @@ export const MODULOS: { id: string; etiqueta: string }[] = [
   { id: "soporte", etiqueta: "Soporte" },
   { id: "analytics", etiqueta: "Analytics" },
   { id: "pedidos", etiqueta: "Pedidos" },
+  { id: "produccion", etiqueta: "Producción (recetas, fabricación y kits)" },
   { id: "insights", etiqueta: "Insights" },
   { id: "contabilidad", etiqueta: "Contabilidad y estados contables" },
   { id: "tienda", etiqueta: "Tienda online" },

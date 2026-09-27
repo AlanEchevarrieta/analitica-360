@@ -104,6 +104,7 @@ export function NuevaCompraForm() {
               precioDe={(producto, variante) => variante?.costo ?? producto.costo ?? 0}
               mostrar="costo"
               permitirNuevaVariante
+              tipo="todos"
             />
             <LineasProductos
               lineas={lineas}

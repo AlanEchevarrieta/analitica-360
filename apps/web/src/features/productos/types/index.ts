@@ -7,6 +7,11 @@ export interface ProductoFila {
   /** SKU del producto (los que tienen variantes lo tienen en cada variante). */
   sku: string | null;
   usaVariantes: boolean;
+  /** Insumo / materia prima (no se vende tal cual). */
+  esInsumo: boolean;
+  unidad: string;
+  /** Kit que se arma al vender: su stock es cuántos se pueden armar. */
+  esKit: boolean;
   precioVenta: number | null;
   costo: number | null;
   activo: boolean;
@@ -31,6 +36,8 @@ export interface FiltrosProductos {
   busqueda: string;
   estado: EstadoProducto;
   orden: OrdenProductos;
+  /** venta = sin insumos (Nueva venta, pedidos); insumos = solo materias primas. */
+  tipo?: "todos" | "venta" | "insumos";
 }
 
 /** GET /productos/:id/variantes (VarianteRecord). */
@@ -56,6 +63,8 @@ export interface LineaProducto {
   cantidad: number;
   /** Stock del producto al momento de agregarlo. */
   stock: number;
+  /** Unidad de medida (kg, m…) del producto. */
+  unidad?: string;
 }
 
 export function etiquetaVariante(atributos: Record<string, string>) {

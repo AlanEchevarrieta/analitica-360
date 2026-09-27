@@ -70,6 +70,8 @@ export function etiquetaMovimiento(tipo: string, entra: boolean) {
     devolucion_proveedor: ["Devolución de proveedor", "Devolución a proveedor"],
     cambio: ["Cambio (entra)", "Cambio (sale)"],
     pedido: ["Pedido (reingreso)", "Pedido"],
+    produccion: ["Fabricado", "Fabricación anulada"],
+    consumo_produccion: ["Insumo devuelto", "Usado en producción"],
   };
   const n = nombres[tipo];
   return n ? n[entra ? 0 : 1] : tipo;

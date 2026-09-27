@@ -46,6 +46,7 @@ export type ModuloClave =
   | 'proveedores'
   | 'pedidos'
   | 'inventario'
+  | 'produccion'
   | 'analytics'
   | 'contabilidad'
   | 'insights'
@@ -71,6 +72,7 @@ export const MODULOS: ModuloClave[] = [
   'proveedores',
   'pedidos',
   'inventario',
+  'produccion',
   'analytics',
   'contabilidad',
   'insights',

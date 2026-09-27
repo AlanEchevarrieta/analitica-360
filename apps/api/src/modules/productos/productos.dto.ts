@@ -13,6 +13,9 @@ export const guardarProductoSchema = z.object({
   precioVenta: z.number().nonnegative().nullable().optional(),
   costo: z.number().nonnegative().nullable().optional(),
   activo: z.boolean().default(true),
+  /** Insumo / materia prima (no se vende tal cual). Sin mandar = no cambia (alta: false). */
+  esInsumo: z.boolean().optional(),
+  unidad: z.enum(['unidad', 'kg', 'g', 'l', 'ml', 'm', 'cm']).optional(),
 });
 export type GuardarProductoInput = z.infer<typeof guardarProductoSchema>;
 
@@ -29,6 +32,8 @@ export const listarProductosQuerySchema = z.object({
   margen: margenProductoSchema.default('todos'),
   /** 'demanda': más vendidos primero (unidades de los últimos 90 días). */
   orden: z.enum(['nombre', 'demanda']).default('nombre'),
+  /** venta: lo que se vende (sin insumos). insumos: solo materias primas. */
+  tipo: z.enum(['todos', 'venta', 'insumos']).default('todos'),
 });
 export type ListarProductosQuery = z.infer<typeof listarProductosQuerySchema>;
 

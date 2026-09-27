@@ -1,3 +1,4 @@
+import { salidasConKits } from '../produccion/kits.js';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Venta, VentaItem } from '@prisma/client';
@@ -312,6 +313,9 @@ export async function confirmarVentaEnTx(
       update: { ultimo: { increment: 1 } },
     });
 
+    // Kits que se arman al vender: el stock sale de sus componentes y su costo es la suma de ellos.
+    const expandidos = await salidasConKits(tx, empresaId, input.items.map((i) => ({ productoId: i.productoId, varianteId: i.varianteId ?? null, cantidad: i.cantidad })));
+
     const saldoPendiente = input.esSenia ? totalConInteres - input.montoSenia : 0;
     const estadoCobro: EstadoCobro = input.esSenia ? 'señado' : 'pagado';
 
@@ -336,35 +340,39 @@ export async function confirmarVentaEnTx(
         saldoPendiente,
         estadoCobro,
         items: {
-          create: input.items.map((i) => ({
+          create: input.items.map((i, n) => ({
             empresaId,
             productoId: i.productoId,
             varianteId: i.varianteId ?? null,
             cantidad: i.cantidad,
             precioUnitario: i.precioUnitario,
-            costoUnitario: i.varianteId ? (costoVariante.get(i.varianteId) ?? 0) : (costoProducto.get(i.productoId) ?? 0),
+            costoUnitario: expandidos[n].costoKit ?? (i.varianteId ? (costoVariante.get(i.varianteId) ?? 0) : (costoProducto.get(i.productoId) ?? 0)),
           })),
         },
       },
       include: { items: { include: { producto: { select: { nombre: true } } } } },
     });
 
-    for (const item of input.items) {
-      await tx.movimientoInventario.create({
-        data: {
-          empresaId,
-          productoId: item.productoId,
-          varianteId: item.varianteId ?? null,
-          loteId: item.loteId ?? null,
-          usuarioId: input.usuarioId,
-          tipo: 'venta',
-          cantidad: item.cantidad,
-          signo: -1,
-          precioUnitario: item.precioUnitario,
-          ubicacionOrigen: input.ubicacionOrigen ?? null,
-          referenciaId: venta.id,
-        },
-      });
+    for (const [n, item] of input.items.entries()) {
+      const { salidas, esKit } = expandidos[n];
+      for (const salida of salidas) {
+        await tx.movimientoInventario.create({
+          data: {
+            empresaId,
+            productoId: salida.productoId,
+            varianteId: salida.varianteId,
+            loteId: esKit ? null : (item.loteId ?? null),
+            usuarioId: input.usuarioId,
+            tipo: 'venta',
+            cantidad: salida.cantidad,
+            signo: -1,
+            precioUnitario: esKit ? null : item.precioUnitario,
+            ubicacionOrigen: input.ubicacionOrigen ?? null,
+            motivo: esKit ? 'Componente de kit' : null,
+            referenciaId: venta.id,
+          },
+        });
+      }
     }
 
     return { ok: true, venta };

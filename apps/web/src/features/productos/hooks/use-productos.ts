@@ -16,6 +16,7 @@ export function useProductos(filtros: FiltrosProductos) {
     orden: filtros.orden,
   });
   if (filtros.busqueda.trim()) params.set("busqueda", filtros.busqueda.trim());
+  if (filtros.tipo && filtros.tipo !== "todos") params.set("tipo", filtros.tipo);
 
   return useQuery({
     queryKey: ["productos", orgId, filtros],

@@ -1,3 +1,4 @@
+import { salidasConKits } from '../produccion/kits.js';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { MovimientoInventario } from '@prisma/client';
@@ -197,21 +198,27 @@ export class PrismaDevolucionesRepository implements DevolucionesRepository {
         include: includeFicha,
       });
 
-      for (const item of items) {
+      // Kits que se arman al vender: vuelven (o salen) sus componentes, no el kit.
+      const expandidos = await salidasConKits(tx, empresaId, items.map((i) => ({ productoId: i.productoId, varianteId: i.varianteId ?? null, cantidad: i.cantidad })));
+      for (const [n, item] of items.entries()) {
         const esDevuelto = item.tipo === 'devuelto';
-        await tx.movimientoInventario.create({
-          data: {
-            empresaId,
-            productoId: item.productoId,
-            varianteId: item.varianteId ?? null,
-            usuarioId: input.usuarioId,
-            tipo: esDevuelto ? 'devolucion_cliente' : 'cambio',
-            cantidad: item.cantidad,
-            signo: esDevuelto ? 1 : -1,
-            precioUnitario: item.precioUnitario,
-            referenciaId: creada.id,
-          },
-        });
+        const { salidas, esKit } = expandidos[n];
+        for (const salida of salidas) {
+          await tx.movimientoInventario.create({
+            data: {
+              empresaId,
+              productoId: salida.productoId,
+              varianteId: salida.varianteId,
+              usuarioId: input.usuarioId,
+              tipo: esDevuelto ? 'devolucion_cliente' : 'cambio',
+              cantidad: salida.cantidad,
+              signo: esDevuelto ? 1 : -1,
+              precioUnitario: esKit ? null : item.precioUnitario,
+              motivo: esKit ? 'Componente de kit' : null,
+              referenciaId: creada.id,
+            },
+          });
+        }
       }
 
       const movimientos = await tx.movimientoInventario.findMany({
