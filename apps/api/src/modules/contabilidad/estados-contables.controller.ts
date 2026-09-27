@@ -1,3 +1,4 @@
+import { LibroDiarioService } from './libro-diario.service.js';
 import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import type { EmpresaContext, UsuarioContext } from '../../common/auth/request-context.types.js';
 import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
@@ -51,5 +52,17 @@ export class MovimientosFinancierosController {
   @HttpCode(204)
   async anular(@CurrentEmpresa() empresa: EmpresaContext, @Param('id') id: string) {
     await this.service.anularMovimiento(empresa.id, id);
+  }
+}
+
+/** Libro diario y mayor del período, armados a partir de las operaciones. */
+@Controller('libro-diario')
+@RequireModulo('contabilidad')
+export class LibroDiarioController {
+  constructor(private readonly service: LibroDiarioService) {}
+
+  @Get()
+  libro(@CurrentEmpresa() empresa: EmpresaContext, @Query(new ZodValidationPipe(periodoEstadosSchema)) q: PeriodoEstados) {
+    return this.service.libro(empresa.id, q.desde, q.hasta);
   }
 }

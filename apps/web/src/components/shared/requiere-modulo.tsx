@@ -26,6 +26,7 @@ export function RequiereModulo({ modulo, children }: { modulo: ModuloClave; chil
 const MODULO_DE_RUTA: [string, ModuloClave][] = [
   ["/analytics/contabilidad", "contabilidad"],
   ["/analytics/estados", "contabilidad"],
+  ["/analytics/libro", "contabilidad"],
   ["/analytics/insights", "insights"],
   ["/analytics", "analytics"],
   ["/ventas", "ventas"],

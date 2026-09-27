@@ -11,6 +11,7 @@ const TABS: { href: string; etiqueta: string; modulo?: ModuloClave }[] = [
   { href: "/analytics/productos", etiqueta: "Ganancia por producto" },
   { href: "/analytics/contabilidad", etiqueta: "Contabilidad", modulo: "contabilidad" },
   { href: "/analytics/estados", etiqueta: "Estados contables", modulo: "contabilidad" },
+  { href: "/analytics/libro", etiqueta: "Libro diario", modulo: "contabilidad" },
   { href: "/analytics/insights", etiqueta: "Insights", modulo: "insights" },
 ];
 
