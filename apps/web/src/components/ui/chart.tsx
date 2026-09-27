@@ -57,10 +57,31 @@ function ChartContainer({
 }) {
   const uniqueId = React.useId()
   const chartId = `chart-${id ?? uniqueId.replace(/:/g, "")}`
+  // El gráfico se dibuja recién cuando está por entrar en pantalla: en un
+  // celular solo se ven 1 o 2 de los varios que tiene una vista, y dibujar
+  // todos juntos traba el procesador. El recuadro ya ocupa su lugar (sin saltos).
+  const [visible, setVisible] = React.useState(false)
+  const caja = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    const el = caja.current
+    if (!el || visible) return
+    const observador = new IntersectionObserver(
+      (entradas) => {
+        if (entradas.some((e) => e.isIntersecting)) {
+          setVisible(true)
+          observador.disconnect()
+        }
+      },
+      { rootMargin: "300px 0px" }
+    )
+    observador.observe(el)
+    return () => observador.disconnect()
+  }, [visible])
 
   return (
     <ChartContext.Provider value={{ config }}>
       <div
+        ref={caja}
         data-slot="chart"
         data-chart={chartId}
         className={cn(
@@ -70,11 +91,13 @@ function ChartContainer({
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
+        {visible && (
         <RechartsPrimitive.ResponsiveContainer
           initialDimension={initialDimension}
         >
           {children}
         </RechartsPrimitive.ResponsiveContainer>
+        )}
       </div>
     </ChartContext.Provider>
   )
