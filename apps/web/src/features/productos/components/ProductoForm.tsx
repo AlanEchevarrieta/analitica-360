@@ -19,6 +19,7 @@ import {
 import { CampoCodigoBarra } from "./CampoCodigoBarra";
 import { UNIDADES } from "@/lib/unidades";
 import { CategoriaSelector } from "./CategoriaSelector";
+import { FotosProducto } from "./FotosProducto";
 import { RepartoStock, repartoParaApi } from "./RepartoStock";
 import { VariantesEditor, type VarianteEditable } from "./VariantesEditor";
 
@@ -60,6 +61,7 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
   const [activo, setActivo] = useState(inicial?.activo ?? true);
   const [esInsumo, setEsInsumo] = useState(inicial?.esInsumo ?? false);
   const [unidad, setUnidad] = useState(inicial?.unidad ?? "unidad");
+  const [enTienda, setEnTienda] = useState(inicial?.enTienda ?? true);
   const [codigo, setCodigo] = useState(inicial?.codigoBarra ?? "");
   const [sku, setSku] = useState(inicial?.sku ?? "");
   const sinVariante = useStockSinVariante(inicial?.id ?? null);
@@ -126,7 +128,7 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
     guardar.mutate(
       {
         id: inicial?.id ?? null,
-        datos: { nombre: nombre.trim(), categoriaId, precioVenta: precioN, costo: costoN, activo, esInsumo, unidad },
+        datos: { nombre: nombre.trim(), categoriaId, precioVenta: precioN, costo: costoN, activo, esInsumo, unidad, enTienda },
         codigoBarra: codigoNuevo !== (inicial?.codigoBarra ?? null) ? codigoNuevo : undefined,
         sku: !tieneVariantes && skuNuevo && skuNuevo !== (inicial?.sku ?? null) ? skuNuevo : undefined,
         variantes: variantesCambiaron || pideReparto ? variantesApi : undefined,
@@ -179,8 +181,14 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
             </p>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />
-              Activo (se puede vender y aparece en la tienda)
+              Activo (se puede vender)
             </label>
+            {!esInsumo && (
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={enTienda} onChange={(e) => setEnTienda(e.target.checked)} />
+                Mostrar en la tienda online
+              </label>
+            )}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-muted/40 p-3 text-sm">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={esInsumo} onChange={(e) => setEsInsumo(e.target.checked)} />
@@ -199,6 +207,8 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
             </div>
           </CardContent>
         </Card>
+
+        {inicial && !esInsumo && <FotosProducto productoId={inicial.id} />}
 
         <Card>
           <CardHeader>

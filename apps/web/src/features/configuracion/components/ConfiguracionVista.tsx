@@ -7,6 +7,7 @@ import { EquipoConfig, ExportarConfig } from "./EquipoExportarConfig";
 import { AtributosConfig, CategoriasConfig, UbicacionesConfig } from "./ListasConfig";
 import { ListasPreciosConfig } from "./ListasPreciosConfig";
 import { ProduccionConfig } from "./ProduccionConfig";
+import { TiendaOnlineConfig } from "./TiendaOnlineConfig";
 import { CuotasConfig, MediosConfig } from "./MediosCuotasConfig";
 import { FlujoVentasConfig, InventarioPedidosConfig } from "./OperacionConfig";
 import { FiscalConfig, RemitenteConfig } from "./RemitenteFiscalConfig";
@@ -33,6 +34,9 @@ export function ConfiguracionVista() {
       </Seccion>
       <Seccion icono="💲" titulo="Listas de precios" subtitulo="Mayorista, revendedor: precios distintos por cliente">
         <ListasPreciosConfig />
+      </Seccion>
+      <Seccion icono="🛍️" titulo="Tienda online" subtitulo="Tu catálogo en internet: dirección, marca y datos para cobrar">
+        <TiendaOnlineConfig />
       </Seccion>
       <Seccion icono="🔨" titulo="Producción" subtitulo="Valor de la hora de trabajo para el costo de fabricar">
         <ProduccionConfig config={config} />

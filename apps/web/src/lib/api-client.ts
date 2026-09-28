@@ -15,7 +15,8 @@ export async function apiFetch<T>(path: string, token: string | null, init?: Req
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      // Con FormData (subida de archivos) el navegador arma el Content-Type con su separador.
+      ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init?.headers,
     },
