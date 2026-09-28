@@ -87,11 +87,11 @@ export function ConfirmacionPedido() {
       ) : null}
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-        <Link href="/productos" className="rounded-full bg-[var(--marca-oscuro)] px-6 py-3 text-sm font-semibold text-white">
+        <Link href="/productos" className="rounded-[var(--r-boton)] bg-[var(--marca-oscuro)] px-6 py-3 text-sm font-semibold text-white">
           Seguir comprando
         </Link>
         {wa ? (
-          <a href={wa} target="_blank" rel="noreferrer" className="rounded-full border border-[var(--marca-hero)] px-6 py-3 text-sm font-semibold text-[var(--marca-hero)]">
+          <a href={wa} target="_blank" rel="noreferrer" className="rounded-[var(--r-boton)] border border-[var(--marca-hero)] px-6 py-3 text-sm font-semibold text-[var(--marca-hero)]">
             Escribir por WhatsApp
           </a>
         ) : null}

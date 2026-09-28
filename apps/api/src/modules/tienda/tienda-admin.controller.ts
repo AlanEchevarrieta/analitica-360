@@ -7,7 +7,7 @@ import { Public } from '../../common/decorators/public.decorator.js';
 import { RequireModulo, RequirePermiso } from '../../common/decorators/permiso.decorator.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
-import { TiendaAdminService } from './tienda-admin.service.js';
+import { BORDES, FONDOS, TIPOGRAFIAS, TiendaAdminService } from './tienda-admin.service.js';
 import { TiendaThrottlerGuard } from './tienda-throttler.guard.js';
 
 type Archivo = { buffer: Buffer; size: number; mimetype: string };
@@ -29,6 +29,10 @@ const tiendaSchema = z.object({
   cbu: z.string().trim().regex(/^(\d{22})?$/, 'El CBU/CVU tiene 22 números').nullable().transform((v) => v || null).default(null),
   titular: texto(80),
   mostrarSinStock: z.boolean().default(true),
+  fondo: z.enum(FONDOS).default('puntos'),
+  tipografia: z.enum(TIPOGRAFIAS).default('clasica'),
+  bordes: z.enum(BORDES).default('redondeados'),
+  anuncio: texto(120),
 });
 
 /** Configuración de la tienda online (la cambia el dueño). */
@@ -56,7 +60,26 @@ export class TiendaConfigController {
   @Roles('dueno')
   @UseInterceptors(subida)
   logo(@CurrentEmpresa() empresa: EmpresaContext, @UploadedFile() archivo: Archivo | undefined) {
-    return this.service.subirLogo(empresa.id, archivo);
+    return this.service.subirImagen(empresa.id, 'logoUrl', archivo);
+  }
+
+  @Delete('logo')
+  @Roles('dueno')
+  quitarLogo(@CurrentEmpresa() empresa: EmpresaContext) {
+    return this.service.quitarImagen(empresa.id, 'logoUrl');
+  }
+
+  @Post('portada')
+  @Roles('dueno')
+  @UseInterceptors(subida)
+  portada(@CurrentEmpresa() empresa: EmpresaContext, @UploadedFile() archivo: Archivo | undefined) {
+    return this.service.subirImagen(empresa.id, 'portadaUrl', archivo);
+  }
+
+  @Delete('portada')
+  @Roles('dueno')
+  quitarPortada(@CurrentEmpresa() empresa: EmpresaContext) {
+    return this.service.quitarImagen(empresa.id, 'portadaUrl');
   }
 }
 

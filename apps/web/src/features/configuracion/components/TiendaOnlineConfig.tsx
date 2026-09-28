@@ -3,13 +3,14 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
-import { ExternalLink, ImagePlus, Loader2, ShoppingCart, Wand2 } from "lucide-react";
+import { ExternalLink, ImagePlus, Loader2, ShoppingCart, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useApiFetch } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
+import { BORDES, OpcionesEstilo, TIPOGRAFIAS, texturaPortada, type Bordes, type Fondo, type Tipografia } from "./EstiloTienda";
 
 interface Tienda {
   existe: boolean;
@@ -28,11 +29,17 @@ interface Tienda {
   cbu: string | null;
   titular: string | null;
   mostrarSinStock: boolean;
+  fondo: Fondo;
+  tipografia: Tipografia;
+  bordes: Bordes;
+  portadaUrl: string | null;
+  anuncio: string | null;
 }
 
-const CAMPOS = ["activa", "subdominio", "dominioPropio", "nombre", "descripcion", "color", "whatsapp", "instagram", "textoEnvios", "alias", "cbu", "titular", "mostrarSinStock"] as const;
+const CAMPOS = ["activa", "subdominio", "dominioPropio", "nombre", "descripcion", "color", "whatsapp", "instagram", "textoEnvios", "alias", "cbu", "titular", "mostrarSinStock", "fondo", "tipografia", "bordes", "anuncio"] as const;
 const PESTANAS = [
   { v: "marca", t: "Marca" },
+  { v: "estilo", t: "Estilo" },
   { v: "contacto", t: "Contacto" },
   { v: "cobros", t: "Cobros" },
   { v: "direccion", t: "Dirección" },
@@ -86,6 +93,7 @@ function Formulario({ inicial }: { inicial: Tienda }) {
   const api = useApiFetch();
   const queryClient = useQueryClient();
   const logoInput = useRef<HTMLInputElement>(null);
+  const portadaInput = useRef<HTMLInputElement>(null);
   const [t, setT] = useState(inicial);
   const [pestana, setPestana] = useState<Pestana>("marca");
   const [aviso, setAviso] = useState<string | null>(null);
@@ -99,15 +107,18 @@ function Formulario({ inicial }: { inicial: Tienda }) {
     onSuccess: () => (toast.success(t.activa ? "Guardado. Tu tienda se actualiza en unos segundos." : "Guardado. La tienda no está publicada."), refrescar()),
     onError: error,
   });
-  const logo = useMutation({
-    mutationFn: (archivo: File) => {
+  // Logo y foto de portada: se suben (o quitan) al momento, sin esperar a "Guardar".
+  const imagen = useMutation({
+    mutationFn: ({ cual, archivo }: { cual: "logo" | "portada"; archivo: File | null }) => {
+      if (!archivo) return api(`/tienda-config/${cual}`, { method: "DELETE" });
       const cuerpo = new FormData();
       cuerpo.append("archivo", archivo);
-      return api("/tienda-config/logo", { method: "POST", body: cuerpo });
+      return api(`/tienda-config/${cual}`, { method: "POST", body: cuerpo });
     },
-    onSuccess: () => (toast.success("Logo actualizado"), refrescar()),
+    onSuccess: (_, { cual, archivo }) => (toast.success(`${cual === "logo" ? "Logo" : "Foto de portada"} ${archivo ? "actualizada" : "quitada"}`), refrescar()),
     onError: error,
   });
+  const subiendo = (cual: "logo" | "portada") => imagen.isPending && imagen.variables?.cual === cual;
 
   async function revisarSubdominio() {
     if (t.subdominio === inicial.subdominio && inicial.existe) return setAviso(null);
@@ -126,6 +137,7 @@ function Formulario({ inicial }: { inicial: Tienda }) {
   const verLocal = TIENDA_LOCAL ? TIENDA_LOCAL.replace("{sub}", inicial.subdominio) : null;
   const colorOk = /^#[0-9a-f]{6}$/i.test(t.color) && seLeeBien(t.color);
   const faltaCobro = !t.alias && !t.cbu;
+  const colores = coloresTienda(/^#[0-9a-f]{6}$/i.test(t.color) ? t.color : "#6366f1");
 
   return (
     <div className="flex flex-col gap-4 text-sm">
@@ -135,7 +147,7 @@ function Formulario({ inicial }: { inicial: Tienda }) {
           Tienda publicada
         </label>
         <span className="text-muted-foreground">
-          {t.activa ? "Los clientes ven el catálogo y los pedidos llegan a Pedidos." : "Nadie la puede ver por ahora."} Dirección: <b className="text-foreground">{direccion}</b>
+          {t.activa ? "Visible en" : "Oculta · será"} <b className="text-foreground">{direccion}</b>
         </span>
         {inicial.existe && inicial.activa && verLocal && (
           <a href={verLocal} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-auto")}>
@@ -203,11 +215,48 @@ function Formulario({ inicial }: { inicial: Tienda }) {
                     {/* eslint-disable-next-line @next/next/no-img-element -- logo subido por el usuario, de otro origen */}
                     {inicial.logoUrl ? <img src={inicial.logoUrl} alt="Logo" className="size-full object-contain" /> : <span className="text-xs text-muted-foreground">Sin logo</span>}
                   </div>
-                  <Button variant="outline" size="sm" disabled={!inicial.existe || logo.isPending} onClick={() => logoInput.current?.click()}>
-                    {logo.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <ImagePlus aria-hidden />} {inicial.logoUrl ? "Cambiar logo" : "Subir logo"}
+                  <Button variant="outline" size="sm" disabled={!inicial.existe || imagen.isPending} onClick={() => logoInput.current?.click()}>
+                    {subiendo("logo") ? <Loader2 className="animate-spin" aria-hidden /> : <ImagePlus aria-hidden />} {inicial.logoUrl ? "Cambiar logo" : "Subir logo"}
                   </Button>
+                  {inicial.logoUrl && (
+                    <Button variant="ghost" size="icon-sm" aria-label="Quitar logo" disabled={imagen.isPending} onClick={() => window.confirm("¿Quitar el logo?") && imagen.mutate({ cual: "logo", archivo: null })}>
+                      <Trash2 aria-hidden />
+                    </Button>
+                  )}
                   <span className="text-xs text-muted-foreground">{inicial.existe ? "JPG, PNG o WEBP. Mejor si es cuadrado o apaisado con fondo transparente." : "Guardá la tienda primero para subir el logo."}</span>
-                  <input ref={logoInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" aria-label="Elegir logo" onChange={(e) => e.target.files?.[0] && logo.mutate(e.target.files[0])} />
+                  <input ref={logoInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" aria-label="Elegir logo" onChange={(e) => e.target.files?.[0] && imagen.mutate({ cual: "logo", archivo: e.target.files[0] })} />
+                </div>
+              </>
+            )}
+
+            {pestana === "estilo" && (
+              <>
+                <OpcionesEstilo
+                  fondo={t.fondo}
+                  tipografia={t.tipografia}
+                  bordes={t.bordes}
+                  hero={aHex(colores.hero)}
+                  crema={aHex(colores.crema)}
+                  onCambio={(k, v) => set(k, v as never)}
+                />
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium">Foto de portada (opcional)</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex h-12 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted ring-1 ring-foreground/10">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- foto subida por el usuario, de otro origen */}
+                      {inicial.portadaUrl ? <img src={inicial.portadaUrl} alt="Portada" className="size-full object-cover" /> : <span className="text-xs text-muted-foreground">Sin foto</span>}
+                    </div>
+                    <Button variant="outline" size="sm" disabled={!inicial.existe || imagen.isPending} onClick={() => portadaInput.current?.click()}>
+                      {subiendo("portada") ? <Loader2 className="animate-spin" aria-hidden /> : <ImagePlus aria-hidden />} {inicial.portadaUrl ? "Cambiar" : "Subir foto"}
+                    </Button>
+                    {inicial.portadaUrl && (
+                      <Button variant="ghost" size="icon-sm" aria-label="Quitar foto de portada" disabled={imagen.isPending} onClick={() => window.confirm("¿Quitar la foto de portada?") && imagen.mutate({ cual: "portada", archivo: null })}>
+                        <Trash2 aria-hidden />
+                      </Button>
+                    )}
+                    <span className="min-w-40 flex-1 text-xs text-muted-foreground">{inicial.existe ? "Horizontal y bien iluminada (ideal 1600×900). Va de fondo, con tu color encima." : "Guardá la tienda primero para subir la foto."}</span>
+                    <input ref={portadaInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" aria-label="Elegir foto de portada" onChange={(e) => e.target.files?.[0] && imagen.mutate({ cual: "portada", archivo: e.target.files[0] })} />
+                  </div>
                 </div>
               </>
             )}
@@ -218,7 +267,10 @@ function Formulario({ inicial }: { inicial: Tienda }) {
                   {campo("whatsapp", "WhatsApp para pedidos y consultas", { inputMode: "tel", placeholder: "261 5469432" }, "Con código de área, sin 0 ni 15. Ahí te llegan los pedidos.")}
                   {campo("instagram", "Instagram (opcional)", { placeholder: "minegocio" }, "Solo el usuario, sin @.")}
                 </div>
-                {campo("textoEnvios", "Envíos y retiro", { placeholder: "Envíos a todo el país. Retiro en el local de lunes a sábado." }, "Se muestra en la portada y al pie de la tienda.")}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {campo("textoEnvios", "Envíos y retiro", { placeholder: "Envíos a todo el país. Retiro en el local." }, "Se muestra en la portada y al pie de la tienda.")}
+                  {campo("anuncio", "Barra de anuncios (opcional)", { placeholder: "🚚 Envío gratis desde $50.000", maxLength: 120 }, "Una franja arriba de todo, para promos o avisos.")}
+                </div>
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={t.mostrarSinStock} onChange={(e) => set("mostrarSinStock", e.target.checked)} />
                   Mostrar también los productos sin stock (como “Sin stock”)
@@ -258,7 +310,7 @@ function Formulario({ inicial }: { inicial: Tienda }) {
           </div>
         </div>
 
-        <VistaPrevia t={t} logoUrl={inicial.logoUrl} />
+        <VistaPrevia t={t} logoUrl={inicial.logoUrl} portadaUrl={inicial.portadaUrl} />
       </div>
 
       <div className="flex flex-wrap items-center gap-3 border-t pt-4">
@@ -282,39 +334,59 @@ function Formulario({ inicial }: { inicial: Tienda }) {
 }
 
 /** Miniatura de la portada de la tienda con los datos que se están editando (sin guardar todavía). */
-function VistaPrevia({ t, logoUrl }: { t: Tienda; logoUrl: string | null }) {
+function VistaPrevia({ t, logoUrl, portadaUrl }: { t: Tienda; logoUrl: string | null; portadaUrl: string | null }) {
   const valido = /^#[0-9a-f]{6}$/i.test(t.color) ? t.color : "#6366f1";
   const c = coloresTienda(valido);
   const css = (x: Rgb) => aHex(x);
+  const fuente = TIPOGRAFIAS.find((f) => f.v === t.tipografia)?.fuente;
+  const borde = BORDES.find((b) => b.v === t.bordes) ?? BORDES[0];
+  const nombre = t.nombre || "Tu negocio";
   return (
     <figure className="flex flex-col gap-1.5 max-lg:order-first lg:sticky lg:top-4">
       <figcaption className="text-xs font-medium text-muted-foreground">Así se ve tu tienda</figcaption>
       <div aria-hidden className="overflow-hidden rounded-lg shadow-sm ring-1 ring-foreground/10" style={{ background: css(c.crema), color: "#1f1a17" }}>
+        {t.anuncio && (
+          <p className="truncate px-2 py-1 text-center text-[8px] font-medium text-white" style={{ background: css(c.oscuro) }}>
+            {t.anuncio}
+          </p>
+        )}
         <div className="flex items-center gap-1.5 border-b px-2.5 py-2" style={{ borderColor: `${css(c.oscuro)}26` }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- logo subido por el usuario, de otro origen */}
           {logoUrl && <img src={logoUrl} alt="" className="size-4 object-contain" />}
-          <span className="flex-1 truncate font-serif text-[13px]" style={{ color: css(c.oscuro) }}>
-            {t.nombre || "Tu negocio"}
+          <span className="flex-1 truncate text-[13px]" style={{ ...fuente, color: css(c.oscuro) }}>
+            {nombre}
           </span>
           <ShoppingCart className="size-3" style={{ color: css(c.oscuro) }} />
         </div>
-        <div className="px-3 py-4" style={{ background: css(c.hero), color: css(c.crema) }}>
-          <p className="font-serif text-base leading-tight">{t.nombre || "Tu negocio"}</p>
+        <div className="relative isolate overflow-hidden px-3 py-5" style={{ background: css(c.hero), color: css(c.crema) }}>
+          {portadaUrl && (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element -- foto subida por el usuario, de otro origen */}
+              <img src={portadaUrl} alt="" className="absolute inset-0 -z-10 size-full object-cover" />
+              <span className="absolute inset-0 -z-10" style={{ background: `linear-gradient(90deg, ${css(c.hero)}eb 0%, ${css(c.hero)}b3 45%, ${css(c.hero)}26 100%)` }} />
+            </>
+          )}
+          <span className="absolute inset-0 -z-10" style={texturaPortada(t.fondo, css(c.crema), 0.6)} />
+          <p className="text-base leading-tight" style={fuente}>
+            {nombre}
+          </p>
           <p className="mt-1 line-clamp-2 text-[10px] opacity-90">{t.descripcion || "Tu frase de presentación"}</p>
-          <span className="mt-2 inline-block rounded-full px-2.5 py-1 text-[9px] font-semibold" style={{ background: css(c.crema), color: css(c.oscuro) }}>
+          <span className="mt-2 inline-block px-2.5 py-1 text-[9px] font-semibold" style={{ background: css(c.crema), color: css(c.oscuro), borderRadius: borde.boton }}>
             Ver productos
           </span>
         </div>
         <div className="grid grid-cols-3 gap-1.5 p-2">
-          {["Producto", "Producto", "Producto"].map((n, i) => (
-            <div key={i} className="overflow-hidden rounded-md bg-white shadow-sm">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="overflow-hidden bg-white shadow-sm" style={{ borderRadius: borde.tarjeta * 0.6 }}>
               <div className="aspect-square" style={{ background: `${css(c.marca)}1a` }} />
               <div className="flex flex-col gap-0.5 p-1">
-                <span className="font-serif text-[8px]">{n}</span>
+                <span className="text-[8px]" style={fuente}>
+                  Producto
+                </span>
                 <span className="text-[9px] font-semibold" style={{ color: css(c.marca) }}>
                   $25.000
                 </span>
-                <span className="rounded-full py-0.5 text-center text-[7px] text-white" style={{ background: css(c.oscuro) }}>
+                <span className="py-0.5 text-center text-[7px] text-white" style={{ background: css(c.oscuro), borderRadius: borde.boton }}>
                   Agregar
                 </span>
               </div>
@@ -322,7 +394,7 @@ function VistaPrevia({ t, logoUrl }: { t: Tienda; logoUrl: string | null }) {
           ))}
         </div>
       </div>
-      <span className="text-[11px] text-muted-foreground">Se actualiza mientras escribís. Los cambios llegan a la tienda al guardar.</span>
+      <span className="text-[11px] text-muted-foreground">Se actualiza mientras editás. Los cambios llegan a la tienda al guardar.</span>
     </figure>
   );
 }

@@ -12,8 +12,8 @@ export function ProductCard({ producto }: { producto: ProductoTienda }) {
   const precio = variante?.precio || producto.precio;
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-[var(--marca-oscuro)]/10 bg-white shadow-sm">
-      <Link href={`/productos/${producto.slug}`} className="block">
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--marca-oscuro)]/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <Link href={`/productos/${producto.slug}`} className="block overflow-hidden">
         <FotoProducto nombre={producto.nombre} url={producto.imagenes[0]} />
       </Link>
       <div className="flex flex-1 flex-col gap-2 p-4">
@@ -39,7 +39,7 @@ export function ProductCard({ producto }: { producto: ProductoTienda }) {
               slug: producto.slug,
             })
           }
-          className="mt-auto rounded-full bg-[var(--marca-oscuro)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--marca-hero)] disabled:cursor-not-allowed disabled:bg-[var(--marca-oscuro)]/40"
+          className="mt-auto rounded-[var(--r-boton)] bg-[var(--marca-oscuro)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--marca-hero)] disabled:cursor-not-allowed disabled:bg-[var(--marca-oscuro)]/40"
         >
           Agregar al carrito
         </button>

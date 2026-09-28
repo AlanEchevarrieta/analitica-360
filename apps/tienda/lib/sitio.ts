@@ -18,6 +18,12 @@ export type Sitio = {
   cbu: string | null;
   titular: string | null;
   mostrarSinStock: boolean;
+  /** Estética elegida en Analítica 360 (ver globals.css). */
+  fondo: "puntos" | "lienzo" | "papel" | "rayas" | "ondas" | "liso";
+  tipografia: "clasica" | "elegante" | "moderna" | "amigable";
+  bordes: "redondeados" | "suaves" | "rectos";
+  portadaUrl: string | null;
+  anuncio: string | null;
 };
 
 /**

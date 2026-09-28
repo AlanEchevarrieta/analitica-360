@@ -20,13 +20,22 @@ export interface GuardarTienda {
   cbu: string | null;
   titular: string | null;
   mostrarSinStock: boolean;
+  fondo: (typeof FONDOS)[number];
+  tipografia: (typeof TIPOGRAFIAS)[number];
+  bordes: (typeof BORDES)[number];
+  anuncio: string | null;
 }
+
+export const FONDOS = ['puntos', 'lienzo', 'papel', 'rayas', 'ondas', 'liso'] as const;
+export const TIPOGRAFIAS = ['clasica', 'elegante', 'moderna', 'amigable'] as const;
+export const BORDES = ['redondeados', 'suaves', 'rectos'] as const;
+type CampoImagen = 'logoUrl' | 'portadaUrl';
 
 export const MAX_FOTOS = 8;
 const MAX_BYTES = 5 * 1024 * 1024;
 
 /** Campos que ve el público (nunca ids internos más allá de la empresa). */
-const PUBLICO = { empresaId: true, nombre: true, descripcion: true, color: true, logoUrl: true, whatsapp: true, instagram: true, textoEnvios: true, alias: true, cbu: true, titular: true, mostrarSinStock: true, subdominio: true, dominioPropio: true } as const;
+const PUBLICO = { empresaId: true, nombre: true, descripcion: true, color: true, logoUrl: true, whatsapp: true, instagram: true, textoEnvios: true, alias: true, cbu: true, titular: true, mostrarSinStock: true, subdominio: true, dominioPropio: true, fondo: true, tipografia: true, bordes: true, portadaUrl: true, anuncio: true } as const;
 
 @Injectable()
 export class TiendaAdminService {
@@ -65,6 +74,11 @@ export class TiendaAdminService {
       cbu: null,
       titular: null,
       mostrarSinStock: true,
+      fondo: 'puntos',
+      tipografia: 'clasica',
+      bordes: 'redondeados',
+      portadaUrl: null,
+      anuncio: null,
     };
   }
 
@@ -110,13 +124,29 @@ export class TiendaAdminService {
     return tipo;
   }
 
-  async subirLogo(empresaId: string, archivo: { buffer: Buffer; size: number } | undefined) {
+  /** Logo o foto de portada: reemplaza la anterior y borra su archivo. */
+  async subirImagen(empresaId: string, campo: CampoImagen, archivo: { buffer: Buffer; size: number } | undefined) {
     const tipo = this.validarImagen(archivo);
     const tienda = await this.prisma.tiendaConfig.findUnique({ where: { empresaId } });
     if (!tienda) throw new BadRequestException('Primero guardá la configuración de la tienda');
     const { url } = await this.almacen.guardar(empresaId, archivo!.buffer, tipo);
-    await this.prisma.tiendaConfig.update({ where: { empresaId }, data: { logoUrl: url } });
-    return { logoUrl: url };
+    await this.prisma.tiendaConfig.update({ where: { empresaId }, data: { [campo]: url } });
+    await this.borrarArchivoDe(empresaId, tienda[campo]);
+    return { [campo]: url };
+  }
+
+  async quitarImagen(empresaId: string, campo: CampoImagen) {
+    const tienda = await this.prisma.tiendaConfig.findUnique({ where: { empresaId } });
+    if (!tienda) throw new NotFoundException('La tienda todavía no existe');
+    await this.prisma.tiendaConfig.update({ where: { empresaId }, data: { [campo]: null } });
+    await this.borrarArchivoDe(empresaId, tienda[campo]);
+    return { [campo]: null };
+  }
+
+  /** La clave es "empresa/archivo.ext" al final de la URL; solo se borra si es de esta empresa. */
+  private async borrarArchivoDe(empresaId: string, url: string | null) {
+    const clave = url?.split('/').slice(-2).join('/');
+    if (clave?.startsWith(`${empresaId}/`)) await this.almacen.borrar(clave);
   }
 
   // ---------------------------------------------------------------- Fotos de productos

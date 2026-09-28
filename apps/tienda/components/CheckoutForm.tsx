@@ -137,7 +137,7 @@ export function CheckoutForm() {
         <button
           type="submit"
           disabled={enviando}
-          className="w-full rounded-full bg-[var(--marca-hero)] px-6 py-3 text-sm font-semibold text-white hover:bg-[var(--marca-oscuro)] disabled:opacity-60"
+          className="w-full rounded-[var(--r-boton)] bg-[var(--marca-hero)] px-6 py-3 text-sm font-semibold text-white hover:bg-[var(--marca-oscuro)] disabled:opacity-60"
         >
           {enviando ? "Confirmando…" : "Confirmar pedido por WhatsApp"}
         </button>

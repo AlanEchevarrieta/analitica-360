@@ -16,6 +16,6 @@ export function FotoProducto({ nombre, url, large = false }: { nombre: string; u
   if (!url) return <ProductPlaceholder nombre={nombre} large={large} />;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- fotos servidas por la plataforma (otro origen)
-    <img src={url} alt={nombre} loading="lazy" className={`w-full bg-white object-cover ${large ? "aspect-square rounded-3xl" : "aspect-[4/3]"}`} />
+    <img src={url} alt={nombre} loading="lazy" className={`w-full bg-white object-cover ${large ? "aspect-square rounded-3xl" : "aspect-[4/3] transition duration-500 group-hover:scale-105"}`} />
   );
 }

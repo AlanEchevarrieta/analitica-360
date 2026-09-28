@@ -11,7 +11,7 @@ export function PaginaCarrito() {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
         <h1 className="font-serif text-3xl">Tu carrito está vacío</h1>
-        <Link href="/productos" className="mt-6 inline-block rounded-full bg-[var(--marca-oscuro)] px-6 py-3 text-sm font-semibold text-white">
+        <Link href="/productos" className="mt-6 inline-block rounded-[var(--r-boton)] bg-[var(--marca-oscuro)] px-6 py-3 text-sm font-semibold text-white">
           Ver colección
         </Link>
       </div>
@@ -57,7 +57,7 @@ export function PaginaCarrito() {
       </ul>
       <div className="mt-6 flex items-center justify-between">
         <p className="font-semibold">Total {formatoARS(total)}</p>
-        <Link href="/checkout" className="rounded-full bg-[var(--marca)] px-6 py-3 text-sm font-semibold text-white">
+        <Link href="/checkout" className="rounded-[var(--r-boton)] bg-[var(--marca)] px-6 py-3 text-sm font-semibold text-white">
           Ir al checkout
         </Link>
       </div>

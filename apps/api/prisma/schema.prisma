@@ -1175,6 +1175,16 @@ model TiendaConfig {
   cbu             String?
   titular         String?
   mostrarSinStock Boolean  @default(true) @map("mostrar_sin_stock")
+  /// Estética: textura de fondo (puntos, lienzo, papel, rayas, ondas, liso),
+  /// tipografía de títulos (clasica, elegante, moderna, amigable) y bordes
+  /// (redondeados, suaves, rectos).
+  fondo           String   @default("puntos")
+  tipografia      String   @default("clasica")
+  bordes          String   @default("redondeados")
+  /// Foto grande de la portada (opcional; si no hay, se usa una foto de producto).
+  portadaUrl      String?  @map("portada_url")
+  /// Franja de anuncio arriba de todo (ej. "Envío gratis desde $50.000").
+  anuncio         String?
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 

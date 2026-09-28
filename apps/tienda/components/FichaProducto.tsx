@@ -105,7 +105,7 @@ export function FichaProducto({ producto }: { producto: ProductoTienda }) {
                 cantidad,
               )
             }
-            className="rounded-full bg-[var(--marca-oscuro)] px-6 py-3 text-sm font-semibold text-white hover:bg-[var(--marca-hero)] disabled:cursor-not-allowed disabled:bg-[var(--marca-oscuro)]/40"
+            className="rounded-[var(--r-boton)] bg-[var(--marca-oscuro)] px-6 py-3 text-sm font-semibold text-white hover:bg-[var(--marca-hero)] disabled:cursor-not-allowed disabled:bg-[var(--marca-oscuro)]/40"
           >
             Agregar al carrito
           </button>
@@ -114,7 +114,7 @@ export function FichaProducto({ producto }: { producto: ProductoTienda }) {
               href={urlWhatsApp(sitio.whatsapp, consulta)!}
               target="_blank"
               rel="noreferrer"
-              className="rounded-full border border-[var(--marca-hero)] px-6 py-3 text-center text-sm font-semibold text-[var(--marca-hero)] hover:bg-[var(--marca-hero)] hover:text-white"
+              className="rounded-[var(--r-boton)] border border-[var(--marca-hero)] px-6 py-3 text-center text-sm font-semibold text-[var(--marca-hero)] hover:bg-[var(--marca-hero)] hover:text-white"
             >
               Consultar por WhatsApp
             </a>

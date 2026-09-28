@@ -80,7 +80,7 @@ export function CarritoDrawer() {
           <Link
             href="/checkout"
             onClick={cerrar}
-            className={`block rounded-full bg-[var(--marca)] px-4 py-3 text-center text-sm font-semibold text-white ${
+            className={`block rounded-[var(--r-boton)] bg-[var(--marca)] px-4 py-3 text-center text-sm font-semibold text-white ${
               items.length === 0 ? "pointer-events-none opacity-50" : "hover:bg-[var(--marca-oscuro)]"
             }`}
           >

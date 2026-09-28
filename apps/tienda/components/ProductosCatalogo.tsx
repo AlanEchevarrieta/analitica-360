@@ -54,7 +54,7 @@ export function ProductosCatalogo({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-full border border-[var(--marca-oscuro)]/20 px-4 py-2 text-sm md:hidden"
+            className="rounded-[var(--r-boton)] border border-[var(--marca-oscuro)]/20 px-4 py-2 text-sm md:hidden"
             onClick={() => setDrawer(true)}
           >
             Filtros
