@@ -29,7 +29,7 @@ export const obtenerSitio = cache(async (): Promise<Sitio | null> => {
   const h = await headers();
   const host = process.env.TIENDA_HOST_FORZADO || h.get("x-forwarded-host") || h.get("host") || "";
   try {
-    const res = await fetch(`${apiUrl()}/tienda-sitio?host=${encodeURIComponent(host)}`, { next: { revalidate: 60 } });
+    const res = await fetch(`${apiUrl()}/tienda-sitio?host=${encodeURIComponent(host)}`, { next: { revalidate: 10 } });
     if (!res.ok) return null;
     return (await res.json()) as Sitio;
   } catch (error) {

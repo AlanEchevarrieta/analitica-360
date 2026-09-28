@@ -203,7 +203,7 @@ function Formulario({ detalle, varianteId, onVariante }: { detalle: RecetaDetall
                 {!detalle.valorHora && (
                   <p className="pb-2 text-xs text-muted-foreground">
                     Para sumar la mano de obra, cargá el valor de la hora en{" "}
-                    <Link href="/configuracion" className="underline">
+                    <Link href="/configuracion?s=produccion" className="underline">
                       Configuración → Producción
                     </Link>
                     .

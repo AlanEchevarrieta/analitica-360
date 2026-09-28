@@ -3,12 +3,13 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
-import { ExternalLink, ImagePlus, Loader2 } from "lucide-react";
+import { ExternalLink, ImagePlus, Loader2, ShoppingCart, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useApiFetch } from "@/hooks/use-api";
+import { cn } from "@/lib/utils";
 
 interface Tienda {
   existe: boolean;
@@ -29,15 +30,55 @@ interface Tienda {
   mostrarSinStock: boolean;
 }
 
+const CAMPOS = ["activa", "subdominio", "dominioPropio", "nombre", "descripcion", "color", "whatsapp", "instagram", "textoEnvios", "alias", "cbu", "titular", "mostrarSinStock"] as const;
+const PESTANAS = [
+  { v: "marca", t: "Marca" },
+  { v: "contacto", t: "Contacto" },
+  { v: "cobros", t: "Cobros" },
+  { v: "direccion", t: "Dirección" },
+] as const;
+type Pestana = (typeof PESTANAS)[number]["v"];
+
+/** Colores que se leen bien en la tienda. */
+const SUGERIDOS = ["#8a5a2b", "#b4532a", "#8c1c3a", "#5b3fa0", "#1e4e8c", "#0f766e", "#2f6b3b", "#2b2b2b"];
+
 /** En desarrollo la tienda corre en el puerto 3010 (acacia.localhost:3010). */
 const TIENDA_LOCAL = process.env.NEXT_PUBLIC_TIENDA_LOCAL_URL ?? "";
+
+/* Mismos colores que arma la tienda a partir del color de marca (apps/tienda/app/globals.css). */
+type Rgb = [number, number, number];
+const aRgb = (hex: string): Rgb => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) || 0) as Rgb;
+const aHex = (c: Rgb) => `#${c.map((x) => x.toString(16).padStart(2, "0")).join("")}`;
+const mezclar = (hex: string, parte: number, con: Rgb = [0, 0, 0]): Rgb => aRgb(hex).map((c, i) => Math.round(c * parte + con[i] * (1 - parte))) as Rgb;
+const luminancia = (c: Rgb) => {
+  const [r, g, b] = c.map((v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const contraste = (a: Rgb, b: Rgb) => {
+  const [x, y] = [luminancia(a), luminancia(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05);
+};
+function coloresTienda(color: string) {
+  const crema = mezclar(color, 0.07, [251, 250, 247]);
+  return { marca: aRgb(color), oscuro: mezclar(color, 0.62), hero: mezclar(color, 0.78), crema };
+}
+/** El precio (color de marca sobre blanco) y los textos de la portada se tienen que poder leer. */
+function seLeeBien(color: string) {
+  const c = coloresTienda(color);
+  return contraste(c.marca, [255, 255, 255]) >= 3 && contraste(c.crema, c.hero) >= 4.5;
+}
+function oscurecer(color: string) {
+  let hex = color;
+  for (let i = 0; i < 30 && !seLeeBien(hex); i++) hex = aHex(mezclar(hex, 0.92));
+  return hex;
+}
 
 /** Tienda online del negocio: dirección, marca, contacto y datos para cobrar. */
 export function TiendaOnlineConfig() {
   const api = useApiFetch();
   const { orgId } = useAuth();
   const { data } = useQuery({ queryKey: ["tienda-config", orgId], queryFn: () => api<Tienda>("/tienda-config"), enabled: Boolean(orgId) });
-  if (!data) return null;
+  if (!data) return <Loader2 className="mx-auto my-8 animate-spin text-muted-foreground" aria-label="Cargando" />;
   return <Formulario key={JSON.stringify(data)} inicial={data} />;
 }
 
@@ -46,17 +87,16 @@ function Formulario({ inicial }: { inicial: Tienda }) {
   const queryClient = useQueryClient();
   const logoInput = useRef<HTMLInputElement>(null);
   const [t, setT] = useState(inicial);
+  const [pestana, setPestana] = useState<Pestana>("marca");
   const [aviso, setAviso] = useState<string | null>(null);
   const set = <K extends keyof Tienda>(k: K, v: Tienda[K]) => setT((x) => ({ ...x, [k]: v }));
   const refrescar = () => void queryClient.invalidateQueries({ queryKey: ["tienda-config"] });
   const error = (e: unknown) => toast.error(e instanceof Error ? e.message : "No se pudo guardar");
+  const hayCambios = CAMPOS.some((k) => (t[k] ?? "") !== (inicial[k] ?? ""));
 
   const guardar = useMutation({
-    mutationFn: () => {
-      const campos: (keyof Tienda)[] = ["activa", "subdominio", "dominioPropio", "nombre", "descripcion", "color", "whatsapp", "instagram", "textoEnvios", "alias", "cbu", "titular", "mostrarSinStock"];
-      return api("/tienda-config", { method: "PUT", body: JSON.stringify(Object.fromEntries(campos.map((k) => [k, t[k]]))) });
-    },
-    onSuccess: () => (toast.success(t.activa ? "Tienda guardada y publicada" : "Tienda guardada"), refrescar()),
+    mutationFn: () => api("/tienda-config", { method: "PUT", body: JSON.stringify(Object.fromEntries(CAMPOS.map((k) => [k, t[k]]))) }),
+    onSuccess: () => (toast.success(t.activa ? "Guardado. Tu tienda se actualiza en unos segundos." : "Guardado. La tienda no está publicada."), refrescar()),
     onError: error,
   });
   const logo = useMutation({
@@ -75,91 +115,214 @@ function Formulario({ inicial }: { inicial: Tienda }) {
     setAviso(r.disponible ? null : r.motivo);
   }
 
-  const campo = (k: keyof Tienda, etiqueta: string, extra: React.ComponentProps<typeof Input> = {}) => (
+  const campo = (k: keyof Tienda, etiqueta: string, extra: React.ComponentProps<typeof Input> = {}, ayuda?: string) => (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={`tienda-${k}`}>{etiqueta}</Label>
       <Input id={`tienda-${k}`} value={(t[k] as string | null) ?? ""} onChange={(e) => set(k, e.target.value as never)} {...extra} />
+      {ayuda && <span className="text-xs text-muted-foreground">{ayuda}</span>}
     </div>
   );
   const direccion = `${t.subdominio}.${inicial.base}`;
-  const verLocal = TIENDA_LOCAL ? TIENDA_LOCAL.replace("{sub}", t.subdominio) : null;
+  const verLocal = TIENDA_LOCAL ? TIENDA_LOCAL.replace("{sub}", inicial.subdominio) : null;
+  const colorOk = /^#[0-9a-f]{6}$/i.test(t.color) && seLeeBien(t.color);
+  const faltaCobro = !t.alias && !t.cbu;
 
   return (
     <div className="flex flex-col gap-4 text-sm">
-      <label className="flex items-center gap-2 rounded-lg bg-muted/40 p-3">
-        <input type="checkbox" checked={t.activa} onChange={(e) => set("activa", e.target.checked)} />
-        <span>
-          <b>Tienda publicada</b> — los clientes pueden ver el catálogo y hacer pedidos (llegan a Pedidos).
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-muted/40 p-3">
+        <label className="flex items-center gap-2 font-medium">
+          <input type="checkbox" className="size-4" checked={t.activa} onChange={(e) => set("activa", e.target.checked)} />
+          Tienda publicada
+        </label>
+        <span className="text-muted-foreground">
+          {t.activa ? "Los clientes ven el catálogo y los pedidos llegan a Pedidos." : "Nadie la puede ver por ahora."} Dirección: <b className="text-foreground">{direccion}</b>
         </span>
-      </label>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="tienda-subdominio">Dirección de la tienda</Label>
-          <div className="flex items-center gap-1">
-            <Input id="tienda-subdominio" className="max-w-48" value={t.subdominio} onChange={(e) => set("subdominio", e.target.value.toLowerCase())} onBlur={() => void revisarSubdominio()} />
-            <span className="text-muted-foreground">.{inicial.base}</span>
-          </div>
-          {aviso ? <span className="text-xs text-destructive">{aviso}</span> : <span className="text-xs text-muted-foreground">Se verá en {direccion}</span>}
-        </div>
-        {campo("dominioPropio", "Dominio propio (opcional)", { placeholder: "minegocio.com.ar" })}
-      </div>
-      {t.dominioPropio && <p className="text-xs text-muted-foreground">Para usar tu dominio, cuando la plataforma esté publicada te pasamos el registro DNS a cargar donde lo compraste (un paso de 5 minutos).</p>}
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {campo("nombre", "Nombre que ven los clientes")}
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="tienda-color">Color de la marca</Label>
-          <div className="flex items-center gap-2">
-            <input id="tienda-color" type="color" className="h-8 w-12 cursor-pointer rounded border bg-transparent" value={t.color} onChange={(e) => set("color", e.target.value)} />
-            <span className="text-muted-foreground tabular-nums">{t.color}</span>
-          </div>
-        </div>
-      </div>
-      {campo("descripcion", "Frase de presentación", { placeholder: "Mates, canastos y bolsos artesanales de Mendoza" })}
-
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex size-16 items-center justify-center overflow-hidden rounded-lg bg-muted ring-1 ring-foreground/10">
-          {/* eslint-disable-next-line @next/next/no-img-element -- logo subido por el usuario, de otro origen */}
-          {inicial.logoUrl ? <img src={inicial.logoUrl} alt="Logo" className="size-full object-contain" /> : <span className="text-xs text-muted-foreground">Sin logo</span>}
-        </div>
-        <Button variant="outline" size="sm" disabled={!inicial.existe || logo.isPending} onClick={() => logoInput.current?.click()}>
-          {logo.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <ImagePlus aria-hidden />} {inicial.logoUrl ? "Cambiar logo" : "Subir logo"}
-        </Button>
-        {!inicial.existe && <span className="text-xs text-muted-foreground">Guardá la tienda primero para subir el logo.</span>}
-        <input ref={logoInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" aria-label="Elegir logo" onChange={(e) => e.target.files?.[0] && logo.mutate(e.target.files[0])} />
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {campo("whatsapp", "WhatsApp para consultas", { inputMode: "tel", placeholder: "261 5469432" })}
-        {campo("instagram", "Instagram (opcional)", { placeholder: "minegocio" })}
-      </div>
-      {campo("textoEnvios", "Envíos y retiro", { placeholder: "Envíos a todo el país. Retiro en el local de lunes a sábado." })}
-
-      <fieldset className="grid gap-3 rounded-lg p-3 ring-1 ring-foreground/10 sm:grid-cols-3">
-        <legend className="px-1 text-xs font-medium text-muted-foreground">Datos para que te transfieran (se muestran al confirmar el pedido)</legend>
-        {campo("alias", "Alias")}
-        {campo("cbu", "CBU / CVU", { inputMode: "numeric" })}
-        {campo("titular", "Titular")}
-      </fieldset>
-
-      <label className="flex items-center gap-2">
-        <input type="checkbox" checked={t.mostrarSinStock} onChange={(e) => set("mostrarSinStock", e.target.checked)} />
-        Mostrar también los productos sin stock (como “Sin stock”)
-      </label>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={() => guardar.mutate()} disabled={guardar.isPending || Boolean(aviso)}>
-          {guardar.isPending && <Loader2 className="animate-spin" aria-hidden />}
-          Guardar tienda
-        </Button>
         {inicial.existe && inicial.activa && verLocal && (
-          <a href={verLocal} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline" })}>
+          <a href={verLocal} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-auto")}>
             <ExternalLink aria-hidden /> Ver mi tienda
           </a>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">Las fotos de cada producto se suben en su ficha (Productos → el producto → Fotos). Los insumos no se muestran nunca.</p>
+
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <div role="tablist" aria-label="Partes de la tienda" className="flex gap-1 overflow-x-auto border-b">
+            {PESTANAS.map((p) => {
+              const alerta = (p.v === "direccion" && aviso) || (p.v === "marca" && !colorOk) || (p.v === "cobros" && faltaCobro);
+              return (
+                <button
+                  key={p.v}
+                  type="button"
+                  role="tab"
+                  aria-selected={pestana === p.v}
+                  onClick={() => setPestana(p.v)}
+                  className={cn("-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2", pestana === p.v ? "border-primary font-medium" : "border-transparent text-muted-foreground hover:text-foreground")}
+                >
+                  {p.t}
+                  {alerta && <span className="size-1.5 rounded-full bg-amber-500" aria-label="revisar" />}
+                </button>
+              );
+            })}
+          </div>
+
+          <div role="tabpanel" className="flex min-h-64 flex-col gap-4">
+            {pestana === "marca" && (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {campo("nombre", "Nombre que ven los clientes")}
+                  {campo("descripcion", "Frase de presentación", { placeholder: "Mates, canastos y bolsos artesanales de Mendoza" })}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="tienda-color">Color de la marca</Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input id="tienda-color" type="color" className="h-8 w-12 cursor-pointer rounded border bg-transparent" value={t.color} onChange={(e) => set("color", e.target.value)} />
+                    <span className="w-16 text-muted-foreground tabular-nums">{t.color}</span>
+                    <span className="text-xs text-muted-foreground">Sugeridos:</span>
+                    {SUGERIDOS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => set("color", c)}
+                        aria-label={`Usar el color ${c}`}
+                        className={cn("size-6 rounded-full ring-1 ring-foreground/15 transition hover:scale-110", t.color.toLowerCase() === c && "ring-2 ring-foreground ring-offset-2 ring-offset-background")}
+                        style={{ background: c }}
+                      />
+                    ))}
+                  </div>
+                  {!colorOk && (
+                    <div role="alert" className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-500/10 p-2 text-xs text-amber-800 dark:text-amber-300">
+                      Este color es muy claro: los precios y los textos de la tienda se van a leer mal.
+                      <Button type="button" size="xs" variant="outline" onClick={() => set("color", oscurecer(t.color))}>
+                        <Wand2 aria-hidden /> Oscurecer lo justo
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex size-14 items-center justify-center overflow-hidden rounded-lg bg-muted ring-1 ring-foreground/10">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- logo subido por el usuario, de otro origen */}
+                    {inicial.logoUrl ? <img src={inicial.logoUrl} alt="Logo" className="size-full object-contain" /> : <span className="text-xs text-muted-foreground">Sin logo</span>}
+                  </div>
+                  <Button variant="outline" size="sm" disabled={!inicial.existe || logo.isPending} onClick={() => logoInput.current?.click()}>
+                    {logo.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <ImagePlus aria-hidden />} {inicial.logoUrl ? "Cambiar logo" : "Subir logo"}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">{inicial.existe ? "JPG, PNG o WEBP. Mejor si es cuadrado o apaisado con fondo transparente." : "Guardá la tienda primero para subir el logo."}</span>
+                  <input ref={logoInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" aria-label="Elegir logo" onChange={(e) => e.target.files?.[0] && logo.mutate(e.target.files[0])} />
+                </div>
+              </>
+            )}
+
+            {pestana === "contacto" && (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {campo("whatsapp", "WhatsApp para pedidos y consultas", { inputMode: "tel", placeholder: "261 5469432" }, "Con código de área, sin 0 ni 15. Ahí te llegan los pedidos.")}
+                  {campo("instagram", "Instagram (opcional)", { placeholder: "minegocio" }, "Solo el usuario, sin @.")}
+                </div>
+                {campo("textoEnvios", "Envíos y retiro", { placeholder: "Envíos a todo el país. Retiro en el local de lunes a sábado." }, "Se muestra en la portada y al pie de la tienda.")}
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={t.mostrarSinStock} onChange={(e) => set("mostrarSinStock", e.target.checked)} />
+                  Mostrar también los productos sin stock (como “Sin stock”)
+                </label>
+                <p className="text-xs text-muted-foreground">Las fotos de cada producto se suben en su ficha (Productos → el producto → Fotos). Los insumos no se muestran nunca.</p>
+              </>
+            )}
+
+            {pestana === "cobros" && (
+              <>
+                <p className="text-muted-foreground">Se muestran al cliente cuando confirma el pedido, con un botón para copiarlos. Por ahora no hay pago online: el cliente transfiere y te manda el comprobante por WhatsApp.</p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {campo("alias", "Alias", { placeholder: "minegocio.mp" })}
+                  {campo("cbu", "CBU / CVU", { inputMode: "numeric" })}
+                  {campo("titular", "Titular de la cuenta")}
+                </div>
+                {faltaCobro && <p className="rounded-lg bg-amber-500/10 p-2 text-xs text-amber-800 dark:text-amber-300">Sin alias ni CBU el cliente no sabe a dónde transferir: le va a tener que escribir para preguntar.</p>}
+              </>
+            )}
+
+            {pestana === "direccion" && (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="tienda-subdominio">Dirección de la tienda</Label>
+                    <div className="flex items-center gap-1">
+                      <Input id="tienda-subdominio" className="max-w-48" value={t.subdominio} onChange={(e) => set("subdominio", e.target.value.toLowerCase())} onBlur={() => void revisarSubdominio()} />
+                      <span className="text-muted-foreground">.{inicial.base}</span>
+                    </div>
+                    {aviso ? <span className="text-xs text-destructive">{aviso}</span> : <span className="text-xs text-muted-foreground">Se verá en {direccion}</span>}
+                  </div>
+                  {campo("dominioPropio", "Dominio propio (opcional)", { placeholder: "minegocio.com.ar" }, "Si ya tenés uno comprado.")}
+                </div>
+                {t.dominioPropio && <p className="text-xs text-muted-foreground">Para usar tu dominio, cuando la plataforma esté publicada te pasamos el registro DNS a cargar donde lo compraste (un paso de 5 minutos).</p>}
+              </>
+            )}
+          </div>
+        </div>
+
+        <VistaPrevia t={t} logoUrl={inicial.logoUrl} />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 border-t pt-4">
+        <Button onClick={() => guardar.mutate()} disabled={guardar.isPending || Boolean(aviso) || !hayCambios}>
+          {guardar.isPending && <Loader2 className="animate-spin" aria-hidden />}
+          Guardar tienda
+        </Button>
+        {hayCambios ? (
+          <>
+            <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Tenés cambios sin guardar</span>
+            <Button variant="ghost" size="sm" onClick={() => (setT(inicial), setAviso(null))}>
+              Descartar
+            </Button>
+          </>
+        ) : (
+          <span className="text-xs text-muted-foreground">Todo guardado</span>
+        )}
+      </div>
     </div>
+  );
+}
+
+/** Miniatura de la portada de la tienda con los datos que se están editando (sin guardar todavía). */
+function VistaPrevia({ t, logoUrl }: { t: Tienda; logoUrl: string | null }) {
+  const valido = /^#[0-9a-f]{6}$/i.test(t.color) ? t.color : "#6366f1";
+  const c = coloresTienda(valido);
+  const css = (x: Rgb) => aHex(x);
+  return (
+    <figure className="flex flex-col gap-1.5 max-lg:order-first lg:sticky lg:top-4">
+      <figcaption className="text-xs font-medium text-muted-foreground">Así se ve tu tienda</figcaption>
+      <div aria-hidden className="overflow-hidden rounded-lg shadow-sm ring-1 ring-foreground/10" style={{ background: css(c.crema), color: "#1f1a17" }}>
+        <div className="flex items-center gap-1.5 border-b px-2.5 py-2" style={{ borderColor: `${css(c.oscuro)}26` }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- logo subido por el usuario, de otro origen */}
+          {logoUrl && <img src={logoUrl} alt="" className="size-4 object-contain" />}
+          <span className="flex-1 truncate font-serif text-[13px]" style={{ color: css(c.oscuro) }}>
+            {t.nombre || "Tu negocio"}
+          </span>
+          <ShoppingCart className="size-3" style={{ color: css(c.oscuro) }} />
+        </div>
+        <div className="px-3 py-4" style={{ background: css(c.hero), color: css(c.crema) }}>
+          <p className="font-serif text-base leading-tight">{t.nombre || "Tu negocio"}</p>
+          <p className="mt-1 line-clamp-2 text-[10px] opacity-90">{t.descripcion || "Tu frase de presentación"}</p>
+          <span className="mt-2 inline-block rounded-full px-2.5 py-1 text-[9px] font-semibold" style={{ background: css(c.crema), color: css(c.oscuro) }}>
+            Ver productos
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5 p-2">
+          {["Producto", "Producto", "Producto"].map((n, i) => (
+            <div key={i} className="overflow-hidden rounded-md bg-white shadow-sm">
+              <div className="aspect-square" style={{ background: `${css(c.marca)}1a` }} />
+              <div className="flex flex-col gap-0.5 p-1">
+                <span className="font-serif text-[8px]">{n}</span>
+                <span className="text-[9px] font-semibold" style={{ color: css(c.marca) }}>
+                  $25.000
+                </span>
+                <span className="rounded-full py-0.5 text-center text-[7px] text-white" style={{ background: css(c.oscuro) }}>
+                  Agregar
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <span className="text-[11px] text-muted-foreground">Se actualiza mientras escribís. Los cambios llegan a la tienda al guardar.</span>
+    </figure>
   );
 }

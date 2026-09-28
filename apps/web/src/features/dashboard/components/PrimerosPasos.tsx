@@ -21,8 +21,8 @@ const PASOS: { clave: keyof RespuestaPasos["pasos"]; titulo: string; detalle: st
   { clave: "productos", titulo: "Cargá tus productos", detalle: "Uno por uno o todos juntos desde Excel.", href: "/productos/importar", accion: "Importar Excel" },
   { clave: "venta", titulo: "Registrá tu primera venta", detalle: "Desde el celular, en segundos.", href: "/ventas/nueva", accion: "Nueva venta" },
   { clave: "compra", titulo: "Cargá una compra", detalle: "Así el stock y la ganancia son exactos.", href: "/compras/nueva", accion: "Nueva compra" },
-  { clave: "datosFiscales", titulo: "Completá tus datos fiscales", detalle: "Monotributo y categoría para las alertas de tope.", href: "/configuracion", accion: "Configurar" },
-  { clave: "equipo", titulo: "Invitá a tu equipo", detalle: "Cada uno con su usuario y permisos.", href: "/configuracion", accion: "Invitar" },
+  { clave: "datosFiscales", titulo: "Completá tus datos fiscales", detalle: "Monotributo y categoría para las alertas de tope.", href: "/configuracion?s=fiscal", accion: "Configurar" },
+  { clave: "equipo", titulo: "Invitá a tu equipo", detalle: "Cada uno con su usuario y permisos.", href: "/configuracion?s=equipo", accion: "Invitar" },
 ];
 
 const CLAVE_OCULTO = "a360-primeros-pasos-oculto";
