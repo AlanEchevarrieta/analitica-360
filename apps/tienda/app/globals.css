@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/*
+ * Colores de la tienda: salen del color de marca que cada negocio elige en
+ * Analítica 360 (--marca, lo pone el layout). El resto se deriva de ese color.
+ */
+:root {
+  --marca: #6366f1;
+  --marca-oscuro: color-mix(in srgb, var(--marca) 62%, black);
+  --marca-hero: color-mix(in srgb, var(--marca) 78%, black);
+  --crema: color-mix(in srgb, var(--marca) 7%, #fbfaf7);
+  --tinta: #1f1a17;
+}
+
+@theme inline {
+  --color-marca: var(--marca);
+  --color-marca-oscuro: var(--marca-oscuro);
+  --color-crema: var(--crema);
+  --color-tinta: var(--tinta);
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-playfair);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--crema);
+  color: var(--tinta);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+.font-serif {
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
+}
