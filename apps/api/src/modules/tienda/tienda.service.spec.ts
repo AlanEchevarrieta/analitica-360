@@ -31,6 +31,7 @@ describe('TiendaService', () => {
   beforeEach(async () => {
     tienda = {
       empresaActiva: vi.fn().mockResolvedValue(true),
+      pedidoMinimo: vi.fn().mockResolvedValue(null),
       catalogo: vi.fn().mockResolvedValue([]),
       productosVendibles: vi.fn().mockResolvedValue([
         { id: PROD_SIMPLE, precio: 5000, variantes: [] },
@@ -52,6 +53,15 @@ describe('TiendaService', () => {
     tienda.empresaActiva.mockResolvedValue(false);
     await expect(service.catalogo('empresa-1')).rejects.toBeInstanceOf(NotFoundException);
     expect(tienda.catalogo).not.toHaveBeenCalled();
+  });
+
+  it('crearPedido() rechaza compras por debajo del mínimo configurado', async () => {
+    tienda.pedidoMinimo.mockResolvedValue(20000);
+    // 2 × $5.000 = $10.000 < $20.000
+    await expect(service.crearPedido('empresa-1', inputBase)).rejects.toThrow(/compra mínima/);
+    expect(pedidos.crear).not.toHaveBeenCalled();
+    tienda.pedidoMinimo.mockResolvedValue(10000);
+    await expect(service.crearPedido('empresa-1', inputBase)).resolves.toMatchObject({ total: 10000 });
   });
 
   it('crearPedido() usa el precio de la base y origen tienda_online', async () => {

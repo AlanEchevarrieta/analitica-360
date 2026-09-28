@@ -1185,6 +1185,18 @@ model TiendaConfig {
   portadaUrl      String?  @map("portada_url")
   /// Franja de anuncio arriba de todo (ej. "Envío gratis desde $50.000").
   anuncio         String?
+  /// Forma de las fotos de producto (cuadrada, vertical, horizontal) y productos por fila en el celular (1 o 2).
+  formaFoto        String   @default("horizontal") @map("forma_foto")
+  columnasCelular  Int      @default(1) @map("columnas_celular")
+  /// Secciones de la portada que no se muestran (beneficios, categorias, destacados, sobre).
+  seccionesOcultas String[] @default([]) @map("secciones_ocultas")
+  tituloDestacados String?  @map("titulo_destacados")
+  sobreNosotros    String?  @map("sobre_nosotros")
+  horario          String?
+  facebook         String?
+  tiktok           String?
+  /// Monto mínimo de compra en la tienda (null = sin mínimo).
+  pedidoMinimo     Decimal? @map("pedido_minimo") @db.Decimal(12, 2)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -1201,6 +1213,9 @@ model ProductoImagen {
   url        String
   /// Clave en el almacenamiento (para poder borrarla).
   clave      String
+  /// Versión chica para listados (las fotos se guardan optimizadas en WEBP).
+  urlMiniatura   String? @map("url_miniatura")
+  claveMiniatura String? @map("clave_miniatura")
   orden      Int      @default(0)
   createdAt  DateTime @default(now()) @map("created_at")
 

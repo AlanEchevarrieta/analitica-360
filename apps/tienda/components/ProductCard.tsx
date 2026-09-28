@@ -14,7 +14,7 @@ export function ProductCard({ producto }: { producto: ProductoTienda }) {
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--marca-oscuro)]/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <Link href={`/productos/${producto.slug}`} className="block overflow-hidden">
-        <FotoProducto nombre={producto.nombre} url={producto.imagenes[0]} />
+        <FotoProducto nombre={producto.nombre} url={producto.miniaturas[0]} />
       </Link>
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-start justify-between gap-2">

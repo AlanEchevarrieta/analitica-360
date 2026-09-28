@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.validation.js';
 import { AlmacenArchivosService } from '../../common/archivos/almacen-archivos.service.js';
+import { optimizarImagen, TAMANOS } from '../../common/archivos/optimizar-imagen.js';
 import { esViolacionUnica } from '../../common/prisma-errors.util.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { normalizarDominio, problemaSubdominio, sitioDesdeHost, sugerirSubdominio, tipoImagen } from './tienda-sitio.util.js';
@@ -24,18 +25,34 @@ export interface GuardarTienda {
   tipografia: (typeof TIPOGRAFIAS)[number];
   bordes: (typeof BORDES)[number];
   anuncio: string | null;
+  formaFoto: (typeof FORMAS_FOTO)[number];
+  columnasCelular: number;
+  seccionesOcultas: (typeof SECCIONES)[number][];
+  tituloDestacados: string | null;
+  sobreNosotros: string | null;
+  horario: string | null;
+  facebook: string | null;
+  tiktok: string | null;
+  pedidoMinimo: number | null;
 }
 
 export const FONDOS = ['puntos', 'lienzo', 'papel', 'rayas', 'ondas', 'liso'] as const;
 export const TIPOGRAFIAS = ['clasica', 'elegante', 'moderna', 'amigable'] as const;
 export const BORDES = ['redondeados', 'suaves', 'rectos'] as const;
+export const FORMAS_FOTO = ['horizontal', 'cuadrada', 'vertical'] as const;
+export const SECCIONES = ['beneficios', 'categorias', 'destacados', 'sobre'] as const;
 type CampoImagen = 'logoUrl' | 'portadaUrl';
 
 export const MAX_FOTOS = 8;
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 15 * 1024 * 1024;
 
 /** Campos que ve el público (nunca ids internos más allá de la empresa). */
-const PUBLICO = { empresaId: true, nombre: true, descripcion: true, color: true, logoUrl: true, whatsapp: true, instagram: true, textoEnvios: true, alias: true, cbu: true, titular: true, mostrarSinStock: true, subdominio: true, dominioPropio: true, fondo: true, tipografia: true, bordes: true, portadaUrl: true, anuncio: true } as const;
+const PUBLICO = { empresaId: true, nombre: true, descripcion: true, color: true, logoUrl: true, whatsapp: true, instagram: true, textoEnvios: true, alias: true, cbu: true, titular: true, mostrarSinStock: true, subdominio: true, dominioPropio: true, fondo: true, tipografia: true, bordes: true, portadaUrl: true, anuncio: true, formaFoto: true, columnasCelular: true, seccionesOcultas: true, tituloDestacados: true, sobreNosotros: true, horario: true, facebook: true, tiktok: true, pedidoMinimo: true } as const;
+
+/** El monto mínimo viaja como número (Prisma lo devuelve como Decimal). */
+function conMontos<T extends { pedidoMinimo: unknown }>(t: T) {
+  return { ...t, pedidoMinimo: t.pedidoMinimo == null ? null : Number(t.pedidoMinimo) };
+}
 
 @Injectable()
 export class TiendaAdminService {
@@ -56,7 +73,7 @@ export class TiendaAdminService {
       this.prisma.empresa.findUnique({ where: { id: empresaId }, select: { nombre: true, telefono: true } }),
     ]);
     const base = this.base();
-    if (tienda) return { existe: true, base, ...tienda };
+    if (tienda) return { existe: true, base, ...conMontos(tienda) };
     return {
       existe: false,
       base,
@@ -79,6 +96,15 @@ export class TiendaAdminService {
       bordes: 'redondeados',
       portadaUrl: null,
       anuncio: null,
+      formaFoto: 'horizontal',
+      columnasCelular: 1,
+      seccionesOcultas: [],
+      tituloDestacados: null,
+      sobreNosotros: null,
+      horario: null,
+      facebook: null,
+      tiktok: null,
+      pedidoMinimo: null,
     };
   }
 
@@ -109,7 +135,7 @@ export class TiendaAdminService {
     }
     const datos = { ...input, dominioPropio };
     try {
-      return await this.prisma.tiendaConfig.upsert({ where: { empresaId }, create: { empresaId, ...datos }, update: datos });
+      return conMontos(await this.prisma.tiendaConfig.upsert({ where: { empresaId }, create: { empresaId, ...datos }, update: datos }));
     } catch (e) {
       if (esViolacionUnica(e)) throw new ConflictException('Esa dirección o dominio ya lo usa otra tienda');
       throw e;
@@ -118,7 +144,7 @@ export class TiendaAdminService {
 
   private validarImagen(archivo: { buffer: Buffer; size: number } | undefined) {
     if (!archivo) throw new BadRequestException('No llegó ninguna imagen');
-    if (archivo.size > MAX_BYTES) throw new BadRequestException('La imagen pesa más de 5 MB');
+    if (archivo.size > MAX_BYTES) throw new BadRequestException('La imagen pesa más de 15 MB');
     const tipo = tipoImagen(archivo.buffer);
     if (!tipo) throw new BadRequestException('Solo imágenes JPG, PNG o WEBP');
     return tipo;
@@ -126,10 +152,11 @@ export class TiendaAdminService {
 
   /** Logo o foto de portada: reemplaza la anterior y borra su archivo. */
   async subirImagen(empresaId: string, campo: CampoImagen, archivo: { buffer: Buffer; size: number } | undefined) {
-    const tipo = this.validarImagen(archivo);
+    this.validarImagen(archivo);
     const tienda = await this.prisma.tiendaConfig.findUnique({ where: { empresaId } });
     if (!tienda) throw new BadRequestException('Primero guardá la configuración de la tienda');
-    const { url } = await this.almacen.guardar(empresaId, archivo!.buffer, tipo);
+    const optimizada = await this.optimizar(archivo!.buffer, campo === 'logoUrl' ? TAMANOS.logo : TAMANOS.portada, campo === 'logoUrl' ? 90 : 80);
+    const { url } = await this.almacen.guardar(empresaId, optimizada, 'webp');
     await this.prisma.tiendaConfig.update({ where: { empresaId }, data: { [campo]: url } });
     await this.borrarArchivoDe(empresaId, tienda[campo]);
     return { [campo]: url };
@@ -149,6 +176,14 @@ export class TiendaAdminService {
     if (clave?.startsWith(`${empresaId}/`)) await this.almacen.borrar(clave);
   }
 
+  private async optimizar(buffer: Buffer, lado: number, calidad?: number) {
+    try {
+      return await optimizarImagen(buffer, lado, calidad);
+    } catch {
+      throw new BadRequestException('No se pudo leer la imagen: probá con otra foto');
+    }
+  }
+
   // ---------------------------------------------------------------- Fotos de productos
 
   private async producto(empresaId: string, productoId: string) {
@@ -158,16 +193,19 @@ export class TiendaAdminService {
 
   async fotos(empresaId: string, productoId: string) {
     await this.producto(empresaId, productoId);
-    return this.prisma.productoImagen.findMany({ where: { empresaId, productoId }, select: { id: true, url: true, orden: true }, orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }] });
+    return this.prisma.productoImagen.findMany({ where: { empresaId, productoId }, select: { id: true, url: true, urlMiniatura: true, orden: true }, orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }] });
   }
 
   async subirFoto(empresaId: string, productoId: string, archivo: { buffer: Buffer; size: number } | undefined) {
     await this.producto(empresaId, productoId);
-    const tipo = this.validarImagen(archivo);
+    this.validarImagen(archivo);
     const cantidad = await this.prisma.productoImagen.count({ where: { empresaId, productoId } });
     if (cantidad >= MAX_FOTOS) throw new BadRequestException(`Máximo ${MAX_FOTOS} fotos por producto`);
-    const { url, clave } = await this.almacen.guardar(empresaId, archivo!.buffer, tipo);
-    await this.prisma.productoImagen.create({ data: { empresaId, productoId, url, clave, orden: cantidad } });
+    // Grande para la ficha del producto y chica para los listados.
+    const [grande, chica] = await Promise.all([this.optimizar(archivo!.buffer, TAMANOS.fotoGrande, 72), this.optimizar(archivo!.buffer, TAMANOS.fotoMiniatura, 75)]);
+    const g = await this.almacen.guardar(empresaId, grande, 'webp');
+    const m = await this.almacen.guardar(empresaId, chica, 'webp');
+    await this.prisma.productoImagen.create({ data: { empresaId, productoId, url: g.url, clave: g.clave, urlMiniatura: m.url, claveMiniatura: m.clave, orden: cantidad } });
     return this.fotos(empresaId, productoId);
   }
 
@@ -176,6 +214,7 @@ export class TiendaAdminService {
     if (!foto) throw new NotFoundException('Foto no encontrada');
     await this.prisma.productoImagen.delete({ where: { id: foto.id } });
     await this.almacen.borrar(foto.clave);
+    if (foto.claveMiniatura) await this.almacen.borrar(foto.claveMiniatura);
     return this.fotos(empresaId, productoId);
   }
 
@@ -198,12 +237,12 @@ export class TiendaAdminService {
       select: PUBLICO,
     });
     if (!tienda) throw new NotFoundException('No hay una tienda en esta dirección');
-    return tienda;
+    return conMontos(tienda);
   }
 
   async configPublica(empresaId: string) {
     const tienda = await this.prisma.tiendaConfig.findFirst({ where: { empresaId, activa: true }, select: PUBLICO });
     if (!tienda) throw new NotFoundException('La tienda no está activa');
-    return tienda;
+    return conMontos(tienda);
   }
 }

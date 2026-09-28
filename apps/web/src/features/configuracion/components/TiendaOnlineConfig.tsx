@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useApiFetch } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
-import { BORDES, OpcionesEstilo, TIPOGRAFIAS, texturaPortada, type Bordes, type Fondo, type Tipografia } from "./EstiloTienda";
+import { BORDES, FORMAS_FOTO, OpcionesEstilo, OpcionesFotos, TIPOGRAFIAS, texturaPortada, type Bordes, type Fondo, type FormaFoto, type Tipografia } from "./EstiloTienda";
 
 interface Tienda {
   existe: boolean;
@@ -34,12 +34,30 @@ interface Tienda {
   bordes: Bordes;
   portadaUrl: string | null;
   anuncio: string | null;
+  formaFoto: FormaFoto;
+  columnasCelular: number;
+  seccionesOcultas: Seccion[];
+  tituloDestacados: string | null;
+  sobreNosotros: string | null;
+  horario: string | null;
+  facebook: string | null;
+  tiktok: string | null;
+  pedidoMinimo: number | null;
 }
 
-const CAMPOS = ["activa", "subdominio", "dominioPropio", "nombre", "descripcion", "color", "whatsapp", "instagram", "textoEnvios", "alias", "cbu", "titular", "mostrarSinStock", "fondo", "tipografia", "bordes", "anuncio"] as const;
+type Seccion = "beneficios" | "categorias" | "destacados" | "sobre";
+const SECCIONES: { v: Seccion; t: string }[] = [
+  { v: "beneficios", t: "Beneficios (envíos, pago, WhatsApp)" },
+  { v: "categorias", t: "Categorías" },
+  { v: "destacados", t: "Destacados" },
+  { v: "sobre", t: "Sobre nosotros" },
+];
+
+const CAMPOS = ["activa", "subdominio", "dominioPropio", "nombre", "descripcion", "color", "whatsapp", "instagram", "textoEnvios", "alias", "cbu", "titular", "mostrarSinStock", "fondo", "tipografia", "bordes", "anuncio", "formaFoto", "columnasCelular", "seccionesOcultas", "tituloDestacados", "sobreNosotros", "horario", "facebook", "tiktok", "pedidoMinimo"] as const;
 const PESTANAS = [
   { v: "marca", t: "Marca" },
   { v: "estilo", t: "Estilo" },
+  { v: "portada", t: "Portada" },
   { v: "contacto", t: "Contacto" },
   { v: "cobros", t: "Cobros" },
   { v: "direccion", t: "Dirección" },
@@ -100,7 +118,8 @@ function Formulario({ inicial }: { inicial: Tienda }) {
   const set = <K extends keyof Tienda>(k: K, v: Tienda[K]) => setT((x) => ({ ...x, [k]: v }));
   const refrescar = () => void queryClient.invalidateQueries({ queryKey: ["tienda-config"] });
   const error = (e: unknown) => toast.error(e instanceof Error ? e.message : "No se pudo guardar");
-  const hayCambios = CAMPOS.some((k) => (t[k] ?? "") !== (inicial[k] ?? ""));
+  const normal = (v: unknown) => JSON.stringify(v === "" || v === undefined ? null : v);
+  const hayCambios = CAMPOS.some((k) => normal(t[k]) !== normal(inicial[k]));
 
   const guardar = useMutation({
     mutationFn: () => api("/tienda-config", { method: "PUT", body: JSON.stringify(Object.fromEntries(CAMPOS.map((k) => [k, t[k]]))) }),
@@ -156,7 +175,7 @@ function Formulario({ inicial }: { inicial: Tienda }) {
         )}
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_15rem]">
         <div className="flex min-w-0 flex-col gap-4">
           <div role="tablist" aria-label="Partes de la tienda" className="flex gap-1 overflow-x-auto border-b">
             {PESTANAS.map((p) => {
@@ -168,7 +187,7 @@ function Formulario({ inicial }: { inicial: Tienda }) {
                   role="tab"
                   aria-selected={pestana === p.v}
                   onClick={() => setPestana(p.v)}
-                  className={cn("-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2", pestana === p.v ? "border-primary font-medium" : "border-transparent text-muted-foreground hover:text-foreground")}
+                  className={cn("-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-2 py-2", pestana === p.v ? "border-primary font-medium" : "border-transparent text-muted-foreground hover:text-foreground")}
                 >
                   {p.t}
                   {alerta && <span className="size-1.5 rounded-full bg-amber-500" aria-label="revisar" />}
@@ -239,6 +258,12 @@ function Formulario({ inicial }: { inicial: Tienda }) {
                   crema={aHex(colores.crema)}
                   onCambio={(k, v) => set(k, v as never)}
                 />
+                <OpcionesFotos forma={t.formaFoto} columnas={t.columnasCelular} onForma={(v) => set("formaFoto", v)} onColumnas={(v) => set("columnasCelular", v)} />
+              </>
+            )}
+
+            {pestana === "portada" && (
+              <>
                 <div className="flex flex-col gap-1.5">
                   <span className="text-sm font-medium">Foto de portada (opcional)</span>
                   <div className="flex flex-wrap items-center gap-2">
@@ -258,6 +283,35 @@ function Formulario({ inicial }: { inicial: Tienda }) {
                     <input ref={portadaInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" aria-label="Elegir foto de portada" onChange={(e) => e.target.files?.[0] && imagen.mutate({ cual: "portada", archivo: e.target.files[0] })} />
                   </div>
                 </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {campo("anuncio", "Barra de anuncios (opcional)", { placeholder: "🚚 Envío gratis desde $50.000", maxLength: 120 })}
+                  {campo("tituloDestacados", "Título de los destacados", { placeholder: "Los más elegidos", maxLength: 60 })}
+                </div>
+                <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                  <legend className="mb-1.5 text-sm font-medium">Secciones que se muestran</legend>
+                  {SECCIONES.map((x) => (
+                    <label key={x.v} className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={!t.seccionesOcultas.includes(x.v)}
+                        onChange={(e) => set("seccionesOcultas", e.target.checked ? t.seccionesOcultas.filter((v) => v !== x.v) : [...t.seccionesOcultas, x.v])}
+                      />
+                      {x.t}
+                    </label>
+                  ))}
+                </fieldset>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="tienda-sobreNosotros">Texto de “Sobre nosotros” (opcional)</Label>
+                  <textarea
+                    id="tienda-sobreNosotros"
+                    rows={3}
+                    maxLength={1500}
+                    value={t.sobreNosotros ?? ""}
+                    onChange={(e) => set("sobreNosotros", e.target.value)}
+                    placeholder="Contá tu historia: quiénes son, cómo hacen sus productos, qué los hace distintos."
+                    className="rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                  />
+                </div>
               </>
             )}
 
@@ -267,15 +321,16 @@ function Formulario({ inicial }: { inicial: Tienda }) {
                   {campo("whatsapp", "WhatsApp para pedidos y consultas", { inputMode: "tel", placeholder: "261 5469432" }, "Con código de área, sin 0 ni 15. Ahí te llegan los pedidos.")}
                   {campo("instagram", "Instagram (opcional)", { placeholder: "minegocio" }, "Solo el usuario, sin @.")}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {campo("textoEnvios", "Envíos y retiro", { placeholder: "Envíos a todo el país. Retiro en el local." }, "Se muestra en la portada y al pie de la tienda.")}
-                  {campo("anuncio", "Barra de anuncios (opcional)", { placeholder: "🚚 Envío gratis desde $50.000", maxLength: 120 }, "Una franja arriba de todo, para promos o avisos.")}
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {campo("facebook", "Facebook (opcional)", { placeholder: "minegocio" })}
+                  {campo("tiktok", "TikTok (opcional)", { placeholder: "minegocio" })}
+                  {campo("horario", "Horario de atención", { placeholder: "Lun a sáb de 9 a 20" })}
                 </div>
+                {campo("textoEnvios", "Envíos y retiro", { placeholder: "Envíos a todo el país. Retiro en el local." }, "Se muestra en la portada y al pie de la tienda.")}
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={t.mostrarSinStock} onChange={(e) => set("mostrarSinStock", e.target.checked)} />
                   Mostrar también los productos sin stock (como “Sin stock”)
                 </label>
-                <p className="text-xs text-muted-foreground">Las fotos de cada producto se suben en su ficha (Productos → el producto → Fotos). Los insumos no se muestran nunca.</p>
               </>
             )}
 
@@ -285,9 +340,27 @@ function Formulario({ inicial }: { inicial: Tienda }) {
                 <div className="grid gap-3 sm:grid-cols-3">
                   {campo("alias", "Alias", { placeholder: "minegocio.mp" })}
                   {campo("cbu", "CBU / CVU", { inputMode: "numeric" })}
-                  {campo("titular", "Titular de la cuenta")}
+                  {campo("titular", "Titular")}
                 </div>
                 {faltaCobro && <p className="rounded-lg bg-amber-500/10 p-2 text-xs text-amber-800 dark:text-amber-300">Sin alias ni CBU el cliente no sabe a dónde transferir: le va a tener que escribir para preguntar.</p>}
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="tienda-pedidoMinimo">Compra mínima (opcional)</Label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground">$</span>
+                    <Input
+                      id="tienda-pedidoMinimo"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      step={500}
+                      className="max-w-40"
+                      placeholder="Sin mínimo"
+                      value={t.pedidoMinimo ?? ""}
+                      onChange={(e) => set("pedidoMinimo", e.target.value === "" ? null : Math.max(0, Number(e.target.value)))}
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground">Si el carrito no llega a ese monto, la tienda avisa cuánto falta y no deja confirmar. Ideal para ventas mayoristas.</span>
+                </div>
               </>
             )}
 
@@ -340,6 +413,7 @@ function VistaPrevia({ t, logoUrl, portadaUrl }: { t: Tienda; logoUrl: string | 
   const css = (x: Rgb) => aHex(x);
   const fuente = TIPOGRAFIAS.find((f) => f.v === t.tipografia)?.fuente;
   const borde = BORDES.find((b) => b.v === t.bordes) ?? BORDES[0];
+  const aspecto = FORMAS_FOTO.find((f) => f.v === t.formaFoto)?.aspecto ?? "4 / 3";
   const nombre = t.nombre || "Tu negocio";
   return (
     <figure className="flex flex-col gap-1.5 max-lg:order-first lg:sticky lg:top-4">
@@ -378,7 +452,7 @@ function VistaPrevia({ t, logoUrl, portadaUrl }: { t: Tienda; logoUrl: string | 
         <div className="grid grid-cols-3 gap-1.5 p-2">
           {[0, 1, 2].map((i) => (
             <div key={i} className="overflow-hidden bg-white shadow-sm" style={{ borderRadius: borde.tarjeta * 0.6 }}>
-              <div className="aspect-square" style={{ background: `${css(c.marca)}1a` }} />
+              <div style={{ aspectRatio: aspecto, background: `${css(c.marca)}1a` }} />
               <div className="flex flex-col gap-0.5 p-1">
                 <span className="text-[8px]" style={fuente}>
                   Producto

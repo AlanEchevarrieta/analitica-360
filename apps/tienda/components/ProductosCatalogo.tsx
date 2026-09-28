@@ -84,7 +84,7 @@ export function ProductosCatalogo({
               No hay productos para mostrar.
             </p>
           ) : (
-            <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-3">
+            <div className="grilla-productos grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-3">
               {lista.map((p) => (
                 <ProductCard key={p.id} producto={p} />
               ))}

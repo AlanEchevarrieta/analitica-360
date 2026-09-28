@@ -13,6 +13,7 @@
   --font-titulos: var(--font-playfair);
   --peso-titulos: 400;
   --r-boton: 9999px;
+  --aspecto-foto: 4 / 3;
 }
 
 @theme inline {
@@ -137,4 +138,30 @@ body::before {
   background-image: var(--tex-oscuro);
   background-size: var(--tex-tamano);
   opacity: var(--tex-op-pagina);
+}
+
+/* Forma de las fotos de producto */
+html[data-foto="cuadrada"] {
+  --aspecto-foto: 1 / 1;
+}
+html[data-foto="vertical"] {
+  --aspecto-foto: 4 / 5;
+}
+
+/* Dos productos por fila también en celulares chicos */
+@media (max-width: 419px) {
+  html[data-columnas="2"] .grilla-productos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+  }
+  html[data-columnas="2"] .grilla-productos article > div {
+    padding: 0.625rem;
+  }
+  html[data-columnas="2"] .grilla-productos h3 {
+    font-size: 0.95rem;
+  }
+  html[data-columnas="2"] .grilla-productos button {
+    padding-inline: 0.5rem;
+    font-size: 0.8rem;
+  }
 }

@@ -19,6 +19,8 @@ export type ProductoTienda = {
   precio: number;
   /** Fotos en orden (la primera es la principal). */
   imagenes: string[];
+  /** Las mismas fotos en tamaño chico (listados y tarjetas). */
+  miniaturas: string[];
   stock: number;
   vendidos: number;
   slug: string;
@@ -61,7 +63,7 @@ export function categoriasDe(productos: ProductoTienda[]): CategoriaTienda[] {
   for (const p of productos) {
     const c = mapa.get(p.categoriaTienda) ?? { id: p.categoriaTienda, label: p.categoria?.trim() || "Otros", cantidad: 0, imagen: null };
     c.cantidad += 1;
-    c.imagen ??= p.imagenes[0] ?? null;
+    c.imagen ??= p.miniaturas[0] ?? null;
     mapa.set(p.categoriaTienda, c);
   }
   return [...mapa.values()].sort((a, b) => b.cantidad - a.cantidad || a.label.localeCompare(b.label, "es"));
@@ -118,6 +120,7 @@ function mapProducto(row: Record<string, unknown>): ProductoTienda {
     categoriaTienda: claveCategoria(categoria),
     precio: Number(row.precio_venta ?? row.precio ?? 0),
     imagenes: Array.isArray(row.imagenes) ? (row.imagenes as unknown[]).map(String) : [],
+    miniaturas: Array.isArray(row.miniaturas) ? (row.miniaturas as unknown[]).map(String) : Array.isArray(row.imagenes) ? (row.imagenes as unknown[]).map(String) : [],
     stock: variantes.some((v) => v.activo) ? stockVars : stockBase,
     vendidos: Number(row.vendidos ?? 0),
     slug: slugify(nombre, id),

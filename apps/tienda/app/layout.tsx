@@ -31,6 +31,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       data-fondo={sitio?.fondo}
       data-tipo={sitio?.tipografia}
       data-bordes={sitio?.bordes}
+      data-foto={sitio?.formaFoto}
+      data-columnas={sitio?.columnasCelular}
       // El color de marca del negocio: de él salen todos los colores de la tienda (globals.css).
       style={sitio ? ({ "--marca": sitio.color } as React.CSSProperties) : undefined}
     >

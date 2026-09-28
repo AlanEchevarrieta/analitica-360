@@ -2,7 +2,7 @@
 export function ProductPlaceholder({ nombre, large = false }: { nombre: string; large?: boolean }) {
   return (
     <div
-      className={`relative flex items-center justify-center overflow-hidden ${large ? "aspect-square w-full rounded-3xl" : "aspect-[4/3]"}`}
+      className={`relative flex items-center justify-center overflow-hidden ${large ? "aspect-square w-full rounded-3xl" : "aspect-[var(--aspecto-foto)]"}`}
       style={{ background: "linear-gradient(145deg, var(--crema) 0%, color-mix(in srgb, var(--marca) 22%, transparent) 60%, var(--marca-hero) 150%)" }}
       aria-hidden
     >
@@ -16,6 +16,6 @@ export function FotoProducto({ nombre, url, large = false }: { nombre: string; u
   if (!url) return <ProductPlaceholder nombre={nombre} large={large} />;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- fotos servidas por la plataforma (otro origen)
-    <img src={url} alt={nombre} loading="lazy" className={`w-full bg-white object-cover ${large ? "aspect-square rounded-3xl" : "aspect-[4/3] transition duration-500 group-hover:scale-105"}`} />
+    <img src={url} alt={nombre} loading={large ? "eager" : "lazy"} fetchPriority={large ? "high" : "auto"} decoding="async" className={`w-full bg-white object-cover ${large ? "aspect-square rounded-3xl" : "aspect-[var(--aspecto-foto)] transition duration-500 group-hover:scale-105"}`} />
   );
 }

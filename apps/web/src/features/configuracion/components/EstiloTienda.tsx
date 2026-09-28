@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 export type Fondo = "puntos" | "lienzo" | "papel" | "rayas" | "ondas" | "liso";
 export type Tipografia = "clasica" | "elegante" | "moderna" | "amigable";
 export type Bordes = "redondeados" | "suaves" | "rectos";
+export type FormaFoto = "horizontal" | "cuadrada" | "vertical";
 
 // Las mismas tipografías de la tienda, para que la vista previa sea fiel (solo se descargan en esta pantalla).
 const playfair = Playfair_Display({ subsets: ["latin"], preload: false });
@@ -118,5 +119,47 @@ export function OpcionesEstilo({ fondo, tipografia, bordes, hero, crema, onCambi
         </div>
       </fieldset>
     </>
+  );
+}
+
+export const FORMAS_FOTO: { v: FormaFoto; t: string; aspecto: string }[] = [
+  { v: "horizontal", t: "Horizontal", aspecto: "4 / 3" },
+  { v: "cuadrada", t: "Cuadrada", aspecto: "1 / 1" },
+  { v: "vertical", t: "Vertical", aspecto: "4 / 5" },
+];
+
+/** Forma de las fotos de producto y cuántos productos por fila en el celular. */
+export function OpcionesFotos({ forma, columnas, onForma, onColumnas }: { forma: FormaFoto; columnas: number; onForma: (v: FormaFoto) => void; onColumnas: (v: number) => void }) {
+  const opcion = "flex flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-xs ring-1 ring-foreground/15 transition hover:ring-foreground/40";
+  const elegida = "ring-2 ring-primary hover:ring-primary";
+  return (
+    <div className="grid gap-4 sm:grid-cols-[3fr_2fr]">
+      <fieldset>
+        <legend className="mb-1.5 text-sm font-medium">Forma de las fotos</legend>
+        <div className="grid grid-cols-3 gap-1.5">
+          {FORMAS_FOTO.map((f) => (
+            <button key={f.v} type="button" onClick={() => onForma(f.v)} aria-pressed={forma === f.v} className={cn(opcion, forma === f.v && elegida)}>
+              <span className="h-4 shrink-0 rounded-[2px] bg-foreground/60" style={{ aspectRatio: f.aspecto }} aria-hidden />
+              {f.t}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend className="mb-1.5 text-sm font-medium">En el celular</legend>
+        <div className="grid grid-cols-2 gap-1.5">
+          {[1, 2].map((n) => (
+            <button key={n} type="button" onClick={() => onColumnas(n)} aria-pressed={columnas === n} className={cn(opcion, columnas === n && elegida)}>
+              <span className="flex gap-0.5" aria-hidden>
+                {Array.from({ length: n }, (_, i) => (
+                  <span key={i} className={cn("h-4 rounded-[2px] bg-foreground/60", n === 1 ? "w-4" : "w-2")} />
+                ))}
+              </span>
+              {n === 1 ? "1 por fila" : "2 por fila"}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+    </div>
   );
 }

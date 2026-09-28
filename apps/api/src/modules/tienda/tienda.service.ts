@@ -45,6 +45,12 @@ export class TiendaService {
       return { productoId: producto.id, varianteId: variante.id, cantidad: item.cantidad, precioUnitario: variante.precio };
     });
 
+    const total = items.reduce((acc, i) => acc + i.cantidad * i.precioUnitario, 0);
+    const minimo = await this.tiendaRepository.pedidoMinimo(empresaId);
+    if (minimo && total < minimo) {
+      throw new BadRequestException(`La compra mínima es de ${minimo.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}`);
+    }
+
     const resultado = await this.pedidosRepository.crear(empresaId, {
       origen: 'tienda_online',
       clienteNombre: input.clienteNombre,
@@ -63,7 +69,7 @@ export class TiendaService {
     return {
       id: resultado.pedido.id,
       numeroPedido: resultado.pedido.numeroPedido,
-      total: items.reduce((acc, i) => acc + i.cantidad * i.precioUnitario, 0),
+      total,
     };
   }
 

@@ -7,12 +7,12 @@ import { Public } from '../../common/decorators/public.decorator.js';
 import { RequireModulo, RequirePermiso } from '../../common/decorators/permiso.decorator.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
-import { BORDES, FONDOS, TIPOGRAFIAS, TiendaAdminService } from './tienda-admin.service.js';
+import { BORDES, FONDOS, FORMAS_FOTO, SECCIONES, TIPOGRAFIAS, TiendaAdminService } from './tienda-admin.service.js';
 import { TiendaThrottlerGuard } from './tienda-throttler.guard.js';
 
 type Archivo = { buffer: Buffer; size: number; mimetype: string };
-/** Las imágenes se reciben en memoria (máx. 5 MB) y se validan por contenido. */
-const subida = FileInterceptor('archivo', { limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
+/** Las imágenes se reciben en memoria (máx. 15 MB: fotos directas del celular), se validan por contenido y se guardan optimizadas. */
+const subida = FileInterceptor('archivo', { limits: { fileSize: 15 * 1024 * 1024, files: 1 } });
 
 const texto = (max: number) => z.string().trim().max(max).nullable().transform((v) => v || null).default(null);
 const tiendaSchema = z.object({
@@ -33,6 +33,15 @@ const tiendaSchema = z.object({
   tipografia: z.enum(TIPOGRAFIAS).default('clasica'),
   bordes: z.enum(BORDES).default('redondeados'),
   anuncio: texto(120),
+  formaFoto: z.enum(FORMAS_FOTO).default('horizontal'),
+  columnasCelular: z.number().int().min(1).max(2).default(1),
+  seccionesOcultas: z.array(z.enum(SECCIONES)).max(SECCIONES.length).default([]),
+  tituloDestacados: texto(60),
+  sobreNosotros: texto(1500),
+  horario: texto(120),
+  facebook: texto(100),
+  tiktok: texto(60),
+  pedidoMinimo: z.number().min(0).max(100_000_000).nullable().transform((v) => v || null).default(null),
 });
 
 /** Configuración de la tienda online (la cambia el dueño). */

@@ -38,7 +38,7 @@ export function FichaProducto({ producto }: { producto: ProductoTienda }) {
                 className={`size-16 shrink-0 overflow-hidden rounded-xl border-2 ${i === foto ? "border-[var(--marca)]" : "border-transparent"}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt="" className="size-full object-cover" />
+                <img src={producto.miniaturas[i] ?? url} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
               </button>
             ))}
           </div>

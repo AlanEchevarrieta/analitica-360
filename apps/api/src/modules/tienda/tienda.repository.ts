@@ -16,6 +16,8 @@ export interface ProductoCatalogo {
   vendidos: number;
   /** Fotos en orden (la primera es la principal). */
   imagenes: string[];
+  /** Las mismas fotos en tamaño chico, para listados. */
+  miniaturas: string[];
   variantes: VarianteCatalogo[];
 }
 
@@ -35,6 +37,8 @@ export const TIENDA_REPOSITORY = Symbol('TIENDA_REPOSITORY');
  */
 export interface TiendaRepository {
   empresaActiva(empresaId: string): Promise<boolean>;
+  /** Monto mínimo de compra configurado (null = sin mínimo). */
+  pedidoMinimo(empresaId: string): Promise<number | null>;
   catalogo(empresaId: string): Promise<ProductoCatalogo[]>;
   productosVendibles(empresaId: string, productoIds: string[]): Promise<ProductoVendible[]>;
 }

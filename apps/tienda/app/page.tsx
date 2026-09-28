@@ -13,6 +13,8 @@ export default async function HomePage() {
   const destacados = productosDestacados(productos, 4);
   const categorias = categoriasDe(productos);
   const portada = destacados.find((p) => p.imagenes[0])?.imagenes[0] ?? null;
+  const ver = (seccion: Sitio["seccionesOcultas"][number]) => !sitio.seccionesOcultas.includes(seccion);
+  const sobre = sitio.sobreNosotros || sitio.descripcion;
 
   return (
     <>
@@ -20,7 +22,7 @@ export default async function HomePage() {
         // Foto de portada propia: a todo el ancho, con el color de la marca encima para que el texto se lea.
         <section className="relative isolate overflow-hidden text-[var(--crema)]">
           {/* eslint-disable-next-line @next/next/no-img-element -- foto de portada del negocio, servida por la plataforma */}
-          <img src={sitio.portadaUrl} alt="" className="absolute inset-0 -z-10 size-full object-cover" />
+          <img src={sitio.portadaUrl} alt="" fetchPriority="high" className="absolute inset-0 -z-10 size-full object-cover" />
           <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,color-mix(in_srgb,var(--marca-hero)_92%,transparent)_0%,color-mix(in_srgb,var(--marca-hero)_70%,transparent)_45%,color-mix(in_srgb,var(--marca-hero)_15%,transparent)_100%)]" />
           <div className="textura -z-10" />
           <div className="mx-auto flex min-h-[26rem] max-w-6xl items-center px-4 py-16 lg:min-h-[32rem]">
@@ -35,7 +37,7 @@ export default async function HomePage() {
             <div className="aspect-[4/3] overflow-hidden rounded-3xl border border-white/20 bg-[var(--crema)]/10 shadow-inner">
               {portada ? (
                 // eslint-disable-next-line @next/next/no-img-element -- foto del producto, servida por la plataforma
-                <img src={portada} alt="" className="size-full object-cover" />
+                <img src={portada} alt="" fetchPriority="high" className="size-full object-cover" />
               ) : sitio.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={sitio.logoUrl} alt="" className="size-full object-contain p-10" />
@@ -47,9 +49,9 @@ export default async function HomePage() {
         </section>
       )}
 
-      <Beneficios sitio={sitio} />
+      {ver("beneficios") ? <Beneficios sitio={sitio} /> : null}
 
-      {categorias.length > 1 ? (
+      {ver("categorias") && categorias.length > 1 ? (
         <section className="mx-auto max-w-6xl px-4 py-14">
           <h2 className="font-serif text-3xl">Categorías</h2>
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -62,7 +64,7 @@ export default async function HomePage() {
                 {c.imagen ? (
                   <span className="block overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element -- foto del producto, servida por la plataforma */}
-                    <img src={c.imagen} alt="" className="aspect-[4/3] w-full object-cover transition duration-500 group-hover:scale-105" />
+                    <img src={c.imagen} alt="" loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover transition duration-500 group-hover:scale-105" />
                   </span>
                 ) : (
                   <span className="flex aspect-[4/3] items-center justify-center bg-[var(--marca)]/10 font-serif text-2xl text-[var(--marca-oscuro)]">{c.label.slice(0, 1)}</span>
@@ -74,24 +76,26 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      <section className={`mx-auto max-w-6xl px-4 pb-14 ${categorias.length > 1 ? "" : "pt-14"}`}>
-        <h2 className="font-serif text-3xl">Los más elegidos</h2>
+      {ver("destacados") ? (
+      <section className={`mx-auto max-w-6xl px-4 pb-14 ${ver("categorias") && categorias.length > 1 ? "" : "pt-14"}`}>
+        <h2 className="font-serif text-3xl">{sitio.tituloDestacados || "Los más elegidos"}</h2>
         {destacados.length === 0 ? (
           <p className="mt-4 text-sm text-[var(--tinta)]/70">Estamos actualizando el catálogo. Volvé a pasar en un rato.</p>
         ) : (
-          <div className="mt-6 grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-4">
+          <div className="grilla-productos mt-6 grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-4">
             {destacados.map((p) => (
               <ProductCard key={p.id} producto={p} />
             ))}
           </div>
         )}
       </section>
+      ) : null}
 
-      {sitio.descripcion || sitio.textoEnvios ? (
+      {ver("sobre") && (sobre || sitio.textoEnvios) ? (
         <section id="sobre-nosotros" className="bg-white/60">
           <div className="mx-auto max-w-6xl px-4 py-16">
             <h2 className="font-serif text-3xl">Sobre {sitio.nombre}</h2>
-            {sitio.descripcion ? <p className="mt-4 max-w-2xl leading-7 text-[var(--tinta)]/80">{sitio.descripcion}</p> : null}
+            {sobre ? <p className="mt-4 max-w-2xl whitespace-pre-line leading-7 text-[var(--tinta)]/80">{sobre}</p> : null}
             {sitio.textoEnvios ? (
               <p className="mt-4 max-w-2xl leading-7 text-[var(--tinta)]/80">
                 <b>Envíos y retiro:</b> {sitio.textoEnvios}

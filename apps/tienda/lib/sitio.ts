@@ -24,6 +24,27 @@ export type Sitio = {
   bordes: "redondeados" | "suaves" | "rectos";
   portadaUrl: string | null;
   anuncio: string | null;
+  formaFoto: "horizontal" | "cuadrada" | "vertical";
+  columnasCelular: number;
+  /** Secciones de la portada que el negocio eligió no mostrar. */
+  seccionesOcultas: ("beneficios" | "categorias" | "destacados" | "sobre")[];
+  tituloDestacados: string | null;
+  sobreNosotros: string | null;
+  horario: string | null;
+  facebook: string | null;
+  tiktok: string | null;
+  /** Compra mínima en pesos (null = sin mínimo). */
+  pedidoMinimo: number | null;
+};
+
+const POR_DEFECTO: Partial<Sitio> = {
+  fondo: "puntos",
+  tipografia: "clasica",
+  bordes: "redondeados",
+  formaFoto: "horizontal",
+  columnasCelular: 1,
+  seccionesOcultas: [],
+  pedidoMinimo: null,
 };
 
 /**
@@ -37,7 +58,8 @@ export const obtenerSitio = cache(async (): Promise<Sitio | null> => {
   try {
     const res = await fetch(`${apiUrl()}/tienda-sitio?host=${encodeURIComponent(host)}`, { next: { revalidate: 10 } });
     if (!res.ok) return null;
-    return (await res.json()) as Sitio;
+    // Valores por defecto para lo que falte (por ej. una API de una versión anterior).
+    return { ...POR_DEFECTO, ...((await res.json()) as Partial<Sitio>) } as Sitio;
   } catch (error) {
     console.error("Tienda: no se pudo conectar con la API", error);
     return null;

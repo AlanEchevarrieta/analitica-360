@@ -39,8 +39,8 @@ export function FotosProducto({ productoId }: { productoId: string }) {
     if (!archivos?.length) return;
     const lista = [...archivos].slice(0, MAXIMO - (fotos.data?.length ?? 0));
     for (const archivo of lista) {
-      if (archivo.size > 5 * 1024 * 1024) {
-        toast.error(`${archivo.name} pesa más de 5 MB`);
+      if (archivo.size > 15 * 1024 * 1024) {
+        toast.error(`${archivo.name} pesa más de 15 MB`);
         continue;
       }
       setSubiendo((n) => n + 1);
@@ -62,7 +62,7 @@ export function FotosProducto({ productoId }: { productoId: string }) {
     <Card>
       <CardHeader>
         <CardTitle>Fotos</CardTitle>
-        <CardDescription>Para la tienda online. La primera es la principal. JPG, PNG o WEBP de hasta 5 MB (hasta {MAXIMO}).</CardDescription>
+        <CardDescription>Para la tienda online. La primera es la principal. JPG, PNG o WEBP de hasta 15 MB, directo del celular: se achican solas (hasta {MAXIMO}).</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">

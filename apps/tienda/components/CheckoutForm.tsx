@@ -9,6 +9,7 @@ import { mensajeWhatsAppPedido, PROVINCIAS_AR, type DatosEnvio } from "@/lib/ped
 import { useSitio } from "@/lib/sitio-contexto";
 import { urlWhatsApp } from "@/lib/whatsapp";
 import { crearPedidoTienda } from "@/app/checkout/actions";
+import { AvisoMinimo } from "@/components/AvisoMinimo";
 
 const vacio: DatosEnvio = {
   nombre: "",
@@ -133,6 +134,7 @@ export function CheckoutForm() {
             onChange={(e) => set("notas", e.target.value)}
           />
         </label>
+        <AvisoMinimo total={total} />
         {error ? <p className="text-sm text-[var(--marca)]">{error}</p> : null}
         <button
           type="submit"

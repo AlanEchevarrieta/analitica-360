@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { AvisoMinimo, useFaltaMinimo } from "@/components/AvisoMinimo";
 import { useCarrito } from "@/lib/carrito";
 import { formatoARS } from "@/lib/productos";
 
 export function CarritoDrawer() {
   const { abierto, cerrar, items, total, setCantidad, quitar } = useCarrito();
+  const falta = useFaltaMinimo(total);
 
   if (!abierto) return null;
 
@@ -77,11 +79,15 @@ export function CarritoDrawer() {
             <span>Total</span>
             <span className="font-semibold text-[var(--marca-oscuro)]">{formatoARS(total)}</span>
           </div>
+          <div className="mb-3">
+            <AvisoMinimo total={total} />
+          </div>
           <Link
             href="/checkout"
             onClick={cerrar}
+            aria-disabled={items.length === 0 || falta > 0}
             className={`block rounded-[var(--r-boton)] bg-[var(--marca)] px-4 py-3 text-center text-sm font-semibold text-white ${
-              items.length === 0 ? "pointer-events-none opacity-50" : "hover:bg-[var(--marca-oscuro)]"
+              items.length === 0 || falta > 0 ? "pointer-events-none opacity-50" : "hover:bg-[var(--marca-oscuro)]"
             }`}
           >
             Ir al checkout

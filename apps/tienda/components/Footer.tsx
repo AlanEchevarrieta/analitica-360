@@ -7,6 +7,8 @@ import { urlWhatsApp } from "@/lib/whatsapp";
 export function Footer() {
   const sitio = useSitio();
   const wa = urlWhatsApp(sitio.whatsapp, `Hola! Tengo una consulta sobre ${sitio.nombre}.`);
+  const fb = sitio.facebook ? (/^https?:\/\//.test(sitio.facebook) ? sitio.facebook : `https://facebook.com/${sitio.facebook.replace(/^@/, "")}`) : null;
+  const tk = sitio.tiktok ? `https://tiktok.com/@${sitio.tiktok.replace(/^@/, "").replace(/^https?:\/\/(www\.)?tiktok\.com\/@?/, "")}` : null;
   const ig = sitio.instagram ? `https://instagram.com/${sitio.instagram.replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//, "")}` : null;
   return (
     <footer id="contacto" className="mt-auto border-t border-[var(--marca-oscuro)]/15 bg-[var(--marca-oscuro)] text-[var(--crema)]">
@@ -15,7 +17,7 @@ export function Footer() {
           <p className="font-serif text-2xl">{sitio.nombre}</p>
           {sitio.descripcion ? <p className="mt-2 text-sm leading-6 text-[var(--crema)]/80">{sitio.descripcion}</p> : null}
         </div>
-        {wa || ig ? (
+        {wa || ig || fb || tk || sitio.horario ? (
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide">Contacto</p>
             <div className="mt-3 flex flex-col gap-2 text-sm">
@@ -29,6 +31,17 @@ export function Footer() {
                   WhatsApp
                 </a>
               ) : null}
+              {fb ? (
+                <a className="hover:text-white" href={fb} target="_blank" rel="noreferrer">
+                  Facebook
+                </a>
+              ) : null}
+              {tk ? (
+                <a className="hover:text-white" href={tk} target="_blank" rel="noreferrer">
+                  TikTok
+                </a>
+              ) : null}
+              {sitio.horario ? <p className="text-[var(--crema)]/80">🕒 {sitio.horario}</p> : null}
             </div>
           </div>
         ) : null}

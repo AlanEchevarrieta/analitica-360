@@ -23,6 +23,11 @@ export class PrismaTiendaRepository implements TiendaRepository {
     return empresa !== null;
   }
 
+  async pedidoMinimo(empresaId: string): Promise<number | null> {
+    const t = await this.prisma.tiendaConfig.findUnique({ where: { empresaId }, select: { pedidoMinimo: true } });
+    return t?.pedidoMinimo == null ? null : Number(t.pedidoMinimo);
+  }
+
   async catalogo(empresaId: string): Promise<ProductoCatalogo[]> {
     // Mismo criterio de stock que el legacy catalogo_tienda: SUM(signo*cantidad)
     // sin contar transferencias (mueven stock entre ubicaciones, no lo cambian).
@@ -84,11 +89,15 @@ export class PrismaTiendaRepository implements TiendaRepository {
 
     const ids = productos.map((p) => p.id);
     const [imagenes, kits] = await Promise.all([
-      ids.length ? this.prisma.productoImagen.findMany({ where: { empresaId, productoId: { in: ids } }, select: { productoId: true, url: true }, orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }] }) : [],
+      ids.length ? this.prisma.productoImagen.findMany({ where: { empresaId, productoId: { in: ids } }, select: { productoId: true, url: true, urlMiniatura: true }, orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }] }) : [],
       this.disponibilidadKits(empresaId, ids),
     ]);
     const fotos = new Map<string, string[]>();
-    for (const i of imagenes) fotos.set(i.productoId, [...(fotos.get(i.productoId) ?? []), i.url]);
+    const chicas = new Map<string, string[]>();
+    for (const i of imagenes) {
+      fotos.set(i.productoId, [...(fotos.get(i.productoId) ?? []), i.url]);
+      chicas.set(i.productoId, [...(chicas.get(i.productoId) ?? []), i.urlMiniatura ?? i.url]);
+    }
 
     return productos.map((p) => ({
       id: p.id,
@@ -100,6 +109,7 @@ export class PrismaTiendaRepository implements TiendaRepository {
       stock: kits.get(p.id) ?? Number(p.stock),
       vendidos: Number(p.vendidos),
       imagenes: fotos.get(p.id) ?? [],
+      miniaturas: chicas.get(p.id) ?? [],
       variantes: variantesPorProducto.get(p.id) ?? [],
     }));
   }

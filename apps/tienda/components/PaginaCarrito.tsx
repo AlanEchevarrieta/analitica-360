@@ -3,9 +3,11 @@
 import { useCarrito } from "@/lib/carrito";
 import { formatoARS } from "@/lib/productos";
 import Link from "next/link";
+import { AvisoMinimo, useFaltaMinimo } from "@/components/AvisoMinimo";
 
 export function PaginaCarrito() {
   const { items, total, setCantidad, quitar } = useCarrito();
+  const falta = useFaltaMinimo(total);
 
   if (items.length === 0) {
     return (
@@ -56,8 +58,11 @@ export function PaginaCarrito() {
         ))}
       </ul>
       <div className="mt-6 flex items-center justify-between">
-        <p className="font-semibold">Total {formatoARS(total)}</p>
-        <Link href="/checkout" className="rounded-[var(--r-boton)] bg-[var(--marca)] px-6 py-3 text-sm font-semibold text-white">
+        <div className="flex flex-col gap-2">
+          <p className="font-semibold">Total {formatoARS(total)}</p>
+          <AvisoMinimo total={total} />
+        </div>
+        <Link href="/checkout" aria-disabled={falta > 0} className={`rounded-[var(--r-boton)] bg-[var(--marca)] px-6 py-3 text-sm font-semibold text-white ${falta > 0 ? "pointer-events-none opacity-50" : ""}`}>
           Ir al checkout
         </Link>
       </div>
