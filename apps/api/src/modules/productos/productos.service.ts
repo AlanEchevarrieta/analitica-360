@@ -59,6 +59,7 @@ export class ProductosService {
       activo: input.activo,
       esInsumo: input.esInsumo,
       unidad: input.unidad,
+      enTienda: input.enTienda,
     });
     return this.conSku(empresaId, desempacar(resultado));
   }
@@ -72,6 +73,7 @@ export class ProductosService {
       activo: input.activo,
       esInsumo: input.esInsumo,
       unidad: input.unidad,
+      enTienda: input.enTienda,
     });
     return this.conSku(empresaId, desempacar(resultado));
   }

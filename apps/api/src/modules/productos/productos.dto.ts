@@ -16,6 +16,8 @@ export const guardarProductoSchema = z.object({
   /** Insumo / materia prima (no se vende tal cual). Sin mandar = no cambia (alta: false). */
   esInsumo: z.boolean().optional(),
   unidad: z.enum(['unidad', 'kg', 'g', 'l', 'ml', 'm', 'cm']).optional(),
+  /** Se muestra en la tienda online. Sin mandar = no cambia (alta: sí). */
+  enTienda: z.boolean().optional(),
 });
 export type GuardarProductoInput = z.infer<typeof guardarProductoSchema>;
 

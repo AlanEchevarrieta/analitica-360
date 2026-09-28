@@ -10,9 +10,12 @@ export interface ProductoCatalogo {
   id: string;
   nombre: string;
   categoria: string | null;
+  categoriaId: string | null;
   precio: number;
   stock: number;
   vendidos: number;
+  /** Fotos en orden (la primera es la principal). */
+  imagenes: string[];
   variantes: VarianteCatalogo[];
 }
 

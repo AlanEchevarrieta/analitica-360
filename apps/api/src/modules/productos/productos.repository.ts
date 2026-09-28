@@ -10,6 +10,7 @@ export interface ProductoRecord {
   usaVariantes: boolean;
   esInsumo: boolean;
   unidad: string;
+  enTienda: boolean;
   precioVenta: number | null;
   costo: number | null;
   activo: boolean;
@@ -27,6 +28,7 @@ export interface GuardarProductoInput {
   activo: boolean;
   esInsumo?: boolean;
   unidad?: string;
+  enTienda?: boolean;
 }
 
 export interface ProductosFiltro {

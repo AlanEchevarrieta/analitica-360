@@ -83,6 +83,8 @@ model Empresa {
   recetas                   Receta[]
   ordenesProduccion         OrdenProduccion[]
   cobrosClientes            CobroCliente[]
+  tienda                    TiendaConfig?
+  imagenesProductos         ProductoImagen[]
 
   @@map("empresas")
 }
@@ -255,6 +257,8 @@ model Producto {
   esInsumo     Boolean   @default(false) @map("es_insumo")
   /// unidad | kg | g | l | ml | m | cm
   unidad       String    @default("unidad")
+  /// Se muestra en la tienda online (los insumos nunca se muestran).
+  enTienda     Boolean   @default(true) @map("en_tienda")
   altoCm       Decimal?  @map("alto_cm") @db.Decimal(8, 2)
   largoCm      Decimal?  @map("largo_cm") @db.Decimal(8, 2)
   anchoCm      Decimal?  @map("ancho_cm") @db.Decimal(8, 2)
@@ -277,6 +281,7 @@ model Producto {
   recetas            Receta[]               @relation("RecetaProducto")
   usadoEnRecetas     RecetaItem[]           @relation("RecetaInsumo")
   ordenesProduccion  OrdenProduccion[]
+  imagenes           ProductoImagen[]
 
   @@index([empresaId])
   @@index([categoriaId]) // productos de una categoría
@@ -1146,4 +1151,52 @@ model CobroAplicacion {
   @@index([cobroId])
   @@index([ventaId])
   @@map("cobros_aplicaciones")
+}
+
+/// Tienda online de la empresa: dirección, marca, contacto y datos de pago.
+model TiendaConfig {
+  id              String   @id @default(uuid()) @db.Uuid
+  empresaId       String   @unique @map("empresa_id") @db.Uuid
+  activa          Boolean  @default(false)
+  /// acacia -> acacia.analitica360.app (único, minúsculas, letras/números/guiones).
+  subdominio      String   @unique
+  /// Dominio propio conectado (ej. acaciamates.com.ar), opcional.
+  dominioPropio   String?  @unique @map("dominio_propio")
+  nombre          String
+  descripcion     String?
+  /// Color principal de la marca (#RRGGBB).
+  color           String   @default("#6366f1")
+  logoUrl         String?  @map("logo_url")
+  whatsapp        String?
+  instagram       String?
+  textoEnvios     String?  @map("texto_envios")
+  /// Datos para transferir (se muestran al confirmar el pedido).
+  alias           String?
+  cbu             String?
+  titular         String?
+  mostrarSinStock Boolean  @default(true) @map("mostrar_sin_stock")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id])
+
+  @@map("tiendas_config")
+}
+
+/// Fotos de un producto (la primera es la principal).
+model ProductoImagen {
+  id         String   @id @default(uuid()) @db.Uuid
+  empresaId  String   @map("empresa_id") @db.Uuid
+  productoId String   @map("producto_id") @db.Uuid
+  url        String
+  /// Clave en el almacenamiento (para poder borrarla).
+  clave      String
+  orden      Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  empresa  Empresa  @relation(fields: [empresaId], references: [id])
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@index([productoId, orden])
+  @@map("productos_imagenes")
 }

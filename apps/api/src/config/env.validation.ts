@@ -21,6 +21,12 @@ const envSchema = z.object({
   /** A quién avisar (si falta, a los emails de admin_emails). */
   AVISOS_EMAIL: z.string().optional(),
   /** Remitente verificado en Resend (ej. avisos@analitica360.app). */
+  /** Carpeta de fotos y logos (desarrollo). */
+  ARCHIVOS_DIR: z.string().optional(),
+  /** URL pública de esa carpeta (por defecto http://localhost:PORT/archivos). */
+  ARCHIVOS_URL_PUBLICA: z.string().optional(),
+  /** Dominio de las tiendas: <subdominio>.<este dominio>. */
+  TIENDA_DOMINIO_BASE: z.string().default('analitica360.app'),
   AVISOS_EMAIL_DESDE: z.string().default('Analítica 360 <onboarding@resend.dev>'),
 });
 

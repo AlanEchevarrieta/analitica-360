@@ -15,8 +15,9 @@ export class PrismaTiendaRepository implements TiendaRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async empresaActiva(empresaId: string): Promise<boolean> {
+    // Empresa activa y con la tienda online activada en Configuración.
     const empresa = await this.prisma.empresa.findFirst({
-      where: { id: empresaId, activo: true, deletedAt: null },
+      where: { id: empresaId, activo: true, deletedAt: null, tienda: { activa: true } },
       select: { id: true },
     });
     return empresa !== null;
@@ -27,11 +28,11 @@ export class PrismaTiendaRepository implements TiendaRepository {
     // sin contar transferencias (mueven stock entre ubicaciones, no lo cambian).
     const [productos, variantes] = await Promise.all([
       this.prisma.$queryRaw<
-        { id: string; nombre: string; categoria: string | null; precio: string; stock: string; vendidos: string }[]
+        { id: string; nombre: string; categoria: string | null; categoria_id: string | null; precio: string; stock: string; vendidos: string }[]
       >(Prisma.sql`
         SELECT
           -- La categoría real (categorias) manda; el texto legacy queda de respaldo.
-          p.id, p.nombre, COALESCE(cat.nombre, p.categoria) AS categoria,
+          p.id, p.nombre, COALESCE(cat.nombre, p.categoria) AS categoria, p.categoria_id,
           COALESCE(p.precio_venta, 0) AS precio,
           COALESCE((
             SELECT SUM(m.signo * m.cantidad) FROM movimientos_inventario m
@@ -46,6 +47,7 @@ export class PrismaTiendaRepository implements TiendaRepository {
         FROM productos p
         LEFT JOIN categorias cat ON cat.id = p.categoria_id
         WHERE p.empresa_id = ${empresaId}::uuid AND p.activo = TRUE AND p.deleted_at IS NULL
+          AND p.es_insumo = FALSE AND p.en_tienda = TRUE
         ORDER BY p.nombre
       `),
       this.prisma.$queryRaw<
@@ -62,7 +64,7 @@ export class PrismaTiendaRepository implements TiendaRepository {
         FROM producto_variantes pv
         JOIN productos p ON p.id = pv.producto_id
         WHERE pv.empresa_id = ${empresaId}::uuid AND pv.activo = TRUE AND pv.deleted_at IS NULL
-          AND p.activo = TRUE AND p.deleted_at IS NULL
+          AND p.activo = TRUE AND p.deleted_at IS NULL AND p.es_insumo = FALSE AND p.en_tienda = TRUE
         ORDER BY pv.id
       `),
     ]);
@@ -80,21 +82,49 @@ export class PrismaTiendaRepository implements TiendaRepository {
       variantesPorProducto.set(v.producto_id, lista);
     }
 
+    const ids = productos.map((p) => p.id);
+    const [imagenes, kits] = await Promise.all([
+      ids.length ? this.prisma.productoImagen.findMany({ where: { empresaId, productoId: { in: ids } }, select: { productoId: true, url: true }, orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }] }) : [],
+      this.disponibilidadKits(empresaId, ids),
+    ]);
+    const fotos = new Map<string, string[]>();
+    for (const i of imagenes) fotos.set(i.productoId, [...(fotos.get(i.productoId) ?? []), i.url]);
+
     return productos.map((p) => ({
       id: p.id,
       nombre: p.nombre,
       categoria: p.categoria,
+      categoriaId: p.categoria_id,
       precio: Number(p.precio),
-      stock: Number(p.stock),
+      // Kit que se arma al vender: su stock es cuántos se pueden armar.
+      stock: kits.get(p.id) ?? Number(p.stock),
       vendidos: Number(p.vendidos),
+      imagenes: fotos.get(p.id) ?? [],
       variantes: variantesPorProducto.get(p.id) ?? [],
     }));
+  }
+
+  private async disponibilidadKits(empresaId: string, ids: string[]): Promise<Map<string, number>> {
+    if (!ids.length) return new Map();
+    const recetas = await this.prisma.receta.findMany({ where: { empresaId, deletedAt: null, armarAlVender: true, varianteId: null, productoId: { in: ids } }, include: { items: true } });
+    if (!recetas.length) return new Map();
+    const filas = await this.prisma.movimientoInventario.groupBy({
+      by: ['productoId', 'varianteId', 'signo'],
+      where: { empresaId, deletedAt: null, productoId: { in: [...new Set(recetas.flatMap((r) => r.items.map((i) => i.insumoId)))] }, tipo: { not: 'transferencia' } },
+      _sum: { cantidad: true },
+    });
+    const stock = new Map<string, number>();
+    for (const f of filas) {
+      const k = `${f.productoId}:${f.varianteId ?? ''}`;
+      stock.set(k, (stock.get(k) ?? 0) + (f._sum.cantidad?.toNumber() ?? 0) * f.signo);
+    }
+    return new Map(recetas.map((r) => [r.productoId, Math.max(0, Math.min(...r.items.map((i) => Math.floor((stock.get(`${i.insumoId}:${i.insumoVarianteId ?? ''}`) ?? 0) / i.cantidad.toNumber()))))]));
   }
 
   async productosVendibles(empresaId: string, productoIds: string[]): Promise<ProductoVendible[]> {
     if (productoIds.length === 0) return [];
     const productos = await this.prisma.producto.findMany({
-      where: { id: { in: productoIds }, empresaId, activo: true, deletedAt: null },
+      where: { id: { in: productoIds }, empresaId, activo: true, deletedAt: null, esInsumo: false, enTienda: true },
       select: {
         id: true,
         precioVenta: true,

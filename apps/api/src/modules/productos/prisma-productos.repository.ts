@@ -34,6 +34,7 @@ export class PrismaProductosRepository implements ProductosRepository {
       usaVariantes: producto.usaVariantes,
       esInsumo: producto.esInsumo,
       unidad: producto.unidad,
+      enTienda: producto.enTienda,
       precioVenta: producto.precioVenta?.toNumber() ?? null,
       costo: producto.costo?.toNumber() ?? null,
       activo: producto.activo,
@@ -65,6 +66,7 @@ export class PrismaProductosRepository implements ProductosRepository {
           activo: input.activo,
           esInsumo: input.esInsumo ?? false,
           unidad: input.unidad ?? 'unidad',
+          enTienda: input.enTienda ?? true,
         },
         include: { categoriaRel: { select: { nombre: true } } },
       });
@@ -103,6 +105,7 @@ export class PrismaProductosRepository implements ProductosRepository {
           activo: input.activo,
           ...(input.esInsumo !== undefined ? { esInsumo: input.esInsumo } : {}),
           ...(input.unidad ? { unidad: input.unidad } : {}),
+          ...(input.enTienda !== undefined ? { enTienda: input.enTienda } : {}),
         },
         include: { categoriaRel: { select: { nombre: true } } },
       });

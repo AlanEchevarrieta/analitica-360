@@ -15,6 +15,7 @@ const productoBase: ProductoRecord = {
   usaVariantes: false,
   esInsumo: false,
   unidad: 'unidad',
+  enTienda: true,
   precioVenta: 100,
   costo: 60,
   activo: true,

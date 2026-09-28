@@ -1,16 +1,27 @@
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { AlmacenArchivosService } from './common/archivos/almacen-archivos.service.js';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module.js';
 import type { Env } from './config/env.validation.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService<Env, true>);
 
   // apps/web llama a esta API directo desde el navegador con el JWT de Clerk:
   // solo se aceptan los orígenes configurados (local por defecto; en producción, el dominio).
   const origenes = config.get('CORS_ORIGINS', { infer: true }).split(',').map((o) => o.trim()).filter(Boolean);
   app.enableCors({ origin: origenes, credentials: true });
+
+  // Fotos de productos y logos (públicos). En producción los sirve el almacenamiento externo.
+  app.useStaticAssets(AlmacenArchivosService.carpetaLocal(config.get('ARCHIVOS_DIR', { infer: true })), {
+    prefix: '/archivos/',
+    maxAge: '30d',
+    immutable: true,
+    index: false,
+    dotfiles: 'deny',
+  });
 
   await app.listen(config.get('PORT', { infer: true }));
 }
