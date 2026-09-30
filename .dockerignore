@@ -1,0 +1,27 @@
+# Todo lo que no hace falta para compilar las imágenes (se construyen desde la raíz del repo).
+**/node_modules
+**/.next
+**/.next-build
+**/dist
+**/.turbo
+**/coverage
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.example
+**/uploads
+.git
+.github
+backups
+graphify-out
+docs
+tests
+test-results
+playwright-report
+*.md
+!apps/**/README.md
+# Sistema viejo (Vite) en la raíz: no entra en las imágenes nuevas.
+src
+public
+supabase
+dist-legacy

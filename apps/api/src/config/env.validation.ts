@@ -33,7 +33,10 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function validateEnv(config: Record<string, unknown>): Env {
-  const parsed = envSchema.safeParse(config);
+  // Una variable definida pero vacía (ej. `RESEND_API_KEY=` en docker-compose)
+  // cuenta como no configurada: así las opcionales toman su valor por defecto.
+  const sinVacias = Object.fromEntries(Object.entries(config).filter(([, v]) => v !== ''));
+  const parsed = envSchema.safeParse(sinVacias);
   if (!parsed.success) {
     throw new Error(
       `Variables de entorno inválidas:\n${parsed.error.issues

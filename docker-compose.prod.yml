@@ -1,0 +1,90 @@
+# Analítica 360 en producción (o para probarla igual que en producción en la compu).
+#
+#   cp .env.produccion.example .env.produccion   # completar las claves
+#   docker compose -f docker-compose.prod.yml --env-file .env.produccion up -d --build
+#
+# Orden de arranque: postgres (sano) → migrate (aplica migraciones y termina) → api → web.
+# Para usar imágenes ya publicadas por CI en vez de compilar: definir API_IMAGE / WEB_IMAGE
+# (ej. ghcr.io/alanechevarrieta/analitica-360-api:<sha>) y correr con --no-build.
+
+name: analitica360-prod
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-analitica360}
+      POSTGRES_USER: ${POSTGRES_USER:-analitica360}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Sin puerto publicado: solo la API la ve por la red interna.
+
+  migrate:
+    image: ${MIGRATE_IMAGE:-analitica360-api-migrate}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: migrate
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-analitica360}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-analitica360}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    image: ${API_IMAGE:-analitica360-api}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-analitica360}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-analitica360}?schema=public
+      CORS_ORIGINS: ${CORS_ORIGINS:?Falta CORS_ORIGINS}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?Falta CLERK_SECRET_KEY}
+      INTERNAL_WEBHOOK_SECRET: ${INTERNAL_WEBHOOK_SECRET:?Falta INTERNAL_WEBHOOK_SECRET}
+      TIENDA_PROXY_KEY: ${TIENDA_PROXY_KEY:-}
+      TIENDA_DOMINIO_BASE: ${TIENDA_DOMINIO_BASE:-analitica360.app}
+      ARCHIVOS_URL_PUBLICA: ${ARCHIVOS_URL_PUBLICA:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      AVISOS_EMAIL: ${AVISOS_EMAIL:-}
+    volumes:
+      - archivos:/data/archivos
+    ports:
+      - "${API_PORT:-3001}:3001"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    image: ${WEB_IMAGE:-analitica360-web}
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Falta NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?Falta NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_WHATSAPP_CONTACT: ${NEXT_PUBLIC_WHATSAPP_CONTACT:-}
+        NEXT_PUBLIC_TIENDA_LOCAL_URL: ${NEXT_PUBLIC_TIENDA_LOCAL_URL:-}
+    restart: unless-stopped
+    environment:
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      CLERK_WEBHOOK_SECRET: ${CLERK_WEBHOOK_SECRET:-}
+      INTERNAL_WEBHOOK_SECRET: ${INTERNAL_WEBHOOK_SECRET}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  archivos:

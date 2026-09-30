@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Compilación de producción en otra carpeta (NEXT_DIST_DIR=.next-build).
+    ".next-build/**",
   ]),
 ]);
 
