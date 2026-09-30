@@ -37,3 +37,6 @@ debug-anulacion-*.png
 
 .vercel
 .env*
+
+# Copias de seguridad locales de la base (tienen datos de clientes)
+backups/
