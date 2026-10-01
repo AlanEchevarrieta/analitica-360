@@ -49,18 +49,21 @@ if (-not (DockerListo)) {
   if (-not (Esperar 'Docker' { DockerListo })) { exit 1 }
 }
 
-$build = if ($Compilar) { @('--build') } else { @() }
+# Siempre un array: un `if` que devuelve un solo elemento queda como string y,
+# al expandirlo con @, Docker recibía "-" (no such service: -).
+$build = @()
+if ($Compilar) { $build = @('--build') }
 
 Push-Location $raiz
 try {
   if (-not (Test-Path '.env.docker')) { throw "Falta .env.docker en $raiz (copiar .env.docker.example y completar)" }
-  docker compose --profile apps --env-file .env.docker up -d @build
+  docker compose --profile apps --env-file .env.docker up -d $build
   if ($LASTEXITCODE -ne 0) { throw 'No se pudo levantar Analitica 360' }
 } finally { Pop-Location }
 
 Push-Location $acacia
 try {
-  docker compose --env-file .env.local up -d @build
+  docker compose --env-file .env.local up -d $build
   if ($LASTEXITCODE -ne 0) { throw 'No se pudo levantar la tienda de Acacia' }
 } finally { Pop-Location }
 
