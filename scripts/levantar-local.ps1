@@ -30,11 +30,14 @@ function Abrir($titulo, $carpeta, $comando, $puerto) {
     "`$Host.UI.RawUI.WindowTitle = '$titulo'; Set-Location '$carpeta'; $comando"
 }
 
+# Por cmd: con ErrorActionPreference=Stop, el error de `docker info` (Docker
+# apagado) cortaba el script en vez de prender Docker Desktop.
+function DockerListo { cmd /c "docker info >nul 2>&1"; return ($LASTEXITCODE -eq 0) }
+
 # 1. Docker + Postgres
-docker info *> $null
-if ($LASTEXITCODE -ne 0) {
+if (-not (DockerListo)) {
   Start-Process 'C:\Program Files\Docker\Docker\Docker Desktop.exe'
-  if (-not (Esperar 'Docker' { docker info *> $null; $LASTEXITCODE -eq 0 } 240)) { exit 1 }
+  if (-not (Esperar 'Docker' { DockerListo } 240)) { exit 1 }
 }
 Push-Location $raiz
 docker compose up -d

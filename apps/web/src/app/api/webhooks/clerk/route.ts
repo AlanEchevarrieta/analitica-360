@@ -45,7 +45,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "firma inválida" }, { status: 400 });
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+  // Desde el servidor: en Docker la API está en la red interna (API_URL_INTERNA=http://api:3001),
+  // no en el localhost del contenedor.
+  const apiUrl = process.env.API_URL_INTERNA ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
   const internalSecret = process.env.INTERNAL_WEBHOOK_SECRET;
   if (!internalSecret) {
     console.error("[webhooks/clerk] INTERNAL_WEBHOOK_SECRET no configurado en apps/web/.env.local");

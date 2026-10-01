@@ -39,6 +39,7 @@ debug-anulacion-*.png
 .env*
 # Plantillas sin claves: sí van al repo.
 !.env.produccion.example
+!.env.docker.example
 
 # Copias de seguridad locales de la base (tienen datos de clientes)
 backups/
