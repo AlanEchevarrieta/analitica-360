@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
 import { CheckCircle2, Circle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useApiFetch } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
 
@@ -51,13 +51,12 @@ export function PrimerosPasos({ bienvenida }: { bienvenida: boolean }) {
 
   return (
     <Card className="ring-primary/40">
-      <CardHeader className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <CardTitle>{bienvenida ? "¡Listo! Tu prueba gratis de 14 días ya empezó" : "Primeros pasos"}</CardTitle>
-          <CardDescription>
-            {data.hechos} de {data.total} hechos · así en unos minutos ya ves tus números
-          </CardDescription>
-        </div>
+      <CardHeader>
+        <CardTitle>{bienvenida ? "¡Listo! Tu prueba gratis de 14 días ya empezó" : "Primeros pasos"}</CardTitle>
+        <CardDescription>
+          {data.hechos} de {data.total} hechos · así en unos minutos ya ves tus números
+        </CardDescription>
+        <CardAction>
         <Button
           size="icon-sm"
           variant="ghost"
@@ -73,6 +72,7 @@ export function PrimerosPasos({ bienvenida }: { bienvenida: boolean }) {
         >
           <X />
         </Button>
+        </CardAction>
       </CardHeader>
       <CardContent>
         <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={data.total} aria-valuenow={data.hechos}>

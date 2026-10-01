@@ -68,11 +68,11 @@ export function PedidosListado() {
               <TableHeader>
                 <TableRow>
                   <TableHead>N°</TableHead>
-                  <TableHead>Fecha</TableHead>
+                  <TableHead className="hidden md:table-cell">Fecha</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Origen</TableHead>
-                  <TableHead>Asignado a</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="hidden md:table-cell">Origen</TableHead>
+                  <TableHead className="hidden md:table-cell">Asignado a</TableHead>
+                  <TableHead className="hidden md:table-cell text-right">Total</TableHead>
                   <TableHead>Estado</TableHead>
                 </TableRow>
               </TableHeader>
@@ -84,11 +84,11 @@ export function PedidosListado() {
                         {p.numeroPedido}
                       </Link>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap tabular-nums">{formatoFechaHora(p.createdAt)}</TableCell>
+                    <TableCell className="hidden md:table-cell whitespace-nowrap tabular-nums">{formatoFechaHora(p.createdAt)}</TableCell>
                     <TableCell>{p.clienteNombre ?? <span className="text-muted-foreground">Sin nombre</span>}</TableCell>
-                    <TableCell className="text-muted-foreground">{ORIGENES[p.origen] ?? p.origen}</TableCell>
-                    <TableCell className="text-muted-foreground">{nombreDe(p.asignadoAId) ?? "—"}</TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">{formatoPesos(p.total)}</TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{ORIGENES[p.origen] ?? p.origen}</TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{nombreDe(p.asignadoAId) ?? "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell text-right font-medium tabular-nums">{formatoPesos(p.total)}</TableCell>
                     <TableCell>
                       <EstadoPedidoBadge estado={p.estado} />
                     </TableCell>

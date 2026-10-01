@@ -47,7 +47,7 @@ export function StockListado() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Card size="sm">
           <CardHeader>
             <CardDescription>Productos activos</CardDescription>
@@ -104,7 +104,7 @@ export function StockListado() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Producto</TableHead>
-                  <TableHead>Categoría</TableHead>
+                  <TableHead className="hidden md:table-cell">Categoría</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
                   <TableHead>Estado</TableHead>
                 </TableRow>
@@ -112,12 +112,12 @@ export function StockListado() {
               <TableBody>
                 {filas.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium whitespace-normal">
                       <Link href={`/inventario/${p.id}`} prefetch={false} className="hover:underline">
                         {p.nombre}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{p.categoriaNombre ?? "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{p.categoriaNombre ?? "—"}</TableCell>
                     <TableCell className="text-right font-medium tabular-nums">{formatoNumero(p.stock)}</TableCell>
                     <TableCell>
                       {p.stock <= 0 ? (

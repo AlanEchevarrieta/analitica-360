@@ -30,9 +30,9 @@ export function ProveedoresListado() {
             <TableHeader>
               <TableRow>
                 <TableHead>Proveedor</TableHead>
-                <TableHead>Qué provee</TableHead>
-                <TableHead>Vendedor</TableHead>
-                <TableHead>Condiciones de pago</TableHead>
+                <TableHead className="hidden md:table-cell">Qué provee</TableHead>
+                <TableHead className="hidden md:table-cell">Vendedor</TableHead>
+                <TableHead className="hidden md:table-cell">Condiciones de pago</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -47,9 +47,9 @@ export function ProveedoresListado() {
                       </Link>
                       {!p.activo && <span className="ml-2 text-xs text-muted-foreground">(inactivo)</span>}
                     </TableCell>
-                    <TableCell className="max-w-64 truncate text-muted-foreground">{p.productosQueProvee ?? "—"}</TableCell>
-                    <TableCell>{p.nombreVendedor ?? "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.condicionesPago ?? "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell max-w-64 truncate text-muted-foreground">{p.productosQueProvee ?? "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell">{p.nombreVendedor ?? "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">{p.condicionesPago ?? "—"}</TableCell>
                     <TableCell className="text-right">
                       {wa && (
                         <a href={wa} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "ghost", size: "sm" })} aria-label={`WhatsApp a ${p.nombre}`}>

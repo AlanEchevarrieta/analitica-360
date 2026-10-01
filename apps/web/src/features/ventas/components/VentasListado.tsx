@@ -43,11 +43,11 @@ export function VentasListado() {
     <Card>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-1 basis-[calc(50%-0.75rem)] flex-col gap-1.5 sm:flex-none sm:basis-auto">
             <Label htmlFor="ventas-desde">Desde</Label>
             <Input id="ventas-desde" type="date" value={filtros.desde} onChange={(e) => cambiar({ desde: e.target.value })} />
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-1 basis-[calc(50%-0.75rem)] flex-col gap-1.5 sm:flex-none sm:basis-auto">
             <Label htmlFor="ventas-hasta">Hasta</Label>
             <Input id="ventas-hasta" type="date" value={filtros.hasta} onChange={(e) => cambiar({ hasta: e.target.value })} />
           </div>
@@ -80,12 +80,12 @@ export function VentasListado() {
               <TableHeader>
                 <TableRow>
                   <TableHead>N°</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Productos</TableHead>
-                  <TableHead>Pago</TableHead>
+                  <TableHead className="hidden md:table-cell">Fecha</TableHead>
+                  <TableHead className="hidden md:table-cell">Cliente</TableHead>
+                  <TableHead className="hidden md:table-cell">Productos</TableHead>
+                  <TableHead className="hidden md:table-cell">Pago</TableHead>
                   <TableHead className="text-right">Total</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <TableHead className="hidden md:table-cell">Estado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -95,15 +95,26 @@ export function VentasListado() {
                       <Link prefetch={false} href={`/ventas/${v.id}`} className="font-medium hover:underline">
                         {v.numeroVenta ?? "Ver"}
                       </Link>
+                      {/* En el celular las columnas secundarias van debajo del número. */}
+                      <div className="mt-0.5 max-w-[55vw] truncate text-xs text-muted-foreground md:hidden">
+                        {formatoFechaHora(v.fecha)}
+                        {v.clienteNombre ? ` · ${v.clienteNombre}` : ""}
+                      </div>
+                      <div className="max-w-[55vw] truncate text-xs text-muted-foreground md:hidden">{v.productos}</div>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap tabular-nums">{formatoFechaHora(v.fecha)}</TableCell>
-                    <TableCell>{v.clienteNombre ?? <span className="text-muted-foreground">Sin cliente</span>}</TableCell>
-                    <TableCell className="max-w-72 truncate" title={v.productos}>
+                    <TableCell className="hidden whitespace-nowrap tabular-nums md:table-cell">{formatoFechaHora(v.fecha)}</TableCell>
+                    <TableCell className="hidden md:table-cell">{v.clienteNombre ?? <span className="text-muted-foreground/60">—</span>}</TableCell>
+                    <TableCell className="hidden max-w-72 truncate md:table-cell" title={v.productos}>
                       {v.productos}
                     </TableCell>
-                    <TableCell>{ETIQUETA_FORMA[v.formaPago] ?? v.formaPago}</TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">{formatoPesos(v.total)}</TableCell>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell className="hidden md:table-cell">{ETIQUETA_FORMA[v.formaPago] ?? v.formaPago}</TableCell>
+                    <TableCell className="text-right align-top font-medium tabular-nums md:align-middle">
+                      {formatoPesos(v.total)}
+                      <div className="mt-0.5 text-xs font-normal md:hidden">
+                        <EstadoVenta venta={v} />
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden whitespace-nowrap md:table-cell">
                       <EstadoVenta venta={v} />
                     </TableCell>
                   </TableRow>

@@ -25,7 +25,7 @@ const ORDENES: { valor: OrdenProductos; etiqueta: string }[] = [
 ];
 
 const TIPOS = [
-  { valor: "todos", etiqueta: "Todos" },
+  { valor: "todos", etiqueta: "Todo tipo" },
   { valor: "venta", etiqueta: "Para vender" },
   { valor: "insumos", etiqueta: "Insumos" },
 ] as const;
@@ -71,14 +71,14 @@ export function ProductosListado() {
               </Button>
             ))}
           </div>
-          <div className="flex gap-1" role="group" aria-label="Tipo">
+          <div className="flex gap-1 sm:border-l sm:pl-3" role="group" aria-label="Tipo">
             {TIPOS.map((t) => (
               <Button key={t.valor} size="sm" variant={filtros.tipo === t.valor ? "secondary" : "ghost"} aria-pressed={filtros.tipo === t.valor} onClick={() => cambiar({ tipo: t.valor })}>
                 {t.etiqueta}
               </Button>
             ))}
           </div>
-          <div className="flex gap-1" role="group" aria-label="Ordenar">
+          <div className="flex gap-1 sm:border-l sm:pl-3" role="group" aria-label="Ordenar">
             {ORDENES.map((o) => (
               <Button
                 key={o.valor}
@@ -108,11 +108,11 @@ export function ProductosListado() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Producto</TableHead>
-                  <TableHead>Categoría</TableHead>
+                  <TableHead className="hidden md:table-cell">Categoría</TableHead>
                   <TableHead className="text-right">Precio</TableHead>
-                  <TableHead className="text-right">Costo</TableHead>
-                  <TableHead className="text-right">Margen</TableHead>
-                  <TableHead className="text-right">Vendidos (90 días)</TableHead>
+                  <TableHead className="hidden text-right md:table-cell">Costo</TableHead>
+                  <TableHead className="hidden text-right md:table-cell">Margen</TableHead>
+                  <TableHead className="hidden text-right md:table-cell">Vendidos (90 días)</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
                 </TableRow>
               </TableHeader>
@@ -121,7 +121,7 @@ export function ProductosListado() {
                   const m = margen(p.precioVenta, p.costo);
                   return (
                     <TableRow key={p.id} className={p.activo ? undefined : "opacity-60"}>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium whitespace-normal">
                         <Link prefetch={false} href={`/productos/${p.id}`} className="hover:underline">
                           {p.nombre}
                         </Link>
@@ -129,16 +129,18 @@ export function ProductosListado() {
                         {p.esInsumo && <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">Insumo</span>}
                         {p.esKit && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-[11px] font-normal text-primary">Kit</span>}
                         <span className="block text-xs font-normal text-muted-foreground">{p.usaVariantes ? "SKU por variante" : (p.sku ?? "")}</span>
+                        {/* En el celular la categoría va debajo del nombre. */}
+                        {p.categoriaNombre && <span className="block text-xs font-normal text-muted-foreground md:hidden">{p.categoriaNombre}</span>}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{p.categoriaNombre ?? "—"}</TableCell>
+                      <TableCell className="hidden text-muted-foreground md:table-cell">{p.categoriaNombre ?? "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {p.precioVenta == null ? "—" : formatoPesos(p.precioVenta)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                      <TableCell className="hidden text-right tabular-nums text-muted-foreground md:table-cell">
                         {p.costo == null ? "—" : formatoPesos(p.costo)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">{m == null ? "—" : `${m}%`}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatoNumero(p.vendidos)}</TableCell>
+                      <TableCell className="hidden text-right tabular-nums md:table-cell">{m == null ? "—" : `${m}%`}</TableCell>
+                      <TableCell className="hidden text-right tabular-nums md:table-cell">{formatoNumero(p.vendidos)}</TableCell>
                       <TableCell
                         className={`text-right font-medium tabular-nums ${p.stock <= 0 ? "text-destructive" : ""}`}
                       >

@@ -30,11 +30,11 @@ export function DevolucionesListado() {
             <TableHeader>
               <TableRow>
                 <TableHead>N°</TableHead>
-                <TableHead>Fecha</TableHead>
+                <TableHead className="hidden md:table-cell">Fecha</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead>Venta</TableHead>
-                <TableHead>Productos</TableHead>
-                <TableHead>Motivo</TableHead>
+                <TableHead className="hidden md:table-cell">Venta</TableHead>
+                <TableHead className="hidden md:table-cell">Productos</TableHead>
+                <TableHead className="hidden md:table-cell">Motivo</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead />
               </TableRow>
@@ -43,9 +43,9 @@ export function DevolucionesListado() {
               {data.map((d) => (
                 <TableRow key={d.id} className={d.estado === "cancelado" ? "opacity-50" : undefined}>
                   <TableCell className="tabular-nums">{d.numero}</TableCell>
-                  <TableCell className="whitespace-nowrap tabular-nums">{formatoFechaHora(d.fecha)}</TableCell>
+                  <TableCell className="hidden md:table-cell whitespace-nowrap tabular-nums">{formatoFechaHora(d.fecha)}</TableCell>
                   <TableCell>{d.tipo === "cambio" ? "Cambio" : "Devolución"}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {d.ventaId ? (
                       <Link prefetch={false} href={`/ventas/${d.ventaId}`} className="hover:underline">
                         {d.ventaLabel ?? "Ver venta"}
@@ -54,10 +54,10 @@ export function DevolucionesListado() {
                       "—"
                     )}
                   </TableCell>
-                  <TableCell className="max-w-72 truncate" title={d.productos}>
+                  <TableCell className="hidden md:table-cell max-w-72 truncate" title={d.productos}>
                     {d.productos}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{d.motivo ?? "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground">{d.motivo ?? "—"}</TableCell>
                   <TableCell>{ESTADO[d.estado] ?? d.estado}</TableCell>
                   <TableCell className="whitespace-nowrap text-right">
                     {d.estado === "pendiente" && (

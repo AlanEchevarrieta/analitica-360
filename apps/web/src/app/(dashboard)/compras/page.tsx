@@ -6,7 +6,7 @@ import { ComprasListado } from "@/features/compras/components/ComprasListado";
 export default function Page() {
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Compras</h1>
         <Link href="/compras/nueva" className={buttonVariants()}>
           <Plus aria-hidden /> Nueva compra

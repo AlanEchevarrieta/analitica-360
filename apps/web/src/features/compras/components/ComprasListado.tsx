@@ -47,10 +47,10 @@ export function ComprasListado() {
                 <TableRow>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Proveedor</TableHead>
-                  <TableHead className="text-right">Mercadería</TableHead>
-                  <TableHead className="text-right">Flete / impuestos / otros</TableHead>
+                  <TableHead className="hidden md:table-cell text-right">Mercadería</TableHead>
+                  <TableHead className="hidden md:table-cell text-right">Flete / impuestos / otros</TableHead>
                   <TableHead className="text-right">Total real</TableHead>
-                  <TableHead>Notas</TableHead>
+                  <TableHead className="hidden md:table-cell">Notas</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -58,15 +58,15 @@ export function ComprasListado() {
                   <TableRow key={c.id}>
                     <TableCell className="tabular-nums">{fechaCorta(c.fecha)}</TableCell>
                     <TableCell>{c.proveedorNombre ?? <span className="text-muted-foreground">Sin proveedor</span>}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatoPesos(c.total)}</TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                    <TableCell className="hidden md:table-cell text-right tabular-nums">{formatoPesos(c.total)}</TableCell>
+                    <TableCell className="hidden md:table-cell text-right tabular-nums text-muted-foreground">
                       {c.totalCostosAdicionales > 0 ? formatoPesos(c.totalCostosAdicionales) : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
                       {c.aCredito && <span className="mr-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-xs font-normal text-amber-600">A crédito</span>}
                       {formatoPesos(c.totalReal)}
                     </TableCell>
-                    <TableCell className="max-w-64 truncate text-muted-foreground" title={c.notas ?? undefined}>
+                    <TableCell className="hidden md:table-cell max-w-64 truncate text-muted-foreground" title={c.notas ?? undefined}>
                       {c.notas ?? ""}
                     </TableCell>
                   </TableRow>

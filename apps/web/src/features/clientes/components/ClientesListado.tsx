@@ -39,11 +39,11 @@ export function ClientesListado() {
             <TableHeader>
               <TableRow>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Teléfono</TableHead>
-                <TableHead className="text-right">Compras</TableHead>
+                <TableHead className="hidden md:table-cell">Teléfono</TableHead>
+                <TableHead className="hidden md:table-cell text-right">Compras</TableHead>
                 <TableHead className="text-right">Total gastado</TableHead>
-                <TableHead>Última compra</TableHead>
-                <TableHead>Etiquetas</TableHead>
+                <TableHead className="hidden md:table-cell">Última compra</TableHead>
+                <TableHead className="hidden md:table-cell">Etiquetas</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -54,11 +54,11 @@ export function ClientesListado() {
                       {c.nombre}
                     </Link>
                   </TableCell>
-                  <TableCell className="tabular-nums text-muted-foreground">{c.telefono ?? "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatoNumero(c.cantidadCompras)}</TableCell>
+                  <TableCell className="hidden md:table-cell tabular-nums text-muted-foreground">{c.telefono ?? "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell text-right tabular-nums">{formatoNumero(c.cantidadCompras)}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatoPesos(c.totalGastado)}</TableCell>
-                  <TableCell className="tabular-nums">{fecha(c.ultimaCompra)}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell className="hidden md:table-cell tabular-nums">{fecha(c.ultimaCompra)}</TableCell>
+                  <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
                     {c.listaPrecioId && listas.has(c.listaPrecioId) && <span className="mr-1.5 rounded bg-primary/15 px-1.5 py-0.5 font-medium text-primary">{listas.get(c.listaPrecioId)}</span>}
                     {c.etiquetas.join(", ")}
                   </TableCell>

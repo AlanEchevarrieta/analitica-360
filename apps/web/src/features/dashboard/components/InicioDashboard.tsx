@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { AlertTriangle, Cake } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
@@ -11,6 +13,9 @@ import { useDashboard } from "../hooks/use-dashboard";
 import { AvisoMonotributo } from "@/features/analytics/components/MonotributoCard";
 
 const GRAFICO_7_DIAS = { total: { label: "Total", color: "var(--chart-1)" } } satisfies ChartConfig;
+
+/** Los más urgentes (la API los ordena por stock); el resto, en Inventario. */
+const MAX_STOCK_BAJO = 10;
 
 function Kpi({ titulo, valor, detalle }: { titulo: string; valor: string; detalle?: string }) {
   return (
@@ -29,12 +34,12 @@ export function InicioDashboard() {
 
   if (isPending) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
           <Skeleton key={i} className="h-24" />
         ))}
-        <Skeleton className="h-72 sm:col-span-2 lg:col-span-3" />
-        <Skeleton className="h-72" />
+        <Skeleton className="col-span-2 h-72 lg:col-span-3" />
+        <Skeleton className="col-span-2 h-72 lg:col-span-1" />
       </div>
     );
   }
@@ -43,7 +48,8 @@ export function InicioDashboard() {
   return (
     <div className="flex flex-col gap-4">
       <AvisoMonotributo />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* De a dos también en el celular: las cuatro cifras entran en una pantalla. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Kpi
           titulo="Ventas de hoy"
           valor={formatoPesos(data.hoy.total)}
@@ -117,8 +123,9 @@ export function InicioDashboard() {
             {data.alertasStock.length === 0 ? (
               <SinDatos mensaje="Ningún producto con stock bajo." />
             ) : (
+              <>
               <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
-                {data.alertasStock.map((p) => (
+                {data.alertasStock.slice(0, MAX_STOCK_BAJO).map((p) => (
                   <li key={p.nombre} className="flex items-center justify-between gap-2">
                     <span className="truncate">{p.nombre}</span>
                     <span
@@ -129,6 +136,12 @@ export function InicioDashboard() {
                   </li>
                 ))}
               </ul>
+              {data.alertasStock.length > MAX_STOCK_BAJO && (
+                <Link href="/inventario" className="mt-3 inline-block text-sm font-medium text-primary hover:underline">
+                  Ver {data.alertasStock.length - MAX_STOCK_BAJO} más en Inventario →
+                </Link>
+              )}
+              </>
             )}
           </CardContent>
         </Card>

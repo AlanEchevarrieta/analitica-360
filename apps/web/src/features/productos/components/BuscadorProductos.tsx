@@ -162,7 +162,7 @@ export function BuscadorProductos({
           <Search className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-muted-foreground" aria-hidden />
           <Input
             className="pl-8"
-            placeholder={catalogo.isPending ? "Cargando productos…" : "Buscar producto o escanear código de barras"}
+            placeholder={catalogo.isPending ? "Cargando productos…" : "Buscar producto o código"}
             aria-label="Buscar producto"
             value={busqueda}
             disabled={catalogo.isPending}
