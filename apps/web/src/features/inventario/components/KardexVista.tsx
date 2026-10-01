@@ -16,6 +16,7 @@ import { formatoFechaHora, formatoNumero, formatoPesos } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { useUbicaciones } from "@/features/ventas/hooks/use-nueva-venta";
 import { etiquetaMovimiento, TIPOS_AJUSTE, useKardex, useRegistrarAjuste, type Kardex, type TipoAjuste } from "../hooks/use-kardex";
+import { usePuedeExportar } from "@/hooks/use-suscripcion";
 
 const POR_PAGINA = 100;
 const selectClase = "h-8 rounded-lg border bg-transparent px-2 text-sm";
@@ -26,6 +27,7 @@ export function KardexVista({ productoId }: { productoId: string }) {
   const [varianteId, setVarianteId] = useState<string | null>(null);
   const [ajustando, setAjustando] = useState(false);
   const [mostrar, setMostrar] = useState(POR_PAGINA);
+  const puedeExportar = usePuedeExportar();
   const { data: k, isPending, isError, error, refetch, isFetching } = useKardex(productoId, periodo.desde, periodo.hasta, varianteId);
 
   if (isPending) return <CargandoFilas filas={10} />;
@@ -69,9 +71,11 @@ export function KardexVista({ productoId }: { productoId: string }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={exportar} disabled={k.filas.length === 0}>
-            <Download aria-hidden /> Exportar
-          </Button>
+          {puedeExportar ? (
+            <Button variant="outline" onClick={exportar} disabled={k.filas.length === 0}>
+              <Download aria-hidden /> Exportar
+            </Button>
+          ) : null}
           <Button onClick={() => setAjustando((x) => !x)} aria-expanded={ajustando}>
             <PackageMinus aria-hidden /> Registrar merma o ajuste
           </Button>

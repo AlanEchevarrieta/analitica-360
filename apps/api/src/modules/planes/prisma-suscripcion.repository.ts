@@ -23,6 +23,21 @@ function masDias(dias: number): Date {
 export class PrismaSuscripcionRepository implements SuscripcionRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async datosAcceso(empresaId: string): Promise<{ esDemo: boolean; suscripcion: SuscripcionActiva | null }> {
+    const [empresa, fila] = await Promise.all([
+      this.prisma.empresa.findUnique({ where: { id: empresaId }, select: { esDemo: true } }),
+      this.prisma.suscripcion.findFirst({
+        where: { empresaId },
+        orderBy: [{ fechaVencimiento: { sort: 'desc', nulls: 'last' } }],
+        select: { id: true, estado: true, fechaVencimiento: true },
+      }),
+    ]);
+    return {
+      esDemo: empresa?.esDemo ?? false,
+      suscripcion: fila ? { id: fila.id, estado: fila.estado, fechaVencimiento: fila.fechaVencimiento?.toISOString().slice(0, 10) ?? null } : null,
+    };
+  }
+
   /** Puerto de mi_suscripcion_activa(): self-healing, crea el trial starter si la empresa no tiene ninguna suscripción. */
   async activa(empresaId: string): Promise<SuscripcionActiva | null> {
     return this.prisma.$transaction(async (tx) => {

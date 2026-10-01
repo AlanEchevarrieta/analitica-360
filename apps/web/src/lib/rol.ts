@@ -39,10 +39,14 @@ export function rolDesdeClerk(orgRole: string | null | undefined): Rol {
 /** Módulos fijos de solo lectura del rol contador (invitar_contador() en supabase/070_rol_contador.sql). */
 export const MODULOS_CONTADOR: ModuloClave[] = ["inicio", "productos", "ventas", "compras", "analytics", "contabilidad"];
 
-/** Puerto de tieneModulo() (sin AccesoColaborador real todavía, ver nota arriba). */
+/**
+ * Puerto de tieneModulo() sin el AccesoColaborador (se usa mientras carga
+ * GET /usuarios/yo). Igual que la API: el operador sin sus permisos cargados
+ * no tiene ningún módulo; si no, se piden datos que la API rechaza con 403
+ * (ej. /monotributo en Inicio para quien no tiene Contabilidad).
+ */
 export function tieneModulo(rol: Rol, modulo: ModuloClave): boolean {
   if (rol === "dueno") return true;
   if (rol === "contador") return MODULOS_CONTADOR.includes(modulo);
-  if (modulo === "configuracion") return false;
-  return true;
+  return false;
 }

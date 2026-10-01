@@ -41,6 +41,8 @@ export const SUSCRIPCION_REPOSITORY = Symbol('SUSCRIPCION_REPOSITORY');
  */
 export interface SuscripcionRepository {
   activa(empresaId: string): Promise<SuscripcionActiva | null>;
+  /** Lectura liviana para el control de acceso de cada request (sin el self-healing de activa()). */
+  datosAcceso(empresaId: string): Promise<{ esDemo: boolean; suscripcion: SuscripcionActiva | null }>;
   iniciarPrueba(empresaId: string, usuarioId: string, userAgent: string | null): Promise<void>;
 
   listarPlanes(): Promise<PlanAdmin[]>;

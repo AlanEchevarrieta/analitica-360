@@ -13,6 +13,7 @@ import {
   type CrearTicketDto,
   type ResponderTicketDto,
 } from './ticket.dto.js';
+import { PermitidoSinSuscripcion } from '../../common/decorators/suscripcion.decorator.js';
 
 /**
  * Sin @RequireModulo en las rutas tenant: no hay claim 'soporte' en la
@@ -26,6 +27,8 @@ import {
  * van antes de los `:id` genéricos para que Express no los confunda con un
  * id de ticket.
  */
+// Soporte: para pedir ayuda aunque la cuenta esté vencida.
+@PermitidoSinSuscripcion()
 @Controller('tickets')
 export class TicketController {
   constructor(private readonly ticketService: TicketService) {}

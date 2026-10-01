@@ -4,7 +4,10 @@ import type { EmpresaContext, UsuarioContext } from '../../common/auth/request-c
 import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { SuscripcionService } from './suscripcion.service.js';
+import { PermitidoSinSuscripcion } from '../../common/decorators/suscripcion.decorator.js';
 
+// Estado de la cuenta y alta de la prueba: tienen que funcionar estando vencida.
+@PermitidoSinSuscripcion()
 @Controller('suscripcion')
 export class SuscripcionController {
   constructor(private readonly suscripcionService: SuscripcionService) {}

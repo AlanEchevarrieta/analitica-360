@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { AppSidebar } from "@/components/shared/app-sidebar";
+import { AvisoCuenta } from "@/components/shared/AvisoCuenta";
 import { EmpresaSwitcher } from "@/components/shared/EmpresaSwitcher";
 import { GuardaDeRuta } from "@/components/shared/requiere-modulo";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -23,6 +24,7 @@ export default async function DashboardLayout({ children }: LayoutProps<"/">) {
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">
+          <AvisoCuenta />
           <GuardaDeRuta>{children}</GuardaDeRuta>
         </div>
       </SidebarInset>

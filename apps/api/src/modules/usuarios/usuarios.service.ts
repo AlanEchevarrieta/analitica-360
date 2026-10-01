@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { RolCrudo } from '../../common/auth/rol.types.js';
+import { ClerkCuentasService } from '../registro/clerk-cuentas.service.js';
 import { USUARIOS_REPOSITORY, type UsuariosRepository } from './usuarios.repository.js';
 import type {
   ClerkOrganizationCreatedEvent,
@@ -28,7 +29,10 @@ function mapearRolClerk(rolClerk: string): RolCrudo {
 export class UsuariosService {
   private readonly logger = new Logger(UsuariosService.name);
 
-  constructor(@Inject(USUARIOS_REPOSITORY) private readonly usuariosRepository: UsuariosRepository) {}
+  constructor(
+    @Inject(USUARIOS_REPOSITORY) private readonly usuariosRepository: UsuariosRepository,
+    private readonly clerkCuentas: ClerkCuentasService,
+  ) {}
 
   async procesarEventoClerk(event: ClerkWebhookEvent): Promise<void> {
     switch (event.type) {
@@ -53,6 +57,12 @@ export class UsuariosService {
           email: data.public_user_data.identifier,
           rolCrudo: mapearRolClerk(data.role),
         });
+        // Los negocios nuevos se crean solo con el registro (prueba gratis).
+        if (event.type === 'organizationMembership.created') {
+          await this.clerkCuentas
+            .bloquearCrearOrganizaciones(data.public_user_data.user_id)
+            .catch((e) => this.logger.warn(`No se pudo quitar "crear organizaciones" a ${data.public_user_data.user_id}: ${String(e)}`));
+        }
         return;
       }
       case 'organizationMembership.deleted': {

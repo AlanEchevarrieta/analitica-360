@@ -30,6 +30,16 @@ export class ClerkCuentasService {
     return org.id;
   }
 
+  /**
+   * Un negocio nuevo se crea solo con el registro (prueba de 14 días). Sin esto,
+   * el usuario podría crear organizaciones desde los componentes de Clerk
+   * (empresas sin prueba ni plan). El registro las crea desde el servidor, así
+   * que no le afecta.
+   */
+  async bloquearCrearOrganizaciones(clerkUserId: string): Promise<void> {
+    await this.clerk.users.updateUser(clerkUserId, { createOrganizationEnabled: false });
+  }
+
   async borrarOrganizacion(clerkOrgId: string): Promise<void> {
     await this.clerk.organizations.deleteOrganization(clerkOrgId);
   }

@@ -7,5 +7,6 @@ import { RegistroService } from './registro.service.js';
 @Module({
   controllers: [RegistroController, AdminAvisosController],
   providers: [RegistroService, ClerkCuentasService],
+  exports: [ClerkCuentasService],
 })
 export class RegistroModule {}

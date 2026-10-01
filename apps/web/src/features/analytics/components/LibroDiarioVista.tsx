@@ -13,6 +13,7 @@ import { useApiFetch } from "@/hooks/use-api";
 import { descargarCsv } from "@/lib/csv";
 import { formatoPesos } from "@/lib/formato";
 import { cn } from "@/lib/utils";
+import { usePuedeExportar } from "@/hooks/use-suscripcion";
 
 interface Linea {
   cuenta: string;
@@ -69,6 +70,7 @@ export function LibroDiarioVista() {
   const [vista, setVista] = useState<"diario" | "mayor">("diario");
   const [origen, setOrigen] = useState("");
   const [mostrar, setMostrar] = useState(POR_PAGINA);
+  const puedeExportar = usePuedeExportar();
   const { data, isPending, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["libro-diario", orgId, periodo.desde, periodo.hasta],
     queryFn: () => api<Libro>(`/libro-diario?desde=${periodo.desde}&hasta=${periodo.hasta}`),
@@ -105,9 +107,11 @@ export function LibroDiarioVista() {
               </Button>
             ))}
           </div>
-          <Button size="sm" variant="outline" onClick={exportar} disabled={!data}>
-            <Download aria-hidden /> Exportar
-          </Button>
+          {puedeExportar ? (
+            <Button size="sm" variant="outline" onClick={exportar} disabled={!data}>
+              <Download aria-hidden /> Exportar
+            </Button>
+          ) : null}
         </div>
       </div>
 

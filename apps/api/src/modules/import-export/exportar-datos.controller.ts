@@ -3,7 +3,9 @@ import type { EmpresaContext } from '../../common/auth/request-context.types.js'
 import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
 import { RequireModulo } from '../../common/decorators/permiso.decorator.js';
 import { ExportarDatosService } from './exportar-datos.service.js';
+import { Exportacion } from '../../common/decorators/suscripcion.decorator.js';
 
+@Exportacion()
 @Controller('import-export/exportar')
 export class ExportarDatosController {
   constructor(private readonly exportarDatosService: ExportarDatosService) {}

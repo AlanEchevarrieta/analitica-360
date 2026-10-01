@@ -26,7 +26,8 @@ interface MiAcceso {
 /**
  * Qué puede ver el usuario en la empresa activa (GET /usuarios/yo: rol +
  * permisos del colaborador). Solo para no mostrar ni pedir lo que la API
- * igual rechaza. Mientras carga, se decide por rol (el dueño ve todo).
+ * igual rechaza. Mientras carga, se decide por rol: el dueño ve todo, el
+ * contador sus módulos fijos y el operador nada (como la API).
  */
 export function useAcceso() {
   const api = useApiFetch();

@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { SuscripcionService } from './suscripcion.service.js';
+import { AccesoCuentaService } from './acceso-cuenta.service.js';
 import { SUSCRIPCION_REPOSITORY, type SuscripcionRepository } from './suscripcion.repository.js';
 
 describe('SuscripcionService', () => {
@@ -10,6 +11,7 @@ describe('SuscripcionService', () => {
   beforeEach(async () => {
     repository = {
       activa: vi.fn(),
+      datosAcceso: vi.fn().mockResolvedValue({ esDemo: false, suscripcion: null }),
       iniciarPrueba: vi.fn(),
       listarPlanes: vi.fn(),
       listarSuscripciones: vi.fn(),
@@ -18,7 +20,7 @@ describe('SuscripcionService', () => {
       cambiarEstadoSuscripcion: vi.fn(),
     };
     const module = await Test.createTestingModule({
-      providers: [SuscripcionService, { provide: SUSCRIPCION_REPOSITORY, useValue: repository }],
+      providers: [SuscripcionService, AccesoCuentaService, { provide: SUSCRIPCION_REPOSITORY, useValue: repository }],
     }).compile();
     service = module.get(SuscripcionService);
   });
@@ -29,6 +31,14 @@ describe('SuscripcionService', () => {
     expect(res.enTrial).toBe(true);
     expect(res.trialVencido).toBe(false);
     expect(res.diasRestantes).toBeGreaterThan(0);
+  });
+
+  it('estado() informa el acceso: prueba vencida → solo lectura y sin exportar', async () => {
+    const vencida = { id: 's1', estado: 'periodo_prueba', fechaVencimiento: '2020-01-01' };
+    repository.activa.mockResolvedValue(vencida);
+    repository.datosAcceso.mockResolvedValue({ esDemo: false, suscripcion: vencida });
+    const res = await service.estado('empresa-1');
+    expect(res.acceso).toEqual({ nivel: 'solo_lectura', motivo: 'prueba_vencida', puedeExportar: false, bloqueoDesde: null });
   });
 
   it('estado() sin suscripción devuelve el estado vacío sin explotar', async () => {

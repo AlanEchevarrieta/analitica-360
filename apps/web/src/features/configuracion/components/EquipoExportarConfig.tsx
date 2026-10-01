@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { OrganizationProfile } from "@clerk/nextjs";
@@ -9,6 +11,7 @@ import { useApiFetch } from "@/hooks/use-api";
 import { hoyAR } from "@/lib/periodos";
 import { descargarCsv } from "@/lib/csv";
 import { PermisosEquipo } from "./PermisosEquipo";
+import { usePuedeExportar } from "@/hooks/use-suscripcion";
 
 /** Usuarios de la empresa: invitaciones, roles y bajas los maneja Clerk (organización = empresa). */
 export function EquipoConfig() {
@@ -47,6 +50,7 @@ const EXPORTES = [
 export function ExportarConfig() {
   const api = useApiFetch();
   const [descargando, setDescargando] = useState<string | null>(null);
+  const puedeExportar = usePuedeExportar();
 
   async function descargar(recurso: string) {
     setDescargando(recurso);
@@ -68,6 +72,14 @@ export function ExportarConfig() {
     } finally {
       setDescargando(null);
     }
+  }
+
+  if (!puedeExportar) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Tu prueba gratis terminó: para descargar tus datos, <Link href="/planes" className="font-medium text-foreground underline">contratá un plan</Link>.
+      </p>
+    );
   }
 
   return (

@@ -60,6 +60,8 @@ export class RegistroService {
       this.logger.error(`No se pudo crear la organización en Clerk: ${String(e)}`);
       throw new BadGatewayException('No pudimos crear tu empresa en este momento. Probá de nuevo en un ratito.');
     }
+    // No frena el alta: si falla, el botón igual está oculto en la web y la cuenta se puede corregir con el script.
+    await this.clerk.bloquearCrearOrganizaciones(clerkUserId).catch((e) => this.logger.warn(`No se pudo quitar "crear organizaciones" a ${clerkUserId}: ${String(e)}`));
 
     const hoy = fechaHoyAR();
     const finPrueba = finDePrueba(hoy);
