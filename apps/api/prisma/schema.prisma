@@ -65,6 +65,7 @@ model Empresa {
   cuponesReferido           Cupon[]                @relation("CuponReferente")
   cambiosOrigen             CambioOrigen[]
   comisiones                Comision[]
+  cuotasProgramadas         CuotaProgramada[]
 
   usuarios                  Usuario[]
   historialPlanes           HistorialPlan[]
@@ -133,6 +134,9 @@ model Plan {
   nombre    String
   precioArs Decimal? @map("precio_ars") @db.Decimal(12, 2)
   activo    Boolean  @default(true)
+  /// Cuotas sin interés para quien no tiene código (un cupón puede definir las suyas).
+  cuotasTrimestral Int @default(3) @map("cuotas_trimestral")
+  cuotasAnual      Int @default(3) @map("cuotas_anual")
   createdAt DateTime @default(now()) @map("created_at")
 
   suscripciones Suscripcion[]
@@ -1019,6 +1023,7 @@ model Pago {
   empresa    Empresa    @relation(fields: [empresaId], references: [id])
   cupon      Cupon?     @relation(fields: [cuponId], references: [id])
   comisiones Comision[]
+  cuotaProgramada CuotaProgramada?
 
   @@index([empresaId, createdAt])
   @@map("pagos")
@@ -1424,4 +1429,39 @@ model CambioOrigen {
 
   @@index([empresaId])
   @@map("cambios_origen")
+}
+
+/// Plan de cuotas de un período (trimestral o anual): cada cuota con su vencimiento.
+/// El cobro (manual hoy, Mercado Pago más adelante) toma las pendientes y las marca pagadas.
+model CuotaProgramada {
+  id           String   @id @default(uuid()) @db.Uuid
+  empresaId    String   @map("empresa_id") @db.Uuid
+  /// Une las cuotas de un mismo período (es el grupo_id de sus pagos).
+  grupoId      String   @map("grupo_id") @db.Uuid
+  numero       Int
+  cuotas       Int
+  plan         String
+  ciclo        String
+  /// entrada | renovacion
+  tipoPeriodo  String   @map("tipo_periodo")
+  cuponId      String?  @map("cupon_id") @db.Uuid
+  monto        Decimal  @db.Decimal(12, 2)
+  precioLista  Decimal  @map("precio_lista") @db.Decimal(12, 2)
+  /// Parte del período que cubre [desde, hasta); vence el día que empieza.
+  periodoDesde DateTime @map("periodo_desde") @db.Date
+  periodoHasta DateTime @map("periodo_hasta") @db.Date
+  vence        DateTime @db.Date
+  /// pendiente | pagada
+  estado       String   @default("pendiente")
+  pagoId       String?  @unique @map("pago_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id])
+  pago    Pago?   @relation(fields: [pagoId], references: [id])
+
+  @@unique([grupoId, numero])
+  @@index([empresaId])
+  @@index([estado, vence])
+  @@map("cuotas_programadas")
 }

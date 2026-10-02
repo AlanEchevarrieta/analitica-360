@@ -34,7 +34,8 @@ export const reglaCicloSchema = z.object({
   periodosEntrada: z.number().int().min(1).max(12).default(1),
   renovacionPct: porcentaje.default(0),
   renovacionPeriodos: z.number().int().min(1).nullable().default(null),
-  cuotas: z.number().int().min(1).max(12).default(1),
+  /** null = las cuotas generales del plan. */
+  cuotas: z.number().int().min(1).max(12).nullable().default(null),
 });
 
 export const reglasSchema = z.object({
@@ -91,6 +92,8 @@ export const devolverPagoSchema = z.object({ motivo: z.string().trim().min(3, 'C
 export const liquidacionQuerySchema = z.object({ camaraId: z.string().uuid(), mes });
 export const aprobarLiquidacionSchema = z.object({ camaraId: z.string().uuid(), mes });
 export const pagarLiquidacionSchema = z.object({ fecha, referencia: z.string().trim().min(1, 'Poné la referencia (ej. número de transferencia)') });
+
+export const cuotasGeneralesSchema = z.object({ trimestral: z.number().int().min(1).max(12).optional(), anual: z.number().int().min(1).max(12).optional() });
 
 export const codigoSchema = z.object({ codigo: z.string().trim().min(1, 'Escribí el código').max(40) });
 export const codigoQuerySchema = z.object({ codigo: z.string().trim().max(40).default('') });

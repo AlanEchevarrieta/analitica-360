@@ -17,6 +17,7 @@ import {
   sumarMeses,
   tipoDelProximoPeriodo,
   type Cotizacion,
+  type CuotasGenerales,
   type ReglasCupon,
   type TramoComision,
 } from './alianzas.util.js';
@@ -24,6 +25,7 @@ import {
 type Tx = Prisma.TransactionClient;
 const fecha = (d: Date | null | undefined) => d?.toISOString().slice(0, 10) ?? null;
 const aDate = (f: string) => new Date(`${f}T00:00:00Z`);
+const diasEntre = (desde: string, hasta: string) => Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86_400_000);
 
 export interface PropuestaPago {
   empresaId: string;
@@ -99,32 +101,30 @@ export class CobrosService {
     const reglas = (empresa.cupon?.reglas ?? {}) as ReglasCupon;
     const cuponInfo = empresa.cupon ? { codigo: empresa.cupon.codigo, camara: empresa.cupon.camara?.nombre ?? null } : null;
 
-    // Cuota siguiente de un período ya empezado.
+    // Cuota siguiente de un período ya empezado: la próxima pendiente del plan de cuotas.
     if (input.grupoId) {
-      const grupo = await db.pago.findMany({ where: { empresaId: input.empresaId, grupoId: input.grupoId, estado: 'confirmado' }, orderBy: { cuota: 'asc' } });
-      if (grupo.length === 0) throw new NotFoundException('No encontramos ese período en cuotas');
-      const primera = grupo[0];
-      const cuotas = primera.cuotas ?? 1;
-      const cuota = Math.max(...grupo.map((p) => p.cuota ?? 1)) + 1;
-      if (cuota > cuotas) throw new BadRequestException('Ese período ya tiene todas sus cuotas pagas');
-      const plan = primera.plan as PlanPagoId;
-      const ciclo = primera.ciclo as CicloFacturacion;
-      const cotizacion = cotizarPeriodo(plan, ciclo, empresa.cupon ? reglas[ciclo] : null, (primera.tipoPeriodo ?? 'entrada') as 'entrada' | 'renovacion');
-      const meses = MESES_CICLO[ciclo] / cuotas;
-      const inicio = fecha(primera.periodoDesde)!;
+      const proxima = await db.cuotaProgramada.findFirst({ where: { empresaId: input.empresaId, grupoId: input.grupoId, estado: 'pendiente' }, orderBy: { numero: 'asc' } });
+      if (!proxima) {
+        const existe = await db.cuotaProgramada.count({ where: { empresaId: input.empresaId, grupoId: input.grupoId } });
+        throw existe ? new BadRequestException('Ese período ya tiene todas sus cuotas pagas') : new NotFoundException('No encontramos ese período en cuotas');
+      }
+      const plan = proxima.plan as PlanPagoId;
+      const ciclo = proxima.ciclo as CicloFacturacion;
+      const generales = await this.cuotasGenerales(db, plan);
+      const cotizacion = cotizarPeriodo(plan, ciclo, empresa.cupon ? reglas[ciclo] : null, proxima.tipoPeriodo as 'entrada' | 'renovacion', 1, generales);
       return {
-        empresaId: input.empresaId, plan, ciclo, cotizacion, cupon: cuponInfo, cuota, cuotas, grupoId: input.grupoId,
-        periodoDesde: sumarMeses(inicio, meses * (cuota - 1)),
-        periodoHasta: sumarMeses(inicio, meses * cuota),
-        precioLista: montosCuotas(cotizacion.lista, cuotas)[cuota - 1],
-        monto: montosCuotas(cotizacion.total, cuotas)[cuota - 1],
+        empresaId: input.empresaId, plan, ciclo, cotizacion, cupon: cuponInfo, cuota: proxima.numero, cuotas: proxima.cuotas, grupoId: input.grupoId,
+        periodoDesde: fecha(proxima.periodoDesde)!,
+        periodoHasta: fecha(proxima.periodoHasta)!,
+        precioLista: Number(proxima.precioLista),
+        monto: Number(proxima.monto),
       };
     }
 
     const { periodos, coberturaHasta } = await this.periodosPagados(db, input.empresaId);
     const regla = empresa.cupon ? reglas[input.ciclo] : null;
     const { tipo, indiceRenovacion } = tipoDelProximoPeriodo(periodos, input.ciclo, regla);
-    const cotizacion = cotizarPeriodo(input.plan, input.ciclo, regla, tipo, indiceRenovacion);
+    const cotizacion = cotizarPeriodo(input.plan, input.ciclo, regla, tipo, indiceRenovacion, await this.cuotasGenerales(db, input.plan));
     const hoy = fechaHoyAR();
     const desde = input.desde ?? (coberturaHasta && coberturaHasta > hoy ? coberturaHasta : hoy);
     const cuotas = input.enCuotas && cotizacion.cuotas > 1 ? cotizacion.cuotas : 1;
@@ -137,6 +137,12 @@ export class CobrosService {
       precioLista: montosCuotas(cotizacion.lista, cuotas)[0],
       monto: montosCuotas(cotizacion.total, cuotas)[0],
     };
+  }
+
+  /** Cuotas sin interés para quien no tiene código, según el plan (configurables en la consola). */
+  async cuotasGenerales(db: Tx | PrismaService, plan: string): Promise<CuotasGenerales> {
+    const fila = await db.plan.findFirst({ where: { nombre: plan, activo: true }, select: { cuotasTrimestral: true, cuotasAnual: true }, orderBy: { createdAt: 'asc' } });
+    return { trimestral: fila?.cuotasTrimestral ?? 3, anual: fila?.cuotasAnual ?? 3 };
   }
 
   /** Mes de liquidación: el del cobro, salvo que ese mes ya esté aprobado o pagado (pasa al siguiente abierto). */
@@ -164,6 +170,23 @@ export class CobrosService {
       const grupoId = p.cuotas > 1 ? (p.grupoId ?? randomUUID()) : null;
       const empresa = await tx.empresa.findUniqueOrThrow({ where: { id: input.empresaId } });
 
+      // Período nuevo en cuotas: se arma el plan completo (cada cuota con su vencimiento).
+      if (grupoId && !p.grupoId) {
+        const listas = montosCuotas(p.cotizacion.lista, p.cuotas);
+        const montos = montosCuotas(p.cotizacion.total, p.cuotas);
+        const meses = MESES_CICLO[p.ciclo] / p.cuotas;
+        await tx.cuotaProgramada.createMany({
+          data: montos.map((monto, i) => {
+            const desde = sumarMeses(p.periodoDesde, meses * i);
+            return {
+              empresaId: input.empresaId, grupoId, numero: i + 1, cuotas: p.cuotas, plan: p.plan, ciclo: p.ciclo,
+              tipoPeriodo: p.cotizacion.tipo, cuponId: empresa.cuponId, monto, precioLista: listas[i],
+              periodoDesde: aDate(desde), periodoHasta: aDate(sumarMeses(p.periodoDesde, meses * (i + 1))), vence: aDate(desde),
+            };
+          }),
+        });
+      }
+
       const pago = await tx.pago.create({
         data: {
           empresaId: input.empresaId,
@@ -188,6 +211,10 @@ export class CobrosService {
           referenciaExterna: input.referenciaExterna ?? null,
         },
       });
+
+      if (grupoId) {
+        await tx.cuotaProgramada.update({ where: { grupoId_numero: { grupoId, numero: p.cuota! } }, data: { estado: 'pagada', pagoId: pago.id } });
+      }
 
       // La suscripción queda activa con el plan pagado hasta el último día cubierto.
       const plan = await tx.plan.findFirst({ where: { nombre: p.plan, activo: true }, select: { id: true } });
@@ -255,6 +282,8 @@ export class CobrosService {
       if (!pago) throw new NotFoundException('Pago no encontrado');
       if (pago.estado !== 'confirmado') throw new BadRequestException('Ese pago ya está devuelto');
       await tx.pago.update({ where: { id: pagoId }, data: { estado: 'devuelto', devueltoEn: new Date(), devolucionMotivo: motivo.trim() || null } });
+      // Si era una cuota, vuelve a quedar pendiente (se puede cobrar de nuevo).
+      await tx.cuotaProgramada.updateMany({ where: { pagoId }, data: { estado: 'pendiente', pagoId: null } });
       const original = await tx.comision.findUnique({ where: { pagoId_tipo: { pagoId, tipo: 'pago' } } });
       if (!original) return { pagoId, ajuste: null };
       const ajuste = ajustePorDevolucion({
@@ -274,19 +303,97 @@ export class CobrosService {
     return r;
   }
 
-  /** Tabla de precios para el emprendedor: por plan y ciclo, el primer pago y la renovación. */
+  /** Tabla de precios para el emprendedor: por plan y ciclo, el primer pago y la renovación (con sus cuotas). */
   async tablaDePrecios(empresaId: string | null, reglas: ReglasCupon | null) {
     const { periodos } = empresaId ? await this.periodosPagados(this.prisma, empresaId) : { periodos: [] };
-    return PLANES_PAGOS.map((plan) => ({
-      plan,
-      nombre: PLANES[plan].nombre,
-      ciclos: (['mensual', 'trimestral', 'anual'] as const).map((ciclo) => {
-        const regla = reglas?.[ciclo] ?? null;
-        const { tipo, indiceRenovacion } = tipoDelProximoPeriodo(periodos, ciclo, regla);
-        const proximo = cotizarPeriodo(plan, ciclo, regla, tipo, indiceRenovacion);
-        const renovacion = cotizarPeriodo(plan, ciclo, regla, 'renovacion', tipo === 'entrada' ? 1 : indiceRenovacion + 1);
-        return { ciclo, meses: MESES_CICLO[ciclo], lista: proximo.lista, primerPago: proximo, renovacion: { total: renovacion.total, descuento: renovacion.descuento } };
+    return Promise.all(
+      PLANES_PAGOS.map(async (plan) => {
+        const generales = await this.cuotasGenerales(this.prisma, plan);
+        return {
+          plan,
+          nombre: PLANES[plan].nombre,
+          ciclos: (['mensual', 'trimestral', 'anual'] as const).map((ciclo) => {
+            const regla = reglas?.[ciclo] ?? null;
+            const { tipo, indiceRenovacion } = tipoDelProximoPeriodo(periodos, ciclo, regla);
+            const proximo = cotizarPeriodo(plan, ciclo, regla, tipo, indiceRenovacion, generales);
+            const renovacion = cotizarPeriodo(plan, ciclo, regla, 'renovacion', tipo === 'entrada' ? 1 : indiceRenovacion + 1, generales);
+            return {
+              ciclo,
+              meses: MESES_CICLO[ciclo],
+              lista: proximo.lista,
+              primerPago: proximo,
+              renovacion: { total: renovacion.total, descuento: renovacion.descuento, cuotas: renovacion.cuotas, montoCuota: renovacion.montoCuota },
+            };
+          }),
+        };
       }),
+    );
+  }
+
+  // ---- Cuotas ------------------------------------------------------------
+
+  private cuotaFila(c: { id: string; grupoId: string; numero: number; cuotas: number; plan: string; ciclo: string; monto: Prisma.Decimal; vence: Date; estado: string; periodoDesde: Date; periodoHasta: Date; pagoId: string | null }, hoy: string) {
+    const vence = fecha(c.vence)!;
+    const vencida = c.estado === 'pendiente' && vence < hoy;
+    return {
+      id: c.id, grupoId: c.grupoId, numero: c.numero, cuotas: c.cuotas, plan: c.plan, ciclo: c.ciclo, monto: Number(c.monto),
+      vence, estado: vencida ? 'vencida' : c.estado, diasAtraso: vencida ? diasEntre(vence, hoy) : 0,
+      periodoDesde: fecha(c.periodoDesde)!, periodoHasta: fecha(c.periodoHasta)!, pagoId: c.pagoId,
+    };
+  }
+
+  /** Planes de cuotas de un cliente (consola): pagadas, pendientes y vencidas. */
+  async cuotasDeEmpresa(empresaId: string) {
+    const hoy = fechaHoyAR();
+    const filas = await this.prisma.cuotaProgramada.findMany({ where: { empresaId }, orderBy: [{ createdAt: 'desc' }, { numero: 'asc' }] });
+    const grupos = new Map<string, ReturnType<CobrosService['cuotaFila']>[]>();
+    for (const f of filas) grupos.set(f.grupoId, [...(grupos.get(f.grupoId) ?? []), this.cuotaFila(f, hoy)]);
+    return [...grupos.entries()].map(([grupoId, cuotas]) => ({
+      grupoId,
+      plan: cuotas[0].plan,
+      ciclo: cuotas[0].ciclo,
+      cuotas,
+      pagadas: cuotas.filter((c) => c.estado === 'pagada').length,
+      total: cuotas.reduce((a, c) => a + c.monto, 0),
     }));
+  }
+
+  /** Cuotas vencidas sin pagar de todos los clientes (consola). */
+  async cuotasVencidas() {
+    const hoy = fechaHoyAR();
+    const filas = await this.prisma.cuotaProgramada.findMany({
+      where: { estado: 'pendiente', vence: { lt: aDate(hoy) } },
+      include: { empresa: { select: { nombre: true } } },
+      orderBy: { vence: 'asc' },
+    });
+    return filas.map((f) => ({ ...this.cuotaFila(f, hoy), empresaId: f.empresaId, empresa: f.empresa.nombre }));
+  }
+
+  /** Para el emprendedor: el período en cuotas que está pagando ("vas por la cuota 2 de 3"). */
+  async cuotasEnCurso(empresaId: string) {
+    const pendiente = await this.prisma.cuotaProgramada.findFirst({ where: { empresaId, estado: 'pendiente' }, orderBy: [{ vence: 'asc' }, { numero: 'asc' }] });
+    if (!pendiente) return null;
+    const grupo = await this.prisma.cuotaProgramada.findMany({ where: { grupoId: pendiente.grupoId }, orderBy: { numero: 'asc' } });
+    return {
+      plan: pendiente.plan,
+      ciclo: pendiente.ciclo,
+      cuotas: pendiente.cuotas,
+      pagadas: grupo.filter((c) => c.estado === 'pagada').length,
+      montoCuota: Number(grupo[0].monto),
+      proxima: { numero: pendiente.numero, monto: Number(pendiente.monto), vence: fecha(pendiente.vence)! },
+    };
+  }
+
+  /** Cuotas generales por plan (consola). */
+  async listarCuotasGenerales() {
+    const planes = await this.prisma.plan.findMany({ where: { nombre: { in: PLANES_PAGOS }, activo: true }, orderBy: { precioArs: 'asc' } });
+    return planes.map((p) => ({ id: p.id, plan: p.nombre, nombre: PLANES[p.nombre as PlanPagoId]?.nombre ?? p.nombre, trimestral: p.cuotasTrimestral, anual: p.cuotasAnual }));
+  }
+
+  async editarCuotasGenerales(id: string, datos: { trimestral?: number; anual?: number }) {
+    const plan = await this.prisma.plan.findUnique({ where: { id } });
+    if (!plan) throw new NotFoundException('Plan no encontrado');
+    await this.prisma.plan.update({ where: { id }, data: { cuotasTrimestral: datos.trimestral, cuotasAnual: datos.anual } });
+    return this.listarCuotasGenerales();
   }
 }

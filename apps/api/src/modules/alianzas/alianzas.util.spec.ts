@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { precioLista } from '../planes/planes.util.js';
 import {
   ajustePorDevolucion,
+  beneficiosDelCupon,
+  cuotasDelPeriodo,
   asignarOrdenes,
   comisionDePago,
   cotizarPeriodo,
@@ -74,7 +76,7 @@ describe('descuentos de UCIM360 (sobre el precio de lista)', () => {
     expect(montosCuotas(entrada.total, 3)).toEqual([29_400, 29_400, 29_400]);
     const renovacion = cotizarPeriodo('basico', 'trimestral', REGLAS_UCIM.trimestral, 'renovacion', 1);
     expect(renovacion.total).toBe(147_000);
-    expect(renovacion.cuotas).toBe(1);
+    expect(renovacion.cuotas).toBe(3); // las cuotas valen también para las renovaciones
   });
 
   it('anual: el primer año sale 75% de la lista (3 meses al 60% y 9 al 80%, sin sumarse) y todas las renovaciones 80%', () => {
@@ -186,5 +188,68 @@ describe('plazo y base de la comisión', () => {
   it('meses de comisión que quedan', () => {
     expect(mesesRestantesDeComision('2027-02-01', fin)).toBe(21);
     expect(mesesRestantesDeComision('2029-01-01', fin)).toBe(0);
+  });
+});
+
+describe('cuotas sin interés (trimestral y anual, para todos)', () => {
+  const GENERALES = { trimestral: 3, anual: 3 };
+
+  it('anual sin código en 3 cuotas: suman la lista y la última absorbe el redondeo', () => {
+    const c = cotizarPeriodo('pro', 'anual', null, 'entrada', 1, GENERALES);
+    expect(c).toMatchObject({ total: 1_068_000, cuotas: 3, montoCuota: 356_000 });
+    expect(montosCuotas(c.total, c.cuotas)).toEqual([356_000, 356_000, 356_000]);
+    expect(montosCuotas(100_000, 3)).toEqual([33_333, 33_333, 33_334]);
+  });
+
+  it('anual con UCIM360: el primer año en 3 cuotas que suman 75% de la lista', () => {
+    const c = cotizarPeriodo('basico', 'anual', REGLAS_UCIM.anual, 'entrada', 1, GENERALES);
+    const cuotas = montosCuotas(c.total, c.cuotas);
+    expect(cuotas).toHaveLength(3);
+    expect(cuotas.reduce((a, b) => a + b, 0)).toBe(441_000);
+    expect(cuotas.reduce((a, b) => a + b, 0) / precioLista('basico', 'anual')).toBeCloseTo(0.75, 10);
+  });
+
+  it('renovación anual con UCIM360 en cuotas: suman 80% de la lista', () => {
+    const c = cotizarPeriodo('ecommerce', 'anual', REGLAS_UCIM.anual, 'renovacion', 2, GENERALES);
+    const cuotas = montosCuotas(c.total, c.cuotas);
+    expect(cuotas).toHaveLength(3);
+    expect(cuotas.reduce((a, b) => a + b, 0) / precioLista('ecommerce', 'anual')).toBeCloseTo(0.8, 10);
+  });
+
+  it('el mensual nunca va en cuotas; un cupón sin cuotas propias usa las generales', () => {
+    expect(cuotasDelPeriodo('mensual', null, { trimestral: 3 })).toBe(1);
+    expect(cuotasDelPeriodo('trimestral', { ...REGLAS_UCIM.trimestral!, cuotas: null }, { trimestral: 6 })).toBe(6);
+    expect(cuotasDelPeriodo('anual', REGLAS_UCIM.anual, { anual: 12 })).toBe(3);
+    expect(cuotasDelPeriodo('anual', null, {})).toBe(1);
+  });
+});
+
+describe('beneficios en palabras (armados desde las reglas del cupón)', () => {
+  it('UCIM360 para una cuenta nueva: mes gratis, trimestral y anual con sus cuotas', () => {
+    const b = beneficiosDelCupon({ diasPrueba: 30, reglas: REGLAS_UCIM }, true);
+    expect(b.lista).toEqual([
+      '1 mes gratis para probar todo',
+      'Trimestral: 40% de descuento en tu primer trimestre (en 3 cuotas sin interés)',
+      'Anual: 40% los primeros 3 meses + 20% los 9 meses siguientes (en 3 cuotas sin interés), y 20% en todas las renovaciones',
+    ]);
+    expect(b.etiquetas).toEqual({ mensual: '1.er MES GRATIS', trimestral: '-40%', anual: 'AHORRÁS 25%' });
+  });
+
+  it('si ya usó una prueba, no se promete el mes gratis', () => {
+    const b = beneficiosDelCupon({ diasPrueba: 30, reglas: REGLAS_UCIM }, false);
+    expect(b.lista[0]).toMatch(/^Trimestral/);
+    expect(b.etiquetas.mensual).toBeNull();
+  });
+
+  it('un cupón nuevo muestra sus propios beneficios', () => {
+    const b = beneficiosDelCupon(
+      {
+        diasPrueba: 45,
+        reglas: { mensual: { entrada: [{ meses: 1, porcentaje: 10 }], periodosEntrada: 2, renovacionPct: 0, renovacionPeriodos: null, cuotas: null }, anual: { entrada: [], periodosEntrada: 1, renovacionPct: 15, renovacionPeriodos: 2, cuotas: 6 } },
+      },
+      true,
+    );
+    expect(b.lista).toEqual(['45 días gratis para probar todo', 'Mensual: 10% de descuento en tus primeros 2 meses', 'Anual: 15% en las primeras 2 renovaciones']);
+    expect(b.etiquetas).toEqual({ mensual: '-10%', trimestral: null, anual: '-15% AL RENOVAR' });
   });
 });

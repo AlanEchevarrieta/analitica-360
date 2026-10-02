@@ -27,9 +27,15 @@ export interface ReglaCiclo {
   renovacionPct: number;
   /** Cuántas renovaciones llevan ese descuento; null = todas, sin límite. */
   renovacionPeriodos: number | null;
-  /** En cuántas cuotas se puede pagar el período de entrada (1 = un solo pago). */
-  cuotas: number;
+  /**
+   * En cuántas cuotas sin interés se paga cada período de este ciclo (primero y
+   * renovaciones). null = las cuotas generales del plan (las de quien no tiene código).
+   */
+  cuotas: number | null;
 }
+
+/** Cuotas sin interés generales (clientes sin código), por ciclo. El mensual siempre va en 1. */
+export type CuotasGenerales = Partial<Record<CicloFacturacion, number>>;
 
 export type ReglasCupon = Partial<Record<CicloFacturacion, ReglaCiclo>>;
 
@@ -161,10 +167,18 @@ const redondear = (n: number) => Math.round(n);
  * Precio de un período. Siempre sobre el precio de LISTA y con un solo
  * descuento por mes (no se acumulan). `indiceRenovacion` empieza en 1.
  */
-export function cotizarPeriodo(plan: PlanPagoId, ciclo: CicloFacturacion, regla: ReglaCiclo | null | undefined, tipo: TipoPeriodo, indiceRenovacion = 1): Cotizacion {
+export function cotizarPeriodo(
+  plan: PlanPagoId,
+  ciclo: CicloFacturacion,
+  regla: ReglaCiclo | null | undefined,
+  tipo: TipoPeriodo,
+  indiceRenovacion = 1,
+  cuotasGenerales: CuotasGenerales = {},
+): Cotizacion {
   const lista = precioLista(plan, ciclo);
   const base = { plan, ciclo, tipo, lista };
-  if (!regla) return { ...base, total: lista, descuento: 0, cuotas: 1, montoCuota: lista, regla: 'sin_cupon' };
+  const cuotas = cuotasDelPeriodo(ciclo, regla, cuotasGenerales);
+  if (!regla) return { ...base, total: lista, descuento: 0, cuotas, montoCuota: redondear(lista / cuotas), regla: 'sin_cupon' };
 
   let total: number;
   if (tipo === 'entrada') {
@@ -183,9 +197,14 @@ export function cotizarPeriodo(plan: PlanPagoId, ciclo: CicloFacturacion, regla:
     total = conDescuento ? redondear(lista * (1 - regla.renovacionPct / 100)) : lista;
   }
 
-  const cuotas = tipo === 'entrada' ? Math.max(1, regla.cuotas) : 1;
   const descuento = lista - total;
   return { ...base, total, descuento, cuotas, montoCuota: redondear(total / cuotas), regla: descuento > 0 ? tipo : 'sin_descuento' };
+}
+
+/** Cuotas de un período: las del cupón si las define; si no, las generales del plan. El mensual, siempre 1. */
+export function cuotasDelPeriodo(ciclo: CicloFacturacion, regla: ReglaCiclo | null | undefined, generales: CuotasGenerales = {}): number {
+  if (ciclo === 'mensual') return 1;
+  return Math.max(1, regla?.cuotas ?? generales[ciclo] ?? 1);
 }
 
 /** Montos de cada cuota: la última absorbe el redondeo para que sumen justo el total. */
@@ -343,6 +362,83 @@ export const REGLAS_UCIM: ReglasCupon = {
     periodosEntrada: 1,
     renovacionPct: 20,
     renovacionPeriodos: null,
-    cuotas: 1,
+    cuotas: 3,
   },
 };
+
+// ---- Beneficios en palabras (para Planes y el registro) -----------------
+
+const NOMBRE_PERIODO: Record<CicloFacturacion, { nombre: string; primero: string; renovacion: string }> = {
+  mensual: { nombre: 'Mensual', primero: 'tu primer mes pago', renovacion: 'los meses siguientes' },
+  trimestral: { nombre: 'Trimestral', primero: 'tu primer trimestre', renovacion: 'las renovaciones' },
+  anual: { nombre: 'Anual', primero: 'tu primer año', renovacion: 'las renovaciones' },
+};
+
+/** Descuento total del primer período sobre la lista (ej. anual 3×40% + 9×20% → 25). */
+export function descuentoDeEntrada(ciclo: CicloFacturacion, regla: ReglaCiclo | null | undefined): number {
+  if (!regla) return 0;
+  const meses = MESES_CICLO[ciclo];
+  let restantes = meses;
+  let suma = 0;
+  for (const t of regla.entrada) {
+    const m = Math.min(t.meses, restantes);
+    suma += m * t.porcentaje;
+    restantes -= m;
+  }
+  return Math.round((suma / meses) * 10) / 10;
+}
+
+function textoPrueba(dias: number): string {
+  if (dias % 30 === 0) {
+    const meses = dias / 30;
+    return meses === 1 ? '1 mes gratis para probar todo' : `${meses} meses gratis para probar todo`;
+  }
+  return `${dias} días gratis para probar todo`;
+}
+
+export interface Beneficios {
+  /** Lista en lenguaje simple, armada desde las reglas del cupón. */
+  lista: string[];
+  /** Etiqueta corta por ciclo para las tarjetas (ej. "-40%", "AHORRÁS 25%", "1.er MES GRATIS"); null = sin beneficio. */
+  etiquetas: Record<CicloFacturacion, string | null>;
+}
+
+/**
+ * Beneficios de un cupón en palabras, a partir de sus reglas (nada escrito a
+ * mano: un código nuevo muestra los suyos). `conPrueba`: si a esta persona le
+ * corresponde la prueba del cupón (es de un solo uso).
+ */
+export function beneficiosDelCupon(c: { diasPrueba: number | null; reglas: ReglasCupon }, conPrueba: boolean, generales: CuotasGenerales = {}): Beneficios {
+  const lista: string[] = [];
+  const prueba = Boolean(c.diasPrueba) && conPrueba;
+  if (prueba) lista.push(textoPrueba(c.diasPrueba!));
+
+  const etiquetas = { mensual: null, trimestral: null, anual: null } as Record<CicloFacturacion, string | null>;
+  for (const ciclo of ['mensual', 'trimestral', 'anual'] as CicloFacturacion[]) {
+    const r = c.reglas[ciclo];
+    const n = NOMBRE_PERIODO[ciclo];
+    const entrada = descuentoDeEntrada(ciclo, r);
+    const partes: string[] = [];
+    if (r && entrada > 0) {
+      const tramos = r.entrada.filter((t) => t.porcentaje > 0 || r.entrada.length > 1);
+      const unico = r.entrada.length === 1 && r.entrada[0].meses >= MESES_CICLO[ciclo];
+      let texto = unico
+        ? `${r.entrada[0].porcentaje}% de descuento en ${r.periodosEntrada > 1 ? `tus primeros ${r.periodosEntrada} ${ciclo === 'anual' ? 'años' : ciclo === 'trimestral' ? 'trimestres' : 'meses'}` : n.primero}`
+        : tramos.map((t, i) => `${t.porcentaje}% ${i === 0 ? `los primeros ${t.meses} ${t.meses === 1 ? 'mes' : 'meses'}` : `los ${t.meses} ${t.meses === 1 ? 'mes siguiente' : 'meses siguientes'}`}`).join(' + ');
+      const cuotas = cuotasDelPeriodo(ciclo, r, generales);
+      if (cuotas > 1) texto += ` (en ${cuotas} cuotas sin interés)`;
+      partes.push(texto);
+    }
+    if (r && r.renovacionPct > 0) {
+      const cuantas = r.renovacionPeriodos == null ? `todas ${n.renovacion}` : `${r.renovacionPeriodos === 1 ? 'la primera renovación' : `las primeras ${r.renovacionPeriodos} renovaciones`}`;
+      partes.push(`${r.renovacionPct}% en ${cuantas}`);
+    }
+    if (partes.length) lista.push(`${n.nombre}: ${partes.join(', y ')}`);
+
+    // Etiqueta corta de la tarjeta.
+    if (entrada > 0) etiquetas[ciclo] = r!.entrada.length > 1 ? `AHORRÁS ${entrada}%` : `-${entrada}%`;
+    else if (r && r.renovacionPct > 0) etiquetas[ciclo] = `-${r.renovacionPct}% AL RENOVAR`;
+    else if (prueba && ciclo === 'mensual') etiquetas[ciclo] = '1.er MES GRATIS';
+  }
+  return { lista, etiquetas };
+}

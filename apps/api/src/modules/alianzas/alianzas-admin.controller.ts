@@ -4,12 +4,14 @@ import { RequireAdminApp } from '../../common/decorators/admin-app.decorator.js'
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { AlianzasAdminService } from './alianzas-admin.service.js';
+import { CobrosService } from './cobros.service.js';
 import {
   aprobarLiquidacionSchema,
   camaraParcialSchema,
   camaraSchema,
   cuponParcialSchema,
   cuponSchema,
+  cuotasGeneralesSchema,
   liquidacionQuerySchema,
   origenSchema,
   pagarLiquidacionSchema,
@@ -22,7 +24,21 @@ import {
 @Controller('admin/alianzas')
 @RequireAdminApp()
 export class AlianzasAdminController {
-  constructor(private readonly service: AlianzasAdminService) {}
+  constructor(
+    private readonly service: AlianzasAdminService,
+    private readonly cobros: CobrosService,
+  ) {}
+
+  /** Cuotas sin interés para quien no tiene código, por plan. */
+  @Get('cuotas')
+  cuotasGenerales() {
+    return this.cobros.listarCuotasGenerales();
+  }
+
+  @Patch('cuotas/:id')
+  editarCuotasGenerales(@Param('id', ParseUUIDPipe) id: string, @Body(new ZodValidationPipe(cuotasGeneralesSchema)) body: { trimestral?: number; anual?: number }) {
+    return this.cobros.editarCuotasGenerales(id, body);
+  }
 
   @Get('resumen')
   resumen() {

@@ -30,6 +30,12 @@ const hoy = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10); // d
 const mesActual = hoy.slice(0, 7);
 const dias = (n: number) => new Date(Date.parse(`${hoy}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const sufijo = randomUUID().slice(0, 8);
+/** Suma meses de calendario a una fecha AAAA-MM-DD (igual que la API). */
+function sumarMesesTexto(fecha: string, meses: number) {
+  const [y, m, d] = fecha.split('-').map(Number);
+  const ultimo = new Date(Date.UTC(y, m - 1 + meses + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m - 1 + meses, Math.min(d, ultimo))).toISOString().slice(0, 10);
+}
 
 describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
   let app: INestApplication;
@@ -222,5 +228,77 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
     const res = await request(app.getHttpServer()).post('/suscripcion/codigo').set(bearer(user5, `org_${user5}`)).send({ codigo: CODIGO.toLowerCase() }).expect(200);
     expect(res.body).toMatchObject({ codigo: CODIGO, camara: `UCIM e2e ${sufijo}`, pruebaHasta: dias(30) });
     await request(app.getHttpServer()).post('/suscripcion/codigo').set(bearer(user5, `org_${user5}`)).send({ codigo: CODIGO }).expect(409);
+  });
+
+  // ---- Cuotas sin interés (trimestral y anual, para todos) ----
+
+  const cobrar = (body: Record<string, unknown>) => request(app.getHttpServer()).post('/admin/pagos').set(ADMIN).send({ metodo: 'transferencia', ...body });
+
+  it('anual SIN código en 3 cuotas: se arma el plan de cuotas con sus vencimientos', async () => {
+    const user = `user_seis_${sufijo}`;
+    const r = await registrar(user, null).expect(201);
+    const cot = await request(app.getHttpServer()).post('/admin/pagos/cotizar').set(ADMIN).send({ empresaId: r.body.empresaId, plan: 'pro', ciclo: 'anual', enCuotas: true }).expect(200);
+    expect(cot.body).toMatchObject({ monto: 356_000, cuotas: 3, cuota: 1, cotizacion: { total: 1_068_000, cuotas: 3, regla: 'sin_cupon' } });
+    const pago = await cobrar({ empresaId: r.body.empresaId, plan: 'pro', ciclo: 'anual', enCuotas: true, desde: hoy }).expect(201);
+    expect(pago.body.comision).toBeNull(); // sin cámara, sin comisión
+    const planes = await request(app.getHttpServer()).get(`/admin/empresas/${r.body.empresaId}/cuotas`).set(ADMIN).expect(200);
+    expect(planes.body).toHaveLength(1);
+    expect(planes.body[0]).toMatchObject({ plan: 'pro', ciclo: 'anual', pagadas: 1, total: 1_068_000 });
+    expect(planes.body[0].cuotas.map((c: { estado: string; vence: string }) => [c.estado, c.vence])).toEqual([
+      ['pagada', hoy],
+      ['pendiente', sumarMesesTexto(hoy, 4)],
+      ['pendiente', sumarMesesTexto(hoy, 8)],
+    ]);
+    // El emprendedor ve en qué cuota va.
+    const precios = await request(app.getHttpServer()).get('/suscripcion/precios').set(bearer(user, `org_${user}`)).expect(200);
+    expect(precios.body.cuotasEnCurso).toMatchObject({ cuotas: 3, pagadas: 1, montoCuota: 356_000, proxima: { numero: 2, vence: sumarMesesTexto(hoy, 4) } });
+  });
+
+  it('anual con el código: 3 cuotas que suman el 75%, comisión por cada cuota cobrada y renovación en cuotas al 80%', async () => {
+    const user = `user_siete_${sufijo}`;
+    const r = await registrar(user, CODIGO).expect(201);
+    const empresa = r.body.empresaId;
+    let grupoId: string | undefined;
+    const montos: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const res = await cobrar(grupoId ? { empresaId: empresa, plan: 'basico', ciclo: 'anual', grupoId } : { empresaId: empresa, plan: 'basico', ciclo: 'anual', enCuotas: true, desde: hoy }).expect(201);
+      grupoId = res.body.pago.grupoId;
+      montos.push(res.body.pago.monto);
+      expect(res.body.comision).toMatchObject({ porcentaje: 20, monto: res.body.pago.monto * 0.2 });
+    }
+    expect(montos.reduce((a, b) => a + b, 0)).toBe(441_000); // 75% de 588.000
+    const renov = await request(app.getHttpServer()).post('/admin/pagos/cotizar').set(ADMIN).send({ empresaId: empresa, plan: 'basico', ciclo: 'anual', enCuotas: true }).expect(200);
+    expect(renov.body.cotizacion).toMatchObject({ tipo: 'renovacion', total: 470_400, cuotas: 3 }); // 80% de 588.000
+    expect(renov.body.periodoDesde).toBe(sumarMesesTexto(hoy, 12));
+  });
+
+  it('cuota atrasada: pasada la gracia la cuenta queda en solo lectura y la cuota figura como vencida', async () => {
+    const user = `user_ocho_${sufijo}`;
+    const r = await registrar(user, null).expect(201);
+    const empresa = r.body.empresaId;
+    // Se registró hace 5 meses (su prueba terminó hace mucho) y pagó la primera de 3 cuotas de un anual.
+    await db.query(`UPDATE suscripciones SET fecha_vencimiento = $2 WHERE empresa_id = $1`, [empresa, dias(-150)]);
+    const desde = dias(-140);
+    await cobrar({ empresaId: empresa, plan: 'basico', ciclo: 'anual', enCuotas: true, desde }).expect(201);
+    const yo = bearer(user, `org_${user}`);
+    const sub = await request(app.getHttpServer()).get('/suscripcion').set(yo).expect(200);
+    expect(sub.body.acceso).toMatchObject({ nivel: 'solo_lectura', motivo: 'plan_vencido' });
+    const bloqueo = await request(app.getHttpServer()).post('/clientes').set(yo).send({}).expect(403);
+    expect(bloqueo.body.code).toBe('cuenta_solo_lectura');
+    const vencidas = await request(app.getHttpServer()).get('/admin/pagos/cuotas-vencidas').set(ADMIN).expect(200);
+    const mia = vencidas.body.find((c: { empresaId: string }) => c.empresaId === empresa);
+    expect(mia).toMatchObject({ numero: 2, cuotas: 3, estado: 'vencida', vence: sumarMesesTexto(desde, 4), monto: 196_000 });
+    expect(mia.diasAtraso).toBeGreaterThan(7);
+    // Al cobrar la cuota atrasada vuelve a operar.
+    await cobrar({ empresaId: empresa, plan: 'basico', ciclo: 'anual', grupoId: mia.grupoId }).expect(201);
+    const despues = await request(app.getHttpServer()).get('/suscripcion').set(yo).expect(200);
+    expect(despues.body.acceso.nivel).toBe('activo');
+  });
+
+  it('seguridad: un emprendedor no ve las cuotas vencidas ni las de otros clientes', async () => {
+    const yo = bearer(user1, `org_${user1}`);
+    await request(app.getHttpServer()).get('/admin/pagos/cuotas-vencidas').set(yo).expect(403);
+    await request(app.getHttpServer()).get(`/admin/empresas/${empresa1}/cuotas`).set(yo).expect(403);
+    await request(app.getHttpServer()).get('/admin/alianzas/cuotas').set(yo).expect(403);
   });
 });

@@ -47,6 +47,18 @@ export class AdminSaasController {
     return this.adminSaasService.listarPagos(query.estado, query.periodo);
   }
 
+  /** Cuotas vencidas sin pagar de todos los clientes. */
+  @Get('pagos/cuotas-vencidas')
+  cuotasVencidas() {
+    return this.cobros.cuotasVencidas();
+  }
+
+  /** Planes de cuotas de un cliente: pagadas, pendientes y vencidas. */
+  @Get('empresas/:id/cuotas')
+  cuotasDeEmpresa(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.cobros.cuotasDeEmpresa(id);
+  }
+
   /** Cuánto cobrar: plan, ciclo y el descuento del cupón de la empresa (primer período o renovación, cuotas). */
   @Post('pagos/cotizar')
   @HttpCode(200)

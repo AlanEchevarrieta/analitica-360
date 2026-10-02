@@ -11,7 +11,7 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { CobrosService } from './cobros.service.js';
 import { CuponesService } from './cupones.service.js';
 import { codigoQuerySchema, codigoSchema } from './alianzas.dto.js';
-import type { ReglasCupon } from './alianzas.util.js';
+import { beneficiosDelCupon, type ReglasCupon } from './alianzas.util.js';
 
 /** Lo que ve el emprendedor: su código y los precios. Nada de comisiones. */
 @Controller()
@@ -29,31 +29,52 @@ export class AlianzasController {
     if (!q.codigo) return { ok: false, mensaje: 'Escribí el código' };
     const v = await this.cupones.verificar(q.codigo, { clerkUserId: request.clerkAuth!.clerkUserId });
     if (!v.ok) return v;
-    return { ok: true, codigo: v.cupon.codigo, camara: v.cupon.camaraNombre, diasPrueba: v.diasPrueba, mesGratis: v.mesGratis, aviso: v.aviso };
+    const generales = await this.cobros.cuotasGenerales(this.prisma, 'pro');
+    return {
+      ok: true,
+      codigo: v.cupon.codigo,
+      camara: v.cupon.camaraNombre,
+      diasPrueba: v.diasPrueba,
+      mesGratis: v.mesGratis,
+      aviso: v.aviso,
+      beneficios: beneficiosDelCupon(v.cupon, v.mesGratis, generales),
+    };
   }
 
   /** Precios para la pantalla de Planes: con el código de la empresa o, si no tiene, el que está probando. */
   @Get('suscripcion/precios')
   @PermitidoSinSuscripcion()
   async precios(@CurrentEmpresa() empresa: EmpresaContext, @CurrentUser() usuario: UsuarioContext, @Query(new ZodValidationPipe(codigoQuerySchema)) q: { codigo: string }) {
-    const actual = await this.prisma.empresa.findUnique({ where: { id: empresa.id }, include: { cupon: { include: { camara: { select: { nombre: true } } } } } });
+    const [actual, cuotasEnCurso, generales] = await Promise.all([
+      this.prisma.empresa.findUnique({ where: { id: empresa.id }, include: { cupon: { include: { camara: { select: { nombre: true } } } } } }),
+      this.cobros.cuotasEnCurso(empresa.id),
+      this.cobros.cuotasGenerales(this.prisma, 'pro'),
+    ]);
+    const base = { cuotasEnCurso };
     if (actual?.cupon) {
+      const reglas = actual.cupon.reglas as ReglasCupon;
+      // La prueba del cupón ya la tuvo (o no le correspondía): los beneficios que quedan son los de pago.
+      const conPrueba = Boolean(actual.pruebaHasta && actual.cupon.diasPrueba && new Date() < actual.pruebaHasta);
       return {
+        ...base,
         cupon: { codigo: actual.cupon.codigo, camara: actual.cupon.camara?.nombre ?? null, aplicado: true, diasPrueba: actual.cupon.diasPrueba },
+        beneficios: beneficiosDelCupon({ diasPrueba: actual.cupon.diasPrueba, reglas }, conPrueba, generales),
         aviso: null,
-        planes: await this.cobros.tablaDePrecios(empresa.id, actual.cupon.reglas as ReglasCupon),
+        planes: await this.cobros.tablaDePrecios(empresa.id, reglas),
       };
     }
     if (q.codigo) {
       const v = await this.cupones.verificar(q.codigo, { email: usuario.email, clerkUserId: usuario.clerkUserId, empresaId: empresa.id, cuit: actual?.cuit }, empresa.id);
-      if (!v.ok) return { cupon: null, aviso: v.mensaje, planes: await this.cobros.tablaDePrecios(empresa.id, null) };
+      if (!v.ok) return { ...base, cupon: null, beneficios: null, aviso: v.mensaje, planes: await this.cobros.tablaDePrecios(empresa.id, null) };
       return {
+        ...base,
         cupon: { codigo: v.cupon.codigo, camara: v.cupon.camaraNombre, aplicado: false, diasPrueba: v.mesGratis ? v.diasPrueba : null },
+        beneficios: beneficiosDelCupon(v.cupon, v.mesGratis, generales),
         aviso: v.aviso,
         planes: await this.cobros.tablaDePrecios(empresa.id, v.cupon.reglas),
       };
     }
-    return { cupon: null, aviso: null, planes: await this.cobros.tablaDePrecios(empresa.id, null) };
+    return { ...base, cupon: null, beneficios: null, aviso: null, planes: await this.cobros.tablaDePrecios(empresa.id, null) };
   }
 
   /** Cargar un código después del registro (solo el dueño). */

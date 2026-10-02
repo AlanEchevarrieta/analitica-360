@@ -11,12 +11,29 @@ export interface PrecioCiclo {
   meses: number;
   lista: number;
   primerPago: { tipo: "entrada" | "renovacion"; total: number; descuento: number; cuotas: number; montoCuota: number };
-  renovacion: { total: number; descuento: number };
+  renovacion: { total: number; descuento: number; cuotas: number; montoCuota: number };
+}
+
+/** Beneficios del código en palabras y la etiqueta corta de cada ciclo (los arma la API desde las reglas del cupón). */
+export interface Beneficios {
+  lista: string[];
+  etiquetas: Record<Ciclo, string | null>;
+}
+
+export interface CuotasEnCurso {
+  plan: string;
+  ciclo: Ciclo;
+  cuotas: number;
+  pagadas: number;
+  montoCuota: number;
+  proxima: { numero: number; monto: number; vence: string };
 }
 
 export interface TablaPrecios {
   cupon: { codigo: string; camara: string | null; aplicado: boolean; diasPrueba: number | null } | null;
+  beneficios: Beneficios | null;
   aviso: string | null;
+  cuotasEnCurso: CuotasEnCurso | null;
   planes: { plan: PlanPagoId; nombre: string; ciclos: PrecioCiclo[] }[];
 }
 
