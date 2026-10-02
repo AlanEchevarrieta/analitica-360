@@ -11,18 +11,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useApiFetch } from "@/hooks/use-api";
 import { ORIGENES, RUBROS } from "@/lib/rubros";
+import { CampoCodigo, useVerificarCodigo } from "./CampoCodigo";
 
 const selectClase = "h-8 w-full rounded-lg border bg-transparent px-2 text-sm";
 const INCLUYE = ["Ventas, stock y clientes desde el celular", "Reportes de ganancia y estados contables", "Sin tarjeta: no se cobra nada durante la prueba"];
 
-/** Alta del negocio: crea la empresa con 14 días de prueba y entra a la app. */
+/** Alta del negocio: crea la empresa con su prueba gratis (14 días, o lo que dé su código) y entra a la app. */
 export function BienvenidaForm() {
   const api = useApiFetch({ permitirPendiente: true });
   const { setActive } = useClerk();
   const router = useRouter();
-  const [d, setD] = useState({ nombre: "", rubro: "", telefono: "", origen: "", acepta: false });
+  const [d, setD] = useState({ nombre: "", rubro: "", telefono: "", origen: "", codigo: "", cuit: "", acepta: false });
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const { resultado: codigo, buscando } = useVerificarCodigo(d.codigo);
   const set = <K extends keyof typeof d>(k: K, v: (typeof d)[K]) => {
     setD((x) => ({ ...x, [k]: v }));
     setError(null);
@@ -32,6 +34,9 @@ export function BienvenidaForm() {
     if (d.nombre.trim().length < 2) return "Poné el nombre de tu negocio.";
     if (!d.rubro) return "Elegí a qué se dedica tu negocio.";
     if (d.telefono.replace(/\D/g, "").length < 8) return "Dejanos un WhatsApp con código de área (ej. 261 5469432).";
+    if (d.cuit.trim() && d.cuit.replace(/\D/g, "").length !== 11) return "El CUIT tiene que tener 11 números (o dejalo vacío).";
+    if (d.codigo.trim() && buscando) return "Esperá un segundo: estamos verificando el código.";
+    if (d.codigo.trim() && codigo && !codigo.ok) return "Ese código no sirve: corregilo o borralo para seguir sin código.";
     if (!d.acepta) return "Para seguir tenés que aceptar los términos y condiciones.";
     return null;
   }
@@ -45,7 +50,15 @@ export function BienvenidaForm() {
     try {
       const r = await api<{ clerkOrgId: string }>("/registro", {
         method: "POST",
-        body: JSON.stringify({ nombreNegocio: d.nombre, rubro: d.rubro, telefono: d.telefono, origen: d.origen || null, aceptaTerminos: true }),
+        body: JSON.stringify({
+          nombreNegocio: d.nombre,
+          rubro: d.rubro,
+          telefono: d.telefono,
+          origen: d.origen || null,
+          codigo: d.codigo.trim() || null,
+          cuit: d.cuit.trim() || null,
+          aceptaTerminos: true,
+        }),
       });
       // La empresa nueva pasa a ser la activa de la sesión (la API la exige en cada pedido).
       await setActive({ organization: r.clerkOrgId });
@@ -60,7 +73,9 @@ export function BienvenidaForm() {
     <Card className="w-full max-w-lg">
       <CardHeader>
         <CardTitle className="text-xl">¡Bienvenido/a a Analítica 360!</CardTitle>
-        <CardDescription>Contanos de tu negocio y empezás tu prueba gratis de 14 días con todas las funciones.</CardDescription>
+        <CardDescription>
+          Contanos de tu negocio y empezás tu prueba gratis de {codigo?.ok && codigo.mesGratis && codigo.diasPrueba ? `${codigo.diasPrueba} días` : "14 días"} con todas las funciones.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={enviar} className="flex flex-col gap-4" noValidate>
@@ -95,6 +110,13 @@ export function BienvenidaForm() {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <CampoCodigo valor={d.codigo} onChange={(v) => set("codigo", v)} resultado={codigo} buscando={buscando} />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="reg-cuit">CUIT (opcional)</Label>
+              <Input id="reg-cuit" inputMode="numeric" placeholder="20-12345678-9" value={d.cuit} onChange={(e) => set("cuit", e.target.value)} />
             </div>
           </div>
           <ul className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3 text-sm">

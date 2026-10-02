@@ -35,6 +35,9 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
   let app: INestApplication;
   let db: pg.Client;
   let camaraId: string;
+  // Cada corrida usa su propia cámara y su propio código (mismas reglas que UCIM360): el test se puede repetir.
+  const CODIGO = `UCIM${sufijo.toUpperCase()}`;
+  const CUIT = `20${String(Date.now()).slice(-8)}9`;
   const emails = new Map<string, string>();
   const bearer = (user: string, org = '') => ({ Authorization: `Bearer ${user}|${org}` });
   const ADMIN = bearer(`user_admin_${sufijo}`, `org_admin_${sufijo}`);
@@ -45,7 +48,13 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
     process.env.INTERNAL_WEBHOOK_SECRET = 'e2e';
     db = new pg.Client({ connectionString: URL_E2E });
     await db.connect();
-    camaraId = (await db.query(`SELECT id FROM camaras WHERE nombre = 'UCIM'`)).rows[0].id;
+    const ucim = (await db.query(`SELECT k.tramos, c.reglas FROM camaras k JOIN cupones c ON c.camara_id = k.id WHERE c.codigo = 'UCIM360'`)).rows[0];
+    camaraId = randomUUID();
+    await db.query(`INSERT INTO camaras (id, nombre, tramos, updated_at) VALUES ($1, $2, $3, now())`, [camaraId, `UCIM e2e ${sufijo}`, JSON.stringify(ucim.tramos)]);
+    await db.query(
+      `INSERT INTO cupones (id, codigo, tipo, camara_id, dias_prueba, reglas, updated_at) VALUES ($1, $2, 'camara', $3, 30, $4, now())`,
+      [randomUUID(), CODIGO, camaraId, JSON.stringify(ucim.reglas)],
+    );
     // Planes (en una base vacía no los trae la migración de datos).
     for (const nombre of ['basico', 'pro', 'ecommerce']) {
       await db.query(`INSERT INTO planes (id, nombre) SELECT gen_random_uuid(), $1 WHERE NOT EXISTS (SELECT 1 FROM planes WHERE nombre = $1)`, [nombre]);
@@ -86,14 +95,21 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
   let empresa1: string;
   const user1 = `user_uno_${sufijo}`;
 
-  it('registro con "ucim 360": 1 mes gratis (30 días) y queda marcado que viene por la UCIM', async () => {
+  it('la migración cargó la UCIM con UCIM360: 30 días de prueba y los tramos 20/25/30/35/40', async () => {
+    const r = (await db.query(`SELECT c.dias_prueba, c.activo, k.meses_comision, k.tramos FROM cupones c JOIN camaras k ON k.id = c.camara_id WHERE c.codigo = 'UCIM360' AND k.nombre = 'UCIM'`)).rows[0];
+    expect(r).toMatchObject({ dias_prueba: 30, activo: true, meses_comision: 24 });
+    expect(r.tramos.map((t: { porcentaje: number }) => t.porcentaje)).toEqual([20, 25, 30, 35, 40]);
+  });
+
+  it('registro con el código en minúsculas y con espacios: 1 mes gratis (30 días) y queda marcado de qué cámara viene', async () => {
     emails.set(user1, `uno_${sufijo}@e2e.test`);
-    const res = await registrar(user1, 'ucim 360', { cuit: '20-12345678-9' }).expect(201);
+    const escrito = `${CODIGO.slice(0, 4).toLowerCase()} ${CODIGO.slice(4).toLowerCase()}`;
+    const res = await registrar(user1, escrito, { cuit: `${CUIT.slice(0, 2)}-${CUIT.slice(2, 10)}-${CUIT.slice(10)}` }).expect(201);
     empresa1 = res.body.empresaId;
     expect(res.body.finPrueba).toBe(dias(30));
-    expect(res.body.cupon).toMatchObject({ codigo: 'UCIM360', camara: 'UCIM', mesGratis: true, diasPrueba: 30, aviso: null });
+    expect(res.body.cupon).toMatchObject({ codigo: CODIGO, camara: `UCIM e2e ${sufijo}`, mesGratis: true, diasPrueba: 30, aviso: null });
     const e = (await db.query(`SELECT camara_id, cuit, prueba_hasta::text FROM empresas WHERE id = $1`, [empresa1])).rows[0];
-    expect(e).toEqual({ camara_id: camaraId, cuit: '20123456789', prueba_hasta: dias(30) });
+    expect(e).toEqual({ camara_id: camaraId, cuit: CUIT, prueba_hasta: dias(30) });
   });
 
   it('sin código: la prueba común de 14 días', async () => {
@@ -110,7 +126,7 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
   it('segundo intento con el mismo email: sin mes gratis, pero queda de la UCIM con sus descuentos', async () => {
     const user2 = `user_dos_${sufijo}`;
     emails.set(user2, `UNO_${sufijo}@e2e.test`); // mismo email, otro usuario de Clerk (y en mayúsculas)
-    const res = await registrar(user2, 'UCIM360').expect(201);
+    const res = await registrar(user2, CODIGO).expect(201);
     expect(res.body.finPrueba).toBe(dias(14));
     expect(res.body.cupon).toMatchObject({ mesGratis: false, diasPrueba: 14 });
     expect(res.body.cupon.aviso).toMatch(/no corresponde el mes gratis/);
@@ -121,13 +137,13 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
 
   it('mismo CUIT con otro email y usuario: tampoco recibe el mes gratis', async () => {
     const user3 = `user_tres_${sufijo}`;
-    const res = await registrar(user3, 'UCIM360', { cuit: '20123456789' }).expect(201);
+    const res = await registrar(user3, CODIGO, { cuit: CUIT }).expect(201);
     expect(res.body.cupon.mesGratis).toBe(false);
   });
 
   it('el emprendedor ve en Planes el mes gratis, la lista, el primer pago con descuento y la renovación', async () => {
     const res = await request(app.getHttpServer()).get('/suscripcion/precios').set(bearer(user1, `org_${user1}`)).expect(200);
-    expect(res.body.cupon).toMatchObject({ codigo: 'UCIM360', aplicado: true });
+    expect(res.body.cupon).toMatchObject({ codigo: CODIGO, aplicado: true });
     const basico = res.body.planes.find((p: { plan: string }) => p.plan === 'basico');
     const ciclo = (c: string) => basico.ciclos.find((x: { ciclo: string }) => x.ciclo === c);
     expect(ciclo('anual')).toMatchObject({ lista: 588_000, primerPago: { total: 441_000 }, renovacion: { total: 470_400 } });
@@ -168,7 +184,7 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
 
   it('trimestral en 3 cuotas de 29.400: cada cuota genera su comisión (cliente n.º 2)', async () => {
     const user4 = `user_cuatro_${sufijo}`;
-    const r = await registrar(user4, 'UCIM360').expect(201);
+    const r = await registrar(user4, CODIGO).expect(201);
     const empresa4 = r.body.empresaId;
     const cuotas: number[] = [];
     let grupoId: string | undefined;
@@ -203,8 +219,8 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
   it('código cargado después del registro, durante la prueba: la prueba pasa a 1 mes desde el alta', async () => {
     const user5 = `user_cinco_${sufijo}`;
     await registrar(user5, null).expect(201);
-    const res = await request(app.getHttpServer()).post('/suscripcion/codigo').set(bearer(user5, `org_${user5}`)).send({ codigo: 'Ucim360' }).expect(200);
-    expect(res.body).toMatchObject({ codigo: 'UCIM360', camara: 'UCIM', pruebaHasta: dias(30) });
-    await request(app.getHttpServer()).post('/suscripcion/codigo').set(bearer(user5, `org_${user5}`)).send({ codigo: 'UCIM360' }).expect(409);
+    const res = await request(app.getHttpServer()).post('/suscripcion/codigo').set(bearer(user5, `org_${user5}`)).send({ codigo: CODIGO.toLowerCase() }).expect(200);
+    expect(res.body).toMatchObject({ codigo: CODIGO, camara: `UCIM e2e ${sufijo}`, pruebaHasta: dias(30) });
+    await request(app.getHttpServer()).post('/suscripcion/codigo').set(bearer(user5, `org_${user5}`)).send({ codigo: CODIGO }).expect(409);
   });
 });

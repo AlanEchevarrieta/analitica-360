@@ -372,9 +372,39 @@ export class AlianzasAdminService {
     });
   }
 
-  async historialOrigen(empresaId: string) {
-    const cambios = await this.prisma.cambioOrigen.findMany({ where: { empresaId }, orderBy: { createdAt: 'desc' } });
-    return cambios.map((c) => ({ ...c, createdAt: c.createdAt.toISOString() }));
+  /** Origen actual del cliente (cámara y código) y los cambios manuales hechos. */
+  async origen(empresaId: string) {
+    const empresa = await this.prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { camaraId: true, cuponId: true, ordenCamara: true, comisionPct: true, comisionHasta: true, camara: { select: { nombre: true } }, cupon: { select: { codigo: true } } },
+    });
+    if (!empresa) throw new NotFoundException('Empresa no encontrada');
+    const [cambios, camaras, cupones] = await Promise.all([
+      this.prisma.cambioOrigen.findMany({ where: { empresaId }, orderBy: { createdAt: 'desc' } }),
+      this.prisma.camara.findMany({ select: { id: true, nombre: true } }),
+      this.prisma.cupon.findMany({ select: { id: true, codigo: true } }),
+    ]);
+    const camara = new Map(camaras.map((c) => [c.id, c.nombre]));
+    const cupon = new Map(cupones.map((c) => [c.id, c.codigo]));
+    return {
+      actual: {
+        camaraId: empresa.camaraId,
+        camara: empresa.camara?.nombre ?? null,
+        cuponId: empresa.cuponId,
+        codigo: empresa.cupon?.codigo ?? null,
+        orden: empresa.ordenCamara,
+        porcentaje: empresa.comisionPct == null ? null : Number(empresa.comisionPct),
+        comisionHasta: fecha(empresa.comisionHasta),
+      },
+      historial: cambios.map((c) => ({
+        id: c.id,
+        antes: [c.camaraAnteriorId ? camara.get(c.camaraAnteriorId) : null, c.cuponAnteriorId ? cupon.get(c.cuponAnteriorId) : null].filter(Boolean).join(' · ') || 'Sin origen',
+        despues: [c.camaraNuevaId ? camara.get(c.camaraNuevaId) : null, c.cuponNuevoId ? cupon.get(c.cuponNuevoId) : null].filter(Boolean).join(' · ') || 'Sin origen',
+        motivo: c.motivo,
+        hechoPor: c.hechoPor,
+        createdAt: c.createdAt.toISOString(),
+      })),
+    };
   }
 
   // ---- Indicadores generales ---------------------------------------------

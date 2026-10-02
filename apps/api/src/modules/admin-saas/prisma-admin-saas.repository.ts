@@ -107,11 +107,13 @@ export class PrismaAdminSaasRepository implements AdminSaasRepository {
   async listarPagos(estado: string | null, periodo: string | null): Promise<AdminPago[]> {
     const periodoDate = periodo ? new Date(`${periodo}-01T00:00:00`) : null;
     const filas = await this.prisma.$queryRaw<
-      { id: string; empresa_id: string; empresa_nombre: string; monto_ars: string; metodo: string; estado: string; periodo: Date | null; notas: string | null; created_at: Date }[]
+      { id: string; empresa_id: string; empresa_nombre: string; monto_ars: string; metodo: string; estado: string; periodo: Date | null; notas: string | null; created_at: Date; plan: string | null; ciclo: string | null; cuota: number | null; cuotas: number | null; grupo_id: string | null; periodo_desde: Date | null; periodo_hasta: Date | null; precio_lista: string | null; descuento_ars: string | null; codigo: string | null; devolucion_motivo: string | null }[]
     >(Prisma.sql`
-      SELECT pago.id, pago.empresa_id, e.nombre AS empresa_nombre, pago.monto_ars, pago.metodo, pago.estado, pago.periodo, pago.notas, pago.created_at
+      SELECT pago.id, pago.empresa_id, e.nombre AS empresa_nombre, pago.monto_ars, pago.metodo, pago.estado, pago.periodo, pago.notas, pago.created_at,
+        pago.plan, pago.ciclo, pago.cuota, pago.cuotas, pago.grupo_id, pago.periodo_desde, pago.periodo_hasta, pago.precio_lista, pago.descuento_ars, c.codigo, pago.devolucion_motivo
       FROM pagos AS pago
       JOIN empresas e ON e.id = pago.empresa_id
+      LEFT JOIN cupones c ON c.id = pago.cupon_id
       WHERE (${estado}::text IS NULL OR ${estado}::text = '' OR pago.estado = ${estado}::text)
         AND (${periodoDate}::date IS NULL OR date_trunc('month', COALESCE(pago.periodo, pago.created_at::date)) = date_trunc('month', ${periodoDate}::date))
       ORDER BY pago.created_at DESC
@@ -126,6 +128,17 @@ export class PrismaAdminSaasRepository implements AdminSaasRepository {
       periodo: f.periodo?.toISOString().slice(0, 7) ?? null,
       notas: f.notas,
       createdAt: f.created_at.toISOString(),
+      plan: f.plan,
+      ciclo: f.ciclo,
+      cuota: f.cuota,
+      cuotas: f.cuotas,
+      grupoId: f.grupo_id,
+      periodoDesde: f.periodo_desde?.toISOString().slice(0, 10) ?? null,
+      periodoHasta: f.periodo_hasta?.toISOString().slice(0, 10) ?? null,
+      precioLista: f.precio_lista == null ? null : Number(f.precio_lista),
+      descuentoArs: f.descuento_ars == null ? null : Number(f.descuento_ars),
+      codigo: f.codigo,
+      devolucionMotivo: f.devolucion_motivo,
     }));
   }
 

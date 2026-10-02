@@ -9,6 +9,7 @@ import { etiquetaGranularidad } from "@/lib/periodos";
 import { useEmpresasAdmin, useEvolucionAdmin, useMetricasAdmin, NOMBRE_PLAN, type AlertaEmpresa } from "../hooks/use-admin";
 import { AvisosRegistro } from "./AvisosRegistro";
 import { EtiquetaAlerta, Indicador, Panel, variacion } from "./comunes";
+import { ResumenAlianzasPanel } from "./alianzas/ResumenAlianzasPanel";
 
 const G_CLIENTES = {
   clientes: { label: "Clientes", color: "var(--chart-2)" },
@@ -162,6 +163,7 @@ export function ResumenVista() {
           </Panel>
         </div>
       </div>
+      <ResumenAlianzasPanel />
     </>
   );
 }

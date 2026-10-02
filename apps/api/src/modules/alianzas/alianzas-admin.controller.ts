@@ -87,8 +87,8 @@ export class AlianzasAdminController {
   }
 
   @Get('empresas/:id/origen')
-  historialOrigen(@Param('id', ParseUUIDPipe) id: string) {
-    return this.service.historialOrigen(id);
+  origen(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.origen(id);
   }
 
   @Patch('empresas/:id/origen')

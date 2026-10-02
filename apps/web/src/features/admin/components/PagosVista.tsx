@@ -9,36 +9,30 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { formatoPesos } from "@/lib/formato";
 import { hoyAR } from "@/lib/periodos";
-import { fechaCorta, useAccionesAdmin, useEmpresasAdmin, usePagosAdmin } from "../hooks/use-admin";
+import { fechaCorta, NOMBRE_PLAN, usePagosAdmin } from "../hooks/use-admin";
+import { fechaAR, NOMBRE_CICLO, useAccionesAlianzas, type Ciclo } from "../hooks/use-alianzas";
 import { Indicador, Panel } from "./comunes";
+import { RegistrarCobro } from "./RegistrarCobro";
 
 const selectClase = "h-8 rounded-lg border bg-transparent px-2 text-sm";
-const aMonto = (t: string) => Number(t.replace(/\./g, "").replace(",", "."));
 
 export function PagosVista() {
   const [estado, setEstado] = useState("");
   const [periodo, setPeriodo] = useState(hoyAR().slice(0, 7));
   const pagos = usePagosAdmin(estado, periodo);
-  const empresas = useEmpresasAdmin();
-  const { registrarPago } = useAccionesAdmin();
-  const [nuevo, setNuevo] = useState({ empresaId: "", monto: "", metodo: "transferencia", periodo: hoyAR().slice(0, 7), notas: "" });
+  const { devolverPago } = useAccionesAlianzas();
 
   const lista = pagos.data ?? [];
   const confirmados = lista.filter((p) => p.estado === "confirmado");
   const total = confirmados.reduce((a, p) => a + p.montoArs, 0);
-  const vivas = (empresas.data ?? []).filter((e) => !e.baja);
+  const descuentos = confirmados.reduce((a, p) => a + (p.descuentoArs ?? 0), 0);
 
-  function registrar() {
-    if (!nuevo.empresaId || !(aMonto(nuevo.monto) > 0)) return toast.error("Elegí el cliente y el monto.");
-    registrarPago.mutate(
-      { empresaId: nuevo.empresaId, monto: aMonto(nuevo.monto), metodo: nuevo.metodo, periodo: nuevo.periodo, notas: nuevo.notas },
-      {
-        onSuccess: () => {
-          toast.success("Pago registrado: la suscripción del cliente queda activa hasta fin de ese mes");
-          setNuevo((n) => ({ ...n, monto: "", notas: "" }));
-        },
-        onError: (e) => toast.error(e.message),
-      },
+  function devolver(id: string) {
+    const motivo = window.prompt("¿Por qué se devuelve este pago? (queda registrado y, si generó comisión, se descuenta)");
+    if (!motivo?.trim()) return;
+    devolverPago.mutate(
+      { id, motivo },
+      { onSuccess: () => toast.success("Pago marcado como devuelto"), onError: (e) => toast.error(e.message) },
     );
   }
 
@@ -49,35 +43,12 @@ export function PagosVista() {
         <p className="text-sm text-muted-foreground">Los cobros son manuales (transferencia, Mercado Pago…): registralos acá y la suscripción se extiende sola.</p>
       </div>
 
-      <Panel titulo="Registrar un pago cobrado">
-        <div className="flex flex-wrap gap-2">
-          <select className={selectClase} aria-label="Cliente" value={nuevo.empresaId} onChange={(e) => setNuevo({ ...nuevo, empresaId: e.target.value })}>
-            <option value="">Cliente…</option>
-            {vivas.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.nombre}
-              </option>
-            ))}
-          </select>
-          <Input className="w-32" inputMode="decimal" placeholder="Monto $" aria-label="Monto" value={nuevo.monto} onChange={(e) => setNuevo({ ...nuevo, monto: e.target.value })} />
-          <select className={selectClase} aria-label="Método" value={nuevo.metodo} onChange={(e) => setNuevo({ ...nuevo, metodo: e.target.value })}>
-            <option value="transferencia">Transferencia</option>
-            <option value="mercadopago">Mercado Pago</option>
-            <option value="efectivo">Efectivo</option>
-            <option value="otro">Otro</option>
-          </select>
-          <Input type="month" className="w-40" aria-label="Mes que paga" value={nuevo.periodo} onChange={(e) => setNuevo({ ...nuevo, periodo: e.target.value })} />
-          <Input className="min-w-40 flex-1" placeholder="Notas (opcional)" aria-label="Notas" value={nuevo.notas} onChange={(e) => setNuevo({ ...nuevo, notas: e.target.value })} />
-          <Button onClick={registrar} disabled={registrarPago.isPending}>
-            Registrar pago
-          </Button>
-        </div>
-      </Panel>
+      <RegistrarCobro />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Indicador etiqueta="Cobrado en el período" valor={formatoPesos(total)} detalle={`${confirmados.length} pagos confirmados`} />
         <Indicador etiqueta="Clientes que pagaron" valor={new Set(confirmados.map((p) => p.empresaId)).size} />
-        <Indicador etiqueta="Pago promedio" valor={formatoPesos(confirmados.length ? total / confirmados.length : 0)} />
+        <Indicador etiqueta="Descuentos por cupones" valor={formatoPesos(descuentos)} />
       </div>
 
       <Panel
@@ -87,10 +58,9 @@ export function PagosVista() {
             <select className={selectClase} aria-label="Estado del pago" value={estado} onChange={(e) => setEstado(e.target.value)}>
               <option value="">Todos los estados</option>
               <option value="confirmado">Confirmados</option>
-              <option value="pendiente">Pendientes</option>
-              <option value="anulado">Anulados</option>
+              <option value="devuelto">Devueltos</option>
             </select>
-            <Input type="month" className="w-40" aria-label="Mes" value={periodo} onChange={(e) => setPeriodo(e.target.value)} />
+            <Input type="month" className="w-40" aria-label="Mes de cobro" value={periodo} onChange={(e) => setPeriodo(e.target.value)} />
             {periodo && (
               <Button size="sm" variant="ghost" onClick={() => setPeriodo("")}>
                 Todos los meses
@@ -111,26 +81,46 @@ export function PagosVista() {
               <TableRow>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Mes que paga</TableHead>
-                <TableHead>Método</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
+                <TableHead>Plan</TableHead>
+                <TableHead className="hidden md:table-cell">Cubre</TableHead>
+                <TableHead className="hidden text-right md:table-cell">Lista</TableHead>
+                <TableHead className="hidden text-right md:table-cell">Descuento</TableHead>
+                <TableHead className="text-right">Cobrado</TableHead>
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
               {lista.map((p) => (
-                <TableRow key={p.id}>
+                <TableRow key={p.id} className={p.estado === "devuelto" ? "opacity-60" : undefined}>
                   <TableCell className="tabular-nums">{fechaCorta(p.createdAt)}</TableCell>
                   <TableCell>
                     <Link prefetch={false} href={`/admin/clientes/${p.empresaId}`} className="hover:underline">
                       {p.empresaNombre}
                     </Link>
-                    {p.notas && <span className="block text-xs text-muted-foreground">{p.notas}</span>}
+                    <span className="block text-xs text-muted-foreground capitalize">
+                      {p.metodo}
+                      {p.codigo ? ` · ${p.codigo}` : ""}
+                      {p.notas ? ` · ${p.notas}` : ""}
+                    </span>
                   </TableCell>
-                  <TableCell className="tabular-nums">{p.periodo ?? "—"}</TableCell>
-                  <TableCell className="capitalize">{p.metodo}</TableCell>
-                  <TableCell className="capitalize">{p.estado}</TableCell>
-                  <TableCell className="text-right font-medium tabular-nums">{formatoPesos(p.montoArs)}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {p.plan ? `${NOMBRE_PLAN(p.plan)} ${NOMBRE_CICLO[p.ciclo as Ciclo]?.toLowerCase() ?? ""}` : "—"}
+                    {p.cuota && <span className="block text-xs text-muted-foreground">Cuota {p.cuota} de {p.cuotas}</span>}
+                  </TableCell>
+                  <TableCell className="hidden whitespace-nowrap tabular-nums md:table-cell">{p.periodoDesde ? `${fechaAR(p.periodoDesde)} → ${fechaAR(p.periodoHasta)}` : (p.periodo ?? "—")}</TableCell>
+                  <TableCell className="hidden text-right tabular-nums text-muted-foreground md:table-cell">{p.precioLista == null ? "—" : formatoPesos(p.precioLista)}</TableCell>
+                  <TableCell className="hidden text-right tabular-nums md:table-cell">{p.descuentoArs ? formatoPesos(p.descuentoArs) : "—"}</TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">
+                    {formatoPesos(p.montoArs)}
+                    {p.estado === "devuelto" && <span className="block text-xs font-normal text-red-400" title={p.devolucionMotivo ?? undefined}>Devuelto</span>}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {p.estado === "confirmado" && (
+                      <Button size="sm" variant="ghost" onClick={() => devolver(p.id)} disabled={devolverPago.isPending}>
+                        Devolver
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

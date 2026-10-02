@@ -13,6 +13,7 @@ import { formatoNumero, formatoPesos } from "@/lib/formato";
 import { etiquetaGranularidad, hoyAR } from "@/lib/periodos";
 import { NOMBRE_ESTADO, NOMBRE_PLAN, fechaCorta, useAccionesAdmin, useEmpresaAdmin, usePlanesAdmin } from "../hooks/use-admin";
 import { EtiquetaAlerta, EtiquetaEstado, EtiquetaPlan, Indicador, Panel, variacion } from "./comunes";
+import { OrigenClientePanel } from "./alianzas/OrigenClientePanel";
 
 const G_VENTAS = { monto: { label: "Vendido", color: "var(--chart-1)" } } satisfies ChartConfig;
 const selectClase = "h-8 rounded-lg border bg-transparent px-2 text-sm";
@@ -24,10 +25,9 @@ const mas = (dias: number) => {
 
 function Acciones({ id, suscripcionId, estado, esDemo }: { id: string; suscripcionId: string | null; estado: string | null; esDemo: boolean }) {
   const planes = usePlanesAdmin();
-  const { asignarPlan, cambiarEstado, marcarDemo, registrarPago } = useAccionesAdmin();
+  const { asignarPlan, cambiarEstado, marcarDemo } = useAccionesAdmin();
   const [plan, setPlan] = useState("");
   const [vence, setVence] = useState(mas(30));
-  const [pago, setPago] = useState({ monto: "", metodo: "transferencia", periodo: hoyAR().slice(0, 7), notas: "" });
   const aviso = (texto: string) => ({ onSuccess: () => toast.success(texto), onError: (e: Error) => toast.error(e.message) });
 
   return (
@@ -73,31 +73,11 @@ function Acciones({ id, suscripcionId, estado, esDemo }: { id: string; suscripci
           </div>
         )}
 
-        <div className="flex flex-col gap-2">
-          <span className="font-medium">Registrar un pago</span>
-          <div className="flex flex-wrap gap-2">
-            <Input className="w-32" inputMode="decimal" placeholder="Monto $" aria-label="Monto del pago" value={pago.monto} onChange={(e) => setPago({ ...pago, monto: e.target.value })} />
-            <select className={selectClase} aria-label="Método de pago" value={pago.metodo} onChange={(e) => setPago({ ...pago, metodo: e.target.value })}>
-              <option value="transferencia">Transferencia</option>
-              <option value="mercadopago">Mercado Pago</option>
-              <option value="efectivo">Efectivo</option>
-              <option value="otro">Otro</option>
-            </select>
-            <Input type="month" className="w-40" aria-label="Mes que paga" value={pago.periodo} onChange={(e) => setPago({ ...pago, periodo: e.target.value })} />
-            <Input className="min-w-40 flex-1" placeholder="Notas (opcional)" aria-label="Notas del pago" value={pago.notas} onChange={(e) => setPago({ ...pago, notas: e.target.value })} />
-            <Button
-              size="sm"
-              disabled={!(Number(pago.monto.replace(/\./g, "").replace(",", ".")) > 0) || registrarPago.isPending}
-              onClick={() =>
-                registrarPago.mutate(
-                  { empresaId: id, monto: Number(pago.monto.replace(/\./g, "").replace(",", ".")), metodo: pago.metodo, periodo: pago.periodo, notas: pago.notas },
-                  { ...aviso("Pago registrado: la suscripción queda activa hasta fin de ese mes"), onSettled: () => setPago((p) => ({ ...p, monto: "", notas: "" })) },
-                )
-              }
-            >
-              Registrar
-            </Button>
-          </div>
+        <div className="flex flex-col gap-1">
+          <span className="font-medium">Registrar un cobro</span>
+          <span className="text-xs text-muted-foreground">
+            Se carga en <Link href="/admin/pagos" className="text-primary hover:underline">Pagos</Link>: el sistema calcula el monto según el plan, el ciclo y el código del cliente.
+          </span>
         </div>
 
         <label className="flex items-center gap-2">
@@ -166,6 +146,8 @@ export function ClienteFichaVista({ id }: { id: string }) {
         </Panel>
         <Acciones id={e.id} suscripcionId={e.suscripcionId} estado={e.estado} esDemo={e.esDemo} />
       </div>
+
+      <OrigenClientePanel empresaId={id} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel titulo="Usuarios">

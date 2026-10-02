@@ -35,6 +35,17 @@ export interface AdminPago {
   periodo: string | null;
   notas: string | null;
   createdAt: string;
+  plan: string | null;
+  ciclo: string | null;
+  cuota: number | null;
+  cuotas: number | null;
+  grupoId: string | null;
+  periodoDesde: string | null;
+  periodoHasta: string | null;
+  precioLista: number | null;
+  descuentoArs: number | null;
+  codigo: string | null;
+  devolucionMotivo: string | null;
 }
 
 

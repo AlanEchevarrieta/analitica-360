@@ -36,7 +36,7 @@ const RUTAS_FIJAS = [
   '/inicio', '/ventas', '/ventas/nueva', '/ventas/devoluciones', '/productos', '/productos/nuevo', '/inventario',
   '/compras', '/compras/nueva', '/pedidos', '/pedidos/nuevo', '/clientes', '/clientes/segmentos', '/clientes/nuevo',
   '/proveedores', '/proveedores/nuevo', '/analytics/ventas', '/analytics/productos', '/analytics/contabilidad',
-  '/analytics/insights', '/analytics/estados', '/configuracion', '/planes', '/soporte', '/soporte/nuevo', '/admin', '/admin/clientes', '/admin/pagos', '/admin/soporte', '/admin/sistema',
+  '/analytics/insights', '/analytics/estados', '/configuracion', '/planes', '/soporte', '/soporte/nuevo', '/admin', '/admin/clientes', '/admin/pagos', '/admin/alianzas', '/admin/alianzas/cupones', '/admin/soporte', '/admin/sistema',
 ];
 
 fs.mkdirSync(carpeta, { recursive: true });
@@ -71,9 +71,11 @@ if (page.url().includes('/elegir-empresa')) {
 const ids = await page.evaluate(async (api) => {
   const token = await window.Clerk.session.getToken();
   const get = (p) => fetch(`${api}${p}`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json());
-  const [ventas, productos, pedidos, proveedores, clientes] = await Promise.all([
+  const [ventas, productos, pedidos, proveedores, clientes, camaras] = await Promise.all([
     get('/ventas?pagina=1&pageSize=1'), get('/productos?pagina=1&pageSize=50&orden=demanda'), get('/pedidos?pagina=1&pageSize=1'),
     get('/proveedores?pagina=1&pageSize=1'), get('/clientes'),
+    // Solo el admin ve cámaras (a los demás la API les responde 403 y quedaría como problema).
+    get('/admin/yo').then((r) => (r?.admin ? get('/admin/alianzas/camaras') : [])).catch(() => []),
   ]);
   return {
     venta: ventas.items?.[0]?.id,
@@ -81,6 +83,7 @@ const ids = await page.evaluate(async (api) => {
     pedido: pedidos.items?.[0]?.id,
     proveedor: proveedores.items?.[0]?.id,
     cliente: clientes?.[0]?.id,
+    camara: Array.isArray(camaras) ? camaras[0]?.id : undefined,
   };
 }, API);
 const rutas = [
@@ -91,6 +94,7 @@ const rutas = [
   ids.pedido && `/pedidos/${ids.pedido}/remito`,
   ids.proveedor && `/proveedores/${ids.proveedor}`,
   ids.cliente && `/clientes/${ids.cliente}`,
+  ids.camara && `/admin/alianzas/${ids.camara}`,
 ].filter(Boolean).filter((r) => !process.env.RUTAS || process.env.RUTAS.split(',').includes(r));
 
 const resumen = [];

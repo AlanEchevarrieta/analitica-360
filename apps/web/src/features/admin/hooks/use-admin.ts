@@ -86,6 +86,17 @@ export interface PagoAdmin {
   periodo: string | null;
   notas: string | null;
   createdAt: string;
+  plan: string | null;
+  ciclo: string | null;
+  cuota: number | null;
+  cuotas: number | null;
+  grupoId: string | null;
+  periodoDesde: string | null;
+  periodoHasta: string | null;
+  precioLista: number | null;
+  descuentoArs: number | null;
+  codigo: string | null;
+  devolucionMotivo: string | null;
 }
 
 export interface TicketAdmin {
@@ -149,10 +160,6 @@ export function useAccionesAdmin() {
   const refrescar = () => void queryClient.invalidateQueries({ queryKey: ["admin"] });
   const post = (ruta: string, body: unknown, method = "POST") => api(ruta, { method, body: JSON.stringify(body) });
   return {
-    registrarPago: useMutation({
-      mutationFn: (p: { empresaId: string; monto: number; metodo: string; periodo: string; notas: string }) => post("/admin/pagos", p),
-      onSuccess: refrescar,
-    }),
     asignarPlan: useMutation({
       mutationFn: (p: { empresaId: string; planId: string; fechaVencimiento: string }) => post("/admin/suscripciones/asignar", p),
       onSuccess: refrescar,
@@ -197,6 +204,7 @@ export const NOMBRE_ESTADO: Record<string, string> = {
   cancelada: "Cancelada",
 };
 
-export const NOMBRE_PLAN = (p: string | null) => (p ? ({ basico: "Básico", starter: "Starter", pro: "Pro", premium: "Premium", ecommerce: "E-commerce" }[p.toLowerCase()] ?? p) : "—");
+// Premium pasó a ser Pro (2026-10-02).
+export const NOMBRE_PLAN = (p: string | null) => (p ? ({ basico: "Básico", starter: "Starter", pro: "Pro", premium: "Pro", ecommerce: "E-commerce" }[p.toLowerCase()] ?? p) : "—");
 
 export const fechaCorta = (iso: string | null) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");

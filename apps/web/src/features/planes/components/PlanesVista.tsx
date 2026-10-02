@@ -1,31 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { Check, Minus } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { BadgeCheck, Gift } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { useSuscripcion } from "@/hooks/use-suscripcion";
-import { formatoPesos } from "@/lib/formato";
 import { cn } from "@/lib/utils";
-import {
-  DESCUENTO_ANUAL,
-  DESCUENTO_LANZAMIENTO,
-  ESTADOS_SUSCRIPCION,
-  MESES_DESCUENTO_LANZAMIENTO,
-  MODULOS,
-  PLANES,
-  PLANES_PAGOS,
-  PRECIOS,
-  desgloseAnual,
-  idPlan,
-  linkContratar,
-  precioVigente,
-  type Ciclo,
-} from "../planes";
+import { CICLOS, ESTADOS_SUSCRIPCION, PLANES, idPlan, type Ciclo } from "../planes";
+import { useAplicarCodigo, usePrecios } from "../use-precios";
+import { TarjetaPlan } from "./TarjetaPlan";
 
-const pct = (n: number) => `${Math.round(n * 100)}%`;
 const fecha = (iso: string) => iso.split("-").reverse().join("/");
 
 function PlanActual() {
@@ -59,90 +46,93 @@ function PlanActual() {
 }
 
 export function PlanesVista() {
+  const { data: sub } = useSuscripcion();
   const [ciclo, setCiclo] = useState<Ciclo>("mensual");
-  const { data } = useSuscripcion();
-  const actual = data?.suscripcion && !data.enTrial ? idPlan(data.suscripcion.planNombre) : null;
+  const [texto, setTexto] = useState("");
+  const [probando, setProbando] = useState("");
+  const precios = usePrecios(probando);
+  const aplicar = useAplicarCodigo();
+  const actual = sub?.suscripcion && !sub.enTrial ? idPlan(sub.suscripcion.planNombre) : null;
+  const cupon = precios.data?.cupon ?? null;
+
+  function aplicarCodigo() {
+    aplicar.mutate(texto, {
+      onSuccess: (r) => {
+        toast.success(r.mensaje);
+        setTexto("");
+        setProbando("");
+      },
+      onError: (e) => toast.error(e.message),
+    });
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <PlanActual />
 
-      <div className="flex justify-center">
-        <div className="inline-flex rounded-lg bg-muted p-1" role="group" aria-label="Forma de pago">
-          {(["mensual", "anual"] as const).map((c) => (
-            <Button key={c} size="sm" variant={ciclo === c ? "default" : "ghost"} aria-pressed={ciclo === c} onClick={() => setCiclo(c)}>
-              {c === "mensual" ? "Mensual" : `Anual −${pct(DESCUENTO_ANUAL)}`}
+      <div className="text-center">
+        <h1 className="text-2xl font-semibold">Elegí tu plan</h1>
+        <p className="text-muted-foreground">Precios en pesos argentinos. Cambiás o cancelás cuando quieras.</p>
+      </div>
+
+      {cupon?.aplicado ? (
+        <p className="mx-auto flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-400">
+          <BadgeCheck className="size-4" aria-hidden />
+          Tenés el código <span className="font-mono font-semibold">{cupon.codigo}</span>
+          {cupon.camara ? ` de ${cupon.camara}` : ""}: los precios ya incluyen sus beneficios.
+        </p>
+      ) : (
+        <div className="mx-auto flex w-full max-w-xl flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Input className="min-w-48 flex-1 uppercase placeholder:normal-case" placeholder="¿Tenés un código? (ej. el de tu cámara)" aria-label="Código" value={texto} onChange={(e) => setTexto(e.target.value)} />
+            <Button variant="outline" disabled={!texto.trim()} onClick={() => setProbando(texto.trim())}>
+              Ver precios
             </Button>
+            {probando && cupon && (
+              <Button onClick={aplicarCodigo} disabled={aplicar.isPending}>
+                Aplicar código
+              </Button>
+            )}
+          </div>
+          {probando && precios.data?.aviso && <p className={cn("text-sm", cupon ? "text-amber-600" : "text-destructive")}>{precios.data.aviso}</p>}
+          {probando && cupon && (
+            <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+              <Gift className="size-4" aria-hidden />
+              {cupon.camara ? `Código de ${cupon.camara}` : "Código válido"}
+              {cupon.diasPrueba && sub?.enTrial ? `: tu prueba gratis pasa a durar ${Math.round(cupon.diasPrueba / 30) === 1 ? "1 mes" : `${cupon.diasPrueba} días`} desde que te registraste` : ""}. Aplicalo para que quede guardado.
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="mx-auto flex rounded-lg border p-1" role="group" aria-label="Forma de pago">
+        {CICLOS.map((c) => (
+          <Button key={c.id} size="sm" variant={ciclo === c.id ? "default" : "ghost"} aria-pressed={ciclo === c.id} onClick={() => setCiclo(c.id)}>
+            {c.nombre}
+          </Button>
+        ))}
+      </div>
+
+      {precios.isError ? (
+        <ErrorDatos error={precios.error} onReintentar={() => precios.refetch()} />
+      ) : !precios.data ? (
+        <CargandoFilas filas={4} />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-3">
+          {precios.data.planes.map((p) => (
+            <TarjetaPlan
+              key={p.plan}
+              id={p.plan}
+              precio={p.ciclos.find((c) => c.ciclo === ciclo)!}
+              codigo={cupon?.codigo ?? null}
+              esActual={actual === p.plan}
+            />
           ))}
         </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {PLANES_PAGOS.map((id) => {
-          const plan = PLANES[id];
-          const anual = desgloseAnual(id);
-          const contratar = linkContratar(id, ciclo);
-          const esActual = actual === id;
-          return (
-            <Card key={id} className={cn("flex flex-col", plan.popular && "ring-2 ring-primary")}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between gap-2 text-lg">
-                  {plan.nombre}
-                  {plan.popular && (
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold tracking-wide text-primary-foreground">MÁS ELEGIDO</span>
-                  )}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground line-through tabular-nums">{formatoPesos(PRECIOS[id].mensual)}</p>
-                <p className="text-2xl font-semibold tabular-nums">
-                  {formatoPesos(precioVigente(id))}
-                  <span className="text-sm font-normal text-muted-foreground"> + IVA / mes</span>
-                </p>
-                <span className="w-fit rounded bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-600">
-                  🔥 −{pct(DESCUENTO_LANZAMIENTO)} los primeros {MESES_DESCUENTO_LANZAMIENTO} meses
-                </span>
-                {ciclo === "anual" && (
-                  <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
-                    <span>Meses 1 a 3: {formatoPesos(anual.mes1a3)}/mes</span>
-                    <span>Meses 4 a 12: {formatoPesos(anual.mes4a12)}/mes</span>
-                    <span className="font-medium text-foreground">Total del año: {formatoPesos(anual.total)} + IVA</span>
-                  </div>
-                )}
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col gap-4">
-                <p className="text-sm">
-                  {plan.usuarios} · {plan.productos}
-                </p>
-                <ul className="flex flex-1 flex-col gap-1.5 text-sm">
-                  {MODULOS.map((m) => {
-                    const incluye = plan.modulos.includes(m.id);
-                    return (
-                      <li key={m.id} className={cn("flex items-center gap-2", !incluye && "text-muted-foreground/60")}>
-                        {incluye ? <Check className="size-4 text-emerald-500" aria-label="Incluido" /> : <Minus className="size-4" aria-label="No incluido" />}
-                        {m.etiqueta}
-                      </li>
-                    );
-                  })}
-                </ul>
-                {esActual ? (
-                  <span className={cn(buttonVariants({ variant: "outline" }), "pointer-events-none w-full")}>Tu plan actual</span>
-                ) : contratar.externo ? (
-                  <a href={contratar.href} target="_blank" rel="noreferrer" className={cn(buttonVariants({ variant: plan.popular ? "default" : "outline" }), "w-full")}>
-                    Elegir {plan.nombre}
-                  </a>
-                ) : (
-                  <Link href={contratar.href} className={cn(buttonVariants({ variant: plan.popular ? "default" : "outline" }), "w-full")}>
-                    Elegir {plan.nombre}
-                  </Link>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      )}
 
       <p className="mx-auto max-w-2xl text-center text-xs text-muted-foreground">
-        Precios sin IVA (21%), recuperable para responsables inscriptos. El descuento de lanzamiento vale los primeros {MESES_DESCUENTO_LANZAMIENTO} meses para
-        suscripciones nuevas. En el pago anual, los meses 4 a 12 llevan el descuento anual: los descuentos no se acumulan.
+        Precios sin IVA (21%), recuperable para responsables inscriptos. Los descuentos de los códigos se calculan sobre el precio de lista y no se acumulan.
       </p>
     </div>
   );
