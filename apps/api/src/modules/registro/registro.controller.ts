@@ -12,6 +12,8 @@ const registroSchema = z.object({
   rubro: z.string().trim().min(1, 'Elegí el rubro').max(60),
   telefono: z.string().trim().min(6, 'Dejanos un WhatsApp para ayudarte').max(30),
   origen: z.string().trim().max(80).nullable().default(null),
+  codigo: z.string().trim().max(40).nullable().default(null),
+  cuit: z.string().trim().max(20).nullable().default(null),
   aceptaTerminos: z.literal(true, { message: 'Tenés que aceptar los términos y condiciones' }),
 });
 type RegistroBody = z.infer<typeof registroSchema>;
@@ -27,7 +29,7 @@ export class RegistroController {
   registrar(@Req() request: Request, @Body(new ZodValidationPipe(registroSchema)) body: RegistroBody) {
     return this.service.registrar(
       request.clerkAuth!.clerkUserId,
-      { nombreNegocio: body.nombreNegocio, rubro: body.rubro, telefono: body.telefono, origen: body.origen || null },
+      { nombreNegocio: body.nombreNegocio, rubro: body.rubro, telefono: body.telefono, origen: body.origen || null, codigo: body.codigo || null, cuit: body.cuit || null },
       request.headers['user-agent'] ?? null,
     );
   }

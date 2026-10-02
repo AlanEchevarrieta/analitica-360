@@ -2,7 +2,7 @@
 
 export const DIAS_PRUEBA = 14;
 /** Durante la prueba se usan todas las funciones (plan más completo sin tienda). */
-export const PLAN_PRUEBA = 'premium';
+export const PLAN_PRUEBA = 'pro';
 
 /** Fecha (YYYY-MM-DD) en que termina la prueba empezando `hoy` (día AR). */
 export function finDePrueba(hoy: string, dias = DIAS_PRUEBA): string {

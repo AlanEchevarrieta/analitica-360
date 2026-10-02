@@ -13,9 +13,9 @@
  * se decidió explícitamente antes de esta fase).
  */
 
-export type PlanId = 'starter' | 'basico' | 'pro' | 'premium' | 'ecommerce';
-export type CicloFacturacion = 'mensual' | 'anual';
-export type PlanPagoId = 'basico' | 'pro' | 'premium' | 'ecommerce';
+export type PlanId = 'starter' | 'basico' | 'pro' | 'ecommerce';
+export type CicloFacturacion = 'mensual' | 'trimestral' | 'anual';
+export type PlanPagoId = 'basico' | 'pro' | 'ecommerce';
 
 export interface PlanDef {
   nombre: string;
@@ -24,57 +24,42 @@ export interface PlanDef {
   maxProductos: number | null;
 }
 
+const MODULOS_OPERACION = ['inicio', 'productos', 'ventas', 'clientes', 'compras', 'proveedores', 'inventario', 'soporte'];
+/**
+ * Pro (2026-10-02) absorbe al ex Premium y hereda todos sus módulos para que
+ * nadie pierda acceso. PENDIENTE: definir los módulos y límites de cada plan.
+ */
+const MODULOS_PRO = [...MODULOS_OPERACION, 'analytics', 'pedidos', 'produccion', 'insights', 'contabilidad'];
+
 export const PLANES: Record<PlanId, PlanDef> = {
   starter: { nombre: 'Starter', modulos: ['inicio', 'productos', 'ventas', 'clientes'], maxUsuarios: 1, maxProductos: 100 },
-  basico: {
-    nombre: 'Básico',
-    modulos: ['inicio', 'productos', 'ventas', 'clientes', 'compras', 'proveedores', 'inventario', 'soporte'],
-    maxUsuarios: 2,
-    maxProductos: null,
-  },
-  pro: {
-    nombre: 'Pro',
-    modulos: ['inicio', 'productos', 'ventas', 'clientes', 'compras', 'proveedores', 'inventario', 'soporte', 'analytics', 'pedidos', 'produccion'],
-    maxUsuarios: 5,
-    maxProductos: null,
-  },
-  premium: {
-    nombre: 'Premium',
-    modulos: [
-      'inicio', 'productos', 'ventas', 'clientes', 'compras', 'proveedores', 'inventario', 'soporte',
-      'analytics', 'pedidos', 'produccion', 'insights', 'contabilidad',
-    ],
-    maxUsuarios: null,
-    maxProductos: null,
-  },
-  ecommerce: {
-    nombre: 'E-commerce',
-    modulos: [
-      'inicio', 'productos', 'ventas', 'clientes', 'compras', 'proveedores', 'inventario', 'soporte',
-      'analytics', 'pedidos', 'produccion', 'insights', 'contabilidad', 'tienda',
-    ],
-    maxUsuarios: null,
-    maxProductos: null,
-  },
+  basico: { nombre: 'Básico', modulos: MODULOS_OPERACION, maxUsuarios: 2, maxProductos: null },
+  pro: { nombre: 'Pro', modulos: MODULOS_PRO, maxUsuarios: null, maxProductos: null },
+  ecommerce: { nombre: 'E-commerce', modulos: [...MODULOS_PRO, 'tienda'], maxUsuarios: null, maxProductos: null },
 };
 
-export const PLANES_PAGOS: PlanPagoId[] = ['basico', 'pro', 'premium', 'ecommerce'];
+export const PLANES_PAGOS: PlanPagoId[] = ['basico', 'pro', 'ecommerce'];
 
-export const modulosDuranteTrial = PLANES.premium.modulos;
+/** Durante la prueba gratis se usan todas las funciones del Pro. */
+export const modulosDuranteTrial = PLANES.pro.modulos;
 
-/** Puerto de clavePlan: normaliza variantes históricas del nombre de plan. */
+/** Normaliza nombres históricos: "Básico" → basico; "Premium" y "business" (nombre viejo de Premium) → pro. */
 export function clavePlan(nombre: string | null | undefined): string {
   const p = (nombre ?? '').trim().toLowerCase();
   if (p === 'básico') return 'basico';
-  if (p === 'business') return 'premium';
+  if (p === 'premium' || p === 'business') return 'pro';
   return p;
 }
 
-/** Puerto de idPlan: clavePlan() acotado a un PlanId válido, 'starter' si no matchea ninguno. */
+/** clavePlan() acotado a un PlanId válido, 'starter' si no matchea ninguno. */
 export function idPlan(nombre: string | null | undefined): PlanId {
   const p = clavePlan(nombre);
-  if (p === 'basico' || p === 'pro' || p === 'premium' || p === 'ecommerce' || p === 'starter') return p;
+  if (p === 'basico' || p === 'pro' || p === 'ecommerce' || p === 'starter') return p;
   return 'starter';
+}
+
+export function esPlanPago(nombre: string | null | undefined): nombre is PlanPagoId {
+  return PLANES_PAGOS.includes(clavePlan(nombre) as PlanPagoId);
 }
 
 /** Puerto de defPlan. */
@@ -82,72 +67,53 @@ export function defPlan(plan: string | null | undefined): PlanDef {
   return PLANES[idPlan(plan)];
 }
 
-/** Puerto de tieneAcceso: durante el trial, siempre los módulos de Premium (modulosDuranteTrial), fuera de trial según el plan contratado. */
+/** Durante el trial, los módulos de Pro; fuera de trial, según el plan contratado. */
 export function tieneAcceso(plan: string, modulo: string, enTrial: boolean): boolean {
   if (enTrial) return modulosDuranteTrial.includes(modulo);
   return defPlan(plan).modulos.includes(modulo);
 }
 
-/** Puerto de planTieneAnalytics. */
 export function planTieneAnalytics(plan: string | null | undefined, enTrial = false): boolean {
   return tieneAcceso(clavePlan(plan), 'analytics', enTrial);
 }
 
-/** Puerto de planTieneInsights. */
 export function planTieneInsights(plan: string | null | undefined, enTrial = false): boolean {
   return tieneAcceso(clavePlan(plan), 'insights', enTrial);
 }
 
-/** Puerto de planMinimoParaModulo: el plan pago más económico que incluye ese módulo. */
+/** El plan pago más económico que incluye ese módulo. */
 export function planMinimoParaModulo(modulo: string): PlanPagoId {
   for (const id of PLANES_PAGOS) {
     if (PLANES[id].modulos.includes(modulo)) return id;
   }
-  return 'premium';
+  return 'pro';
 }
 
-/** Puerto de planEsIlimitado. */
 export function planEsIlimitado(plan: string | null | undefined): boolean {
   const id = idPlan(plan);
-  return id === 'premium' || id === 'ecommerce';
+  return id === 'pro' || id === 'ecommerce';
 }
 
-export const PRECIOS: Record<PlanPagoId, { mensual: number; anual: number }> = {
-  basico: { mensual: 25_000, anual: 20_000 },
-  pro: { mensual: 70_000, anual: 56_000 },
-  premium: { mensual: 95_000, anual: 76_000 },
-  ecommerce: { mensual: 150_000, anual: 120_000 },
+/**
+ * Precio de LISTA por mes, en pesos y sin IVA (2026-10-02). Sin promociones al
+ * público: los descuentos vienen solo de cupones (ver modules/alianzas).
+ */
+export const PRECIO_MENSUAL: Record<PlanPagoId, number> = {
+  basico: 49_000,
+  pro: 89_000,
+  ecommerce: 149_000,
 };
 
-export const DESCUENTO_LANZAMIENTO = 0.4;
-export const DESCUENTO_ANUAL = 0.2;
-export const MESES_DESCUENTO_LANZAMIENTO = 3;
+export const MESES_CICLO: Record<CicloFacturacion, number> = { mensual: 1, trimestral: 3, anual: 12 };
+export const CICLOS: CicloFacturacion[] = ['mensual', 'trimestral', 'anual'];
 
-/** Puerto de precioLista. */
+/** Precio de lista de un período completo del ciclo: trimestral = 3 × mensual, anual = 12 × mensual. */
 export function precioLista(plan: PlanPagoId, ciclo: CicloFacturacion): number {
-  return PRECIOS[plan][ciclo];
-}
-
-/** Puerto de precioLanzamiento. */
-export function precioLanzamiento(plan: PlanPagoId, ciclo: CicloFacturacion): number {
-  return Math.round(precioLista(plan, ciclo) * (1 - DESCUENTO_LANZAMIENTO));
-}
-
-/** Puerto de desgloseAnualPlan: precio mes a mes de un plan anual con descuento de lanzamiento los primeros 3 meses. */
-export function desgloseAnualPlan(plan: PlanPagoId): { listaMes: number; mes1a3: number; mes4a12: number; totalAnio: number } {
-  const listaMes = PRECIOS[plan].mensual;
-  const mes1a3 = Math.round(listaMes * (1 - DESCUENTO_LANZAMIENTO));
-  const mes4a12 = Math.round(listaMes * (1 - DESCUENTO_ANUAL));
-  return { listaMes, mes1a3, mes4a12, totalAnio: mes1a3 * 3 + mes4a12 * 9 };
-}
-
-/** Puerto de mesesAhorroAnual. */
-export function mesesAhorroAnual(): number {
-  return Math.round(DESCUENTO_ANUAL * 12);
+  return PRECIO_MENSUAL[plan] * MESES_CICLO[ciclo];
 }
 
 /** Puerto de ORDEN_PLANES + ordenarPlanesAdmin: orden fijo para listados admin (starter -> ... -> ecommerce/business). */
-export const ORDEN_PLANES = ['starter', 'basico', 'básico', 'pro', 'premium', 'ecommerce', 'business'] as const;
+export const ORDEN_PLANES = ['starter', 'basico', 'básico', 'pro', 'premium', 'business', 'ecommerce'] as const;
 
 export function ordenarPlanesAdmin<T extends { nombre: string }>(planes: T[]): T[] {
   return [...planes].sort((a, b) => {

@@ -42,8 +42,29 @@ model Empresa {
   telefono           String?
   /// Cómo nos conoció (registro propio).
   origenRegistro     String?   @map("origen_registro")
+  /// CUIT (opcional, sin guiones): también controla que el mes gratis de un cupón sea de un solo uso.
+  cuit               String?
+  /// Cámara de la que vino (por su código) y el cupón que usó.
+  camaraId           String?   @map("camara_id") @db.Uuid
+  cuponId            String?   @map("cupon_id") @db.Uuid
+  /// Prueba gratis que recibió (14 días o la del cupón).
+  pruebaDesde        DateTime? @map("prueba_desde") @db.Date
+  pruebaHasta        DateTime? @map("prueba_hasta") @db.Date
+  /// Inicio del primer período pago: arranca la ventana de comisión.
+  primerPagoEn       DateTime? @map("primer_pago_en") @db.Date
+  /// Número de orden dentro de la cámara (con el primer pago; no cambia aunque otros se den de baja).
+  ordenCamara        Int?      @map("orden_camara")
+  comisionPct        Decimal?  @map("comision_pct") @db.Decimal(5, 2)
+  /// Fin (excluido) de la comisión de la cámara por este cliente.
+  comisionHasta      DateTime? @map("comision_hasta") @db.Date
   createdAt          DateTime  @default(now()) @map("created_at")
   deletedAt          DateTime? @map("deleted_at")
+
+  camara                    Camara?                @relation(fields: [camaraId], references: [id])
+  cupon                     Cupon?                 @relation("EmpresaCupon", fields: [cuponId], references: [id])
+  cuponesReferido           Cupon[]                @relation("CuponReferente")
+  cambiosOrigen             CambioOrigen[]
+  comisiones                Comision[]
 
   usuarios                  Usuario[]
   historialPlanes           HistorialPlan[]
@@ -86,6 +107,7 @@ model Empresa {
   tienda                    TiendaConfig?
   imagenesProductos         ProductoImagen[]
 
+  @@unique([camaraId, ordenCamara])
   @@map("empresas")
 }
 
@@ -962,14 +984,41 @@ model TicketNumeracion {
 model Pago {
   id        String    @id @default(uuid()) @db.Uuid
   empresaId String    @map("empresa_id") @db.Uuid
+  /// Monto cobrado (con el descuento ya aplicado), sin IVA.
   montoArs  Decimal   @map("monto_ars") @db.Decimal(12, 2)
   metodo    String
+  /// confirmado | devuelto
   estado    String    @default("confirmado")
   periodo   DateTime? @db.Date
   notas     String?
+  /// Plan y ciclo pagados (basico | pro | ecommerce; mensual | trimestral | anual).
+  plan              String?
+  ciclo             String?
+  /// Período que cubre este pago [desde, hasta).
+  periodoDesde      DateTime? @map("periodo_desde") @db.Date
+  periodoHasta      DateTime? @map("periodo_hasta") @db.Date
+  /// Cuotas: número de cuota, total de cuotas y el grupo que une las cuotas de un mismo período.
+  cuota             Int?
+  cuotas            Int?
+  grupoId           String?   @map("grupo_id") @db.Uuid
+  /// entrada (primer período pago) | renovacion
+  tipoPeriodo       String?   @map("tipo_periodo")
+  /// Precio de lista de lo que cubre este pago y el descuento aplicado (lista − descuento = monto).
+  precioLista       Decimal?  @map("precio_lista") @db.Decimal(12, 2)
+  descuentoArs      Decimal?  @map("descuento_ars") @db.Decimal(12, 2)
+  cuponId           String?   @map("cupon_id") @db.Uuid
+  /// sin_cupon | entrada | renovacion | sin_descuento | manual
+  reglaAplicada     String?   @map("regla_aplicada")
+  /// manual (lo carga el admin) | mercadopago
+  origen            String    @default("manual")
+  referenciaExterna String?   @map("referencia_externa")
+  devueltoEn        DateTime? @map("devuelto_en")
+  devolucionMotivo  String?   @map("devolucion_motivo")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  empresa Empresa @relation(fields: [empresaId], references: [id])
+  empresa    Empresa    @relation(fields: [empresaId], references: [id])
+  cupon      Cupon?     @relation(fields: [cuponId], references: [id])
+  comisiones Comision[]
 
   @@index([empresaId, createdAt])
   @@map("pagos")
@@ -1224,4 +1273,155 @@ model ProductoImagen {
 
   @@index([productoId, orden])
   @@map("productos_imagenes")
+}
+
+
+// ==== Alianzas con cámaras y cupones ====
+// Reglas de cálculo en src/modules/alianzas/alianzas.util.ts.
+
+/// Cámara o aliado que nos trae clientes y cobra comisión por ellos.
+model Camara {
+  id               String   @id @default(uuid()) @db.Uuid
+  nombre           String
+  contactoNombre   String?  @map("contacto_nombre")
+  contactoEmail    String?  @map("contacto_email")
+  contactoTelefono String?  @map("contacto_telefono")
+  activa           Boolean  @default(true)
+  /// Meses de comisión por cliente desde su primer pago.
+  mesesComision    Int      @default(24) @map("meses_comision")
+  /// Tramos por número de orden: [{ desde, hasta (null = sin tope), porcentaje }].
+  tramos           Json
+  notas            String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  cupones       Cupon[]
+  empresas      Empresa[]
+  comisiones    Comision[]
+  liquidaciones Liquidacion[]
+
+  @@map("camaras")
+}
+
+/// Cupón o código: de cámara, de descuento o de referido.
+model Cupon {
+  id                 String    @id @default(uuid()) @db.Uuid
+  /// Normalizado: sin espacios y en mayúsculas ("ucim 360" → "UCIM360").
+  codigo             String    @unique
+  /// camara | descuento | referido
+  tipo               String
+  camaraId           String?   @map("camara_id") @db.Uuid
+  /// Referidos: la empresa que recomienda (la lógica se arma más adelante).
+  empresaReferenteId String?   @map("empresa_referente_id") @db.Uuid
+  descripcion        String?
+  /// Días de prueba gratis (reemplazan a los 14 comunes); null = la prueba común.
+  diasPrueba         Int?      @map("dias_prueba")
+  /// Por ciclo (mensual | trimestral | anual): { entrada: [{ meses, porcentaje }], periodosEntrada, renovacionPct, renovacionPeriodos, cuotas }.
+  reglas             Json      @default("{}")
+  desde              DateTime? @db.Date
+  hasta              DateTime? @db.Date
+  maxUsos            Int?      @map("max_usos")
+  usos               Int       @default(0)
+  activo             Boolean   @default(true)
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  camara           Camara?    @relation(fields: [camaraId], references: [id])
+  empresaReferente Empresa?   @relation("CuponReferente", fields: [empresaReferenteId], references: [id])
+  usosRegistro     CuponUso[]
+  empresas         Empresa[]  @relation("EmpresaCupon")
+  pagos            Pago[]
+
+  @@index([camaraId])
+  @@map("cupones")
+}
+
+/// Cada uso de un cupón: quién y cuándo. Controla que el mes gratis sea de un solo uso.
+model CuponUso {
+  id          String   @id @default(uuid()) @db.Uuid
+  cuponId     String   @map("cupon_id") @db.Uuid
+  empresaId   String?  @map("empresa_id") @db.Uuid
+  clerkUserId String?  @map("clerk_user_id")
+  email       String?
+  cuit        String?
+  /// Recibió la prueba extendida del cupón.
+  conPrueba   Boolean  @default(false) @map("con_prueba")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  cupon Cupon @relation(fields: [cuponId], references: [id])
+
+  @@index([email])
+  @@index([clerkUserId])
+  @@index([cuit])
+  @@index([empresaId])
+  @@map("cupones_usos")
+}
+
+/// Una línea por pago que genera comisión (o ajuste negativo por devolución). No se recalculan.
+model Comision {
+  id            String    @id @default(uuid()) @db.Uuid
+  camaraId      String    @map("camara_id") @db.Uuid
+  empresaId     String    @map("empresa_id") @db.Uuid
+  pagoId        String    @map("pago_id") @db.Uuid
+  /// pago | ajuste
+  tipo          String
+  base          Decimal   @db.Decimal(12, 2)
+  /// Parte del período pagado que cae dentro de la ventana de comisión (0 a 1).
+  proporcion    Decimal   @db.Decimal(9, 6)
+  porcentaje    Decimal   @db.Decimal(5, 2)
+  monto         Decimal   @db.Decimal(12, 2)
+  periodoDesde  DateTime? @map("periodo_desde") @db.Date
+  periodoHasta  DateTime? @map("periodo_hasta") @db.Date
+  /// Mes (día 1) en que se liquida: el del cobro, o el de la devolución para los ajustes.
+  mes           DateTime  @db.Date
+  liquidacionId String?   @map("liquidacion_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  camara      Camara       @relation(fields: [camaraId], references: [id])
+  empresa     Empresa      @relation(fields: [empresaId], references: [id])
+  pago        Pago         @relation(fields: [pagoId], references: [id])
+  liquidacion Liquidacion? @relation(fields: [liquidacionId], references: [id])
+
+  @@unique([pagoId, tipo])
+  @@index([camaraId, mes])
+  @@map("comisiones")
+}
+
+/// Liquidación mensual de una cámara: pendiente → aprobada → pagada.
+model Liquidacion {
+  id          String    @id @default(uuid()) @db.Uuid
+  camaraId    String    @map("camara_id") @db.Uuid
+  mes         DateTime  @db.Date
+  estado      String    @default("pendiente")
+  total       Decimal   @default(0) @db.Decimal(12, 2)
+  aprobadaEn  DateTime? @map("aprobada_en")
+  aprobadaPor String?   @map("aprobada_por")
+  pagadaEn    DateTime? @map("pagada_en") @db.Date
+  referencia  String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  camara     Camara     @relation(fields: [camaraId], references: [id])
+  comisiones Comision[]
+
+  @@unique([camaraId, mes])
+  @@map("liquidaciones")
+}
+
+/// Corrección manual del origen de un cliente (solo admin), con quién, cuándo y por qué.
+model CambioOrigen {
+  id               String   @id @default(uuid()) @db.Uuid
+  empresaId        String   @map("empresa_id") @db.Uuid
+  camaraAnteriorId String?  @map("camara_anterior_id") @db.Uuid
+  camaraNuevaId    String?  @map("camara_nueva_id") @db.Uuid
+  cuponAnteriorId  String?  @map("cupon_anterior_id") @db.Uuid
+  cuponNuevoId     String?  @map("cupon_nuevo_id") @db.Uuid
+  motivo           String
+  hechoPor         String   @map("hecho_por")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
+  @@map("cambios_origen")
 }

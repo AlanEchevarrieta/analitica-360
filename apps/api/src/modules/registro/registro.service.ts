@@ -1,9 +1,10 @@
-import { BadGatewayException, ConflictException, Injectable, Logger } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.validation.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
 import { ClerkCuentasService } from './clerk-cuentas.service.js';
+import { CuponesService, normalizarCuit, type Verificacion } from '../alianzas/cupones.service.js';
 import { finDePrueba, limpiarNombre, normalizarTelefono, PLAN_PRUEBA, resumenPrimerosPasos, type PrimerosPasos } from './registro.util.js';
 
 export interface RegistroInput {
@@ -11,6 +12,9 @@ export interface RegistroInput {
   rubro: string;
   telefono: string;
   origen: string | null;
+  /** Código de una cámara o cupón (opcional). */
+  codigo?: string | null;
+  cuit?: string | null;
 }
 
 export interface RegistroRespuesta {
@@ -19,6 +23,8 @@ export interface RegistroRespuesta {
   finPrueba: string | null;
   /** Ya estaba registrado (reintento): se devuelve su empresa. */
   yaExistia: boolean;
+  /** Código aplicado: de qué cámara y si recibió la prueba extendida. */
+  cupon?: { codigo: string; camara: string | null; mesGratis: boolean; diasPrueba: number; aviso: string | null } | null;
 }
 
 @Injectable()
@@ -29,6 +35,7 @@ export class RegistroService {
     private readonly prisma: PrismaService,
     private readonly clerk: ClerkCuentasService,
     private readonly config: ConfigService<Env, true>,
+    private readonly cupones: CuponesService,
   ) {}
 
   /**
@@ -53,6 +60,15 @@ export class RegistroService {
     const nombre = limpiarNombre(input.nombreNegocio);
     const telefono = normalizarTelefono(input.telefono);
     const datos = await this.clerk.usuario(clerkUserId);
+    const cuit = normalizarCuit(input.cuit);
+    if (input.cuit?.trim() && !cuit) throw new BadRequestException('El CUIT tiene que tener 11 números');
+    // El código se valida antes de crear nada: si no sirve, se avisa y puede seguir sin código.
+    let codigo: Extract<Verificacion, { ok: true }> | null = null;
+    if (input.codigo?.trim()) {
+      const v = await this.cupones.verificar(input.codigo, { email: datos.email, clerkUserId, cuit });
+      if (!v.ok) throw new BadRequestException(v.mensaje);
+      codigo = v;
+    }
     let clerkOrgId: string;
     try {
       clerkOrgId = await this.clerk.crearOrganizacion(nombre, clerkUserId);
@@ -64,15 +80,23 @@ export class RegistroService {
     await this.clerk.bloquearCrearOrganizaciones(clerkUserId).catch((e) => this.logger.warn(`No se pudo quitar "crear organizaciones" a ${clerkUserId}: ${String(e)}`));
 
     const hoy = fechaHoyAR();
-    const finPrueba = finDePrueba(hoy);
+    // La prueba del cupón reemplaza a los 14 días (no se suman), si le corresponde.
+    const finPrueba = finDePrueba(hoy, codigo?.diasPrueba);
+    const origen = {
+      cuit,
+      camaraId: codigo?.cupon.camaraId ?? null,
+      cuponId: codigo?.cupon.id ?? null,
+      pruebaDesde: new Date(`${hoy}T00:00:00Z`),
+      pruebaHasta: new Date(`${finPrueba}T00:00:00Z`),
+    };
     let empresaId: string;
     try {
       empresaId = await this.prisma.$transaction(async (tx) => {
         // upsert: el webhook de Clerk puede haber llegado antes y creado la empresa.
         const empresa = await tx.empresa.upsert({
           where: { clerkOrgId },
-          create: { clerkOrgId, nombre, rubro: input.rubro, telefono, origenRegistro: input.origen, planActual: PLAN_PRUEBA },
-          update: { nombre, rubro: input.rubro, telefono, origenRegistro: input.origen, planActual: PLAN_PRUEBA },
+          create: { clerkOrgId, nombre, rubro: input.rubro, telefono, origenRegistro: input.origen, planActual: PLAN_PRUEBA, ...origen },
+          update: { nombre, rubro: input.rubro, telefono, origenRegistro: input.origen, planActual: PLAN_PRUEBA, ...origen },
         });
         const usuario = await tx.usuario.upsert({
           where: { clerkUserId },
@@ -85,13 +109,14 @@ export class RegistroService {
             data: { empresaId: empresa.id, planId: plan?.id ?? null, estado: 'periodo_prueba', fechaInicio: new Date(`${hoy}T00:00:00Z`), fechaVencimiento: new Date(`${finPrueba}T00:00:00Z`) },
           });
         }
+        if (codigo) await this.cupones.registrarUso(tx, codigo.cupon.id, { email: datos.email, clerkUserId, empresaId: empresa.id, cuit }, codigo.mesGratis);
         await tx.aceptacionTerminos.create({ data: { empresaId: empresa.id, usuarioId: usuario.id, version: '1.1', userAgent } });
         await tx.avisoAdmin.create({
           data: {
             tipo: 'registro',
             titulo: `Nuevo registro: ${nombre}`,
             empresaId: empresa.id,
-            detalle: { nombre, rubro: input.rubro, telefono, origen: input.origen, dueno: datos.nombre, email: datos.email, finPrueba },
+            detalle: { nombre, rubro: input.rubro, telefono, origen: input.origen, dueno: datos.nombre, email: datos.email, finPrueba, codigo: codigo?.cupon.codigo ?? null, camara: codigo?.cupon.camaraNombre ?? null },
           },
         });
         return empresa.id;
@@ -102,12 +127,15 @@ export class RegistroService {
       throw e;
     }
 
-    await this.avisarPorEmail(nombre, input, telefono, datos, finPrueba);
-    return { clerkOrgId, empresaId, finPrueba, yaExistia: false };
+    await this.avisarPorEmail(nombre, input, telefono, datos, finPrueba, codigo?.cupon.codigo ?? null);
+    const cupon = codigo
+      ? { codigo: codigo.cupon.codigo, camara: codigo.cupon.camaraNombre, mesGratis: codigo.mesGratis, diasPrueba: codigo.diasPrueba, aviso: codigo.aviso }
+      : null;
+    return { clerkOrgId, empresaId, finPrueba, yaExistia: false, cupon };
   }
 
   /** Aviso por email (opcional, con Resend). Nunca hace fallar el registro. */
-  private async avisarPorEmail(nombre: string, input: RegistroInput, telefono: string, datos: { nombre: string; email: string }, finPrueba: string) {
+  private async avisarPorEmail(nombre: string, input: RegistroInput, telefono: string, datos: { nombre: string; email: string }, finPrueba: string, codigo: string | null) {
     const clave = this.config.get('RESEND_API_KEY', { infer: true });
     if (!clave) return;
     try {
@@ -126,6 +154,7 @@ export class RegistroService {
             `Dueño: ${datos.nombre} <${datos.email}>`,
             `WhatsApp: https://wa.me/${telefono.replace(/\D/g, '')}`,
             `Nos conoció por: ${input.origen ?? '—'}`,
+            `Código: ${codigo ?? '—'}`,
             `La prueba termina el ${finPrueba.split('-').reverse().join('/')}.`,
           ].join('\n'),
         }),

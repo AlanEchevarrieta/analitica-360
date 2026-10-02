@@ -1,14 +1,19 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { RequireAdminApp } from '../../common/decorators/admin-app.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { AdminSaasService } from './admin-saas.service.js';
-import { listarPagosQuerySchema, registrarPagoSchema, type ListarPagosQuery, type RegistrarPagoDto } from './admin-saas.dto.js';
+import { listarPagosQuerySchema, type ListarPagosQuery } from './admin-saas.dto.js';
+import { CobrosService } from '../alianzas/cobros.service.js';
+import { cotizarCobroSchema, devolverPagoSchema, registrarCobroSchema, type CotizarCobroDto, type RegistrarCobroDto } from '../alianzas/alianzas.dto.js';
 
 /** Cross-tenant, todo gateado por @RequireAdminApp() (puerto de es_admin_app()). */
 @Controller('admin')
 @RequireAdminApp()
 export class AdminSaasController {
-  constructor(private readonly adminSaasService: AdminSaasService) {}
+  constructor(
+    private readonly adminSaasService: AdminSaasService,
+    private readonly cobros: CobrosService,
+  ) {}
 
   @Get('metrics')
   metrics() {
@@ -42,8 +47,23 @@ export class AdminSaasController {
     return this.adminSaasService.listarPagos(query.estado, query.periodo);
   }
 
+  /** Cuánto cobrar: plan, ciclo y el descuento del cupón de la empresa (primer período o renovación, cuotas). */
+  @Post('pagos/cotizar')
+  @HttpCode(200)
+  cotizarPago(@Body(new ZodValidationPipe(cotizarCobroSchema)) body: CotizarCobroDto) {
+    return this.cobros.proponer(body);
+  }
+
+  /** Registra un cobro (pago completo o cuota): extiende la suscripción y genera la comisión si vino por una cámara. */
   @Post('pagos')
-  registrarPago(@Body(new ZodValidationPipe(registrarPagoSchema)) body: RegistrarPagoDto) {
-    return this.adminSaasService.registrarPago(body);
+  registrarPago(@Body(new ZodValidationPipe(registrarCobroSchema)) body: RegistrarCobroDto) {
+    return this.cobros.registrar(body);
+  }
+
+  /** Devolución: el pago queda devuelto y la comisión se ajusta en negativo. */
+  @Post('pagos/:id/devolver')
+  @HttpCode(200)
+  devolverPago(@Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodValidationPipe(devolverPagoSchema)) body: { motivo: string }) {
+    return this.cobros.devolver(id, body.motivo);
   }
 }

@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   ADMIN_SAAS_REPOSITORY,
   type AdminCapacidad,
@@ -6,7 +6,6 @@ import {
   type AdminSaasMetrics,
   type AdminSaasRepository,
 } from './admin-saas.repository.js';
-import type { RegistrarPagoDto } from './admin-saas.dto.js';
 import { PrismaAdminClientesRepository } from './prisma-admin-clientes.repository.js';
 import type { AdminEmpresaDetalle, AdminEmpresaFila, AdminEvolucionMes, AdminTablaTamano } from './admin-clientes.types.js';
 import { alertasEmpresa } from './admin-clientes.util.js';
@@ -52,19 +51,5 @@ export class AdminSaasService {
     return this.repository.listarPagos(estado || null, periodo || null);
   }
 
-  async registrarPago(input: RegistrarPagoDto): Promise<{ id: string }> {
-    const resultado = await this.repository.registrarPago({
-      empresaId: input.empresaId,
-      monto: input.monto,
-      metodo: input.metodo,
-      periodo: input.periodo,
-      notas: input.notas || null,
-    });
-    if (!resultado.ok) {
-      if (resultado.motivo === 'empresa_invalida') throw new NotFoundException('Empresa no encontrada');
-      if (resultado.motivo === 'monto_invalido') throw new BadRequestException('El monto tiene que ser mayor a 0');
-      throw new BadRequestException('El método de pago es obligatorio');
-    }
-    return { id: resultado.id };
-  }
+
 }

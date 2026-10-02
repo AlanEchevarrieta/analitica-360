@@ -19,6 +19,7 @@ import { ArchivosModule } from './common/archivos/archivos.module.js';
 import { CuentaCorrienteModule } from './modules/cuenta-corriente/cuenta-corriente.module.js';
 import { ProduccionModule } from './modules/produccion/produccion.module.js';
 import { RegistroModule } from './modules/registro/registro.module.js';
+import { AlianzasModule } from './modules/alianzas/alianzas.module.js';
 import { ListasPreciosModule } from './modules/listas-precios/listas-precios.module.js';
 import { ClientesModule } from './modules/clientes/clientes.module.js';
 import { AnalyticsModule } from './modules/analytics/analytics.module.js';
@@ -49,6 +50,7 @@ import { ConfiguracionModule } from './modules/configuracion/configuracion.modul
     ClientesModule,
     ListasPreciosModule,
     RegistroModule,
+    AlianzasModule,
     ProduccionModule,
     CuentaCorrienteModule,
     ArchivosModule,

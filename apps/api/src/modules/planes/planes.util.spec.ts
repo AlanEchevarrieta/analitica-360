@@ -1,24 +1,23 @@
 import {
   clavePlan,
   defPlan,
-  desgloseAnualPlan,
+  esPlanPago,
   idPlan,
-  mesesAhorroAnual,
   ordenarPlanesAdmin,
   planEsIlimitado,
   planMinimoParaModulo,
   planTieneAnalytics,
   planTieneInsights,
-  precioLanzamiento,
   precioLista,
   tieneAcceso,
 } from './planes.util.js';
 
 describe('clavePlan / idPlan / defPlan', () => {
-  it('normaliza variantes históricas', () => {
+  it('normaliza variantes históricas: Premium y business pasaron a Pro', () => {
     expect(clavePlan('Básico')).toBe('basico');
-    expect(clavePlan('Business')).toBe('premium');
-    expect(idPlan('business')).toBe('premium');
+    expect(clavePlan('Premium')).toBe('pro');
+    expect(clavePlan('Business')).toBe('pro');
+    expect(idPlan('premium')).toBe('pro');
   });
 
   it('un plan desconocido cae a starter', () => {
@@ -26,29 +25,35 @@ describe('clavePlan / idPlan / defPlan', () => {
     expect(idPlan(null)).toBe('starter');
   });
 
-  it('defPlan devuelve la definición completa', () => {
+  it('defPlan devuelve la definición completa; Pro hereda los módulos del ex Premium', () => {
     expect(defPlan('pro').nombre).toBe('Pro');
-    expect(defPlan('pro').modulos).toContain('analytics');
+    expect(defPlan('pro').modulos).toEqual(expect.arrayContaining(['analytics', 'insights', 'contabilidad', 'produccion']));
+    expect(defPlan('premium').nombre).toBe('Pro');
+  });
+
+  it('solo Básico, Pro y E-commerce son planes pagos', () => {
+    expect(esPlanPago('basico')).toBe(true);
+    expect(esPlanPago('Premium')).toBe(true);
+    expect(esPlanPago('starter')).toBe(false);
   });
 });
 
 describe('tieneAcceso', () => {
-  it('durante el trial siempre da acceso a los módulos de Premium, sin importar el plan', () => {
+  it('durante el trial da acceso a los módulos de Pro, sin importar el plan', () => {
     expect(tieneAcceso('starter', 'contabilidad', true)).toBe(true);
-    expect(tieneAcceso('starter', 'tienda', true)).toBe(false); // tienda es solo de ecommerce, ni Premium la tiene
+    expect(tieneAcceso('starter', 'tienda', true)).toBe(false); // tienda es solo de E-commerce
   });
 
   it('fuera de trial depende del plan contratado', () => {
     expect(tieneAcceso('starter', 'analytics', false)).toBe(false);
     expect(tieneAcceso('pro', 'analytics', false)).toBe(true);
+    expect(tieneAcceso('basico', 'analytics', false)).toBe(false);
   });
-});
 
-describe('planTieneAnalytics / planTieneInsights', () => {
-  it('analytics desde Pro, insights recién desde Premium', () => {
+  it('analytics e insights desde Pro', () => {
     expect(planTieneAnalytics('pro')).toBe(true);
-    expect(planTieneInsights('pro')).toBe(false);
-    expect(planTieneInsights('premium')).toBe(true);
+    expect(planTieneInsights('pro')).toBe(true);
+    expect(planTieneInsights('basico')).toBe(false);
   });
 });
 
@@ -61,29 +66,20 @@ describe('planMinimoParaModulo', () => {
 });
 
 describe('planEsIlimitado', () => {
-  it('solo premium y ecommerce son ilimitados', () => {
-    expect(planEsIlimitado('premium')).toBe(true);
+  it('Pro y E-commerce son ilimitados', () => {
+    expect(planEsIlimitado('pro')).toBe(true);
     expect(planEsIlimitado('ecommerce')).toBe(true);
-    expect(planEsIlimitado('pro')).toBe(false);
+    expect(planEsIlimitado('basico')).toBe(false);
   });
 });
 
-describe('precios', () => {
-  it('precioLanzamiento aplica el 40% de descuento', () => {
-    expect(precioLista('pro', 'mensual')).toBe(70_000);
-    expect(precioLanzamiento('pro', 'mensual')).toBe(42_000);
-  });
-
-  it('desgloseAnualPlan combina descuento de lanzamiento (3 meses) y anual (9 meses)', () => {
-    const d = desgloseAnualPlan('basico');
-    expect(d.listaMes).toBe(25_000);
-    expect(d.mes1a3).toBe(15_000); // 25000 * 0.6
-    expect(d.mes4a12).toBe(20_000); // 25000 * 0.8
-    expect(d.totalAnio).toBe(15_000 * 3 + 20_000 * 9);
-  });
-
-  it('mesesAhorroAnual son ~2.4 meses redondeado', () => {
-    expect(mesesAhorroAnual()).toBe(2);
+describe('precioLista', () => {
+  it('lista 2026-10-02: Básico 49.000, Pro 89.000, E-commerce 149.000 por mes; trimestral 3× y anual 12×', () => {
+    expect(precioLista('basico', 'mensual')).toBe(49_000);
+    expect(precioLista('pro', 'mensual')).toBe(89_000);
+    expect(precioLista('ecommerce', 'mensual')).toBe(149_000);
+    expect(precioLista('basico', 'trimestral')).toBe(147_000);
+    expect(precioLista('basico', 'anual')).toBe(588_000);
   });
 });
 

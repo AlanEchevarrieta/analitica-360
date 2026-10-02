@@ -1,0 +1,67 @@
+import { Body, Controller, Get, HttpCode, Post, Query, Req } from '@nestjs/common';
+import type { Request } from 'express';
+import type { EmpresaContext, UsuarioContext } from '../../common/auth/request-context.types.js';
+import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { Roles } from '../../common/decorators/roles.decorator.js';
+import { SinEmpresa } from '../../common/decorators/sin-empresa.decorator.js';
+import { PermitidoSinSuscripcion } from '../../common/decorators/suscripcion.decorator.js';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
+import { PrismaService } from '../../database/prisma.service.js';
+import { CobrosService } from './cobros.service.js';
+import { CuponesService } from './cupones.service.js';
+import { codigoQuerySchema, codigoSchema } from './alianzas.dto.js';
+import type { ReglasCupon } from './alianzas.util.js';
+
+/** Lo que ve el emprendedor: su código y los precios. Nada de comisiones. */
+@Controller()
+export class AlianzasController {
+  constructor(
+    private readonly cupones: CuponesService,
+    private readonly cobros: CobrosService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  /** Registro (/bienvenida): valida el código mientras lo escribe. El control final es al registrarse. */
+  @Get('registro/codigo')
+  @SinEmpresa()
+  async verificarEnRegistro(@Req() request: Request, @Query(new ZodValidationPipe(codigoQuerySchema)) q: { codigo: string }) {
+    if (!q.codigo) return { ok: false, mensaje: 'Escribí el código' };
+    const v = await this.cupones.verificar(q.codigo, { clerkUserId: request.clerkAuth!.clerkUserId });
+    if (!v.ok) return v;
+    return { ok: true, codigo: v.cupon.codigo, camara: v.cupon.camaraNombre, diasPrueba: v.diasPrueba, mesGratis: v.mesGratis, aviso: v.aviso };
+  }
+
+  /** Precios para la pantalla de Planes: con el código de la empresa o, si no tiene, el que está probando. */
+  @Get('suscripcion/precios')
+  @PermitidoSinSuscripcion()
+  async precios(@CurrentEmpresa() empresa: EmpresaContext, @CurrentUser() usuario: UsuarioContext, @Query(new ZodValidationPipe(codigoQuerySchema)) q: { codigo: string }) {
+    const actual = await this.prisma.empresa.findUnique({ where: { id: empresa.id }, include: { cupon: { include: { camara: { select: { nombre: true } } } } } });
+    if (actual?.cupon) {
+      return {
+        cupon: { codigo: actual.cupon.codigo, camara: actual.cupon.camara?.nombre ?? null, aplicado: true, diasPrueba: actual.cupon.diasPrueba },
+        aviso: null,
+        planes: await this.cobros.tablaDePrecios(empresa.id, actual.cupon.reglas as ReglasCupon),
+      };
+    }
+    if (q.codigo) {
+      const v = await this.cupones.verificar(q.codigo, { email: usuario.email, clerkUserId: usuario.clerkUserId, empresaId: empresa.id, cuit: actual?.cuit }, empresa.id);
+      if (!v.ok) return { cupon: null, aviso: v.mensaje, planes: await this.cobros.tablaDePrecios(empresa.id, null) };
+      return {
+        cupon: { codigo: v.cupon.codigo, camara: v.cupon.camaraNombre, aplicado: false, diasPrueba: v.mesGratis ? v.diasPrueba : null },
+        aviso: v.aviso,
+        planes: await this.cobros.tablaDePrecios(empresa.id, v.cupon.reglas),
+      };
+    }
+    return { cupon: null, aviso: null, planes: await this.cobros.tablaDePrecios(empresa.id, null) };
+  }
+
+  /** Cargar un código después del registro (solo el dueño). */
+  @Post('suscripcion/codigo')
+  @HttpCode(200)
+  @Roles('dueno')
+  @PermitidoSinSuscripcion()
+  aplicarCodigo(@CurrentEmpresa() empresa: EmpresaContext, @CurrentUser() usuario: UsuarioContext, @Body(new ZodValidationPipe(codigoSchema)) body: { codigo: string }) {
+    return this.cupones.aplicarDespues(empresa.id, { email: usuario.email, clerkUserId: usuario.clerkUserId }, body.codigo);
+  }
+}

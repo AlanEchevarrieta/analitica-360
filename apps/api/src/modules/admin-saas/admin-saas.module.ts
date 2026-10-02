@@ -5,8 +5,10 @@ import { AdminSaasService } from './admin-saas.service.js';
 import { ADMIN_SAAS_REPOSITORY } from './admin-saas.repository.js';
 import { PrismaAdminSaasRepository } from './prisma-admin-saas.repository.js';
 import { PrismaAdminClientesRepository } from './prisma-admin-clientes.repository.js';
+import { AlianzasModule } from '../alianzas/alianzas.module.js';
 
 @Module({
+  imports: [AlianzasModule],
   controllers: [AdminAccesoController, AdminSaasController],
   providers: [AdminSaasService, PrismaAdminClientesRepository, { provide: ADMIN_SAAS_REPOSITORY, useClass: PrismaAdminSaasRepository }],
 })

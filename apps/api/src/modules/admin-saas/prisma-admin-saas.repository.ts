@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
-import type { AdminCapacidad, AdminPago, AdminSaasMetrics, AdminSaasRepository, RegistrarPagoInput, ResultadoPago } from './admin-saas.repository.js';
+import type { AdminCapacidad, AdminPago, AdminSaasMetrics, AdminSaasRepository } from './admin-saas.repository.js';
 
 @Injectable()
 export class PrismaAdminSaasRepository implements AdminSaasRepository {
@@ -129,30 +129,4 @@ export class PrismaAdminSaasRepository implements AdminSaasRepository {
     }));
   }
 
-  /** Puerto de admin_registrar_pago() (025_admin_saas.sql): registra el pago Y extiende la suscripción de la empresa. */
-  async registrarPago(input: RegistrarPagoInput): Promise<ResultadoPago> {
-    if (!(input.monto > 0)) return { ok: false, motivo: 'monto_invalido' };
-    const metodo = input.metodo.trim();
-    if (!metodo) return { ok: false, motivo: 'metodo_invalido' };
-
-    const empresa = await this.prisma.empresa.findUnique({ where: { id: input.empresaId }, select: { id: true } });
-    if (!empresa) return { ok: false, motivo: 'empresa_invalida' };
-
-    const inicioMes = new Date(`${input.periodo}-01T00:00:00`);
-    inicioMes.setDate(1);
-    const finMes = new Date(inicioMes.getFullYear(), inicioMes.getMonth() + 1, 0);
-
-    const pago = await this.prisma.$transaction(async (tx) => {
-      const creado = await tx.pago.create({
-        data: { empresaId: input.empresaId, montoArs: input.monto, metodo, estado: 'confirmado', periodo: inicioMes, notas: input.notas?.trim() || null },
-      });
-      const suscripciones = await tx.suscripcion.findMany({ where: { empresaId: input.empresaId }, select: { id: true, fechaVencimiento: true } });
-      for (const s of suscripciones) {
-        const nuevoVencimiento = !s.fechaVencimiento || finMes > s.fechaVencimiento ? finMes : s.fechaVencimiento;
-        await tx.suscripcion.update({ where: { id: s.id }, data: { estado: 'activa', fechaVencimiento: nuevoVencimiento } });
-      }
-      return creado;
-    });
-    return { ok: true, id: pago.id };
-  }
 }
