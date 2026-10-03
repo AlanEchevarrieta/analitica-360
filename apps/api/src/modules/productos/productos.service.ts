@@ -65,11 +65,13 @@ export class ProductosService {
   }
 
   async actualizar(empresaId: string, id: string, input: GuardarProductoInput): Promise<ProductoRecord> {
+    // Lo que no se manda queda como estaba (antes se borraba: un cliente de la API
+    // que no mandaba la categoría la dejaba vacía; lo detectó la bitácora de auditoría).
     const resultado = await this.productosRepository.actualizar(empresaId, id, {
       nombre: input.nombre,
-      categoriaId: input.categoriaId ?? null,
-      precioVenta: input.precioVenta ?? null,
-      costo: input.costo ?? null,
+      categoriaId: input.categoriaId,
+      precioVenta: input.precioVenta,
+      costo: input.costo,
       activo: input.activo,
       esInsumo: input.esInsumo,
       unidad: input.unidad,

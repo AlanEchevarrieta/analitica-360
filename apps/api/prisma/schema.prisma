@@ -1494,3 +1494,38 @@ model EventoUso {
   @@index([empresaId, creadoEn])
   @@map("eventos_uso")
 }
+
+/// Bitácora de auditoría: quién cambió qué y cuándo (SOC 2 CC7/CC8, ISO 27001 A.8.15).
+/// Solo se agregan filas: un trigger impide editarlas o borrarlas, y cada fila
+/// guarda un hash encadenado con la anterior para detectar si alguien la tocó.
+/// Sin claves foráneas a propósito: la evidencia queda aunque se borre la empresa.
+model RegistroAuditoria {
+  id             BigInt   @id @default(autoincrement())
+  /// Empresa dueña del dato (null = algo general, ej. un cupón).
+  empresaId      String?  @map("empresa_id") @db.Uuid
+  actorUsuarioId String?  @map("actor_usuario_id") @db.Uuid
+  actorEmpresaId String?  @map("actor_empresa_id") @db.Uuid
+  /// usuario | admin | tienda | sistema
+  actorTipo      String   @map("actor_tipo") @db.VarChar(10)
+  actorNombre    String   @map("actor_nombre") @db.VarChar(160)
+  /// crear | editar | borrar | restaurar | anular
+  accion         String   @db.VarChar(12)
+  /// Modelo de Prisma: Producto, Venta…
+  entidad        String   @db.VarChar(40)
+  entidadId      String?  @map("entidad_id") @db.VarChar(64)
+  entidadNombre  String?  @map("entidad_nombre") @db.VarChar(160)
+  resumen        String
+  /// { campo: [antes, después] }
+  cambios        Json?
+  ip             String?  @db.VarChar(64)
+  ruta           String?  @db.VarChar(200)
+  /// sha256(hash anterior | contenido); lo calcula la base.
+  hash           String   @default("") @db.VarChar(64)
+  creadoEn       DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
+
+  @@index([empresaId, creadoEn])
+  @@index([entidad, entidadId])
+  @@index([actorUsuarioId, creadoEn])
+  @@index([creadoEn])
+  @@map("registro_auditoria")
+}

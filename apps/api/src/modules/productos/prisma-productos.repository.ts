@@ -45,8 +45,8 @@ export class PrismaProductosRepository implements ProductosRepository {
     };
   }
 
-  private async categoriaValida(empresaId: string, categoriaId: string | null): Promise<boolean> {
-    if (categoriaId === null) return true;
+  private async categoriaValida(empresaId: string, categoriaId: string | null | undefined): Promise<boolean> {
+    if (categoriaId == null) return true;
     const categoria = await this.prisma.categoria.findFirst({ where: { id: categoriaId, empresaId } });
     return categoria != null;
   }
@@ -63,7 +63,7 @@ export class PrismaProductosRepository implements ProductosRepository {
           categoriaId: input.categoriaId,
           precioVenta: input.precioVenta,
           costo: input.costo,
-          activo: input.activo,
+          activo: input.activo ?? true,
           esInsumo: input.esInsumo ?? false,
           unidad: input.unidad ?? 'unidad',
           enTienda: input.enTienda ?? true,
@@ -111,12 +111,14 @@ export class PrismaProductosRepository implements ProductosRepository {
       });
       // Solo si cambió precio o costo: guardar el producto sin tocar precios
       // no debe ensuciar el historial (lo usa Insights para analizar precios).
-      const cambioPrecio =
-        (existente.precioVenta?.toNumber() ?? null) !== (input.precioVenta ?? null) ||
-        (existente.costo?.toNumber() ?? null) !== (input.costo ?? null);
-      if (cambioPrecio && input.precioVenta != null && input.costo != null) {
+      const precioAntes = existente.precioVenta?.toNumber() ?? null;
+      const costoAntes = existente.costo?.toNumber() ?? null;
+      const precio = input.precioVenta === undefined ? precioAntes : input.precioVenta;
+      const costo = input.costo === undefined ? costoAntes : input.costo;
+      const cambioPrecio = precioAntes !== precio || costoAntes !== costo;
+      if (cambioPrecio && precio != null && costo != null) {
         await tx.precioHistorial.create({
-          data: { empresaId, productoId: id, precioVenta: input.precioVenta, costo: input.costo },
+          data: { empresaId, productoId: id, precioVenta: precio, costo },
         });
       }
       return actualizado;

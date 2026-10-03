@@ -30,6 +30,7 @@ import { SoporteModule } from './modules/soporte/soporte.module.js';
 import { PlanesModule } from './modules/planes/planes.module.js';
 import { AdminSaasModule } from './modules/admin-saas/admin-saas.module.js';
 import { UsoModule } from './modules/uso/uso.module.js';
+import { AuditoriaModule } from './modules/auditoria/auditoria.module.js';
 import { TiendaModule } from './modules/tienda/tienda.module.js';
 import { ConfiguracionModule } from './modules/configuracion/configuracion.module.js';
 
@@ -63,6 +64,7 @@ import { ConfiguracionModule } from './modules/configuracion/configuracion.modul
     PlanesModule,
     AdminSaasModule,
     UsoModule,
+    AuditoriaModule,
     TiendaModule,
     ConfiguracionModule,
   ],

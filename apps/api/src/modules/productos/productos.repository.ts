@@ -22,10 +22,11 @@ export interface ProductoRecord {
 
 export interface GuardarProductoInput {
   nombre: string;
-  categoriaId: string | null;
-  precioVenta: number | null;
-  costo: number | null;
-  activo: boolean;
+  /** Al editar, undefined = no cambia; null = se borra. */
+  categoriaId?: string | null;
+  precioVenta?: number | null;
+  costo?: number | null;
+  activo?: boolean;
   esInsumo?: boolean;
   unidad?: string;
   enTienda?: boolean;

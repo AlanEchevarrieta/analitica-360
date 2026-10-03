@@ -16,6 +16,7 @@ import { TiendaOnlineConfig } from "./TiendaOnlineConfig";
 import { CuotasConfig, MediosConfig } from "./MediosCuotasConfig";
 import { FlujoVentasConfig, InventarioPedidosConfig } from "./OperacionConfig";
 import { FiscalConfig, RemitenteConfig } from "./RemitenteFiscalConfig";
+import { AuditoriaConfig } from "./AuditoriaConfig";
 
 interface Opcion {
   clave: string;
@@ -62,6 +63,7 @@ const GRUPOS: { titulo: string; opciones: Opcion[] }[] = [
     titulo: "Equipo y datos",
     opciones: [
       { clave: "equipo", icono: "👥", titulo: "Equipo", subtitulo: "Invitá al equipo y asigná roles", panel: () => <EquipoConfig /> },
+      { clave: "auditoria", icono: "🔍", titulo: "Auditoría", subtitulo: "Quién cambió qué y cuándo, con el antes y el después", panel: () => <AuditoriaConfig /> },
       { clave: "exportar", icono: "📥", titulo: "Exportar mis datos", subtitulo: "Descargá tu historial. Tus datos son tuyos, siempre.", panel: () => <ExportarConfig /> },
     ],
   },

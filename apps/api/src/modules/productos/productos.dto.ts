@@ -12,7 +12,8 @@ export const guardarProductoSchema = z.object({
   categoriaId: z.uuid().nullable().optional(),
   precioVenta: z.number().nonnegative().nullable().optional(),
   costo: z.number().nonnegative().nullable().optional(),
-  activo: z.boolean().default(true),
+  /** Sin mandar = no cambia (alta: activo). */
+  activo: z.boolean().optional(),
   /** Insumo / materia prima (no se vende tal cual). Sin mandar = no cambia (alta: false). */
   esInsumo: z.boolean().optional(),
   unidad: z.enum(['unidad', 'kg', 'g', 'l', 'ml', 'm', 'cm']).optional(),
