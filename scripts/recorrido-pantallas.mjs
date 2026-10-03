@@ -6,6 +6,7 @@
 // Uso (web en :3000 y API en :3001 levantadas):
 //   node scripts/recorrido-pantallas.mjs <clerkUserId> <carpetaCapturas> [ancho]
 // RUTAS=/inicio,/ventas limita el recorrido a esas rutas.
+// CLIC="Mes pasado" toca ese texto en cada pantalla antes de la captura.
 // PALETA=acacia y MODO=light|dark eligen la apariencia (cookie y localStorage).
 
 import fs from 'node:fs';
@@ -33,7 +34,7 @@ const clerk = (p, body) =>
 
 // IDs reales para las pantallas de detalle (se toman de la API con la sesión del navegador).
 const RUTAS_FIJAS = [
-  '/inicio', '/ventas', '/ventas/nueva', '/ventas/devoluciones', '/productos', '/productos/nuevo', '/inventario',
+  '/inicio', '/ventas', '/ventas/nueva', '/ventas/devoluciones', '/productos', '/productos/nuevo', '/inventario', '/inventario/movimientos',
   '/compras', '/compras/nueva', '/pedidos', '/pedidos/nuevo', '/clientes', '/clientes/segmentos', '/clientes/nuevo',
   '/proveedores', '/proveedores/nuevo', '/analytics/ventas', '/analytics/productos', '/analytics/contabilidad',
   '/analytics/insights', '/analytics/estados', '/configuracion', '/planes', '/soporte', '/soporte/nuevo', '/admin', '/admin/clientes', '/admin/pagos', '/admin/alianzas', '/admin/alianzas/cupones', '/admin/soporte', '/admin/sistema',
@@ -107,6 +108,12 @@ for (const ruta of rutas) {
     await page.waitForLoadState('networkidle', { timeout: 60_000 }).catch(() => {});
     await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 60_000 }).catch(() => {});
     await page.waitForTimeout(Number(process.env.ESPERA_MS ?? 800));
+    // CLIC="Mes pasado" toca ese texto antes de la captura (p. ej. para elegir un período con datos).
+    if (process.env.CLIC) {
+      await page.getByText(process.env.CLIC, { exact: true }).first().click().catch(() => {});
+      await page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => {});
+      await page.waitForTimeout(800);
+    }
     // Next agrega un role="alert" vacío (anunciador de rutas): solo cuentan los que tienen texto.
     const alerta = (await page.locator('[role="alert"]').allInnerTexts()).map((t) => t.trim()).filter(Boolean);
     if (alerta.length) problemas.push({ ruta, tipo: 'mensaje de error en pantalla', detalle: alerta.join(' | ').slice(0, 300) });

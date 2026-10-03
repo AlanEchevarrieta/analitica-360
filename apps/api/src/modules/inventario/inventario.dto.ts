@@ -72,3 +72,18 @@ export const disponiblesQuerySchema = z.object({
   varianteId: z.uuid().optional(),
 });
 export type DisponiblesQuery = z.infer<typeof disponiblesQuerySchema>;
+
+export const movimientosGeneralesQuerySchema = z
+  .object({
+    desde: fechaIso,
+    hasta: fechaIso,
+    grupo: z.enum(['ventas', 'compras', 'devoluciones', 'ajustes', 'traslados', 'produccion']).optional(),
+    productoId: z.uuid().optional(),
+    ubicacion: z.string().trim().max(80).optional(),
+    busqueda: z.string().trim().max(80).optional(),
+    pagina: z.coerce.number().int().min(1).default(1),
+    // Hasta 5000 para exportar el período a Excel.
+    pageSize: z.coerce.number().int().min(1).max(5000).default(50),
+  })
+  .refine((q) => q.desde <= q.hasta, { message: 'El período empieza después de terminar', path: ['desde'] });
+export type MovimientosGeneralesQuery = z.infer<typeof movimientosGeneralesQuerySchema>;

@@ -7,15 +7,19 @@ import { RequireModulo, RequirePermiso } from '../../common/decorators/permiso.d
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { KardexService } from './kardex.service.js';
 import { MovimientosService } from './movimientos.service.js';
+import { MovimientosGeneralesService } from './movimientos-generales.service.js';
+import { tieneAccion } from '../../common/auth/rol.types.js';
 import {
   kardexQuerySchema,
   kardexValorizadoQuerySchema,
+  movimientosGeneralesQuerySchema,
   periodoQuerySchema,
   registrarAjusteSchema,
   registrarTrasladoMasivoSchema,
   registrarTrasladoSchema,
   type KardexQuery,
   type KardexValorizadoQuery,
+  type MovimientosGeneralesQuery,
   type PeriodoQuery,
   type RegistrarAjusteInput,
   type RegistrarTrasladoInput,
@@ -28,7 +32,23 @@ export class MovimientosController {
   constructor(
     private readonly movimientosService: MovimientosService,
     private readonly kardexService: KardexService,
+    private readonly generales: MovimientosGeneralesService,
   ) {}
+
+  /** Todos los movimientos de stock de todos los productos, filtrados y por páginas (con totales del período). */
+  @Get('inventario/movimientos')
+  movimientos(
+    @CurrentEmpresa() empresa: EmpresaContext,
+    @CurrentUser() usuario: UsuarioContext,
+    @Query(new ZodValidationPipe(movimientosGeneralesQuerySchema)) q: MovimientosGeneralesQuery,
+  ) {
+    return this.generales.listar(empresa.id, q, tieneAccion(usuario.rol, 'ver_costos', usuario.acceso));
+  }
+
+  @Get('inventario/movimientos/ubicaciones')
+  ubicacionesMovimientos(@CurrentEmpresa() empresa: EmpresaContext) {
+    return this.generales.ubicaciones(empresa.id);
+  }
 
   /** Kardex valorizado (PPP) de un producto en un período. */
   @Get('inventario/kardex/:productoId')
