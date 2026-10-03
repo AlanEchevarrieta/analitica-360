@@ -108,6 +108,7 @@ model Empresa {
   tienda                    TiendaConfig?
   imagenesProductos         ProductoImagen[]
 
+  eventosUso EventoUso[]
   @@unique([camaraId, ordenCamara])
   @@map("empresas")
 }
@@ -227,6 +228,7 @@ model Usuario {
   tickets                Ticket[]
   ticketsRespuestas      TicketRespuesta[]
   asignacionFijaDe       ConfiguracionEmpresa[] @relation("AsignacionFijaUsuario")
+  eventosUso             EventoUso[]
 
   @@index([empresaId])
   @@map("usuarios")
@@ -1464,4 +1466,31 @@ model CuotaProgramada {
   @@index([empresaId])
   @@index([estado, vence])
   @@map("cuotas_programadas")
+}
+
+/// Uso de la app (consola → Uso): pantallas que se abren y botones que se tocan.
+/// Solo nombres de pantallas y de botones; nunca lo que se escribe. Se guarda 180 días.
+model EventoUso {
+  id          BigInt   @id @default(autoincrement())
+  empresaId   String   @map("empresa_id") @db.Uuid
+  usuarioId   String   @map("usuario_id") @db.Uuid
+  /// Pestaña del navegador (se renueva al cerrarla).
+  sesion      String   @db.VarChar(40)
+  /// vista | clic
+  tipo        String   @db.VarChar(10)
+  /// Ruta sin ids: /ventas/:id
+  ruta        String   @db.VarChar(200)
+  /// Qué se tocó ("Nueva venta", "Exportar"); null en las vistas.
+  objetivo    String?  @db.VarChar(80)
+  /// celular | escritorio
+  dispositivo String?  @db.VarChar(12)
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(3)
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([creadoEn])
+  @@index([usuarioId, creadoEn])
+  @@index([empresaId, creadoEn])
+  @@map("eventos_uso")
 }

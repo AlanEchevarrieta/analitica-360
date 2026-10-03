@@ -29,6 +29,7 @@ import { NotificacionesModule } from './modules/notificaciones/notificaciones.mo
 import { SoporteModule } from './modules/soporte/soporte.module.js';
 import { PlanesModule } from './modules/planes/planes.module.js';
 import { AdminSaasModule } from './modules/admin-saas/admin-saas.module.js';
+import { UsoModule } from './modules/uso/uso.module.js';
 import { TiendaModule } from './modules/tienda/tienda.module.js';
 import { ConfiguracionModule } from './modules/configuracion/configuracion.module.js';
 
@@ -61,6 +62,7 @@ import { ConfiguracionModule } from './modules/configuracion/configuracion.modul
     SoporteModule,
     PlanesModule,
     AdminSaasModule,
+    UsoModule,
     TiendaModule,
     ConfiguracionModule,
   ],

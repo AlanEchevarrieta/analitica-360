@@ -37,7 +37,7 @@ const RUTAS_FIJAS = [
   '/inicio', '/ventas', '/ventas/nueva', '/ventas/devoluciones', '/productos', '/productos/nuevo', '/inventario', '/inventario/movimientos',
   '/compras', '/compras/nueva', '/pedidos', '/pedidos/nuevo', '/clientes', '/clientes/segmentos', '/clientes/nuevo',
   '/proveedores', '/proveedores/nuevo', '/analytics/ventas', '/analytics/productos', '/analytics/contabilidad',
-  '/analytics/insights', '/analytics/estados', '/configuracion', '/planes', '/soporte', '/soporte/nuevo', '/admin', '/admin/clientes', '/admin/pagos', '/admin/alianzas', '/admin/alianzas/cupones', '/admin/soporte', '/admin/sistema',
+  '/analytics/insights', '/analytics/estados', '/configuracion', '/planes', '/soporte', '/soporte/nuevo', '/admin', '/admin/clientes', '/admin/pagos', '/admin/alianzas', '/admin/alianzas/cupones', '/admin/uso', '/admin/soporte', '/admin/sistema',
 ];
 
 fs.mkdirSync(carpeta, { recursive: true });
@@ -87,7 +87,7 @@ const ids = await page.evaluate(async (api) => {
     camara: Array.isArray(camaras) ? camaras[0]?.id : undefined,
   };
 }, API);
-const rutas = [
+const conocidas = [
   ...RUTAS_FIJAS,
   ids.venta && `/ventas/${ids.venta}`,
   ids.producto && `/productos/${ids.producto}`,
@@ -96,7 +96,9 @@ const rutas = [
   ids.proveedor && `/proveedores/${ids.proveedor}`,
   ids.cliente && `/clientes/${ids.cliente}`,
   ids.camara && `/admin/alianzas/${ids.camara}`,
-].filter(Boolean).filter((r) => !process.env.RUTAS || process.env.RUTAS.split(',').includes(r));
+].filter(Boolean);
+// Con RUTAS se recorren esas, en ese orden (también rutas que no están en la lista).
+const rutas = process.env.RUTAS ? process.env.RUTAS.split(',') : conocidas;
 
 const resumen = [];
 for (const ruta of rutas) {

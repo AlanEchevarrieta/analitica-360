@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/shared/app-sidebar";
 import { AvisoCuenta } from "@/components/shared/AvisoCuenta";
 import { EmpresaSwitcher } from "@/components/shared/EmpresaSwitcher";
 import { GuardaDeRuta } from "@/components/shared/requiere-modulo";
+import { RastreoUso } from "@/components/shared/rastreo-uso";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
@@ -14,6 +15,7 @@ export default async function DashboardLayout({ children }: LayoutProps<"/">) {
 
   return (
     <SidebarProvider>
+      <RastreoUso />
       <AppSidebar />
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 print:hidden">

@@ -7,10 +7,15 @@ const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP_CONTACT;
 
 export default function Page() {
   return (
-    <PaginaLegal titulo="Política de Privacidad" version="Versión 1.1">
+    <PaginaLegal titulo="Política de Privacidad" version="Versión 1.2">
       <Seccion titulo="¿Qué datos recopilamos?">
         Email y nombre del titular de la cuenta, WhatsApp de contacto, nombre de la empresa, rubro, y todos los datos comerciales que el usuario ingresa voluntariamente (ventas, productos, clientes,
         etc.).
+      </Seccion>
+      <Seccion titulo="Uso de la app">
+        Registramos qué pantallas se abren y qué botones se tocan dentro de la app (por ejemplo, &quot;abrió Ventas&quot; o &quot;tocó Exportar&quot;), con la fecha, el usuario y si fue desde el
+        celular o la computadora. Nunca registramos lo que se escribe ni los datos de clientes o productos que aparecen en pantalla. Lo usamos solo para mejorar la app y dar soporte, y lo borramos a
+        los 180 días.
       </Seccion>
       <Seccion titulo="¿Para qué los usamos?">
         Exclusivamente para proveer el servicio contratado y dar soporte. No utilizamos los datos para publicidad, perfilado ni ningún fin ajeno al servicio.
