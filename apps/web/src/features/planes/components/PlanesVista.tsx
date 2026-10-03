@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, Gift } from "lucide-react";
+import { CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,8 +9,12 @@ import { Input } from "@/components/ui/input";
 import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { useSuscripcion } from "@/hooks/use-suscripcion";
 import { cn } from "@/lib/utils";
-import { CICLOS, ESTADOS_SUSCRIPCION, PLANES, idPlan, type Ciclo } from "../planes";
-import { useAplicarCodigo, usePrecios } from "../use-precios";
+import { ESTADOS_SUSCRIPCION, PLANES, idPlan, type Ciclo } from "../planes";
+import { useAplicarCodigo, usePrecios, type CuotasEnCurso } from "../use-precios";
+import { formatoPesos } from "@/lib/formato";
+import { hoyAR } from "@/lib/periodos";
+import { CartelBeneficios } from "./CartelBeneficios";
+import { SelectorCiclo } from "./SelectorCiclo";
 import { TarjetaPlan } from "./TarjetaPlan";
 
 const fecha = (iso: string) => iso.split("-").reverse().join("/");
@@ -45,6 +49,22 @@ function PlanActual() {
   );
 }
 
+/** "Pagás en 3 cuotas de $X — vas por la cuota 2 de 3". */
+function AvisoCuotas({ c }: { c: CuotasEnCurso }) {
+  const vencida = c.proxima.vence < hoyAR();
+  return (
+    <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl p-4 text-sm ring-1", vencida ? "bg-destructive/10 ring-destructive/30" : "bg-muted/50 ring-border")}>
+      <CalendarClock className="size-5 shrink-0 text-primary" aria-hidden />
+      <span>
+        Pagás en <strong>{c.cuotas} cuotas sin interés de {formatoPesos(c.montoCuota)}</strong>. Ya pagaste {c.pagadas} de {c.cuotas}.
+      </span>
+      <span className={cn("text-muted-foreground", vencida && "font-medium text-destructive")}>
+        Cuota {c.proxima.numero}: {formatoPesos(c.proxima.monto)} · {vencida ? "venció" : "vence"} el {fecha(c.proxima.vence)}
+      </span>
+    </div>
+  );
+}
+
 export function PlanesVista() {
   const { data: sub } = useSuscripcion();
   const [ciclo, setCiclo] = useState<Ciclo>("mensual");
@@ -69,24 +89,29 @@ export function PlanesVista() {
   return (
     <div className="flex flex-col gap-6">
       <PlanActual />
+      {precios.data?.cuotasEnCurso && <AvisoCuotas c={precios.data.cuotasEnCurso} />}
 
       <div className="text-center">
         <h1 className="text-2xl font-semibold">Elegí tu plan</h1>
         <p className="text-muted-foreground">Precios en pesos argentinos. Cambiás o cancelás cuando quieras.</p>
       </div>
 
-      {cupon?.aplicado ? (
-        <p className="mx-auto flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-400">
-          <BadgeCheck className="size-4" aria-hidden />
-          Tenés el código <span className="font-mono font-semibold">{cupon.codigo}</span>
-          {cupon.camara ? ` de ${cupon.camara}` : ""}: los precios ya incluyen sus beneficios.
-        </p>
-      ) : (
+      {cupon && precios.data?.beneficios && (
+        <CartelBeneficios
+          className="mx-auto w-full max-w-3xl"
+          codigo={cupon.codigo}
+          camara={cupon.camara}
+          beneficios={precios.data.beneficios.lista}
+          aplicado={cupon.aplicado}
+        />
+      )}
+
+      {!cupon?.aplicado && (
         <div className="mx-auto flex w-full max-w-xl flex-col gap-2">
           <div className="flex flex-wrap gap-2">
             <Input className="min-w-48 flex-1 uppercase placeholder:normal-case" placeholder="¿Tenés un código? (ej. el de tu cámara)" aria-label="Código" value={texto} onChange={(e) => setTexto(e.target.value)} />
             <Button variant="outline" disabled={!texto.trim()} onClick={() => setProbando(texto.trim())}>
-              Ver precios
+              Ver beneficios
             </Button>
             {probando && cupon && (
               <Button onClick={aplicarCodigo} disabled={aplicar.isPending}>
@@ -95,36 +120,25 @@ export function PlanesVista() {
             )}
           </div>
           {probando && precios.data?.aviso && <p className={cn("text-sm", cupon ? "text-amber-600" : "text-destructive")}>{precios.data.aviso}</p>}
-          {probando && cupon && (
-            <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
-              <Gift className="size-4" aria-hidden />
-              {cupon.camara ? `Código de ${cupon.camara}` : "Código válido"}
-              {cupon.diasPrueba && sub?.enTrial ? `: tu prueba gratis pasa a durar ${Math.round(cupon.diasPrueba / 30) === 1 ? "1 mes" : `${cupon.diasPrueba} días`} desde que te registraste` : ""}. Aplicalo para que quede guardado.
-            </p>
-          )}
+          {probando && cupon && <p className="text-xs text-muted-foreground">Tocá «Aplicar código» para que quede guardado en tu cuenta.</p>}
         </div>
       )}
 
-      <div className="mx-auto flex rounded-lg border p-1" role="group" aria-label="Forma de pago">
-        {CICLOS.map((c) => (
-          <Button key={c.id} size="sm" variant={ciclo === c.id ? "default" : "ghost"} aria-pressed={ciclo === c.id} onClick={() => setCiclo(c.id)}>
-            {c.nombre}
-          </Button>
-        ))}
-      </div>
+      <SelectorCiclo ciclo={ciclo} onChange={setCiclo} tabla={precios.data} beneficios={precios.data?.beneficios ?? null} />
 
       {precios.isError ? (
         <ErrorDatos error={precios.error} onReintentar={() => precios.refetch()} />
       ) : !precios.data ? (
         <CargandoFilas filas={4} />
       ) : (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-6 pt-2 md:grid-cols-3 md:gap-4">
           {precios.data.planes.map((p) => (
             <TarjetaPlan
               key={p.plan}
               id={p.plan}
               precio={p.ciclos.find((c) => c.ciclo === ciclo)!}
               codigo={cupon?.codigo ?? null}
+              etiqueta={precios.data!.beneficios?.etiquetas[ciclo] ?? null}
               esActual={actual === p.plan}
             />
           ))}

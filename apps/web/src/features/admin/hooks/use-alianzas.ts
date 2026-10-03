@@ -20,7 +20,8 @@ export interface ReglaCiclo {
   periodosEntrada: number;
   renovacionPct: number;
   renovacionPeriodos: number | null;
-  cuotas: number;
+  /** null = las cuotas generales del plan. */
+  cuotas: number | null;
 }
 export type ReglasCupon = Partial<Record<Ciclo, ReglaCiclo>>;
 
@@ -160,6 +161,38 @@ export interface OrigenCliente {
   historial: { id: string; antes: string; despues: string; motivo: string; hechoPor: string; createdAt: string }[];
 }
 
+export interface CuotaFila {
+  id: string;
+  grupoId: string;
+  numero: number;
+  cuotas: number;
+  plan: string;
+  ciclo: Ciclo;
+  monto: number;
+  vence: string;
+  estado: "pendiente" | "pagada" | "vencida";
+  diasAtraso: number;
+  periodoDesde: string;
+  periodoHasta: string;
+  pagoId: string | null;
+}
+export interface PlanDeCuotas {
+  grupoId: string;
+  plan: string;
+  ciclo: Ciclo;
+  cuotas: CuotaFila[];
+  pagadas: number;
+  total: number;
+}
+export type CuotaVencida = CuotaFila & { empresaId: string; empresa: string };
+export interface CuotasGeneralesPlan {
+  id: string;
+  plan: string;
+  nombre: string;
+  trimestral: number;
+  anual: number;
+}
+
 function useConsulta<T>(clave: unknown[], ruta: string | null) {
   const api = useApiFetch();
   const { orgId } = useAuth();
@@ -175,6 +208,10 @@ export const useCupones = () => useConsulta<Cupon[]>(["cupones"], `${BASE}/cupon
 export const useLiquidacion = (camaraId: string, mes: string) =>
   useConsulta<Liquidacion>(["liquidacion", camaraId, mes], mes ? `${BASE}/liquidaciones?camaraId=${camaraId}&mes=${mes}` : null);
 export const useOrigenCliente = (empresaId: string) => useConsulta<OrigenCliente>(["origen", empresaId], `${BASE}/empresas/${empresaId}/origen`);
+
+export const useCuotasGenerales = () => useConsulta<CuotasGeneralesPlan[]>(["cuotas-generales"], `${BASE}/cuotas`);
+export const useCuotasVencidas = () => useConsulta<CuotaVencida[]>(["cuotas-vencidas"], "/admin/pagos/cuotas-vencidas");
+export const useCuotasEmpresa = (empresaId: string) => useConsulta<PlanDeCuotas[]>(["cuotas", empresaId], empresaId ? `/admin/empresas/${empresaId}/cuotas` : null);
 
 export function useAccionesAlianzas() {
   const api = useApiFetch();
@@ -198,6 +235,10 @@ export function useAccionesAlianzas() {
     registrarPago: useMutation({
       mutationFn: (d: { empresaId: string; plan: PlanPago; ciclo: Ciclo; metodo: string; notas: string; enCuotas?: boolean; grupoId?: string; monto?: number; desde?: string; fechaCobro?: string }) =>
         enviar<{ pago: { monto: number }; comision: { monto: number } | null }>("/admin/pagos", d),
+      onSuccess: refrescar,
+    }),
+    editarCuotasGenerales: useMutation({
+      mutationFn: ({ id, ...d }: { id: string; trimestral?: number; anual?: number }) => enviar(`${BASE}/cuotas/${id}`, d, "PATCH"),
       onSuccess: refrescar,
     }),
     devolverPago: useMutation({ mutationFn: ({ id, motivo }: { id: string; motivo: string }) => enviar(`/admin/pagos/${id}/devolver`, { motivo }), onSuccess: refrescar }),

@@ -66,10 +66,14 @@ export class AlianzasController {
     if (q.codigo) {
       const v = await this.cupones.verificar(q.codigo, { email: usuario.email, clerkUserId: usuario.clerkUserId, empresaId: empresa.id, cuit: actual?.cuit }, empresa.id);
       if (!v.ok) return { ...base, cupon: null, beneficios: null, aviso: v.mensaje, planes: await this.cobros.tablaDePrecios(empresa.id, null) };
+      // Ya registrado: la prueba del cupón solo extiende una prueba que siga vigente (no se promete si ya paga).
+      const sub = await this.prisma.suscripcion.findFirst({ where: { empresaId: empresa.id }, orderBy: [{ fechaVencimiento: { sort: 'desc', nulls: 'last' } }] });
+      const enPrueba = sub?.estado === 'periodo_prueba' && sub.fechaVencimiento != null && sub.fechaVencimiento > new Date();
+      const mesGratis = v.mesGratis && enPrueba;
       return {
         ...base,
-        cupon: { codigo: v.cupon.codigo, camara: v.cupon.camaraNombre, aplicado: false, diasPrueba: v.mesGratis ? v.diasPrueba : null },
-        beneficios: beneficiosDelCupon(v.cupon, v.mesGratis, generales),
+        cupon: { codigo: v.cupon.codigo, camara: v.cupon.camaraNombre, aplicado: false, diasPrueba: mesGratis ? v.diasPrueba : null },
+        beneficios: beneficiosDelCupon(v.cupon, mesGratis, generales),
         aviso: v.aviso,
         planes: await this.cobros.tablaDePrecios(empresa.id, v.cupon.reglas),
       };

@@ -112,12 +112,10 @@ export function BienvenidaForm() {
               </select>
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <CampoCodigo valor={d.codigo} onChange={(v) => set("codigo", v)} resultado={codigo} buscando={buscando} />
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="reg-cuit">CUIT (opcional)</Label>
-              <Input id="reg-cuit" inputMode="numeric" placeholder="20-12345678-9" value={d.cuit} onChange={(e) => set("cuit", e.target.value)} />
-            </div>
+          <CampoCodigo valor={d.codigo} onChange={(v) => set("codigo", v)} resultado={codigo} buscando={buscando} />
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="reg-cuit">CUIT (opcional)</Label>
+            <Input id="reg-cuit" inputMode="numeric" placeholder="20-12345678-9" value={d.cuit} onChange={(e) => set("cuit", e.target.value)} />
           </div>
           <ul className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3 text-sm">
             {INCLUYE.map((t) => (

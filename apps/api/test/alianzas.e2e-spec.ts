@@ -252,6 +252,10 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
     // El emprendedor ve en qué cuota va.
     const precios = await request(app.getHttpServer()).get('/suscripcion/precios').set(bearer(user, `org_${user}`)).expect(200);
     expect(precios.body.cuotasEnCurso).toMatchObject({ cuotas: 3, pagadas: 1, montoCuota: 356_000, proxima: { numero: 2, vence: sumarMesesTexto(hoy, 4) } });
+    // Ya paga: si prueba un código, se le muestran los descuentos pero no se le promete el mes gratis.
+    const conCodigo = await request(app.getHttpServer()).get('/suscripcion/precios').query({ codigo: CODIGO }).set(bearer(user, `org_${user}`)).expect(200);
+    expect(conCodigo.body.beneficios.lista.join(' ')).not.toMatch(/gratis/);
+    expect(conCodigo.body.beneficios.etiquetas).toMatchObject({ mensual: null, trimestral: '-40%', anual: 'AHORRÁS 25%' });
   });
 
   it('anual con el código: 3 cuotas que suman el 75%, comisión por cada cuota cobrada y renovación en cuotas al 80%', async () => {

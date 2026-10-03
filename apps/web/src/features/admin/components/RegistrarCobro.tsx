@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatoPesos } from "@/lib/formato";
 import { hoyAR } from "@/lib/periodos";
-import { useEmpresasAdmin, usePagosAdmin } from "../hooks/use-admin";
-import { fechaAR, NOMBRE_CICLO, useAccionesAlianzas, type Ciclo, type PlanPago, type PropuestaPago } from "../hooks/use-alianzas";
+import { useEmpresasAdmin } from "../hooks/use-admin";
+import { fechaAR, NOMBRE_CICLO, useAccionesAlianzas, useCuotasEmpresa, type Ciclo, type PlanPago, type PropuestaPago } from "../hooks/use-alianzas";
 import { Panel } from "./comunes";
 
 const selectClase = "h-8 rounded-lg border bg-transparent px-2 text-sm";
@@ -25,7 +25,6 @@ const PLANES: { id: PlanPago; nombre: string }[] = [
  */
 export function RegistrarCobro() {
   const empresas = useEmpresasAdmin();
-  const todos = usePagosAdmin("", "");
   const { cotizarPago, registrarPago } = useAccionesAlianzas();
   const [f, setF] = useState({ empresaId: "", plan: "basico" as PlanPago, ciclo: "mensual" as Ciclo, enCuotas: false, grupoId: "", metodo: "transferencia", fechaCobro: hoyAR(), notas: "", monto: "" });
   const [propuesta, setPropuesta] = useState<PropuestaPago | null>(null);
@@ -34,17 +33,11 @@ export function RegistrarCobro() {
     setPropuesta(null);
   };
 
-  // Períodos en cuotas con cuotas pendientes de este cliente.
-  const enCurso = useMemo(() => {
-    const grupos = new Map<string, { grupoId: string; plan: string; ciclo: string; pagadas: number; cuotas: number; desde: string | null }>();
-    for (const p of todos.data ?? []) {
-      if (p.empresaId !== f.empresaId || !p.grupoId || p.estado !== "confirmado") continue;
-      const g = grupos.get(p.grupoId) ?? { grupoId: p.grupoId, plan: p.plan ?? "", ciclo: p.ciclo ?? "", pagadas: 0, cuotas: p.cuotas ?? 1, desde: p.periodoDesde };
-      g.pagadas += 1;
-      grupos.set(p.grupoId, g);
-    }
-    return [...grupos.values()].filter((g) => g.pagadas < g.cuotas);
-  }, [todos.data, f.empresaId]);
+  // Períodos en cuotas con cuotas pendientes de este cliente (del plan de cuotas).
+  const cuotasCliente = useCuotasEmpresa(f.empresaId);
+  const enCurso = (cuotasCliente.data ?? [])
+    .filter((g) => g.pagadas < g.cuotas.length)
+    .map((g) => ({ grupoId: g.grupoId, plan: g.plan, ciclo: g.ciclo, pagadas: g.pagadas, cuotas: g.cuotas.length, desde: g.cuotas[0]?.periodoDesde ?? null }));
 
   function calcular() {
     if (!f.empresaId) return toast.error("Elegí el cliente.");
@@ -125,7 +118,7 @@ export function RegistrarCobro() {
               </select>
               <label className="flex items-center gap-1.5 text-sm">
                 <input type="checkbox" checked={f.enCuotas} onChange={(e) => set({ enCuotas: e.target.checked })} />
-                En cuotas (si el cupón lo permite)
+                En cuotas sin interés (trimestral y anual)
               </label>
             </>
           )}

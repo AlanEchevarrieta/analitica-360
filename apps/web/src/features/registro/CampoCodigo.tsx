@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeCheck, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useApiFetch } from "@/hooks/use-api";
+import { CartelBeneficios } from "@/features/planes/components/CartelBeneficios";
 
 export interface CodigoVerificado {
   ok: boolean;
@@ -15,6 +16,8 @@ export interface CodigoVerificado {
   diasPrueba?: number;
   mesGratis?: boolean;
   aviso?: string | null;
+  /** Beneficios en palabras, armados por la API desde las reglas del cupón. */
+  beneficios?: { lista: string[] };
 }
 
 /** Verifica el código medio segundo después de que deja de escribir (GET /registro/codigo). */
@@ -41,7 +44,6 @@ export function useVerificarCodigo(valor: string) {
 
 /** Código de una cámara o cupón (no importan mayúsculas ni espacios). */
 export function CampoCodigo({ valor, onChange, resultado, buscando }: { valor: string; onChange: (v: string) => void; resultado: CodigoVerificado | null; buscando: boolean }) {
-  const meses = resultado?.diasPrueba && resultado.diasPrueba >= 28 ? Math.round(resultado.diasPrueba / 30) : null;
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor="reg-codigo">¿Tenés un código? (opcional)</Label>
@@ -50,15 +52,11 @@ export function CampoCodigo({ valor, onChange, resultado, buscando }: { valor: s
         {buscando && <Loader2 className="absolute top-2 right-2 size-4 animate-spin text-muted-foreground" aria-hidden />}
       </div>
       {resultado && !buscando && (
-        resultado.ok ? (
-          <p className="flex items-start gap-1.5 text-xs text-emerald-600">
-            <BadgeCheck className="mt-px size-4 shrink-0" aria-hidden />
-            <span>
-              {resultado.camara ? `Código de ${resultado.camara}: ` : "Código válido: "}
-              {resultado.mesGratis ? `${meses ? `${meses} ${meses === 1 ? "mes" : "meses"}` : `${resultado.diasPrueba} días`} gratis y descuentos al elegir tu plan.` : "descuentos al elegir tu plan."}
-              {resultado.aviso && <span className="block text-amber-600">{resultado.aviso}</span>}
-            </span>
-          </p>
+        resultado.ok && resultado.codigo ? (
+          <div className="flex flex-col gap-1">
+            <CartelBeneficios compacto codigo={resultado.codigo} camara={resultado.camara ?? null} beneficios={resultado.beneficios?.lista ?? []} aplicado={false} />
+            {resultado.aviso && <p className="text-xs text-amber-600">{resultado.aviso}</p>}
+          </div>
         ) : (
           <p role="alert" className="text-xs text-destructive">
             {resultado.mensaje}

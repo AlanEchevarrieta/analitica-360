@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { NOMBRE_CICLO, type Ciclo, type ReglaCiclo, type ReglasCupon } from "../../hooks/use-alianzas";
 
 const MESES: Record<Ciclo, number> = { mensual: 1, trimestral: 3, anual: 12 };
-const REGLA_VACIA: ReglaCiclo = { entrada: [], periodosEntrada: 1, renovacionPct: 0, renovacionPeriodos: null, cuotas: 1 };
+const REGLA_VACIA: ReglaCiclo = { entrada: [], periodosEntrada: 1, renovacionPct: 0, renovacionPeriodos: null, cuotas: null };
 
 /** Descuento total del primer período sobre la lista (ej. anual 3×40% + 9×20% → 25%). */
 function descuentoEntrada(ciclo: Ciclo, r: ReglaCiclo) {
@@ -67,11 +67,14 @@ export function ReglasEditor({ reglas, onChange }: { reglas: ReglasCupon; onChan
                     onChange={(e) => setRegla(ciclo, { ...r, renovacionPeriodos: e.target.value ? numero(e.target.value) : null })} />
                   renovaciones (vacío = todas)
                 </div>
-                <div className="flex items-center gap-1">
-                  Primer período en
-                  <Input className="h-8 w-16" type="number" min={1} max={12} aria-label="Cuotas" value={r.cuotas} onChange={(e) => setRegla(ciclo, { ...r, cuotas: Math.max(1, numero(e.target.value)) })} />
-                  cuota(s)
-                </div>
+                {ciclo !== "mensual" && (
+                  <div className="flex items-center gap-1">
+                    Pagar en
+                    <Input className="h-8 w-16" type="number" min={1} max={12} placeholder="plan" aria-label="Cuotas" value={r.cuotas ?? ""}
+                      onChange={(e) => setRegla(ciclo, { ...r, cuotas: e.target.value ? Math.max(1, numero(e.target.value)) : null })} />
+                    cuotas (vacío = las del plan)
+                  </div>
+                )}
               </>
             )}
           </div>

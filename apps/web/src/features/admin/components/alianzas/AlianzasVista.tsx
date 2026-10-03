@@ -34,6 +34,9 @@ export function AlianzasVista() {
           <Link href="/admin/alianzas/cupones" className={buttonVariants({ variant: "outline" })}>
             Cupones
           </Link>
+          <Link href="/admin/alianzas/cuotas" className={buttonVariants({ variant: "outline" })}>
+            Cuotas
+          </Link>
           <Button onClick={() => setNueva((v) => !v)}>{nueva ? "Cerrar" : "Nueva cámara"}</Button>
         </div>
       </div>

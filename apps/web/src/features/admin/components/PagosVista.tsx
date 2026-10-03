@@ -13,6 +13,7 @@ import { fechaCorta, NOMBRE_PLAN, usePagosAdmin } from "../hooks/use-admin";
 import { fechaAR, NOMBRE_CICLO, useAccionesAlianzas, type Ciclo } from "../hooks/use-alianzas";
 import { Indicador, Panel } from "./comunes";
 import { RegistrarCobro } from "./RegistrarCobro";
+import { CuotasVencidasPanel } from "./alianzas/CuotasCliente";
 
 const selectClase = "h-8 rounded-lg border bg-transparent px-2 text-sm";
 
@@ -44,6 +45,8 @@ export function PagosVista() {
       </div>
 
       <RegistrarCobro />
+
+      <CuotasVencidasPanel />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Indicador etiqueta="Cobrado en el período" valor={formatoPesos(total)} detalle={`${confirmados.length} pagos confirmados`} />

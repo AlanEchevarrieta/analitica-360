@@ -14,6 +14,7 @@ import { etiquetaGranularidad, hoyAR } from "@/lib/periodos";
 import { NOMBRE_ESTADO, NOMBRE_PLAN, fechaCorta, useAccionesAdmin, useEmpresaAdmin, usePlanesAdmin } from "../hooks/use-admin";
 import { EtiquetaAlerta, EtiquetaEstado, EtiquetaPlan, Indicador, Panel, variacion } from "./comunes";
 import { OrigenClientePanel } from "./alianzas/OrigenClientePanel";
+import { CuotasClientePanel } from "./alianzas/CuotasCliente";
 
 const G_VENTAS = { monto: { label: "Vendido", color: "var(--chart-1)" } } satisfies ChartConfig;
 const selectClase = "h-8 rounded-lg border bg-transparent px-2 text-sm";
@@ -148,6 +149,8 @@ export function ClienteFichaVista({ id }: { id: string }) {
       </div>
 
       <OrigenClientePanel empresaId={id} />
+
+      <CuotasClientePanel empresaId={id} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel titulo="Usuarios">

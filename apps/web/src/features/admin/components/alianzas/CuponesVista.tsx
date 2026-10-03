@@ -25,7 +25,7 @@ function resumenReglas(c: Cupon) {
     }
     const entrada = Math.round((suma / meses) * 10) / 10;
     if (!entrada && !r.renovacionPct) return [];
-    const textos = [entrada ? `${entrada}% el 1.º${r.cuotas > 1 ? ` (${r.cuotas} cuotas)` : ""}` : null, r.renovacionPct ? `${r.renovacionPct}% renovaciones` : null].filter(Boolean);
+    const textos = [entrada ? `${entrada}% el 1.º${(r.cuotas ?? 0) > 1 ? ` (${r.cuotas} cuotas)` : ""}` : null, r.renovacionPct ? `${r.renovacionPct}% renovaciones` : null].filter(Boolean);
     return [`${NOMBRE_CICLO[ciclo]}: ${textos.join(", ")}`];
   });
   return partes.join(" · ") || "Sin descuentos";
