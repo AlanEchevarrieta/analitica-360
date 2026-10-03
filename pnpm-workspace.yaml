@@ -7,3 +7,7 @@ allowBuilds:
   esbuild: true
   prisma: true
   unrs-resolver: true
+# Parches de seguridad en dependencias indirectas (pnpm audit, 2026-10-03).
+overrides:
+  dompurify: ">=3.4.16"
+  mysql2: ">=3.23.1"

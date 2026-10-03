@@ -10,6 +10,24 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   // Imagen de Docker: servidor mínimo con solo lo necesario (ver apps/web/Dockerfile).
   // La raíz del monorepo para que incluya packages/shared-types y el node_modules de pnpm.
+  poweredByHeader: false,
+  // Cabeceras de seguridad: nada de mostrar la app dentro de un iframe ajeno
+  // (clickjacking), sin adivinar tipos de archivo y sin mandar la URL completa a otros sitios.
+  // La cámara queda permitida para el lector de códigos de barra.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+        ],
+      },
+    ];
+  },
   ...(standalone ? { output: "standalone", outputFileTracingRoot: path.resolve(process.cwd(), "../..") } : {}),
 };
 

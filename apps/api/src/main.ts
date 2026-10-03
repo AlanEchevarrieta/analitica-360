@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AlmacenArchivosService } from './common/archivos/almacen-archivos.service.js';
 import { ConfigService } from '@nestjs/config';
@@ -8,6 +9,11 @@ import type { Env } from './config/env.validation.js';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService<Env, true>);
+
+  // Cabeceras de seguridad (nosniff, sin iframes ajenos, HSTS…) y sin anunciar Express.
+  // Las fotos de /archivos/ las muestran la web y las tiendas desde otro origen: cross-origin.
+  app.disable('x-powered-by');
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
   // apps/web llama a esta API directo desde el navegador con el JWT de Clerk:
   // solo se aceptan los orígenes configurados (local por defecto; en producción, el dominio).

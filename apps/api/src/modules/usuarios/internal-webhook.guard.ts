@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { type CanActivate, type ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
@@ -17,7 +18,10 @@ export class InternalWebhookGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
     const secret = request.headers['x-internal-webhook-secret'];
     const esperado = this.config.get('INTERNAL_WEBHOOK_SECRET', { infer: true });
-    if (secret !== esperado) {
+    // Comparación en tiempo constante: no deja adivinar el secreto midiendo cuánto tarda.
+    const a = Buffer.from(typeof secret === 'string' ? secret : '');
+    const b = Buffer.from(esperado);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
       throw new UnauthorizedException('Secreto de reenvío interno inválido');
     }
     return true;
