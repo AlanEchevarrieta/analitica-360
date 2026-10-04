@@ -58,6 +58,27 @@ export function PedidoFichaVista({ id }: { id: string }) {
         <span className="ml-auto text-lg font-semibold tabular-nums">{formatoPesos(p.total)}</span>
       </div>
 
+      {(p.descuentos.cupon > 0 || p.descuentos.transferencia > 0 || p.descuentos.ofertas > 0 || p.descuentos.formaPagoTienda) && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border bg-muted/30 px-4 py-3 text-sm">
+          <span>
+            Productos <b className="tabular-nums">{formatoPesos(p.descuentos.subtotal)}</b>
+            {p.descuentos.ofertas > 0 && <span className="text-muted-foreground"> (ya con {formatoPesos(p.descuentos.ofertas)} de ofertas)</span>}
+          </span>
+          {p.descuentos.cupon > 0 && (
+            <span className="text-emerald-700 dark:text-emerald-400">
+              Cupón <b className="font-mono">{p.descuentos.cuponCodigo}</b> −{formatoPesos(p.descuentos.cupon)}
+            </span>
+          )}
+          {p.descuentos.transferencia > 0 && <span className="text-emerald-700 dark:text-emerald-400">Transferencia −{formatoPesos(p.descuentos.transferencia)}</span>}
+          {p.descuentos.formaPagoTienda && (
+            <span className="text-muted-foreground">Eligió pagar: {p.descuentos.formaPagoTienda === "transferencia" ? "transferencia" : "a coordinar"}</span>
+          )}
+          <span className="ml-auto">
+            A cobrar <b className="tabular-nums">{formatoPesos(p.total)}</b>
+          </span>
+        </div>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <Card>
           <CardHeader>

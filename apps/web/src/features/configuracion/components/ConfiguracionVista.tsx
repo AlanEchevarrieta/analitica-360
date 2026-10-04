@@ -17,6 +17,7 @@ import { CuotasConfig, MediosConfig } from "./MediosCuotasConfig";
 import { FlujoVentasConfig, InventarioPedidosConfig } from "./OperacionConfig";
 import { FiscalConfig, RemitenteConfig } from "./RemitenteFiscalConfig";
 import { AuditoriaConfig } from "./AuditoriaConfig";
+import { CuponesTiendaConfig } from "./CuponesTiendaConfig";
 
 interface Opcion {
   clave: string;
@@ -49,7 +50,10 @@ const GRUPOS: { titulo: string; opciones: Opcion[] }[] = [
   },
   {
     titulo: "Tienda online",
-    opciones: [{ clave: "tienda", icono: "🛍️", titulo: "Tienda online", subtitulo: "Tu catálogo en internet: marca, contacto y datos para cobrar", panel: () => <TiendaOnlineConfig /> }],
+    opciones: [
+      { clave: "tienda", icono: "🛍️", titulo: "Tienda online", subtitulo: "Tu catálogo en internet: marca, contacto y datos para cobrar", panel: () => <TiendaOnlineConfig /> },
+      { clave: "cupones", icono: "🎟️", titulo: "Cupones de la tienda", subtitulo: "Códigos de descuento para el checkout (ej. ACACIA10)", panel: () => <CuponesTiendaConfig /> },
+    ],
   },
   {
     titulo: "Mi negocio",

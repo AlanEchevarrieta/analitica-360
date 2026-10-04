@@ -54,6 +54,15 @@ export interface PedidoFicha extends PedidoRecord {
   notas: string | null;
   /** Venta registrada al despachar (null antes del despacho o en pedidos del legacy). */
   ventaId: string | null;
+  /** Descuentos de la tienda online (todo en 0 / null en pedidos manuales). */
+  descuentos: {
+    subtotal: number;
+    ofertas: number;
+    cuponCodigo: string | null;
+    cupon: number;
+    transferencia: number;
+    formaPagoTienda: string | null;
+  };
   items: PedidoItemRecord[];
 }
 

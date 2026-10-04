@@ -128,6 +128,10 @@ describe.skipIf(!URL_E2E)('Descuentos de la tienda online (e2e)', () => {
     const items = (await db.query(`SELECT producto_id, precio_unitario::float AS precio FROM pedidos_items WHERE pedido_id = $1 ORDER BY precio_unitario`, [pedidoId])).rows;
     expect(items).toEqual([{ producto_id: mate, precio: 12000 }, { producto_id: bolso, precio: 49000 }]);
     expect((await db.query(`SELECT usos FROM cupones_tienda WHERE empresa_id = $1 AND codigo = 'ACACIA10'`, [empresa])).rows[0].usos).toBe(1);
+    // En la app, el pedido muestra lo que hay que cobrar y de dónde sale.
+    const ficha = (await request(s()).get(`/pedidos/${pedidoId}`).set(DUENO).expect(200)).body;
+    expect(ficha.total).toBe(49410);
+    expect(ficha.descuentos).toEqual({ subtotal: 61000, ofertas: 3000, cuponCodigo: 'ACACIA10', cupon: 6100, transferencia: 5490, formaPagoTienda: 'transferencia' });
   });
 
   it('un cupón de un solo uso aguanta dos compras al mismo tiempo: una pasa, la otra no', async () => {

@@ -47,7 +47,11 @@ export class PrismaPedidosRepository implements PedidosRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private toFicha(p: PedidoConFicha): PedidoFicha {
-    const total = p.items.reduce((acc, i) => acc + i.cantidad.toNumber() * i.precioUnitario.toNumber(), 0);
+    const subtotal = p.items.reduce((acc, i) => acc + i.cantidad.toNumber() * i.precioUnitario.toNumber(), 0);
+    const descuentoCupon = p.descuentoCupon.toNumber();
+    const descuentoTransferencia = p.descuentoTransferencia.toNumber();
+    // Total = lo que hay que cobrar: los ítems (ya con la oferta) menos cupón y transferencia.
+    const total = subtotal - descuentoCupon - descuentoTransferencia;
     return {
       id: p.id,
       empresaId: p.empresaId,
@@ -70,6 +74,14 @@ export class PrismaPedidosRepository implements PedidosRepository {
       transportista: p.transportista,
       notas: p.notas,
       ventaId: p.ventaId,
+      descuentos: {
+        subtotal,
+        ofertas: p.descuentoOfertas.toNumber(),
+        cuponCodigo: p.cuponCodigo,
+        cupon: descuentoCupon,
+        transferencia: descuentoTransferencia,
+        formaPagoTienda: p.formaPagoTienda,
+      },
       items: p.items.map((i) => ({
         id: i.id,
         productoId: i.productoId,
@@ -153,7 +165,7 @@ export class PrismaPedidosRepository implements PedidosRepository {
         origen: p.origen as OrigenPedido,
         estado: p.estado as EstadoPedido,
         asignadoAId: p.asignadoAId,
-        total: p.items.reduce((acc, i) => acc + i.cantidad.toNumber() * i.precioUnitario.toNumber(), 0),
+        total: p.items.reduce((acc, i) => acc + i.cantidad.toNumber() * i.precioUnitario.toNumber(), 0) - p.descuentoCupon.toNumber() - p.descuentoTransferencia.toNumber(),
         createdAt: p.createdAt,
       })),
       total,

@@ -20,6 +20,7 @@ import { CampoCodigoBarra } from "./CampoCodigoBarra";
 import { UNIDADES } from "@/lib/unidades";
 import { CategoriaSelector } from "./CategoriaSelector";
 import { FotosProducto } from "./FotosProducto";
+import { OfertaProducto } from "./OfertaProducto";
 import { RepartoStock, repartoParaApi } from "./RepartoStock";
 import { VariantesEditor, type VarianteEditable } from "./VariantesEditor";
 
@@ -209,6 +210,7 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
         </Card>
 
         {inicial && !esInsumo && <FotosProducto productoId={inicial.id} />}
+        {inicial && !esInsumo && enTienda && <OfertaProducto productoId={inicial.id} precioVenta={inicial.precioVenta} usaVariantes={inicial.usaVariantes} />}
 
         <Card>
           <CardHeader>

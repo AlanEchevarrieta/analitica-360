@@ -43,6 +43,7 @@ interface Tienda {
   facebook: string | null;
   tiktok: string | null;
   pedidoMinimo: number | null;
+  descuentoTransferencia: number;
 }
 
 type Seccion = "beneficios" | "categorias" | "destacados" | "sobre";
@@ -53,7 +54,7 @@ const SECCIONES: { v: Seccion; t: string }[] = [
   { v: "sobre", t: "Sobre nosotros" },
 ];
 
-const CAMPOS = ["activa", "subdominio", "dominioPropio", "nombre", "descripcion", "color", "whatsapp", "instagram", "textoEnvios", "alias", "cbu", "titular", "mostrarSinStock", "fondo", "tipografia", "bordes", "anuncio", "formaFoto", "columnasCelular", "seccionesOcultas", "tituloDestacados", "sobreNosotros", "horario", "facebook", "tiktok", "pedidoMinimo"] as const;
+const CAMPOS = ["activa", "subdominio", "dominioPropio", "nombre", "descripcion", "color", "whatsapp", "instagram", "textoEnvios", "alias", "cbu", "titular", "mostrarSinStock", "fondo", "tipografia", "bordes", "anuncio", "formaFoto", "columnasCelular", "seccionesOcultas", "tituloDestacados", "sobreNosotros", "horario", "facebook", "tiktok", "pedidoMinimo", "descuentoTransferencia"] as const;
 const PESTANAS = [
   { v: "marca", t: "Marca" },
   { v: "estilo", t: "Estilo" },
@@ -360,6 +361,25 @@ function Formulario({ inicial }: { inicial: Tienda }) {
                     />
                   </div>
                   <span className="text-xs text-muted-foreground">Si el carrito no llega a ese monto, la tienda avisa cuánto falta y no deja confirmar. Ideal para ventas mayoristas.</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="tienda-descuentoTransferencia">Descuento por pagar con transferencia</Label>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      id="tienda-descuentoTransferencia"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={50}
+                      step={1}
+                      className="max-w-24"
+                      placeholder="0"
+                      value={t.descuentoTransferencia || ""}
+                      onChange={(e) => set("descuentoTransferencia", Math.min(50, Math.max(0, Number(e.target.value) || 0)))}
+                    />
+                    <span className="text-muted-foreground">%</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">En el checkout el cliente elige &quot;Transferencia&quot; y ve el precio con este descuento (se aplica después del cupón). 0 = sin descuento. Los cupones están en Configuración → Cupones de la tienda.</span>
                 </div>
               </>
             )}
