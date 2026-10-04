@@ -42,6 +42,10 @@ describe('bitácora de auditoría', () => {
     expect(resumen('Producto', 'editar', null, { a: [1, 2], b: [1, 2], c: [1, 2], d: [1, 2], e: [1, 2] })).toMatch(/y 2 cambios más$/);
   });
 
+  it('las fechas sin hora se leen como fecha', () => {
+    expect(resumen('Producto', 'editar', 'Mate', { ofertaHasta: [null, '2026-10-12T00:00:00.000Z'] })).toBe('editó producto «Mate»: oferta hasta (vacío) → 12/10/2026');
+  });
+
   it('si cambian el texto y su id, la frase muestra solo el texto', () => {
     expect(resumen('Producto', 'editar', 'Mochila', { categoria: [null, 'Mochilas'], categoriaId: [null, 'c1'] })).toBe('editó producto «Mochila»: categoría (vacío) → Mochilas');
   });

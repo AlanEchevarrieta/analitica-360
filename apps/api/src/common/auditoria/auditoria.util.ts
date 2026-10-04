@@ -160,6 +160,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const valorLegible = (campo: string, v: unknown): string => {
   if (v === null || v === undefined || v === '') return '(vacío)';
   if (typeof v === 'string' && UUID.test(v)) return `…${v.slice(-6)}`;
+  // Fechas sin hora (columnas DATE): 2026-10-12T00:00:00.000Z → 12/10/2026
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T00:00:00\.000Z$/.test(v)) return v.slice(0, 10).split('-').reverse().join('/');
   if (typeof v === 'boolean') return v ? 'sí' : 'no';
   if (typeof v === 'number' && /precio|costo|monto|total|saldo|importe/i.test(campo)) return `$${v.toLocaleString('es-AR')}`;
   const s = typeof v === 'object' ? JSON.stringify(v) : String(v);

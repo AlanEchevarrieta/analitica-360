@@ -122,7 +122,7 @@ for (const ruta of rutas) {
     // En el celular, nada tiene que obligar a deslizar de costado.
     const ancho_doc = await page.evaluate(() => document.documentElement.scrollWidth);
     if (ancho_doc > Number(ancho) + 1) problemas.push({ ruta, tipo: 'desborde horizontal', detalle: `${ancho_doc}px en una pantalla de ${ancho}px` });
-    const archivo = `${ruta.replace(/^\//, '').replace(/[/[\]]/g, '_') || 'raiz'}.png`;
+    const archivo = `${ruta.replace(/^\//, '').replace(/[/[\]?=&:*"<>|]/g, '_') || 'raiz'}.png`;
     // Captura de toda la página: se agranda la ventana y se espera a que los
     // gráficos se redibujen (con fullPage la foto salía al empezar la animación).
     const alto = await page.evaluate(() => document.documentElement.scrollHeight);
