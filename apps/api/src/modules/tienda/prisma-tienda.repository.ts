@@ -33,11 +33,11 @@ export class PrismaTiendaRepository implements TiendaRepository {
     // sin contar transferencias (mueven stock entre ubicaciones, no lo cambian).
     const [productos, variantes] = await Promise.all([
       this.prisma.$queryRaw<
-        { id: string; nombre: string; categoria: string | null; categoria_id: string | null; precio: string; stock: string; vendidos: string }[]
+        { id: string; nombre: string; categoria: string | null; categoria_id: string | null; precio: string; stock: string; vendidos: string; created_at: Date }[]
       >(Prisma.sql`
         SELECT
           -- La categoría real (categorias) manda; el texto legacy queda de respaldo.
-          p.id, p.nombre, COALESCE(cat.nombre, p.categoria) AS categoria, p.categoria_id,
+          p.id, p.nombre, COALESCE(cat.nombre, p.categoria) AS categoria, p.categoria_id, p.created_at,
           COALESCE(p.precio_venta, 0) AS precio,
           COALESCE((
             SELECT SUM(m.signo * m.cantidad) FROM movimientos_inventario m
@@ -108,6 +108,7 @@ export class PrismaTiendaRepository implements TiendaRepository {
       // Kit que se arma al vender: su stock es cuántos se pueden armar.
       stock: kits.get(p.id) ?? Number(p.stock),
       vendidos: Number(p.vendidos),
+      creadoEn: p.created_at.toISOString(),
       imagenes: fotos.get(p.id) ?? [],
       miniaturas: chicas.get(p.id) ?? [],
       variantes: variantesPorProducto.get(p.id) ?? [],

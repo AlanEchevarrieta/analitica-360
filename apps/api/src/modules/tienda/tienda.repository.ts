@@ -14,6 +14,8 @@ export interface ProductoCatalogo {
   precio: number;
   stock: number;
   vendidos: number;
+  /** Alta del producto (para ordenar por novedades). */
+  creadoEn: string;
   /** Fotos en orden (la primera es la principal). */
   imagenes: string[];
   /** Las mismas fotos en tamaño chico, para listados. */
