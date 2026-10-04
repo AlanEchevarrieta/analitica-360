@@ -2,8 +2,8 @@
 // con el mismo código que usa la app. Todo queda en la bitácora de auditoría
 // como un cambio del "Equipo Analítica 360".
 //
-// Uso (desde apps/api): npx tsx scripts/categorizar-productos.ts --empresa <uuid> "Producto=Categoría" ... [--aplicar]
-// Sin --aplicar solo muestra qué haría.
+// Uso (desde apps/api): npx tsx scripts/categorizar-productos.ts --empresa <uuid> "Producto=Categoría" ... [--crear-categorias] [--aplicar]
+// Sin --aplicar solo muestra qué haría. Con --crear-categorias crea las categorías que no existan.
 import 'dotenv/config';
 import { Prisma } from '@prisma/client';
 import { conContextoAuditoria, type ContextoAuditoria } from '../src/common/auditoria/contexto-auditoria.js';
@@ -14,6 +14,7 @@ import { baseSku } from '../src/modules/productos/sku.util.js';
 const args = process.argv.slice(2);
 const empresa = args[args.indexOf('--empresa') + 1];
 const aplicar = args.includes('--aplicar');
+const crear = args.includes('--crear-categorias');
 const pedidos = args.filter((a) => a.includes('=')).map((a) => a.split('=') as [string, string]);
 if (!empresa || pedidos.length === 0) {
   console.error('Uso: npx tsx scripts/categorizar-productos.ts --empresa <uuid> "Producto=Categoría" ... [--aplicar]');
@@ -39,16 +40,21 @@ try {
     const p = await prisma.producto.findFirst({ where: { empresaId: empresa, nombre, deletedAt: null }, select: { id: true, categoriaId: true, sku: true, usaVariantes: true } });
     const c = await prisma.categoria.findFirst({ where: { empresaId: empresa, nombre: categoria } });
     if (!p) throw new Error(`No existe el producto "${nombre}"`);
-    if (!c) throw new Error(`No existe la categoría "${categoria}"`);
+    if (!c && !crear) throw new Error(`No existe la categoría "${categoria}" (usá --crear-categorias)`);
     if (p.categoriaId) throw new Error(`"${nombre}" ya tiene categoría: no se pisa`);
-    plan.push({ ...p, nombre, categoria: c });
-    console.log(`${nombre} → ${categoria}${p.sku || p.usaVariantes ? '' : ` · SKU ${baseSku({ categoria, producto: nombre })}-NNN`}`);
+    plan.push({ ...p, nombre, categoria: c ?? { id: null as string | null, nombre: categoria } });
+    console.log(`${nombre} → ${categoria}${c ? '' : ' (categoría nueva)'}${p.sku || p.usaVariantes ? '' : ` · SKU ${baseSku({ categoria, producto: nombre })}-NNN`}`);
   }
   if (!aplicar) {
     console.log('\nPrueba: no se guardó nada. Agregá --aplicar.');
   } else {
     await conContextoAuditoria(ctx, async () => {
-      for (const p of plan) await prisma.producto.update({ where: { id: p.id }, data: { categoriaId: p.categoria.id, categoria: p.categoria.nombre } });
+      for (const p of plan) {
+        // La categoría nueva se crea una sola vez aunque la pidan varios productos.
+        p.categoria.id ??= plan.find((o) => o !== p && o.categoria.nombre === p.categoria.nombre && o.categoria.id)?.categoria.id ?? null;
+        p.categoria.id ??= (await prisma.categoria.create({ data: { empresaId: empresa, nombre: p.categoria.nombre } })).id;
+        await prisma.producto.update({ where: { id: p.id }, data: { categoriaId: p.categoria.id, categoria: p.categoria.nombre } });
+      }
       const n = await new PrismaSkuRepository(prisma).asignarFaltantes(empresa);
       console.log(`\nCategorías puestas: ${plan.length} · SKU generados: ${n}`);
     });
