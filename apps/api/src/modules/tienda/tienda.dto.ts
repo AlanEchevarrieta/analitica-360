@@ -21,5 +21,13 @@ export const crearPedidoTiendaSchema = z.object({
   provincia: requerido(60, 'Ingresá la provincia'),
   notas: texto(500).nullable().optional(),
   items: z.array(itemPedidoTiendaSchema).min(1, 'El carrito está vacío').max(50),
+  cuponCodigo: texto(40).nullable().optional(),
+  formaPago: z.enum(['transferencia', 'a_coordinar']).default('a_coordinar'),
 });
 export type CrearPedidoTiendaInput = z.infer<typeof crearPedidoTiendaSchema>;
+
+export const validarCuponSchema = z.object({
+  codigo: requerido(40, 'Ingresá el código'),
+  subtotal: z.number().min(0).max(1_000_000_000),
+});
+export type ValidarCuponInput = z.infer<typeof validarCuponSchema>;

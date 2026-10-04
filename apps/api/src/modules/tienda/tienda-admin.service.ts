@@ -34,6 +34,7 @@ export interface GuardarTienda {
   facebook: string | null;
   tiktok: string | null;
   pedidoMinimo: number | null;
+  descuentoTransferencia: number;
 }
 
 export const FONDOS = ['puntos', 'lienzo', 'papel', 'rayas', 'ondas', 'liso'] as const;
@@ -47,11 +48,11 @@ export const MAX_FOTOS = 8;
 const MAX_BYTES = 15 * 1024 * 1024;
 
 /** Campos que ve el público (nunca ids internos más allá de la empresa). */
-const PUBLICO = { empresaId: true, nombre: true, descripcion: true, color: true, logoUrl: true, whatsapp: true, instagram: true, textoEnvios: true, alias: true, cbu: true, titular: true, mostrarSinStock: true, subdominio: true, dominioPropio: true, fondo: true, tipografia: true, bordes: true, portadaUrl: true, anuncio: true, formaFoto: true, columnasCelular: true, seccionesOcultas: true, tituloDestacados: true, sobreNosotros: true, horario: true, facebook: true, tiktok: true, pedidoMinimo: true } as const;
+const PUBLICO = { empresaId: true, nombre: true, descripcion: true, color: true, logoUrl: true, whatsapp: true, instagram: true, textoEnvios: true, alias: true, cbu: true, titular: true, mostrarSinStock: true, subdominio: true, dominioPropio: true, fondo: true, tipografia: true, bordes: true, portadaUrl: true, anuncio: true, formaFoto: true, columnasCelular: true, seccionesOcultas: true, tituloDestacados: true, sobreNosotros: true, horario: true, facebook: true, tiktok: true, pedidoMinimo: true, descuentoTransferencia: true } as const;
 
-/** El monto mínimo viaja como número (Prisma lo devuelve como Decimal). */
-function conMontos<T extends { pedidoMinimo: unknown }>(t: T) {
-  return { ...t, pedidoMinimo: t.pedidoMinimo == null ? null : Number(t.pedidoMinimo) };
+/** Los montos viajan como número (Prisma los devuelve como Decimal). */
+function conMontos<T extends { pedidoMinimo: unknown; descuentoTransferencia?: unknown }>(t: T) {
+  return { ...t, pedidoMinimo: t.pedidoMinimo == null ? null : Number(t.pedidoMinimo), descuentoTransferencia: Number(t.descuentoTransferencia ?? 0) };
 }
 
 @Injectable()
@@ -105,6 +106,7 @@ export class TiendaAdminService {
       facebook: null,
       tiktok: null,
       pedidoMinimo: null,
+      descuentoTransferencia: 0,
     };
   }
 

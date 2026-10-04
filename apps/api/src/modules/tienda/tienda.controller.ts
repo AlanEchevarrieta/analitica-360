@@ -4,7 +4,7 @@ import { Public } from '../../common/decorators/public.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { TiendaService } from './tienda.service.js';
 import { TiendaThrottlerGuard } from './tienda-throttler.guard.js';
-import { crearPedidoTiendaSchema, type CrearPedidoTiendaInput } from './tienda.dto.js';
+import { crearPedidoTiendaSchema, validarCuponSchema, type CrearPedidoTiendaInput, type ValidarCuponInput } from './tienda.dto.js';
 
 /**
  * API pública de la tienda online (sin Clerk): la consume el servidor de
@@ -20,6 +20,22 @@ export class TiendaController {
   @Get('catalogo')
   catalogo(@Param('empresaId', new ParseUUIDPipe()) empresaId: string) {
     return this.tiendaService.catalogo(empresaId);
+  }
+
+  /** Pedido mínimo y % por transferencia, para mostrarlos en el carrito y el checkout. */
+  @Get('condiciones')
+  condiciones(@Param('empresaId', new ParseUUIDPipe()) empresaId: string) {
+    return this.tiendaService.condiciones(empresaId);
+  }
+
+  // Límite bajo: que no se puedan probar códigos a lo loco.
+  @Post('cupones/validar')
+  @Throttle({ default: { ttl: 60_000, limit: 15 } })
+  validarCupon(
+    @Param('empresaId', new ParseUUIDPipe()) empresaId: string,
+    @Body(new ZodValidationPipe(validarCuponSchema)) body: ValidarCuponInput,
+  ) {
+    return this.tiendaService.validarCupon(empresaId, body);
   }
 
   // Un cliente real no confirma más de un par de pedidos por minuto.

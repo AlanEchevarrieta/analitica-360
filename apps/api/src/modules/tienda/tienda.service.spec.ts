@@ -21,7 +21,10 @@ const inputBase: CrearPedidoTiendaInput = {
   provincia: 'Mendoza',
   notas: '',
   items: [{ productoId: PROD_SIMPLE, cantidad: 2 }],
+  formaPago: 'a_coordinar',
 };
+
+const cuponBase = { codigo: 'ACACIA10', tipo: 'porcentaje' as const, valor: 10, compraMinima: null, desde: null, hasta: null, usosMax: null, usos: 0, activo: true };
 
 describe('TiendaService', () => {
   let service: TiendaService;
@@ -32,10 +35,14 @@ describe('TiendaService', () => {
     tienda = {
       empresaActiva: vi.fn().mockResolvedValue(true),
       pedidoMinimo: vi.fn().mockResolvedValue(null),
+      condiciones: vi.fn().mockResolvedValue({ pedidoMinimo: null, descuentoTransferencia: 0 }),
       catalogo: vi.fn().mockResolvedValue([]),
+      cupon: vi.fn().mockResolvedValue(null),
+      usarCupon: vi.fn().mockResolvedValue(true),
+      devolverCupon: vi.fn().mockResolvedValue(undefined),
       productosVendibles: vi.fn().mockResolvedValue([
-        { id: PROD_SIMPLE, precio: 5000, variantes: [] },
-        { id: PROD_VARIANTES, precio: 49000, variantes: [{ id: VARIANTE, precio: 45000 }] },
+        { id: PROD_SIMPLE, precio: 5000, oferta: null, variantes: [] },
+        { id: PROD_VARIANTES, precio: 49000, oferta: null, variantes: [{ id: VARIANTE, precio: 45000 }] },
       ]),
     };
     pedidos = { crear: vi.fn().mockResolvedValue({ ok: true, pedido: fichaCreada }) };
@@ -56,11 +63,11 @@ describe('TiendaService', () => {
   });
 
   it('crearPedido() rechaza compras por debajo del mínimo configurado', async () => {
-    tienda.pedidoMinimo.mockResolvedValue(20000);
+    tienda.condiciones.mockResolvedValue({ pedidoMinimo: 20000, descuentoTransferencia: 0 });
     // 2 × $5.000 = $10.000 < $20.000
     await expect(service.crearPedido('empresa-1', inputBase)).rejects.toThrow(/compra mínima/);
     expect(pedidos.crear).not.toHaveBeenCalled();
-    tienda.pedidoMinimo.mockResolvedValue(10000);
+    tienda.condiciones.mockResolvedValue({ pedidoMinimo: 10000, descuentoTransferencia: 0 });
     await expect(service.crearPedido('empresa-1', inputBase)).resolves.toMatchObject({ total: 10000 });
   });
 
@@ -84,7 +91,56 @@ describe('TiendaService', () => {
         ],
       }),
     );
-    expect(resultado).toEqual({ id: 'ped-1', numeroPedido: 'PED-7', total: 55000 });
+    expect(resultado).toEqual({ id: 'ped-1', numeroPedido: 'PED-7', subtotal: 55000, descuentoCupon: 0, descuentoTransferencia: 0, total: 55000 });
+  });
+
+  it('crearPedido() aplica la oferta vigente en el precio del ítem (también a las variantes)', async () => {
+    tienda.productosVendibles.mockResolvedValue([
+      { id: PROD_VARIANTES, precio: 49000, oferta: { tipo: 'porcentaje', valor: 20, desde: null, hasta: null }, variantes: [{ id: VARIANTE, precio: 45000 }] },
+    ]);
+    const r = await service.crearPedido('empresa-1', { ...inputBase, items: [{ productoId: PROD_VARIANTES, varianteId: VARIANTE, cantidad: 2 }] });
+    expect(pedidos.crear).toHaveBeenCalledWith(
+      'empresa-1',
+      expect.objectContaining({
+        items: [{ productoId: PROD_VARIANTES, varianteId: VARIANTE, cantidad: 2, precioUnitario: 36000 }],
+        descuentos: expect.objectContaining({ ofertas: 18000 }),
+      }),
+    );
+    expect(r.total).toBe(72000);
+  });
+
+  it('crearPedido() con cupón y transferencia: los descuentos los calcula el servidor', async () => {
+    tienda.cupon.mockResolvedValue(cuponBase);
+    tienda.condiciones.mockResolvedValue({ pedidoMinimo: null, descuentoTransferencia: 10 });
+    const r = await service.crearPedido('empresa-1', { ...inputBase, items: [{ productoId: PROD_VARIANTES, varianteId: VARIANTE, cantidad: 1 }], cuponCodigo: ' acacia10 ', formaPago: 'transferencia' });
+    // 45.000 − 10% cupón = 40.500 − 10% transferencia = 36.450
+    expect(r).toMatchObject({ subtotal: 45000, descuentoCupon: 4500, descuentoTransferencia: 4050, total: 36450 });
+    expect(tienda.usarCupon).toHaveBeenCalledWith('empresa-1', 'ACACIA10');
+    expect(pedidos.crear).toHaveBeenCalledWith('empresa-1', expect.objectContaining({ descuentos: { cuponCodigo: 'ACACIA10', ofertas: 0, cupon: 4500, transferencia: 4050, formaPago: 'transferencia' } }));
+  });
+
+  it('crearPedido() con un cupón inválido no crea nada', async () => {
+    tienda.cupon.mockResolvedValue({ ...cuponBase, hasta: '2020-01-01' });
+    await expect(service.crearPedido('empresa-1', { ...inputBase, cuponCodigo: 'ACACIA10' })).rejects.toThrow(/vencido/);
+    expect(tienda.usarCupon).not.toHaveBeenCalled();
+    expect(pedidos.crear).not.toHaveBeenCalled();
+  });
+
+  it('crearPedido(): si el cupón se agotó justo antes (otra compra), rechaza; si el pedido falla, devuelve el uso', async () => {
+    tienda.cupon.mockResolvedValue({ ...cuponBase, usosMax: 1 });
+    tienda.usarCupon.mockResolvedValueOnce(false);
+    await expect(service.crearPedido('empresa-1', { ...inputBase, cuponCodigo: 'ACACIA10' })).rejects.toThrow(/todas las veces/);
+    expect(pedidos.crear).not.toHaveBeenCalled();
+
+    pedidos.crear.mockResolvedValueOnce({ ok: false, motivo: 'producto_invalido' });
+    await expect(service.crearPedido('empresa-1', { ...inputBase, cuponCodigo: 'ACACIA10' })).rejects.toThrow(BadRequestException);
+    expect(tienda.devolverCupon).toHaveBeenCalledWith('empresa-1', 'ACACIA10');
+  });
+
+  it('validarCupon() explica por qué no vale', async () => {
+    tienda.cupon.mockResolvedValue({ ...cuponBase, compraMinima: 30000 });
+    await expect(service.validarCupon('empresa-1', { codigo: 'acacia10', subtotal: 20000 })).resolves.toEqual({ valido: false, mensaje: expect.stringMatching(/compras desde \$\s?30\.000/) });
+    await expect(service.validarCupon('empresa-1', { codigo: 'acacia10', subtotal: 40000 })).resolves.toEqual({ valido: true, codigo: 'ACACIA10', descuento: 4000 });
   });
 
   it('crearPedido() rechaza productos que no están a la venta', async () => {

@@ -109,6 +109,7 @@ model Empresa {
   imagenesProductos         ProductoImagen[]
 
   eventosUso EventoUso[]
+  cuponesTienda CuponTienda[]
   @@unique([camaraId, ordenCamara])
   @@map("empresas")
 }
@@ -292,6 +293,11 @@ model Producto {
   anchoCm      Decimal?  @map("ancho_cm") @db.Decimal(8, 2)
   pesoGr       Decimal?  @map("peso_gr") @db.Decimal(10, 2)
   activo       Boolean   @default(true)
+  /// Oferta en la tienda online: porcentaje (20 = 20% off) o precio fijo; fechas opcionales (días de Argentina, inclusive).
+  ofertaTipo   String?   @map("oferta_tipo") @db.VarChar(10)
+  ofertaValor  Decimal?  @map("oferta_valor") @db.Decimal(12, 2)
+  ofertaDesde  DateTime? @map("oferta_desde") @db.Date
+  ofertaHasta  DateTime? @map("oferta_hasta") @db.Date
   createdAt    DateTime  @default(now()) @map("created_at")
   deletedAt    DateTime? @map("deleted_at")
 
@@ -775,6 +781,13 @@ model Pedido {
   remitenteTelefono  String?  @map("remitente_telefono")
   remitenteEmail     String?  @map("remitente_email")
   asignadoAId        String?  @map("asignado_a") @db.Uuid
+  // Descuentos de la tienda online (la oferta ya va en el precio de cada ítem; acá queda cuánto fue).
+  cuponCodigo            String?  @map("cupon_codigo") @db.VarChar(40)
+  descuentoOfertas       Decimal  @default(0) @map("descuento_ofertas") @db.Decimal(12, 2)
+  descuentoCupon         Decimal  @default(0) @map("descuento_cupon") @db.Decimal(12, 2)
+  descuentoTransferencia Decimal  @default(0) @map("descuento_transferencia") @db.Decimal(12, 2)
+  /// transferencia | a_coordinar (lo que eligió el cliente en la tienda)
+  formaPagoTienda        String?  @map("forma_pago_tienda") @db.VarChar(20)
   // Venta generada al despachar (ingreso + costo del pedido); null antes del despacho.
   ventaId            String?  @unique @map("venta_id") @db.Uuid
   createdAt          DateTime @default(now()) @map("created_at")
@@ -1252,6 +1265,8 @@ model TiendaConfig {
   facebook         String?
   tiktok           String?
   /// Monto mínimo de compra en la tienda (null = sin mínimo).
+  /// % de descuento si paga por transferencia (0 = sin descuento).
+  descuentoTransferencia Decimal @default(0) @map("descuento_transferencia") @db.Decimal(5, 2)
   pedidoMinimo     Decimal? @map("pedido_minimo") @db.Decimal(12, 2)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
@@ -1528,4 +1543,30 @@ model RegistroAuditoria {
   @@index([actorUsuarioId, creadoEn])
   @@index([creadoEn])
   @@map("registro_auditoria")
+}
+
+/// Cupón de descuento de la tienda online de una empresa (ACACIA10). Distinto de
+/// `Cupon`, que es de las alianzas de Analítica 360.
+model CuponTienda {
+  id          String    @id @default(uuid()) @db.Uuid
+  empresaId   String    @map("empresa_id") @db.Uuid
+  /// En mayúsculas, sin espacios; único por empresa.
+  codigo      String    @db.VarChar(40)
+  /// porcentaje | monto
+  tipo        String    @db.VarChar(10)
+  valor       Decimal   @db.Decimal(12, 2)
+  compraMinima Decimal? @map("compra_minima") @db.Decimal(12, 2)
+  desde       DateTime? @db.Date
+  hasta       DateTime? @db.Date
+  /// null = sin límite
+  usosMax     Int?      @map("usos_max")
+  usos        Int       @default(0)
+  activo      Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id])
+
+  @@unique([empresaId, codigo])
+  @@map("cupones_tienda")
 }

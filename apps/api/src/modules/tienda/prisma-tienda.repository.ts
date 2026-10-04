@@ -1,7 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
-import type { ProductoCatalogo, ProductoVendible, TiendaRepository } from './tienda.repository.js';
+import type { CuponTienda, Oferta } from './precios-tienda.util.js';
+import type { CondicionesTienda, ProductoCatalogoBase, ProductoVendible, TiendaRepository } from './tienda.repository.js';
+
+const fecha = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+function ofertaDe(p: { oferta_tipo?: string | null; oferta_valor?: unknown; oferta_desde?: Date | null; oferta_hasta?: Date | null }): Oferta | null {
+  if (!p.oferta_tipo || p.oferta_valor == null) return null;
+  return { tipo: p.oferta_tipo as Oferta['tipo'], valor: Number(p.oferta_valor), desde: fecha(p.oferta_desde ?? null), hasta: fecha(p.oferta_hasta ?? null) };
+}
 
 function atributosComoTexto(raw: unknown): Record<string, string> {
   const out: Record<string, string> = {};
@@ -24,20 +31,51 @@ export class PrismaTiendaRepository implements TiendaRepository {
   }
 
   async pedidoMinimo(empresaId: string): Promise<number | null> {
-    const t = await this.prisma.tiendaConfig.findUnique({ where: { empresaId }, select: { pedidoMinimo: true } });
-    return t?.pedidoMinimo == null ? null : Number(t.pedidoMinimo);
+    return (await this.condiciones(empresaId)).pedidoMinimo;
   }
 
-  async catalogo(empresaId: string): Promise<ProductoCatalogo[]> {
+  async condiciones(empresaId: string): Promise<CondicionesTienda> {
+    const t = await this.prisma.tiendaConfig.findUnique({ where: { empresaId }, select: { pedidoMinimo: true, descuentoTransferencia: true } });
+    return { pedidoMinimo: t?.pedidoMinimo == null ? null : Number(t.pedidoMinimo), descuentoTransferencia: Number(t?.descuentoTransferencia ?? 0) };
+  }
+
+  async cupon(empresaId: string, codigo: string): Promise<CuponTienda | null> {
+    const c = await this.prisma.cuponTienda.findUnique({ where: { empresaId_codigo: { empresaId, codigo } } });
+    if (!c) return null;
+    return {
+      codigo: c.codigo,
+      tipo: c.tipo as CuponTienda['tipo'],
+      valor: Number(c.valor),
+      compraMinima: c.compraMinima == null ? null : Number(c.compraMinima),
+      desde: fecha(c.desde),
+      hasta: fecha(c.hasta),
+      usosMax: c.usosMax,
+      usos: c.usos,
+      activo: c.activo,
+    };
+  }
+
+  async usarCupon(empresaId: string, codigo: string): Promise<boolean> {
+    // Condicional en la misma sentencia: dos compras a la vez no pueden pasarse del límite.
+    const n = await this.prisma.$executeRaw`UPDATE cupones_tienda SET usos = usos + 1, updated_at = now()
+      WHERE empresa_id = ${empresaId}::uuid AND codigo = ${codigo} AND activo AND (usos_max IS NULL OR usos < usos_max)`;
+    return n === 1;
+  }
+
+  async devolverCupon(empresaId: string, codigo: string): Promise<void> {
+    await this.prisma.$executeRaw`UPDATE cupones_tienda SET usos = GREATEST(usos - 1, 0), updated_at = now() WHERE empresa_id = ${empresaId}::uuid AND codigo = ${codigo}`;
+  }
+
+  async catalogo(empresaId: string): Promise<ProductoCatalogoBase[]> {
     // Mismo criterio de stock que el legacy catalogo_tienda: SUM(signo*cantidad)
     // sin contar transferencias (mueven stock entre ubicaciones, no lo cambian).
     const [productos, variantes] = await Promise.all([
       this.prisma.$queryRaw<
-        { id: string; nombre: string; categoria: string | null; categoria_id: string | null; precio: string; stock: string; vendidos: string; created_at: Date }[]
+        { id: string; nombre: string; categoria: string | null; categoria_id: string | null; precio: string; stock: string; vendidos: string; created_at: Date; oferta_tipo: string | null; oferta_valor: string | null; oferta_desde: Date | null; oferta_hasta: Date | null }[]
       >(Prisma.sql`
         SELECT
           -- La categoría real (categorias) manda; el texto legacy queda de respaldo.
-          p.id, p.nombre, COALESCE(cat.nombre, p.categoria) AS categoria, p.categoria_id, p.created_at,
+          p.id, p.nombre, COALESCE(cat.nombre, p.categoria) AS categoria, p.categoria_id, p.created_at, p.oferta_tipo, p.oferta_valor, p.oferta_desde, p.oferta_hasta,
           COALESCE(p.precio_venta, 0) AS precio,
           COALESCE((
             SELECT SUM(m.signo * m.cantidad) FROM movimientos_inventario m
@@ -74,7 +112,7 @@ export class PrismaTiendaRepository implements TiendaRepository {
       `),
     ]);
 
-    const variantesPorProducto = new Map<string, ProductoCatalogo['variantes']>();
+    const variantesPorProducto = new Map<string, ProductoCatalogoBase['variantes']>();
     for (const v of variantes) {
       const lista = variantesPorProducto.get(v.producto_id) ?? [];
       lista.push({
@@ -109,6 +147,7 @@ export class PrismaTiendaRepository implements TiendaRepository {
       stock: kits.get(p.id) ?? Number(p.stock),
       vendidos: Number(p.vendidos),
       creadoEn: p.created_at.toISOString(),
+      oferta: ofertaDe(p),
       imagenes: fotos.get(p.id) ?? [],
       miniaturas: chicas.get(p.id) ?? [],
       variantes: variantesPorProducto.get(p.id) ?? [],
@@ -139,6 +178,10 @@ export class PrismaTiendaRepository implements TiendaRepository {
       select: {
         id: true,
         precioVenta: true,
+        ofertaTipo: true,
+        ofertaValor: true,
+        ofertaDesde: true,
+        ofertaHasta: true,
         variantes: {
           where: { activo: true, deletedAt: null },
           select: { id: true, precioVenta: true },
@@ -150,6 +193,7 @@ export class PrismaTiendaRepository implements TiendaRepository {
       return {
         id: p.id,
         precio,
+        oferta: ofertaDe({ oferta_tipo: p.ofertaTipo, oferta_valor: p.ofertaValor, oferta_desde: p.ofertaDesde, oferta_hasta: p.ofertaHasta }),
         variantes: p.variantes.map((v) => ({ id: v.id, precio: Number(v.precioVenta ?? precio) })),
       };
     });

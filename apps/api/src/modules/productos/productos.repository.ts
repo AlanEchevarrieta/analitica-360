@@ -11,6 +11,8 @@ export interface ProductoRecord {
   esInsumo: boolean;
   unidad: string;
   enTienda: boolean;
+  /** Oferta de la tienda online (null = sin oferta). */
+  oferta: { tipo: 'porcentaje' | 'precio'; valor: number; desde: string | null; hasta: string | null } | null;
   precioVenta: number | null;
   costo: number | null;
   activo: boolean;

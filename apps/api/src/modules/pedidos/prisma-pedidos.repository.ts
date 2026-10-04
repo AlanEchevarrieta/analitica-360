@@ -229,6 +229,15 @@ export class PrismaPedidosRepository implements PedidosRepository {
           metodoEnvio: input.metodoEnvio,
           notas: input.notas,
           asignadoAId,
+          ...(input.descuentos
+            ? {
+                cuponCodigo: input.descuentos.cuponCodigo,
+                descuentoOfertas: input.descuentos.ofertas,
+                descuentoCupon: input.descuentos.cupon,
+                descuentoTransferencia: input.descuentos.transferencia,
+                formaPagoTienda: input.descuentos.formaPago,
+              }
+            : {}),
           items: {
             create: input.items.map((i) => ({
               productoId: i.productoId,
@@ -353,7 +362,8 @@ export class PrismaPedidosRepository implements PedidosRepository {
           precioUnitario: i.precioUnitario.toNumber(),
         })),
         formaPago,
-        descuento: 0,
+        // Las ofertas ya van en el precio de cada ítem; cupón y transferencia son descuento sobre el total.
+        descuento: pedido.descuentoCupon.toNumber() + pedido.descuentoTransferencia.toNumber(),
         clienteNombre: pedido.clienteNombre,
         clienteId: pedido.clienteId,
         cuotas: 1,
@@ -361,7 +371,7 @@ export class PrismaPedidosRepository implements PedidosRepository {
         ubicacionOrigen,
         esSenia: false,
         montoSenia: 0,
-        notas: `Pedido ${pedido.numeroPedido}${pedido.origen === 'tienda_online' ? ' (tienda online)' : ''}`,
+        notas: `Pedido ${pedido.numeroPedido}${pedido.origen === 'tienda_online' ? ' (tienda online)' : ''}${pedido.cuponCodigo ? ` · cupón ${pedido.cuponCodigo}` : ''}${pedido.descuentoTransferencia.toNumber() > 0 ? ' · descuento por transferencia' : ''}`,
       });
       if (!venta.ok) return { ok: false, motivo: 'venta_invalida' };
 

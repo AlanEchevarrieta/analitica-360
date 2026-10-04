@@ -87,6 +87,14 @@ export interface CrearPedidoInput {
   metodoEnvio: string | null;
   notas: string | null;
   items: ItemPedidoInput[];
+  /** Solo la tienda online: descuentos ya calculados por el servidor (ver tienda/precios-tienda.util). */
+  descuentos?: {
+    cuponCodigo: string | null;
+    ofertas: number;
+    cupon: number;
+    transferencia: number;
+    formaPago: 'transferencia' | 'a_coordinar';
+  };
 }
 
 export type MotivoRechazoPedido = 'sin_items' | 'producto_invalido' | 'variante_invalida' | 'cliente_invalido';

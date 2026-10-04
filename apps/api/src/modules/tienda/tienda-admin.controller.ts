@@ -42,6 +42,8 @@ const tiendaSchema = z.object({
   facebook: texto(100),
   tiktok: texto(60),
   pedidoMinimo: z.number().min(0).max(100_000_000).nullable().transform((v) => v || null).default(null),
+  /** % por pagar con transferencia (0 = sin descuento). */
+  descuentoTransferencia: z.number().min(0).max(50, 'Hasta 50%').default(0),
 });
 
 /** Configuración de la tienda online (la cambia el dueño). */

@@ -35,6 +35,15 @@ export class PrismaProductosRepository implements ProductosRepository {
       esInsumo: producto.esInsumo,
       unidad: producto.unidad,
       enTienda: producto.enTienda,
+      oferta:
+        producto.ofertaTipo && producto.ofertaValor
+          ? {
+              tipo: producto.ofertaTipo as 'porcentaje' | 'precio',
+              valor: producto.ofertaValor.toNumber(),
+              desde: producto.ofertaDesde?.toISOString().slice(0, 10) ?? null,
+              hasta: producto.ofertaHasta?.toISOString().slice(0, 10) ?? null,
+            }
+          : null,
       precioVenta: producto.precioVenta?.toNumber() ?? null,
       costo: producto.costo?.toNumber() ?? null,
       activo: producto.activo,
