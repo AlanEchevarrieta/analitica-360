@@ -43,3 +43,6 @@ debug-anulacion-*.png
 
 # Copias de seguridad locales de la base (tienen datos de clientes)
 backups/
+
+# Resultados de pnpm auditar (pueden tener datos de clientes)
+.auditorias/

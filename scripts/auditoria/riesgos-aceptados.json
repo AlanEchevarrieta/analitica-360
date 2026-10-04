@@ -1,0 +1,74 @@
+[
+  {
+    "herramienta": "gitleaks",
+    "regla": "generic-api-key",
+    "ruta": "apps/api/README.md",
+    "motivo": "token de ejemplo (abc123) en la documentación, no es una clave real",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "gitleaks",
+    "regla": "generic-api-key",
+    "ruta": "docker-compose.yml",
+    "motivo": "contraseñas de Postgres y MinIO solo de desarrollo local; producción usa docker-compose.prod.yml con variables de entorno",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "gitleaks",
+    "regla": "generic-api-key",
+    "ruta": "graphify-out/",
+    "motivo": "falso positivo: hashes de archivos en la caché de graphify",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "semgrep",
+    "regla": "regex_dos",
+    "ruta": "auditoria",
+    "motivo": "falso positivo: expresiones de UUID y fecha ancladas y sin repeticiones anidadas (no hay retroceso catastrófico)",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "semgrep",
+    "regla": "helmet_header_x_powered_by",
+    "ruta": "apps/api/src/main.ts",
+    "motivo": "falso positivo: la regla avisa que se use helmet y x-powered-by apagado, y es justo lo que hace main.ts",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "semgrep",
+    "regla": "node_insecure_random_generator",
+    "ruta": "apps/api/src/modules/uso/uso.service.ts",
+    "motivo": "Math.random solo decide cuándo limpiar eventos viejos (1 de cada 100); no protege nada",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "semgrep",
+    "regla": "node_insecure_random_generator",
+    "ruta": "apps/web/src/components/ui/sidebar.tsx",
+    "motivo": "componente de shadcn: Math.random elige el ancho del esqueleto de carga",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "pnpm-audit",
+    "regla": "*",
+    "ruta": "xlsx",
+    "motivo": "solo la usa la app vieja de Vite en la raíz, que no va a producción; se va al retirarla (Pendientes)",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2026-12-31"
+  },
+  {
+    "herramienta": "pnpm-audit",
+    "regla": "*",
+    "ruta": "shadcn",
+    "motivo": "braces llega por la CLI de shadcn, que solo se usa en desarrollo para agregar componentes",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  }
+]

@@ -114,7 +114,7 @@ export function SegmentosDifusion() {
                 <li key={d.id} className="flex gap-3 py-2">
                   <span className="w-36 shrink-0 tabular-nums text-muted-foreground">{formatoFechaHora(d.fecha)}</span>
                   <span className="w-28 shrink-0">{SEGMENTOS.find((s) => s.id === d.segmento)?.titulo ?? d.segmento}</span>
-                  <span className="flex-1 truncate">{d.mensaje}</span>
+                  <span className="min-w-0 flex-1 truncate">{d.mensaje}</span>
                   <span className="tabular-nums">{d.cantidad} clientes</span>
                 </li>
               ))}

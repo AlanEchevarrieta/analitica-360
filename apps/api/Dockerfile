@@ -26,6 +26,8 @@ RUN DATABASE_URL=postgresql://build:build@localhost:5432/build pnpm exec prisma 
 
 # 3. Migraciones: usa el CLI de Prisma (devDependency) contra DATABASE_URL.
 FROM build AS migrate
+# Sin root también para migrar (Semgrep: dockerfile.security.missing-user).
+USER node
 CMD ["pnpm", "exec", "prisma", "migrate", "deploy"]
 
 # 4. Paquete de producción: solo dependencias de runtime + el cliente de Prisma ya generado.
@@ -39,6 +41,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter api deploy --pro
     done
 
 FROM node:24-bookworm-slim AS runtime
+# Sin npm, npx, yarn ni corepack: la app arranca con node y así no arrastran vulnerabilidades (Trivy).
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 ENV NODE_ENV=production PORT=3001 ARCHIVOS_DIR=/data/archivos
 WORKDIR /app
 COPY --from=prod-deps --chown=node:node /out ./

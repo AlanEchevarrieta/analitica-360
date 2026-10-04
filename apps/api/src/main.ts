@@ -13,7 +13,17 @@ async function bootstrap() {
   // Cabeceras de seguridad (nosniff, sin iframes ajenos, HSTS…) y sin anunciar Express.
   // Las fotos de /archivos/ las muestran la web y las tiendas desde otro origen: cross-origin.
   app.disable('x-powered-by');
-  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  // La API solo devuelve JSON y fotos: su CSP no permite nada (ZAP marcaba la de helmet por amplia).
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: { useDefaults: false, directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] } },
+    }),
+  );
+  app.use((_req: unknown, res: { setHeader: (k: string, v: string) => void }, next: () => void) => {
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
 
   // apps/web llama a esta API directo desde el navegador con el JWT de Clerk:
   // solo se aceptan los orígenes configurados (local por defecto; en producción, el dominio).

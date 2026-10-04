@@ -24,7 +24,8 @@
     "new:dev": "turbo run dev --filter=./apps/*",
     "new:build": "turbo run build --filter=./apps/*",
     "new:lint": "turbo run lint --filter=./apps/*",
-    "new:test": "turbo run test --filter=./apps/*"
+    "new:test": "turbo run test --filter=./apps/*",
+    "auditar": "node scripts/auditoria/auditar.mjs"
   },
   "dependencies": {
     "@sentry/react": "^10.74.0",
