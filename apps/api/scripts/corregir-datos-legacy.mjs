@@ -17,6 +17,10 @@
 //    nombre coincide (sin mayúsculas ni tildes).
 // 6. Productos con la categoría como texto: se vinculan a la tabla de
 //    categorías (creándola si no existe).
+// 7. Ventas anuladas que en realidad son de OTRA empresa: todos sus productos,
+//    su vendedor y su cliente son de esa otra empresa. Se mueven allá con sus
+//    ítems, su anulación y sus movimientos de stock, y queda en la bitácora.
+// 8. Solo informa lo que siga apuntando a productos de otra empresa.
 
 import 'dotenv/config';
 import pg from 'pg';
@@ -69,6 +73,47 @@ try {
   console.log(`1. Ventas con total recalculado (descuento): ${totales.rowCount}` +
     (conSenia.rows[0].n ? ` · ${conSenia.rows[0].n} con seña para revisar a mano` : ''));
 
+  // 7. (Va antes de 2 y 3: si no, el paso 2 crearía reversiones de más para estas ventas.)
+  //    Ventas anuladas de otra empresa (legacy): las de prueba que Belén hizo en
+  //    "Empresa Prueba" el 2026-09-08 quedaron con la cabecera en Acacia. Si todo lo
+  //    que la venta referencia (productos, vendedor, cliente) es de UNA misma otra
+  //    empresa, la venta es de esa empresa. Solo anuladas: no cambia stock ni reportes.
+  const ajenas = await q(
+    `SELECT v.id, v.numero_venta, MIN(p.empresa_id::text)::uuid AS destino, MIN(e.nombre) AS destino_nombre
+     FROM ventas v
+     JOIN ventas_items i ON i.venta_id = v.id
+     JOIN productos p ON p.id = i.producto_id
+     JOIN empresas e ON e.id = p.empresa_id
+     JOIN usuarios u ON u.id = v.usuario_id
+     LEFT JOIN clientes c ON c.id = v.cliente_id
+     WHERE v.empresa_id = $1 AND v.deleted_at IS NOT NULL
+       AND EXISTS (SELECT 1 FROM anulaciones a WHERE a.venta_id = v.id)
+     GROUP BY v.id, v.numero_venta, u.empresa_id, c.empresa_id
+     HAVING COUNT(DISTINCT p.empresa_id) = 1 AND MIN(p.empresa_id::text)::uuid <> $1
+        AND u.empresa_id = MIN(p.empresa_id::text)::uuid
+        AND (c.empresa_id IS NULL OR c.empresa_id = MIN(p.empresa_id::text)::uuid)`,
+    [empresa],
+  );
+  for (const v of ajenas.rows) {
+    await q(`UPDATE ventas SET empresa_id = $2 WHERE id = $1`, [v.id, v.destino]);
+    await q(`UPDATE ventas_items SET empresa_id = $2 WHERE venta_id = $1`, [v.id, v.destino]);
+    await q(`UPDATE anulaciones SET empresa_id = $2 WHERE venta_id = $1`, [v.id, v.destino]);
+    await q(`UPDATE movimientos_inventario SET empresa_id = $2 WHERE referencia_id = $1`, [v.id, v.destino]);
+    // SQL directo: la extensión de auditoría no lo ve, así que se asienta a mano en las dos empresas.
+    for (const [duena, texto] of [
+      [empresa, `movió venta «${v.numero_venta}» a «${v.destino_nombre}»: venta de prueba anulada del sistema viejo; sus productos, cliente y vendedor son de esa empresa`],
+      [v.destino, `recibió venta «${v.numero_venta}» que había quedado cargada en otra empresa (sistema viejo)`],
+    ]) {
+      await q(
+        `INSERT INTO registro_auditoria (empresa_id, actor_tipo, actor_nombre, accion, entidad, entidad_id, entidad_nombre, resumen, cambios, ruta)
+         VALUES ($1, 'sistema', 'Corrección de datos (Analítica 360)', 'editar', 'Venta', $2, $3, $4, $5, 'scripts/corregir-datos-legacy.mjs')`,
+        [duena, v.id, v.numero_venta, texto, JSON.stringify({ empresaId: [empresa, v.destino] })],
+      );
+    }
+  }
+  console.log(`7. Ventas anuladas devueltas a su empresa: ${ajenas.rowCount}` +
+    (ajenas.rowCount ? ` · ${ajenas.rows.map((v) => v.numero_venta).join(', ')} → ${[...new Set(ajenas.rows.map((v) => v.destino_nombre))].join(', ')}` : ''));
+
   // 2 y 3. Anulaciones sin reversión: por documento anulado y producto/variante,
   // lo que quedó neto se revierte con un movimiento inverso.
   for (const [nombre, tabla, tipo] of [
@@ -78,13 +123,15 @@ try {
     const r = await q(
       `INSERT INTO movimientos_inventario
          (id, empresa_id, producto_id, variante_id, usuario_id, tipo, cantidad, signo, motivo, referencia_id, fecha)
-       SELECT gen_random_uuid(), $1, m.producto_id, m.variante_id, $2, $3,
+       SELECT gen_random_uuid(), m.empresa_id, m.producto_id, m.variante_id, $2, $3,
               ABS(SUM(m.signo * m.cantidad)), -SIGN(SUM(m.signo * m.cantidad))::smallint,
               'Corrección: anulación sin reversión de stock (legacy)', d.id, now()
        FROM ${tabla} d
        JOIN movimientos_inventario m ON m.referencia_id = d.id AND m.deleted_at IS NULL
        WHERE d.empresa_id = $1 AND d.deleted_at IS NOT NULL
-       GROUP BY d.id, m.producto_id, m.variante_id
+       -- La reversión va en la empresa del movimiento original (antes iba en $1 y dejó
+       -- devoluciones de "Empresa Prueba" cargadas en Acacia; las arregla el paso 7).
+       GROUP BY d.id, m.empresa_id, m.producto_id, m.variante_id
        HAVING SUM(m.signo * m.cantidad) <> 0
        RETURNING cantidad`,
       [empresa, dueno.id, tipo],
@@ -176,7 +223,7 @@ try {
   console.log(`6. Productos vinculados a su categoría: ${categorizados.rowCount}` +
     (creadas.rowCount ? ` · categorías creadas: ${creadas.rows.map((r) => r.nombre).join(', ')}` : ''));
 
-  // 7. Solo informa: movimientos de stock de esta empresa que apuntan a productos
+  // 8. Solo informa: movimientos de stock de esta empresa que apuntan a productos
   //    de OTRA empresa (datos del legacy). No suman en ningún cálculo (las consultas
   //    filtran por empresa), pero hay que decidir a mano a qué producto corresponden.
   const ajenos = await q(
@@ -186,7 +233,7 @@ try {
      GROUP BY p.nombre, e.nombre ORDER BY p.nombre`,
     [empresa],
   );
-  console.log(`7. Movimientos que apuntan a productos de otra empresa: ${ajenos.rows.reduce((a, r) => a + r.movimientos, 0)}` +
+  console.log(`8. Movimientos que apuntan a productos de otra empresa: ${ajenos.rows.reduce((a, r) => a + r.movimientos, 0)}` +
     (ajenos.rowCount ? ` · revisar a mano: ${ajenos.rows.map((r) => `${r.nombre} de "${r.duena}" (${r.movimientos} mov., stock ${r.stock})`).join(', ')}` : ''));
 
   await q(APLICAR ? 'COMMIT' : 'ROLLBACK');

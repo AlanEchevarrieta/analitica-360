@@ -67,10 +67,15 @@ const CHEQUEOS = [
   },
   {
     id: 'costo-cero',
-    titulo: 'Productos vendidos con costo $0 (el margen sale inflado)',
+    titulo: 'Ventas vigentes sin costo (ni en la venta ni en el producto): el margen sale inflado',
     grave: false,
-    sql: `SELECT e.nombre AS empresa, p.nombre || ': ' || count(*) || ' ventas' AS detalle FROM ventas_items i JOIN productos p ON p.id = i.producto_id JOIN empresas e ON e.id = i.empresa_id
-      WHERE coalesce(i.costo_unitario,0) = 0 GROUP BY e.nombre, p.nombre`,
+    // Analytics usa el costo del producto si el de la venta es 0, y no cuenta las ventas borradas:
+    // solo infla el margen lo vigente que no tiene costo en ningún lado.
+    sql: `SELECT e.nombre AS empresa, p.nombre || ': ' || count(*) || ' ítems' AS detalle
+      FROM ventas_items i JOIN ventas v ON v.id = i.venta_id JOIN productos p ON p.id = i.producto_id JOIN empresas e ON e.id = i.empresa_id
+      LEFT JOIN producto_variantes pv ON pv.id = i.variante_id
+      WHERE v.deleted_at IS NULL AND coalesce(i.costo_unitario,0) = 0 AND coalesce(pv.costo, p.costo, 0) = 0
+      GROUP BY e.nombre, p.nombre`,
   },
   {
     id: 'sin-precio',
@@ -102,7 +107,7 @@ export async function calidadDatos() {
   for (const c of CHEQUEOS) {
     let r;
     try {
-      r = await sqlJson(`SELECT json_build_object('n', count(*), 'ejemplos', coalesce(json_agg(x) FILTER (WHERE x.rn <= 5), '[]')) FROM (SELECT q.*, row_number() OVER () AS rn FROM (${c.sql}) q) x`);
+      r = await sqlJson(`SELECT json_build_object('n', count(*), 'ejemplos', coalesce(json_agg(x) FILTER (WHERE x.rn <= 5), '[]')) FROM (SELECT q.*, row_number() OVER () AS rn FROM (${c.sql}) q WHERE q.empresa NOT IN (SELECT nombre FROM empresas WHERE es_demo)) x`);
     } catch (e) {
       filas.push(`⚪ ${c.titulo}: no se pudo revisar (${e.message.slice(0, 120)})`);
       estado = estado === 'verde' ? 'amarillo' : estado;
@@ -123,7 +128,7 @@ export async function calidadDatos() {
     id: 'DAT-01',
     titulo: 'Calidad de datos (reglas de negocio)',
     estado,
-    resumen: `${CHEQUEOS.length} reglas revisadas, ${filas.filter((f) => f.startsWith('✅')).length} sin problemas; ${problemas} filas con problemas.`,
+    resumen: `${CHEQUEOS.length} reglas revisadas (sin empresas demo), ${filas.filter((f) => f.startsWith('✅')).length} sin problemas; ${problemas} filas con problemas.`,
     detalle: filas,
     normas: ['soc2-pi1.2', 'gdpr-5.1d'],
   });
