@@ -34,7 +34,9 @@ export default clerkMiddleware(
       strict: true,
       directives: {
         "connect-src": API ? [API] : [],
-        "img-src": ["self", "data:", "blob:", "https:", ...(API ? [API] : [])],
+        // Fotos: de la API (/archivos) y avatares de Clerk (que ya trae su default). Con el
+        // almacenamiento de producción, sumar su dominio acá.
+        "img-src": ["self", "data:", "blob:", ...(API ? [API] : [])],
         "font-src": ["self", "data:"],
         "object-src": ["none"],
         "base-uri": ["self"],

@@ -70,5 +70,106 @@
     "motivo": "braces llega por la CLI de shadcn, que solo se usa en desarrollo para agregar componentes",
     "evaluadoPor": "auditoría 2026-10-03",
     "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "gitleaks",
+    "regla": "generic-api-key",
+    "ruta": "scripts/auditoria/seguridad.mjs",
+    "motivo": "falso positivo: la lista de nombres de imágenes Docker parece una clave",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "semgrep",
+    "regla": "helmet_header_check_csp",
+    "ruta": "apps/api/src/main.ts",
+    "motivo": "falso positivo: pide configurar la CSP de helmet y está configurada (default-src 'none')",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "zap",
+    "regla": "style-src unsafe-inline",
+    "motivo": "React, los gráficos y los componentes usan estilos en línea; un estilo no ejecuta código. Los scripts siguen restringidos",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-04-03"
+  },
+  {
+    "herramienta": "zap",
+    "regla": "script-src unsafe-inline",
+    "ruta": "tienda",
+    "motivo": "las páginas de las tiendas se cachean (no pueden llevar nonce); solo scripts del mismo sitio, sin HTML de usuarios. Revisar si pasan a renderizarse por pedido",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "zap",
+    "regla": "script-src unsafe-inline",
+    "ruta": "acacia-store",
+    "motivo": "igual que la tienda modelo: páginas cacheadas, solo scripts del mismo sitio",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "zap",
+    "regla": "Wildcard Directive",
+    "ruta": "tienda",
+    "motivo": "img-src https:/http: porque las fotos vienen del almacenamiento, cuyo dominio se define con el hosting. Restringirlo entonces",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2026-12-31"
+  },
+  {
+    "herramienta": "zap",
+    "regla": "Wildcard Directive",
+    "ruta": "acacia-store",
+    "motivo": "igual que la tienda modelo: las fotos vienen del almacenamiento de la API",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2026-12-31"
+  },
+  {
+    "herramienta": "zap",
+    "regla": "Wildcard Directive",
+    "ruta": "web",
+    "motivo": "lo que queda son los subdominios que agrega Clerk a su CSP por defecto (telemetría y protección); no se pueden quitar sin romper el inicio de sesión",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "zap",
+    "regla": "Sub Resource Integrity",
+    "motivo": "Clerk sirve su script versionado desde su dominio (sin hash fijo) y las fotos de productos son contenido, no código",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "zap",
+    "regla": "Cross-Domain JavaScript Source File Inclusion",
+    "ruta": "web",
+    "motivo": "es el script de Clerk (inicio de sesión), proveedor contratado",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "zap",
+    "regla": "Cross-Origin-Embedder-Policy",
+    "motivo": "exigir COEP bloquearía las fotos y el script de Clerk de otros orígenes; COOP y CORP sí están puestos",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "zap",
+    "regla": "Cross-Origin-Opener-Policy",
+    "ruta": "web",
+    "motivo": "se usa same-origin-allow-popups a propósito: las ventanas de inicio de sesión de Clerk lo necesitan",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "zap",
+    "regla": "Big Redirect Detected",
+    "ruta": "web",
+    "motivo": "es la redirección de / al inicio de sesión de Next; el cuerpo no tiene datos sensibles",
+    "evaluadoPor": "auditoría 2026-10-03",
+    "revisar": "2027-01-03"
   }
 ]

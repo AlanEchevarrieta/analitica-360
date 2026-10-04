@@ -17,7 +17,7 @@ async function bootstrap() {
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },
-      contentSecurityPolicy: { useDefaults: false, directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] } },
+      contentSecurityPolicy: { useDefaults: false, directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"], baseUri: ["'none'"], formAction: ["'none'"] } },
     }),
   );
   app.use((_req: unknown, res: { setHeader: (k: string, v: string) => void }, next: () => void) => {
