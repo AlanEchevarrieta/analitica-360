@@ -63,6 +63,7 @@ const SECRETO = /token|secret|password|contrase|clave|apikey|api_key/i;
 
 const ETIQUETAS: Record<string, string> = {
   precioVenta: 'precio de venta',
+  categoria: 'categoría',
   costo: 'costo',
   deletedAt: 'borrado',
   activo: 'activo',
@@ -169,9 +170,11 @@ export function resumen(modelo: string, accion: Accion, nombre: string | null, c
   const entidad = AUDITADOS[modelo]?.nombre ?? modelo;
   const base = `${VERBO[accion]} ${entidad}${nombre ? ` «${nombre}»` : ''}`;
   if (accion !== 'editar') return base;
+  // Si cambian el texto y su id (categoria + categoriaId), en la frase alcanza con el texto.
   const partes = Object.entries(cambios)
+    .filter(([k]) => !(k.endsWith('Id') && k.slice(0, -2) in cambios))
     .slice(0, 3)
     .map(([k, [a, d]]) => `${etiquetaCampo(k)} ${valorLegible(k, a)} → ${valorLegible(k, d)}`);
-  const resto = Object.keys(cambios).length - partes.length;
+  const resto = Object.keys(cambios).filter((k) => !(k.endsWith('Id') && k.slice(0, -2) in cambios)).length - partes.length;
   return `${base}: ${partes.join('; ')}${resto > 0 ? ` y ${resto} cambio${resto === 1 ? '' : 's'} más` : ''}`;
 }

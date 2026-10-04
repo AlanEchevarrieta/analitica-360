@@ -42,6 +42,10 @@ describe('bitácora de auditoría', () => {
     expect(resumen('Producto', 'editar', null, { a: [1, 2], b: [1, 2], c: [1, 2], d: [1, 2], e: [1, 2] })).toMatch(/y 2 cambios más$/);
   });
 
+  it('si cambian el texto y su id, la frase muestra solo el texto', () => {
+    expect(resumen('Producto', 'editar', 'Mochila', { categoria: [null, 'Mochilas'], categoriaId: [null, 'c1'] })).toBe('editó producto «Mochila»: categoría (vacío) → Mochilas');
+  });
+
   it('solo los movimientos de stock manuales (no los de cada venta)', () => {
     const filtro = AUDITADOS.MovimientoInventario.filtro!;
     expect(filtro({ tipo: 'merma' })).toBe(true);
