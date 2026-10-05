@@ -148,7 +148,7 @@ export function PlanesVista() {
       )}
 
       <p className="mx-auto max-w-2xl text-center text-xs text-muted-foreground">
-        Precios sin IVA (21%), recuperable para responsables inscriptos. Los descuentos de los códigos se calculan sobre el precio de lista y no se acumulan.
+        Precios sin IVA (21%), recuperable para responsables inscriptos. Los descuentos de los códigos se calculan sobre el precio de lista y no se acumulan entre sí; el de recomendar a otros negocios se suma aparte.
       </p>
     </div>
   );
