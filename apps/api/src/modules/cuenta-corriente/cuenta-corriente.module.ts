@@ -5,5 +5,6 @@ import { CuentaCorrienteService } from './cuenta-corriente.service.js';
 @Module({
   controllers: [CuentaCorrienteController],
   providers: [CuentaCorrienteService],
+  exports: [CuentaCorrienteService],
 })
 export class CuentaCorrienteModule {}

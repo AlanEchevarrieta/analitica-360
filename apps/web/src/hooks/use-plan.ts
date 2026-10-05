@@ -15,6 +15,7 @@ export const NOMBRE_FUNCION: Record<string, string> = {
   difusiones: "Segmentos y difusiones",
   importar: "Importar desde Excel",
   auditoria: "Bitácora de auditoría",
+  informe_mensual: "Informe mensual por email",
   tienda: "Tienda online",
 };
 

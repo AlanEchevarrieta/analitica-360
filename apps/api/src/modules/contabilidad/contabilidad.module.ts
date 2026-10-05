@@ -27,5 +27,6 @@ import { PrismaEstadosContablesRepository } from './prisma-estados-contables.rep
     MonotributoService,
     { provide: ESTADOS_CONTABLES_REPOSITORY, useClass: PrismaEstadosContablesRepository },
   ],
+  exports: [MonotributoService],
 })
 export class ContabilidadModule {}

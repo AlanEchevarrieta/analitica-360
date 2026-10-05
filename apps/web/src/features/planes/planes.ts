@@ -59,6 +59,7 @@ export const MODULOS: { id: string; etiqueta: string }[] = [
   { id: "difusiones", etiqueta: "Segmentos y difusiones por WhatsApp" },
   { id: "importar", etiqueta: "Importar desde Excel" },
   { id: "auditoria", etiqueta: "Bitácora de auditoría" },
+  { id: "informe_mensual", etiqueta: "Informe mensual por email (el semanal va en todos los planes)" },
   { id: "tienda", etiqueta: "Tienda online (ofertas, cupones y cuentas de compradores)" },
 ];
 

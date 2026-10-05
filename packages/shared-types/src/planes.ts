@@ -34,6 +34,7 @@ export type Funcion =
   | "difusiones"
   | "importar"
   | "auditoria"
+  | "informe_mensual"
   | "tienda";
 
 export interface PlanDef {
@@ -46,7 +47,7 @@ export interface PlanDef {
 }
 
 const BASICO: Funcion[] = ["inicio", "productos", "ventas", "clientes", "compras", "proveedores", "inventario", "soporte"];
-const PRO: Funcion[] = [...BASICO, "analytics", "insights", "contabilidad", "pedidos", "produccion", "listas_precios", "cuenta_corriente", "difusiones", "importar", "auditoria"];
+const PRO: Funcion[] = [...BASICO, "analytics", "insights", "contabilidad", "pedidos", "produccion", "listas_precios", "cuenta_corriente", "difusiones", "importar", "auditoria", "informe_mensual"];
 
 export const PLANES: Record<PlanId, PlanDef> = {
   starter: { nombre: "Starter", funciones: ["inicio", "productos", "ventas", "clientes", "soporte"], maxUsuarios: 1, maxUbicaciones: 1, maxProductos: 100 },

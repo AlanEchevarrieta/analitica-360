@@ -28,3 +28,13 @@ export async function apiFetch<T>(path: string, token: string | null, init?: Req
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
+
+/** Igual que apiFetch, pero para descargar un archivo (PDF): devuelve el contenido sin leerlo como JSON. */
+export async function apiArchivo(path: string, token: string | null): Promise<Blob> {
+  const res = await fetch(`${API_URL}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(res.status, body?.message ?? `Error ${res.status} al descargar`);
+  }
+  return res.blob();
+}

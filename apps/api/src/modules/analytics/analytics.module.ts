@@ -40,5 +40,6 @@ import { BcraInflacionClient } from './bcra-inflacion.client.js';
     { provide: INFLACION_REPOSITORY, useClass: PrismaInflacionRepository },
     BcraInflacionClient,
   ],
+  exports: [AnalyticsPeriodoService, DashboardService],
 })
 export class AnalyticsModule {}

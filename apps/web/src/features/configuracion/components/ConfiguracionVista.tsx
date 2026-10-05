@@ -18,6 +18,7 @@ import { FlujoVentasConfig, InventarioPedidosConfig } from "./OperacionConfig";
 import { FiscalConfig, RemitenteConfig } from "./RemitenteFiscalConfig";
 import { AuditoriaConfig } from "./AuditoriaConfig";
 import { CuponesTiendaConfig } from "./CuponesTiendaConfig";
+import { InformesConfig } from "./InformesConfig";
 import { CandadoPlan, MejorarPlan } from "@/components/shared/mejorar-plan";
 import { usePlan } from "@/hooks/use-plan";
 
@@ -64,6 +65,7 @@ const GRUPOS: { titulo: string; opciones: Opcion[] }[] = [
     opciones: [
       { clave: "remitente", icono: "📬", titulo: "Datos del remitente", subtitulo: "Quién figura en el remito", panel: (c) => <RemitenteConfig config={c} /> },
       { clave: "fiscal", icono: "🌎", titulo: "Configuración fiscal", subtitulo: "País, moneda e IVA", panel: (c) => <FiscalConfig config={c} /> },
+      { clave: "informes", icono: "📧", titulo: "Informes por email", subtitulo: "El resumen de la semana y del mes, en PDF, a tu email", panel: () => <InformesConfig /> },
       { clave: "apariencia", icono: "🖌️", titulo: "Apariencia", subtitulo: "Modo claro u oscuro y colores de la app", panel: () => <AparienciaConfig /> },
     ],
   },

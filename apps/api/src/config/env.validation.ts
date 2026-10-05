@@ -35,6 +35,10 @@ const envSchema = z.object({
   /** Dominio de las tiendas: <subdominio>.<este dominio>. */
   TIENDA_DOMINIO_BASE: z.string().default('analitica360.app'),
   AVISOS_EMAIL_DESDE: z.string().default('Analítica 360 <onboarding@resend.dev>'),
+  /** URL pública de esta API (para los links de baja de los informes por email). Por defecto http://localhost:PORT. */
+  API_URL_PUBLICA: z.string().url().optional(),
+  /** Informes semanales y mensuales por email: '0' apaga el programador (ej. en una segunda instancia o en pruebas). */
+  INFORMES_AUTOMATICOS: z.enum(['0', '1']).default('1'),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -71,6 +71,9 @@ model Empresa {
   comisiones                Comision[]
   cuotasProgramadas         CuotaProgramada[]
 
+  informesConfig            InformesConfig?
+  informesEnviados          InformeEnviado[]
+
   usuarios                  Usuario[]
   historialPlanes           HistorialPlan[]
   suscripciones             Suscripcion[]
@@ -1645,4 +1648,45 @@ model FavoritoTienda {
 
   @@id([cuentaId, productoId])
   @@map("favoritos_tienda")
+}
+
+/// Informes automáticos por email (semanal y mensual, en PDF). Sin fila = los dos activados y solo a los dueños.
+model InformesConfig {
+  id          String   @id @default(uuid()) @db.Uuid
+  empresaId   String   @unique @map("empresa_id") @db.Uuid
+  semanal     Boolean  @default(true)
+  mensual     Boolean  @default(true)
+  /// Otros destinatarios (contador, socio), en minúsculas.
+  emailsExtra String[] @default([]) @map("emails_extra")
+  /// Bajas desde el link del email, por tipo: "semanal:ana@x.com".
+  bajas       String[] @default([])
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id])
+
+  @@map("informes_config")
+}
+
+/// Cada informe que se mandó (o se intentó): evita mandar dos veces el mismo período.
+model InformeEnviado {
+  id            String    @id @default(uuid()) @db.Uuid
+  empresaId     String    @map("empresa_id") @db.Uuid
+  /// semanal | mensual
+  tipo          String    @db.VarChar(10)
+  desde         DateTime  @db.Date
+  hasta         DateTime  @db.Date
+  /// enviando | enviado | sin_destinatarios | sin_servicio (falta Resend) | error
+  estado        String    @db.VarChar(20)
+  destinatarios String[]  @default([])
+  error         String?   @db.VarChar(300)
+  /// Si falla, se reintenta hasta 3 veces.
+  intentos      Int       @default(1)
+  creadoEn      DateTime  @default(now()) @map("creado_en")
+  enviadoEn     DateTime? @map("enviado_en")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id])
+
+  @@unique([empresaId, tipo, desde])
+  @@index([creadoEn])
+  @@map("informes_enviados")
 }
