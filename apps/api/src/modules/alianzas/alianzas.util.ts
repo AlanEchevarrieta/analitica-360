@@ -159,9 +159,11 @@ export interface Cotizacion {
   montoCuota: number;
   /** Qué se aplicó, para guardar en el pago. */
   regla: 'sin_cupon' | 'entrada' | 'renovacion' | 'sin_descuento';
+  /** % descontado por haber recomendado a otros negocios (ver referidos.util). */
+  referidosPct?: number;
 }
 
-const redondear = (n: number) => Math.round(n);
+export const redondear = (n: number) => Math.round(n);
 
 /**
  * Precio de un período. Siempre sobre el precio de LISTA y con un solo

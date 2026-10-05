@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
@@ -21,6 +21,7 @@ import {
   type ReglasCupon,
   type TramoComision,
 } from './alianzas.util.js';
+import { aplicarPremios, estadoPremioNuevo, PREMIO_PCT, porcentajePremios } from './referidos.util.js';
 
 type Tx = Prisma.TransactionClient;
 const fecha = (d: Date | null | undefined) => d?.toISOString().slice(0, 10) ?? null;
@@ -42,6 +43,8 @@ export interface PropuestaPago {
   periodoHasta: string;
   precioLista: number;
   monto: number;
+  /** Premios por recomendar que se descuentan en este período (se marcan como usados al cobrar). */
+  premios: string[];
 }
 
 export interface RegistrarCobroInput {
@@ -124,13 +127,17 @@ export class CobrosService {
         periodoHasta: fecha(proxima.periodoHasta)!,
         precioLista: Number(proxima.precioLista),
         monto: Number(proxima.monto),
+        premios: [],
       };
     }
 
     const { periodos, coberturaHasta } = await this.periodosPagados(db, input.empresaId);
     const regla = empresa.cupon ? reglas[input.ciclo] : null;
     const { tipo, indiceRenovacion } = tipoDelProximoPeriodo(periodos, input.ciclo, regla);
-    const cotizacion = cotizarPeriodo(input.plan, input.ciclo, regla, tipo, indiceRenovacion, await this.cuotasGenerales(db, input.plan), precioEspecial(empresa, input.plan));
+    const sinPremios = cotizarPeriodo(input.plan, input.ciclo, regla, tipo, indiceRenovacion, await this.cuotasGenerales(db, input.plan), precioEspecial(empresa, input.plan));
+    // Premios por haber recomendado a otros negocios: se descuentan en este período (todos juntos).
+    const premios = await this.premiosDisponibles(db, input.empresaId);
+    const cotizacion = aplicarPremios(sinPremios, porcentajePremios(premios.map((x) => x.porcentaje)));
     const hoy = fechaHoyAR();
     const desde = input.desde ?? (coberturaHasta && coberturaHasta > hoy ? coberturaHasta : hoy);
     const cuotas = input.enCuotas && cotizacion.cuotas > 1 ? cotizacion.cuotas : 1;
@@ -142,7 +149,37 @@ export class CobrosService {
       periodoHasta: sumarMeses(desde, meses),
       precioLista: montosCuotas(cotizacion.lista, cuotas)[0],
       monto: montosCuotas(cotizacion.total, cuotas)[0],
+      premios: cotizacion.referidosPct ? premios.map((x) => x.id) : [],
     };
+  }
+
+  /** Premios por recomendar sin usar (los más viejos primero; como mucho 6 se usan juntos). */
+  private async premiosDisponibles(db: Tx | PrismaService, empresaId: string) {
+    const filas = await db.premioReferido.findMany({ where: { empresaReferenteId: empresaId, estado: 'disponible' }, orderBy: { creadoEn: 'asc' }, select: { id: true, porcentaje: true } });
+    return filas.slice(0, 6).map((f) => ({ id: f.id, porcentaje: Number(f.porcentaje) }));
+  }
+
+  /**
+   * Primer pago de un negocio que vino recomendado: el que lo recomendó gana su premio
+   * (o queda en "tope" si ya ganó 6 en el último año). Si ese primer pago se había
+   * devuelto y vuelve a pagar, el premio anulado se recupera.
+   */
+  private async premiarReferente(tx: Tx, empresa: { id: string; cuponId: string | null }, pagoId: string) {
+    if (!empresa.cuponId) return;
+    const cupon = await tx.cupon.findUnique({ where: { id: empresa.cuponId }, select: { tipo: true, empresaReferenteId: true } });
+    const referente = cupon?.tipo === 'referido' ? cupon.empresaReferenteId : null;
+    if (!referente || referente === empresa.id) return;
+    if ((await tx.pago.count({ where: { empresaId: empresa.id, estado: 'confirmado' } })) !== 1) return;
+    const previo = await tx.premioReferido.findUnique({ where: { empresaReferidaId: empresa.id } });
+    if (previo && previo.estado !== 'anulado') return;
+    // Bloquea a la que recomendó: dos primeros pagos a la vez no pueden pasarse del tope.
+    await tx.$queryRaw(Prisma.sql`SELECT id FROM empresas WHERE id = ${referente}::uuid FOR UPDATE`);
+    const delAnio = await tx.premioReferido.count({
+      where: { empresaReferenteId: referente, estado: { in: ['disponible', 'usado'] }, creadoEn: { gte: new Date(Date.now() - 365 * 86_400_000) } },
+    });
+    const datos = { pagoOrigenId: pagoId, porcentaje: PREMIO_PCT, estado: estadoPremioNuevo(delAnio), creadoEn: new Date() };
+    if (previo) await tx.premioReferido.update({ where: { id: previo.id }, data: datos });
+    else await tx.premioReferido.create({ data: { empresaReferenteId: referente, empresaReferidaId: empresa.id, ...datos } });
   }
 
   /** Cuotas sin interés para quien no tiene código, según el plan (configurables en la consola). */
@@ -222,6 +259,14 @@ export class CobrosService {
         await tx.cuotaProgramada.update({ where: { grupoId_numero: { grupoId, numero: p.cuota! } }, data: { estado: 'pagada', pagoId: pago.id } });
       }
 
+      // Premios por recomendar: los que se descontaron quedan usados; si este es el primer pago
+      // de un negocio recomendado, el que lo recomendó gana el suyo.
+      if (p.premios.length) {
+        const usados = await tx.premioReferido.updateMany({ where: { id: { in: p.premios }, estado: 'disponible' }, data: { estado: 'usado', pagoUsoId: pago.id, usadoEn: new Date() } });
+        if (usados.count !== p.premios.length) throw new ConflictException('Los premios por recomendar cambiaron mientras tanto: volvé a cotizar.');
+      }
+      await this.premiarReferente(tx, empresa, pago.id);
+
       // La suscripción queda activa con el plan pagado hasta el último día cubierto.
       const plan = await tx.plan.findFirst({ where: { nombre: p.plan, activo: true }, select: { id: true } });
       const ultimoDia = aDate(sumarDias(p.periodoHasta, -1));
@@ -236,7 +281,10 @@ export class CobrosService {
       await tx.empresa.update({ where: { id: input.empresaId }, data: { planActual: p.plan } });
 
       const comision = empresa.camaraId ? await this.generarComision(tx, empresa.id, empresa.camaraId, pago.id, monto, p.periodoDesde, p.periodoHasta, fechaCobro) : null;
-      return { pago: { id: pago.id, monto, precioLista: p.precioLista, descuento: p.precioLista - monto, plan: p.plan, ciclo: p.ciclo, cuota: p.cuota, cuotas: p.cuotas, grupoId, periodoDesde: p.periodoDesde, periodoHasta: p.periodoHasta, tipo: p.cotizacion.tipo }, comision };
+      return {
+        pago: { id: pago.id, monto, precioLista: p.precioLista, descuento: p.precioLista - monto, plan: p.plan, ciclo: p.ciclo, cuota: p.cuota, cuotas: p.cuotas, grupoId, periodoDesde: p.periodoDesde, periodoHasta: p.periodoHasta, tipo: p.cotizacion.tipo, referidosPct: p.cotizacion.referidosPct ?? 0 },
+        comision,
+      };
     });
     this.accesoCuenta.olvidar(input.empresaId);
     return resultado;
@@ -290,6 +338,10 @@ export class CobrosService {
       await tx.pago.update({ where: { id: pagoId }, data: { estado: 'devuelto', devueltoEn: new Date(), devolucionMotivo: motivo.trim() || null } });
       // Si era una cuota, vuelve a quedar pendiente (se puede cobrar de nuevo).
       await tx.cuotaProgramada.updateMany({ where: { pagoId }, data: { estado: 'pendiente', pagoId: null } });
+      // Referidos: si era el primer pago de un recomendado, su premio se anula (si no se usó);
+      // si en este pago se descontaron premios, vuelven a estar disponibles.
+      await tx.premioReferido.updateMany({ where: { pagoOrigenId: pagoId, estado: { in: ['disponible', 'tope'] } }, data: { estado: 'anulado' } });
+      await tx.premioReferido.updateMany({ where: { pagoUsoId: pagoId }, data: { estado: 'disponible', pagoUsoId: null, usadoEn: null } });
       const original = await tx.comision.findUnique({ where: { pagoId_tipo: { pagoId, tipo: 'pago' } } });
       if (!original) return { pagoId, ajuste: null };
       const ajuste = ajustePorDevolucion({
@@ -313,6 +365,7 @@ export class CobrosService {
   async tablaDePrecios(empresaId: string | null, reglas: ReglasCupon | null) {
     const { periodos } = empresaId ? await this.periodosPagados(this.prisma, empresaId) : { periodos: [] };
     const especial = empresaId ? await this.prisma.empresa.findUnique({ where: { id: empresaId }, select: { precioEspecialPlan: true, precioEspecialMensual: true } }) : null;
+    const pctPremios = empresaId ? porcentajePremios((await this.premiosDisponibles(this.prisma, empresaId)).map((x) => x.porcentaje)) : 0;
     return Promise.all(
       PLANES_PAGOS.map(async (plan) => {
         const generales = await this.cuotasGenerales(this.prisma, plan);
@@ -322,7 +375,7 @@ export class CobrosService {
           ciclos: (['mensual', 'trimestral', 'anual'] as const).map((ciclo) => {
             const regla = reglas?.[ciclo] ?? null;
             const { tipo, indiceRenovacion } = tipoDelProximoPeriodo(periodos, ciclo, regla);
-            const proximo = cotizarPeriodo(plan, ciclo, regla, tipo, indiceRenovacion, generales, especial ? precioEspecial(especial, plan) : null);
+            const proximo = aplicarPremios(cotizarPeriodo(plan, ciclo, regla, tipo, indiceRenovacion, generales, especial ? precioEspecial(especial, plan) : null), pctPremios);
             const renovacion = cotizarPeriodo(plan, ciclo, regla, 'renovacion', tipo === 'entrada' ? 1 : indiceRenovacion + 1, generales, especial ? precioEspecial(especial, plan) : null);
             return {
               ciclo,

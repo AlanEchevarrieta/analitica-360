@@ -110,6 +110,10 @@ export class CuponesService {
       hoy,
     );
     if (!v.ok) return { ok: false, mensaje: v.mensaje };
+    // Código de referido: no vale para el mismo negocio que recomienda (ni su gente, ni su CUIT).
+    if (cupon!.tipo === 'referido' && cupon!.empresaReferenteId && (await this.esDelReferente(db, cupon!.empresaReferenteId, quien, empresaActual))) {
+      return { ok: false, mensaje: 'Ese es tu propio código: compartilo con otros negocios para ganar descuentos.' };
+    }
 
     const historial = await this.historialPrueba(db, quien, empresaActual);
     const conPruebaPropia = Boolean(cupon!.diasPrueba);
@@ -132,6 +136,25 @@ export class CuponesService {
           ? 'Ya usaste una prueba gratis antes, así que no corresponde el mes gratis. Igual queda registrado el código y tenés sus descuentos al pagar.'
           : null,
     };
+  }
+
+  private async esDelReferente(db: Db, referenteId: string, q: QuienUsa, empresaActual?: string | null): Promise<boolean> {
+    if (empresaActual === referenteId || q.empresaId === referenteId) return true;
+    const email = q.email?.trim().toLowerCase() || null;
+    const cuit = normalizarCuit(q.cuit);
+    const ref = await db.empresa.findUnique({
+      where: { id: referenteId },
+      select: {
+        cuit: true,
+        usuarios: {
+          where: { deletedAt: null, OR: [...(email ? [{ email: { equals: email, mode: 'insensitive' as const } }] : []), ...(q.clerkUserId ? [{ clerkUserId: q.clerkUserId }] : [])] },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
+    if (!ref) return false;
+    return (Boolean(email || q.clerkUserId) && ref.usuarios.length > 0) || (cuit != null && ref.cuit === cuit);
   }
 
   /** Registra el uso del cupón (quién y cuándo) y suma uno a sus usos. */

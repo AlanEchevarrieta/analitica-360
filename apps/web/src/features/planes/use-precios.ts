@@ -10,7 +10,7 @@ export interface PrecioCiclo {
   ciclo: Ciclo;
   meses: number;
   lista: number;
-  primerPago: { tipo: "entrada" | "renovacion"; total: number; descuento: number; cuotas: number; montoCuota: number };
+  primerPago: { tipo: "entrada" | "renovacion"; total: number; descuento: number; cuotas: number; montoCuota: number; referidosPct?: number };
   renovacion: { total: number; descuento: number; cuotas: number; montoCuota: number };
 }
 

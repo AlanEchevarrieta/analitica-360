@@ -72,6 +72,8 @@ model Empresa {
   cuotasProgramadas         CuotaProgramada[]
 
   informesConfig            InformesConfig?
+  premiosGanados            PremioReferido[]       @relation("PremioReferente")
+  premioComoReferida        PremioReferido?        @relation("PremioReferida")
   informesEnviados          InformeEnviado[]
 
   usuarios                  Usuario[]
@@ -1705,4 +1707,28 @@ model CotizacionDolar {
 
   @@id([casa, fecha])
   @@map("cotizaciones_dolar")
+}
+
+/// Premio por recomendar: cuando la empresa recomendada hace su primer pago, la que la recomendó
+/// gana un % de descuento para su próximo período (se suman; hasta 6 por año).
+model PremioReferido {
+  id                 String    @id @default(uuid()) @db.Uuid
+  empresaReferenteId String    @map("empresa_referente_id") @db.Uuid
+  /// Una sola vez por empresa recomendada.
+  empresaReferidaId  String    @unique @map("empresa_referida_id") @db.Uuid
+  /// El primer pago de la recomendada (si se devuelve antes de usarse, el premio se anula).
+  pagoOrigenId       String    @map("pago_origen_id") @db.Uuid
+  porcentaje         Decimal   @default(10) @db.Decimal(5, 2)
+  /// disponible | usado | tope (pasó el máximo del año: no se usa) | anulado
+  estado             String    @default("disponible") @db.VarChar(12)
+  /// El pago de la que recomendó en el que se descontó.
+  pagoUsoId          String?   @map("pago_uso_id") @db.Uuid
+  usadoEn            DateTime? @map("usado_en")
+  creadoEn           DateTime  @default(now()) @map("creado_en")
+
+  referente Empresa @relation("PremioReferente", fields: [empresaReferenteId], references: [id])
+  referida  Empresa @relation("PremioReferida", fields: [empresaReferidaId], references: [id])
+
+  @@index([empresaReferenteId, estado])
+  @@map("premios_referidos")
 }

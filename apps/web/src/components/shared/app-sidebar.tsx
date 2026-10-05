@@ -11,6 +11,7 @@ import {
   BarChart3,
   ClipboardList,
   Factory,
+  Gift,
   Hammer,
   Home,
   Package,
@@ -192,6 +193,14 @@ export function AppSidebar() {
                 <span>Planes</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            {verConfig && (
+              <SidebarMenuItem>
+                <SidebarMenuButton render={<Link href="/recomendar" />} isActive={activo("/recomendar")} tooltip="Recomendá y ganá">
+                  <Gift />
+                  <span>Recomendá y ganá</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             {esAdmin && (
               <SidebarMenuItem>
                 <SidebarMenuButton render={<Link href="/admin" />} tooltip="Consola">

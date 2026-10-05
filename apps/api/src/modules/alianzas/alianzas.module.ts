@@ -5,6 +5,8 @@ import { AlianzasAdminService } from './alianzas-admin.service.js';
 import { AlianzasController } from './alianzas.controller.js';
 import { CobrosService } from './cobros.service.js';
 import { CuponesService } from './cupones.service.js';
+import { ReferidosController } from './referidos.controller.js';
+import { ReferidosService } from './referidos.service.js';
 
 /**
  * Alianzas con cámaras y cupones: códigos, prueba gratis extendida,
@@ -14,8 +16,8 @@ import { CuponesService } from './cupones.service.js';
 @Module({
   // AccesoCuentaService: tras un pago o una prueba extendida, el acceso rige al instante.
   imports: [PlanesModule],
-  controllers: [AlianzasController, AlianzasAdminController],
-  providers: [CuponesService, CobrosService, AlianzasAdminService],
+  controllers: [AlianzasController, AlianzasAdminController, ReferidosController],
+  providers: [CuponesService, CobrosService, AlianzasAdminService, ReferidosService],
   exports: [CuponesService, CobrosService],
 })
 export class AlianzasModule {}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarClock } from "lucide-react";
+import Link from "next/link";
+import { CalendarClock, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,6 +91,7 @@ export function PlanesVista() {
     <div className="flex flex-col gap-6">
       <PlanActual />
       {precios.data?.cuotasEnCurso && <AvisoCuotas c={precios.data.cuotasEnCurso} />}
+      <AvisoReferidos pct={precios.data?.planes[0]?.ciclos[0]?.primerPago.referidosPct ?? 0} />
 
       <div className="text-center">
         <h1 className="text-2xl font-semibold">Elegí tu plan</h1>
@@ -149,5 +151,27 @@ export function PlanesVista() {
         Precios sin IVA (21%), recuperable para responsables inscriptos. Los descuentos de los códigos se calculan sobre el precio de lista y no se acumulan.
       </p>
     </div>
+  );
+}
+
+/** Premios por recomendar: el descuento ya está aplicado en los precios del próximo pago. */
+function AvisoReferidos({ pct }: { pct: number }) {
+  return (
+    <Card size="sm" className={cn(pct > 0 && "ring-2 ring-primary/40")}>
+      <CardHeader className="flex flex-row flex-wrap items-center gap-3">
+        <Gift className="size-5 shrink-0 text-primary" aria-hidden />
+        <div className="min-w-0 flex-1">
+          <CardTitle className="text-base">{pct > 0 ? `Tenés ${pct}% de descuento en tu próximo pago` : "Recomendá y pagá menos"}</CardTitle>
+          <CardDescription>
+            {pct > 0
+              ? "Por los negocios que recomendaste. Ya está descontado en los precios de abajo."
+              : "Por cada negocio que se registre con tu código y pague, ganás 10% en tu próximo pago."}
+          </CardDescription>
+        </div>
+        <Link href="/recomendar" className="text-sm font-medium text-primary underline">
+          {pct > 0 ? "Ver mis recomendados" : "Ver mi código"}
+        </Link>
+      </CardHeader>
+    </Card>
   );
 }
