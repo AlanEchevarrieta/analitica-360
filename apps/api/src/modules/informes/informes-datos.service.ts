@@ -6,6 +6,7 @@ import { DashboardService } from '../analytics/dashboard.service.js';
 import { AnalyticsPeriodoService } from '../analytics/periodo.service.js';
 import { MonotributoService } from '../contabilidad/monotributo.service.js';
 import { CuentaCorrienteService } from '../cuenta-corriente/cuenta-corriente.service.js';
+import { CotizacionesService } from '../cotizaciones/cotizaciones.service.js';
 import { completarDias, periodoPrevio, variacion, type Periodo, type TipoInforme } from './informes.util.js';
 
 export interface Cifra {
@@ -36,6 +37,8 @@ export interface DatosInforme {
   monotributo: { categoria: string | null; usoPct: number | null; margenDisponible: number | null; proyeccionAnual: number; categoriaProyectada: string | null } | null;
   /** Más de 50.000 ventas en el período: los números de detalle no se calculan. */
   demasiadasVentas: boolean;
+  /** Si la empresa lo pidió: los mismos números en dólares (con el dólar del día de cada venta). */
+  usd?: { casa: string; ventas: number; ganancia: number; ticket: number; compras: number } | null;
 }
 
 const cifra = (valor: number, anterior: number): Cifra => ({ valor, anterior, variacion: variacion(valor, anterior) });
@@ -49,6 +52,7 @@ export class InformesDatosService {
     private readonly dashboard: DashboardService,
     private readonly cuentaCorriente: CuentaCorrienteService,
     private readonly monotributo: MonotributoService,
+    private readonly cotizaciones: CotizacionesService,
   ) {}
 
   async armar(empresaId: string, tipo: TipoInforme, periodo: Periodo): Promise<DatosInforme> {
@@ -69,6 +73,7 @@ export class InformesDatosService {
     const gananciaAnt = b ? b.total - b.costo : 0;
     const comprasDe = (d: typeof a) => (d?.comprasDiarias ?? []).reduce((s, x) => s + x.total, 0);
     const [cc, mono] = mensual ?? [null, null];
+    const usd = await this.enDolares(empresaId, periodo);
     return {
       empresa: empresa.nombre,
       tipo,
@@ -98,7 +103,27 @@ export class InformesDatosService {
           }
         : null,
       demasiadasVentas: actual.avisoLimite != null,
+      usd,
     };
+  }
+
+  /** Los números principales en dólares, si la empresa lo pidió (Configuración → Informes). Sin cotización, se omiten. */
+  private async enDolares(empresaId: string, p: Periodo): Promise<DatosInforme['usd']> {
+    const conf = await this.prisma.informesConfig.findUnique({ where: { empresaId }, select: { conDolares: true } });
+    if (!conf?.conDolares) return null;
+    try {
+      const [r, casa] = await Promise.all([this.periodos.periodo(empresaId, p.desde, p.hasta, 'dia', 'USD'), this.cotizaciones.casaDe(empresaId)]);
+      if (!r.data) return null;
+      return {
+        casa,
+        ventas: r.data.total,
+        ganancia: r.data.total - r.data.costo,
+        ticket: r.data.cantidad ? r.data.total / r.data.cantidad : 0,
+        compras: r.data.comprasDiarias.reduce((a, x) => a + x.total, 0),
+      };
+    } catch {
+      return null;
+    }
   }
 
   /** Productos a la venta que no se vendieron en el período (los insumos no cuentan). */

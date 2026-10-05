@@ -4,11 +4,12 @@
 #   - Web (gestion)                http://localhost:3000
 #   - Tienda modelo                http://acacia.localhost:3010
 #   - Tienda de Acacia             http://localhost:3002   (repo ~/acacia-store)
-# Uso: .\scripts\levantar-docker.ps1 [-Compilar]   (-Compilar recompila las imagenes con el codigo actual)
+# Uso: .\scripts\levantar-docker.ps1 [-Compilar] [-SinAbrir]   (-Compilar recompila las imagenes con el codigo actual;
+#      -SinAbrir no abre el navegador, ej. desde la auditoria semanal)
 # Los contenedores quedan con restart unless-stopped: vuelven solos al prender Docker.
 # Para apagarlos: .\scripts\apagar-docker.ps1
 
-param([switch]$Compilar)
+param([switch]$Compilar, [switch]$SinAbrir)
 
 # Continue (no Stop): docker escribe su progreso por stderr y PowerShell 5.1 lo
 # toma como error. Los fallos reales se detectan con $LASTEXITCODE.
@@ -67,7 +68,7 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'No se pudo levantar la tienda de Acacia' }
 } finally { Pop-Location }
 
-if (Esperar 'la web' { Responde 'http://localhost:3000/sign-in' }) {
+if ((Esperar 'la web' { Responde 'http://localhost:3000/sign-in' }) -and -not $SinAbrir) {
   Start-Process 'http://localhost:3002'
   Start-Process 'http://localhost:3000'
 }

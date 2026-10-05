@@ -7,7 +7,7 @@ import { RequireModulo } from '../../common/decorators/permiso.decorator.js';
 import { InsightsService } from './insights.service.js';
 import { CacheLectura } from '../../common/cache/cache-lecturas.js';
 
-const insightsQuerySchema = z.object({ pronostico: z.enum(['semana', 'mes']).default('semana') });
+const insightsQuerySchema = z.object({ pronostico: z.enum(['semana', 'mes']).default('semana'), moneda: z.enum(['ARS', 'USD']).optional() });
 
 @Controller('analytics/insights')
 @RequireModulo('insights')
@@ -17,6 +17,6 @@ export class InsightsController {
 
   @Get()
   insights(@CurrentEmpresa() empresa: EmpresaContext, @Query(new ZodValidationPipe(insightsQuerySchema)) q: z.infer<typeof insightsQuerySchema>) {
-    return this.insightsService.insights(empresa.id, q.pronostico);
+    return this.insightsService.insights(empresa.id, q.pronostico, q.moneda);
   }
 }

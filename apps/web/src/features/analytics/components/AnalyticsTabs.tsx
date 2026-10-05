@@ -7,8 +7,8 @@ import { useAcceso } from "@/hooks/use-acceso";
 import type { ModuloClave } from "@/lib/rol";
 import { SelectorMoneda } from "@/components/shared/selector-moneda";
 
-/** Secciones que se ven solo en pesos: los balances y el libro no cierran si cada línea va con otra cotización; Insights mezcla precios de hoy e históricos. */
-const SOLO_PESOS = ["/analytics/estados", "/analytics/libro", "/analytics/insights"];
+/** Secciones que se ven solo en pesos: los balances y el libro no cierran si cada línea va con otra cotización. */
+const SOLO_PESOS = ["/analytics/estados", "/analytics/libro"];
 
 /** Título de Analytics con el botón $ / US$. */
 export function EncabezadoAnalytics() {

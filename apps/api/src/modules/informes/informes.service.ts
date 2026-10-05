@@ -26,6 +26,8 @@ const MAX_INTENTOS = 3;
 export interface ConfigInformes {
   semanal: boolean;
   mensual: boolean;
+  /** Mostrar también los números en dólares. */
+  conDolares: boolean;
   emailsExtra: string[];
   /** Los dueños, que lo reciben siempre (salvo que se den de baja desde el email). */
   duenos: string[];
@@ -51,18 +53,19 @@ export class InformesService {
     return {
       semanal: c?.semanal ?? true,
       mensual: c?.mensual ?? true,
+      conDolares: c?.conDolares ?? false,
       emailsExtra: c?.emailsExtra ?? [],
       duenos,
       bajas: (c?.bajas ?? []).map((b) => ({ tipo: b.slice(0, b.indexOf(':')) as TipoInforme, email: b.slice(b.indexOf(':') + 1) })),
     };
   }
 
-  async guardarConfig(empresaId: string, input: { semanal?: boolean; mensual?: boolean; emailsExtra?: string[]; reactivar?: string }): Promise<ConfigInformes> {
+  async guardarConfig(empresaId: string, input: { semanal?: boolean; mensual?: boolean; conDolares?: boolean; emailsExtra?: string[]; reactivar?: string }): Promise<ConfigInformes> {
     const actual = await this.prisma.informesConfig.findUnique({ where: { empresaId } });
     const emailsExtra = input.emailsExtra ? [...new Set(input.emailsExtra.map((e) => e.trim().toLowerCase()))] : undefined;
     // "reactivar" saca a ese email de las bajas (volvió a querer recibirlo).
     const bajas = input.reactivar ? (actual?.bajas ?? []).filter((b) => !b.endsWith(`:${input.reactivar!.toLowerCase()}`)) : undefined;
-    const datos = { semanal: input.semanal, mensual: input.mensual, emailsExtra, bajas };
+    const datos = { semanal: input.semanal, mensual: input.mensual, conDolares: input.conDolares, emailsExtra, bajas };
     await this.prisma.informesConfig.upsert({ where: { empresaId }, create: { empresaId, ...datos }, update: datos });
     return this.verConfig(empresaId);
   }

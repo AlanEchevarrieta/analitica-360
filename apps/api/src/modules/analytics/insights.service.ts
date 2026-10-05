@@ -16,6 +16,7 @@ import {
   type InsightVariantes,
 } from './insights.util.js';
 import { fechaHoyAR, inicioMesIso, sumarDiasIso } from './analytics.util.js';
+import { CotizacionesService, type Moneda } from '../cotizaciones/cotizaciones.service.js';
 
 const VACIO: InsightsPayload = {
   salud: null,
@@ -30,9 +31,12 @@ const VACIO: InsightsPayload = {
 
 @Injectable()
 export class InsightsService {
-  constructor(@Inject(INSIGHTS_REPOSITORY) private readonly repository: InsightsRepository) {}
+  constructor(
+    @Inject(INSIGHTS_REPOSITORY) private readonly repository: InsightsRepository,
+    private readonly cotizaciones: CotizacionesService,
+  ) {}
 
-  async insights(empresaId: string, pronostico: 'semana' | 'mes' = 'semana'): Promise<InsightsPayload> {
+  async insights(empresaId: string, pronostico: 'semana' | 'mes' = 'semana', moneda?: Moneda): Promise<InsightsPayload> {
     const errores: InsightsErrores = {};
     const hoy = fechaHoyAR();
     const mesIni = inicioMesIso(hoy);
@@ -64,6 +68,15 @@ export class InsightsService {
       serieForecast = serieHist;
       usaVariantes = usaVar;
       items = await this.repository.itemsDeVentas(empresaId, ventas.map((v) => v.id));
+      if (moneda === 'USD') {
+        // En dólares: ventas y precios viejos con el dólar de su día; precio y costo actuales, con el de hoy.
+        const fechas = [...serieForecast.map((p) => p.fecha), ...historial.map((h) => h.desde.slice(0, 10)), ...ventas.map((v) => v.fechaIso.slice(0, 10))].filter(Boolean).sort();
+        const conv = await this.cotizaciones.conversor(empresaId, moneda, fechas[0] ?? hoy, hoy);
+        productos = productos.map((p) => ({ ...p, costo: p.costo / conv.hoy, precioVenta: p.precioVenta / conv.hoy }));
+        ventas = ventas.map((v) => ({ ...v, total: conv.a(v.total, v.fechaIso.slice(0, 10)) }));
+        historial = historial.map((h) => ({ ...h, precio: conv.a(h.precio, h.desde.slice(0, 10)) }));
+        serieForecast = serieForecast.map((p) => ({ ...p, total: conv.a(p.total, p.fecha) }));
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'No se pudieron cargar los datos';
       return { ...VACIO, errores: { radar: msg, elasticidad: msg, forecast: msg, variantes: msg, precio: msg } };

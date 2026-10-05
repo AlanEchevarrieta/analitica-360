@@ -20,6 +20,7 @@ type Tipo = "semanal" | "mensual";
 interface ConfigInformes {
   semanal: boolean;
   mensual: boolean;
+  conDolares: boolean;
   emailsExtra: string[];
   duenos: string[];
   bajas: { tipo: Tipo; email: string }[];
@@ -61,7 +62,7 @@ export function InformesConfig() {
   const [bajando, setBajando] = useState<Tipo | null>(null);
 
   const guardar = useMutation({
-    mutationFn: (cambios: Partial<Pick<ConfigInformes, "semanal" | "mensual" | "emailsExtra">> & { reactivar?: string }) =>
+    mutationFn: (cambios: Partial<Pick<ConfigInformes, "semanal" | "mensual" | "conDolares" | "emailsExtra">> & { reactivar?: string }) =>
       api<ConfigInformes>("/informes/config", { method: "PATCH", body: JSON.stringify(cambios) }),
     onSuccess: (c) => {
       queryClient.setQueryData(clave, c);
@@ -145,6 +146,14 @@ export function InformesConfig() {
           );
         })}
       </div>
+
+      <label className="flex items-start gap-2 text-sm">
+        <input type="checkbox" className="mt-0.5" checked={c.conDolares} disabled={guardar.isPending} onChange={(e) => guardar.mutate({ conDolares: e.target.checked })} />
+        <span>
+          Mostrar también los números en dólares
+          <span className="block text-muted-foreground">Con el dólar del día de cada venta (el que elegiste en Configuración fiscal).</span>
+        </span>
+      </label>
 
       <div className="flex flex-col gap-3">
         <p className="font-medium">Quién lo recibe</p>

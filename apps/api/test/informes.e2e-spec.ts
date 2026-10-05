@@ -70,7 +70,7 @@ describe.skipIf(!URL_E2E)('Informes por email (e2e)', () => {
 
   it('por defecto: semanal y mensual activados, a los dueños', async () => {
     const r = await request(s()).get('/informes/config').set(dueno('pro')).expect(200);
-    expect(r.body).toEqual({ semanal: true, mensual: true, emailsExtra: [], duenos: [`inf_pro_${sufijo}@e2e.test`], bajas: [] });
+    expect(r.body).toEqual({ semanal: true, mensual: true, conDolares: false, emailsExtra: [], duenos: [`inf_pro_${sufijo}@e2e.test`], bajas: [] });
   });
 
   it('solo el dueño lo configura', async () => {
@@ -144,6 +144,20 @@ describe.skipIf(!URL_E2E)('Informes por email (e2e)', () => {
     // El dueño lo puede reactivar.
     const re = await request(s()).patch('/informes/config').set(dueno('pro')).send({ reactivar: 'contador@estudio.com' }).expect(200);
     expect(re.body.bajas).toEqual([]);
+  });
+
+  it('con la opción de dólares, el informe trae los números también en US$', async () => {
+    await db.query(`INSERT INTO cotizaciones_dolar (casa, fecha, compra, venta) VALUES ('blue', '2026-10-01', 1000, 1000) ON CONFLICT DO NOTHING`);
+    const { InformesDatosService } = await import('../src/modules/informes/informes-datos.service.js');
+    const datos = app.get(InformesDatosService);
+    const semana = { desde: '2026-10-05', hasta: '2026-10-11' };
+    expect((await datos.armar(empresas.pro, 'semanal', semana)).usd).toBeNull();
+    const r = await request(s()).patch('/informes/config').set(dueno('pro')).send({ conDolares: true }).expect(200);
+    expect(r.body.conDolares).toBe(true);
+    const d = await datos.armar(empresas.pro, 'semanal', semana);
+    expect(d.usd).toMatchObject({ casa: 'blue' });
+    expect(d.usd!.ventas).toBeGreaterThan(0);
+    expect(d.usd!.ventas).toBeLessThan(d.ventas.valor);
   });
 
   it('enviarme uno de prueba: sin Resend avisa que falta configurarlo', async () => {

@@ -1,6 +1,8 @@
 import { Test } from '@nestjs/testing';
 import { InsightsService } from './insights.service.js';
 import { INSIGHTS_REPOSITORY, type InsightsRepository } from './insights.repository.js';
+import { CotizacionesService } from '../cotizaciones/cotizaciones.service.js';
+import { EN_PESOS } from '../cotizaciones/conversor.js';
 
 describe('InsightsService', () => {
   let service: InsightsService;
@@ -19,7 +21,7 @@ describe('InsightsService', () => {
       stockPorVariante: vi.fn(),
     };
     const module = await Test.createTestingModule({
-      providers: [InsightsService, { provide: INSIGHTS_REPOSITORY, useValue: repository }],
+      providers: [InsightsService, { provide: INSIGHTS_REPOSITORY, useValue: repository }, { provide: CotizacionesService, useValue: { conversor: async () => EN_PESOS } }],
     }).compile();
     service = module.get(InsightsService);
   });

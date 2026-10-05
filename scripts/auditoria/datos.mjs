@@ -1,6 +1,7 @@
 // Calidad de datos: reglas de negocio que los datos tienen que cumplir siempre,
 // y la integridad de la bitácora de auditoría (cadena de hashes).
 import { aceptado, control, sqlJson } from './comun.mjs';
+import { anotarSello, ARCHIVO_SELLOS, compararSellos, leerSellos } from './sellos.mjs';
 
 /**
  * Cada chequeo cuenta filas que rompen una regla. `grave` = rojo si aparece alguna;
@@ -144,15 +145,29 @@ export async function integridadBitacora() {
         'ultimo', (SELECT json_build_object('id', id, 'hash', hash, 'fecha', creado_en) FROM registro_auditoria ORDER BY id DESC LIMIT 1),
         'triggers', (SELECT count(*) FROM pg_trigger WHERE tgrelid = 'registro_auditoria'::regclass AND NOT tgisinternal AND tgenabled <> 'D')) FROM c`);
     const triggersOk = r.triggers >= 3;
+    // Sellos anteriores (guardados fuera del sistema): esas filas tienen que seguir con el mismo hash.
+    const sellos = leerSellos();
+    const actuales = sellos.length
+      ? ((await sqlJson(`SELECT coalesce(json_object_agg(s.id, r.hash), '{}') FROM unnest(ARRAY[${sellos.map((x) => Number(x.id)).join(',')}]::bigint[]) AS s(id) LEFT JOIN registro_auditoria r ON r.id = s.id`)) ?? {})
+      : {};
+    const { revisados, distintos } = compararSellos(sellos, actuales);
+    let anotado = false;
+    if (r.ultimo && r.errores === 0 && distintos.length === 0) anotado = anotarSello({ fecha: new Date().toISOString().slice(0, 16).replace('T', ' '), id: r.ultimo.id, hash: r.ultimo.hash });
+    const rojo = r.errores > 0 || !triggersOk || distintos.length > 0;
     return control({
       ...base,
-      estado: r.errores > 0 || !triggersOk ? 'rojo' : 'verde',
+      estado: rojo ? 'rojo' : 'verde',
       resumen:
         r.errores > 0
           ? `¡ALTERADA! ${r.errores} registros no coinciden; el primero es el #${r.primer}.`
-          : `${r.total} registros encadenados, ninguno alterado. ${triggersOk ? 'Protección contra edición y borrado activa.' : 'ATENCIÓN: hay triggers de protección desactivados.'}`,
-      detalle: r.ultimo ? [`Sello (ancla) para guardar fuera del sistema: #${r.ultimo.id} ${r.ultimo.hash}`] : [],
-      evidencia: r.ultimo,
+          : distintos.length
+            ? `¡REESCRITA! ${distintos.length} de ${revisados} sellos guardados fuera del sistema no coinciden (el primero, #${distintos[0].id} del ${distintos[0].fecha}).`
+            : `${r.total} registros encadenados, ninguno alterado; ${revisados === 0 ? 'todavía no hay sellos anteriores para comparar' : `${revisados} ${revisados === 1 ? 'sello externo coincide' : 'sellos externos coinciden'}`}. ${triggersOk ? 'Protección contra edición y borrado activa.' : 'ATENCIÓN: hay triggers de protección desactivados.'}`,
+      detalle: [
+        ...(r.ultimo ? [`Sello de hoy: #${r.ultimo.id} ${r.ultimo.hash}${anotado ? ` (anotado en ${ARCHIVO_SELLOS})` : ''}`] : []),
+        ...distintos.map((d) => `Sello #${d.id} (${d.fecha}): guardado ${d.hash.slice(0, 12)}…, en la base ${actuales[d.id] ? `${String(actuales[d.id]).slice(0, 12)}…` : 'la fila ya no existe'}`),
+      ],
+      evidencia: { ultimo: r.ultimo, sellosRevisados: revisados, sellosDistintos: distintos },
     });
   } catch (e) {
     return control({ ...base, estado: 'gris', resumen: `No se pudo verificar: ${e.message.slice(0, 150)}` });

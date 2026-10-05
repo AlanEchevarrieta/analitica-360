@@ -54,7 +54,7 @@ export const useGastos = (desde: string, hasta: string) =>
 
 /** Insights usa todo el historial; solo se elige cómo agrupar el pronóstico. */
 export const useInsights = (pronostico: "semana" | "mes") =>
-  useConsulta<Insights>(["insights", pronostico], `/analytics/insights?pronostico=${pronostico}`);
+  useConsulta<Insights>(["insights", pronostico], `/analytics/insights?pronostico=${pronostico}`, true);
 
 /** Productos que se compran juntos (de a 2 o de a 3), con todo el historial. */
 export const useCombos = (tamano: 2 | 3) =>

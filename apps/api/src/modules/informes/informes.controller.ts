@@ -12,6 +12,7 @@ import { TIPOS_INFORME, type TipoInforme } from './informes.util.js';
 const configSchema = z.object({
   semanal: z.boolean().optional(),
   mensual: z.boolean().optional(),
+  conDolares: z.boolean().optional(),
   emailsExtra: z.array(z.string().trim().email('Hay un email que no es válido').max(160)).max(5, 'Hasta 5 emails extra').optional(),
   /** Volver a mandarle a un email que se había dado de baja. */
   reactivar: z.string().trim().email().optional(),

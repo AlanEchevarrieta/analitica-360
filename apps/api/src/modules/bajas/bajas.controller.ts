@@ -47,6 +47,11 @@ export class AdminBajasController {
     return this.bajas.listar();
   }
 
+  @Get(':empresaId')
+  estado(@Param('empresaId', ParseUUIDPipe) empresaId: string) {
+    return this.bajas.estado(empresaId);
+  }
+
   @Post(':empresaId')
   solicitar(@Param('empresaId', ParseUUIDPipe) empresaId: string, @CurrentUser() usuario: UsuarioContext, @Body(new ZodValidationPipe(confirmarSchema)) body: { confirmacion: string }) {
     return this.bajas.solicitar(empresaId, `consola: ${usuario.email}`, body.confirmacion);

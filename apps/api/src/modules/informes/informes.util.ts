@@ -100,6 +100,8 @@ const PESOS = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS
 /** $ 1.234.567 (sin centavos: es un resumen). */
 export const pesos = (n: number) => PESOS.format(Math.round(n)).replace(/ /g, ' ');
 export const entero = (n: number) => new Intl.NumberFormat('es-AR').format(Math.round(n));
+/** US$ 1.234 (con centavos si es menos de 100). */
+export const dolares = (n: number) => `US$ ${n.toLocaleString('es-AR', { minimumFractionDigits: Math.abs(n) < 100 ? 2 : 0, maximumFractionDigits: Math.abs(n) < 100 ? 2 : 0 })}`;
 export const pct = (n: number | null) => (n == null ? '' : `${n > 0 ? '+' : ''}${n.toLocaleString('es-AR', { maximumFractionDigits: 1 })}%`);
 
 // --- Baja desde el link del email (sin iniciar sesión): firmada para que nadie dé de baja a otro. ---

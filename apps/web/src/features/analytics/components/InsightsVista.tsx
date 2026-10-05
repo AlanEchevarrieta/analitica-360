@@ -6,7 +6,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
-import { formatoPesos } from "@/lib/formato";
+import { formatoMoneda } from "@/lib/formato";
 import { etiquetaFecha, hoyAR } from "@/lib/periodos";
 import { useInsights } from "../hooks/use-analytics";
 import { InsightsMercado } from "./InsightsMercado";
@@ -80,7 +80,7 @@ export function InsightsVista() {
                 </div>
                 <CardDescription>
                   {data.forecast
-                    ? `${data.forecast.etiquetaProyeccion}: ${formatoPesos(data.forecast.totalProyeccion)} (tendencia de ${pronostico === "semana" ? "las últimas semanas completas" : "los últimos meses completos"})`
+                    ? `${data.forecast.etiquetaProyeccion}: ${formatoMoneda(data.forecast.totalProyeccion)} (tendencia de ${pronostico === "semana" ? "las últimas semanas completas" : "los últimos meses completos"})`
                     : (data.errores.forecast ?? "Hacen falta al menos 30 días de ventas para proyectar.")}
                 </CardDescription>
               </CardHeader>
@@ -90,8 +90,8 @@ export function InsightsVista() {
                     <LineChart data={data.forecast.puntos} margin={{ left: 8, right: 8 }}>
                       <CartesianGrid vertical={false} />
                       <XAxis dataKey="clave" tickFormatter={etiquetaFecha} tickLine={false} axisLine={false} fontSize={12} />
-                      <YAxis tickFormatter={(v: number) => formatoPesos(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
-                      <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} labelFormatter={(l) => (pronostico === "semana" ? `Semana del ${etiquetaFecha(String(l))}` : etiquetaFecha(String(l).slice(0, 7)))} />} />
+                      <YAxis tickFormatter={(v: number) => formatoMoneda(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
+                      <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoMoneda(Number(v))} labelFormatter={(l) => (pronostico === "semana" ? `Semana del ${etiquetaFecha(String(l))}` : etiquetaFecha(String(l).slice(0, 7)))} />} />
                       <Line dataKey="historico" stroke="var(--color-historico)" strokeWidth={2} dot={false} connectNulls={false} />
                       <Line dataKey="proyeccion" stroke="var(--color-proyeccion)" strokeDasharray="5 5" strokeWidth={2} dot={false} />
                     </LineChart>
@@ -117,7 +117,7 @@ export function InsightsVista() {
                     <li key={e.productoId} className="flex flex-wrap items-center gap-3 py-2">
                       <span className="min-w-40 flex-1 font-medium">{e.producto}</span>
                       <span className="tabular-nums text-muted-foreground">
-                        {formatoPesos(e.precioAnterior)} → {formatoPesos(e.precioActual)} · ventas {e.deltaVentasPct > 0 ? "+" : ""}
+                        {formatoMoneda(e.precioAnterior)} → {formatoMoneda(e.precioActual)} · ventas {e.deltaVentasPct > 0 ? "+" : ""}
                         {e.deltaVentasPct.toFixed(0)}%
                       </span>
                       <span className={`rounded-full px-2 py-0.5 text-xs ${BADGE[e.badge]?.clase ?? ""}`}>{BADGE[e.badge]?.etiqueta ?? e.badge}</span>
@@ -131,7 +131,7 @@ export function InsightsVista() {
                   <p className="mb-1 font-medium">Precios sugeridos</p>
                   {data.precios.map((p) => (
                     <p key={p.producto}>
-                      {p.producto}: {formatoPesos(p.precioActual)} → <span className="font-medium">{formatoPesos(p.precioSugerido)}</span> (≈ {formatoPesos(p.extraMes)} más de ganancia por mes)
+                      {p.producto}: {formatoMoneda(p.precioActual)} → <span className="font-medium">{formatoMoneda(p.precioSugerido)}</span> (≈ {formatoMoneda(p.extraMes)} más de ganancia por mes)
                     </p>
                   ))}
                 </div>

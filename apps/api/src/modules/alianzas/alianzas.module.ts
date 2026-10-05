@@ -5,7 +5,7 @@ import { AlianzasAdminService } from './alianzas-admin.service.js';
 import { AlianzasController } from './alianzas.controller.js';
 import { CobrosService } from './cobros.service.js';
 import { CuponesService } from './cupones.service.js';
-import { ReferidosController } from './referidos.controller.js';
+import { AdminReferidosController, ReferidosController } from './referidos.controller.js';
 import { ReferidosService } from './referidos.service.js';
 
 /**
@@ -16,7 +16,7 @@ import { ReferidosService } from './referidos.service.js';
 @Module({
   // AccesoCuentaService: tras un pago o una prueba extendida, el acceso rige al instante.
   imports: [PlanesModule],
-  controllers: [AlianzasController, AlianzasAdminController, ReferidosController],
+  controllers: [AlianzasController, AlianzasAdminController, ReferidosController, AdminReferidosController],
   providers: [CuponesService, CobrosService, AlianzasAdminService, ReferidosService],
   exports: [CuponesService, CobrosService],
 })

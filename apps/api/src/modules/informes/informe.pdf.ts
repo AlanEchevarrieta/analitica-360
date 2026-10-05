@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import type { Cifra, DatosInforme } from './informes-datos.service.js';
-import { ddmm, ddmmaaaa, diaSemana, entero, nombrePeriodo, pct, pesos } from './informes.util.js';
+import { ddmm, ddmmaaaa, diaSemana, dolares, entero, nombrePeriodo, pct, pesos } from './informes.util.js';
 
 const C = {
   marca: '#4f46e5',
@@ -50,7 +50,7 @@ export function pdfInforme(d: DatosInforme, generado: Date = new Date()): Promis
     y + 14,
     (x, w, y0) => tabla(doc, x, w, y0, 'Stock bajo (hoy)', ['Producto', 'Stock'], d.stockBajo.map((s) => [s.nombre, entero(s.stock)]), 'Ningún producto en el mínimo.'),
     (x, w, y0) => {
-      let yy = bloque(doc, x, w, y0, 'Compras del período', [[pesos(d.compras.valor), d.compras.variacion, true]]);
+      let yy = bloque(doc, x, w, y0, 'Compras del período', [[d.usd ? `${pesos(d.compras.valor)} (${dolares(d.usd.compras)})` : pesos(d.compras.valor), d.compras.variacion, true]]);
       const sin = d.sinVentas.cantidad
         ? `${entero(d.sinVentas.cantidad)} producto${d.sinVentas.cantidad === 1 ? '' : 's'} sin ventas: ${d.sinVentas.ejemplos.join(', ')}${d.sinVentas.cantidad > d.sinVentas.ejemplos.length ? '…' : ''}`
         : 'Todos tus productos tuvieron ventas.';
@@ -98,7 +98,8 @@ function encabezado(doc: Doc, d: DatosInforme) {
   doc.font('Helvetica-Bold').fontSize(9).fillColor('#c7d2fe').text('ANALÍTICA 360', MARGEN, 26, { characterSpacing: 1.5 });
   doc.font('Helvetica-Bold').fontSize(22).fillColor('#ffffff').text(`${titulo(d)} · ${d.empresa}`, MARGEN, 42, { width: UTIL, ellipsis: true, height: 28 });
   const rango = d.tipo === 'semanal' ? `Del lunes ${ddmm(d.periodo.desde)} al domingo ${ddmmaaaa(d.periodo.hasta)}` : nombrePeriodo('mensual', d.periodo);
-  doc.font('Helvetica').fontSize(11).fillColor('#e0e7ff').text(`${rango}  ·  comparado con ${d.tipo === 'semanal' ? 'la semana' : 'el mes'} anterior`, MARGEN, 72);
+  const dolar = d.usd ? `  ·  US$: dólar ${d.usd.casa === 'bolsa' ? 'MEP' : d.usd.casa} del día de cada venta` : '';
+  doc.font('Helvetica').fontSize(11).fillColor('#e0e7ff').text(`${rango}  ·  comparado con ${d.tipo === 'semanal' ? 'la semana' : 'el mes'} anterior${dolar}`, MARGEN, 72, { width: UTIL });
 }
 
 function colorDe(v: number | null, subirEsBueno = true) {
@@ -107,11 +108,13 @@ function colorDe(v: number | null, subirEsBueno = true) {
 }
 
 function tarjetas(doc: Doc, d: DatosInforme, y: number): number {
+  const u = d.usd;
+  const margen = d.margenPct == null ? null : `margen ${d.margenPct.toLocaleString('es-AR')}%`;
   const items: [string, string, Cifra, string?][] = [
-    ['Ventas', pesos(d.ventas.valor), d.ventas],
+    ['Ventas', pesos(d.ventas.valor), d.ventas, u ? dolares(u.ventas) : undefined],
     ['N.º de ventas', entero(d.cantidad.valor), d.cantidad],
-    ['Ticket promedio', pesos(d.ticket.valor), d.ticket],
-    ['Ganancia', pesos(d.ganancia.valor), d.ganancia, d.margenPct == null ? undefined : `margen ${d.margenPct.toLocaleString('es-AR')}%`],
+    ['Ticket promedio', pesos(d.ticket.valor), d.ticket, u ? dolares(u.ticket) : undefined],
+    ['Ganancia', pesos(d.ganancia.valor), d.ganancia, [margen, u ? dolares(u.ganancia) : null].filter(Boolean).join(' · ') || undefined],
   ];
   const gap = 10;
   const w = (UTIL - gap * 3) / 4;

@@ -1667,6 +1667,8 @@ model InformesConfig {
   empresaId   String   @unique @map("empresa_id") @db.Uuid
   semanal     Boolean  @default(true)
   mensual     Boolean  @default(true)
+  /// Mostrar también cada número en dólares (con el dólar del día de cada venta).
+  conDolares  Boolean  @default(false) @map("con_dolares")
   /// Otros destinatarios (contador, socio), en minúsculas.
   emailsExtra String[] @default([]) @map("emails_extra")
   /// Bajas desde el link del email, por tipo: "semanal:ana@x.com".

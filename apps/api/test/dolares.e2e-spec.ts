@@ -84,6 +84,14 @@ describe.skipIf(!URL_E2E)('Reportes en dólares (e2e)', () => {
     expect(c.body.totales.ingresos).toBeCloseTo(17, 6);
   });
 
+  it('Insights también: los totales del historial salen en dólares', async () => {
+    const pesos = await request(s()).get('/analytics/insights').set(DUENO).expect(200);
+    const usd = await request(s()).get('/analytics/insights?moneda=USD').set(DUENO).expect(200);
+    const suma = (r: { body: { serieDiaria: { total: number }[] } }) => r.body.serieDiaria.reduce((a, x) => a + x.total, 0);
+    expect(suma(pesos)).toBe(19_000);
+    expect(suma(usd)).toBeCloseTo(17, 6);
+  });
+
   it('el Inicio acepta dólares', async () => {
     await request(s()).get('/analytics/dashboard?moneda=USD').set(DUENO).expect(200);
     await request(s()).get('/analytics/dashboard?moneda=EUR').set(DUENO).expect(400);

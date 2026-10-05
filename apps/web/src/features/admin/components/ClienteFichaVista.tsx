@@ -15,6 +15,7 @@ import { NOMBRE_ESTADO, NOMBRE_PLAN, fechaCorta, useAccionesAdmin, useEmpresaAdm
 import { EtiquetaAlerta, EtiquetaEstado, EtiquetaPlan, Indicador, Panel, variacion } from "./comunes";
 import { OrigenClientePanel } from "./alianzas/OrigenClientePanel";
 import { CuotasClientePanel } from "./alianzas/CuotasCliente";
+import { BajaClientePanel, ReferidosClientePanel } from "./ReferidosBajaPaneles";
 
 const G_VENTAS = { monto: { label: "Vendido", color: "var(--chart-1)" } } satisfies ChartConfig;
 const selectClase = "h-8 rounded-lg border bg-transparent px-2 text-sm";
@@ -152,6 +153,8 @@ export function ClienteFichaVista({ id }: { id: string }) {
 
       <CuotasClientePanel empresaId={id} />
 
+      <ReferidosClientePanel empresaId={id} />
+
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel titulo="Usuarios">
           <ul className="flex flex-col divide-y text-sm">
@@ -203,6 +206,7 @@ export function ClienteFichaVista({ id }: { id: string }) {
           </ul>
         </Panel>
       </div>
+      <BajaClientePanel empresaId={id} nombre={e.nombre} esDemo={e.esDemo} />
       <Link href="/admin/clientes" className={buttonVariants({ variant: "ghost", className: "self-start" })}>
         <ArrowLeft aria-hidden /> Volver a clientes
       </Link>

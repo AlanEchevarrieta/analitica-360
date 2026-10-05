@@ -28,7 +28,9 @@ RUN DATABASE_URL=postgresql://build:build@localhost:5432/build pnpm exec prisma 
 FROM build AS migrate
 # Sin root también para migrar (Semgrep: dockerfile.security.missing-user).
 USER node
-CMD ["pnpm", "exec", "prisma", "migrate", "deploy"]
+# Prisma directo (sin pnpm): pnpm exec revisa las dependencias del workspace al arrancar e intenta
+# instalar lo que falta, y como usuario node no puede escribir en su almacén.
+CMD ["./node_modules/.bin/prisma", "migrate", "deploy"]
 
 # 4. Paquete de producción: solo dependencias de runtime + el cliente de Prisma ya generado.
 FROM build AS prod-deps

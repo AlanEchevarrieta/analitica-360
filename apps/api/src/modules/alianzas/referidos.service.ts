@@ -52,6 +52,24 @@ export class ReferidosService {
     throw new Error('No se pudo generar el código de referido');
   }
 
+  /** Consola: lo mismo que ve el cliente (sin crearle el código si no lo tiene) y quién lo recomendó a él. */
+  async resumenAdmin(empresaId: string) {
+    const [propio, empresa] = await Promise.all([
+      this.prisma.cupon.findFirst({ where: { tipo: 'referido', empresaReferenteId: empresaId }, select: { id: true, codigo: true } }),
+      this.prisma.empresa.findUnique({
+        where: { id: empresaId },
+        select: { cupon: { select: { tipo: true, codigo: true, empresaReferente: { select: { id: true, nombre: true } } } }, premioComoReferida: { select: { estado: true } } },
+      }),
+    ]);
+    const recomendadoPor =
+      empresa?.cupon?.tipo === 'referido' && empresa.cupon.empresaReferente
+        ? { empresaId: empresa.cupon.empresaReferente.id, nombre: empresa.cupon.empresaReferente.nombre, codigo: empresa.cupon.codigo, premio: empresa.premioComoReferida?.estado ?? null }
+        : null;
+    if (!propio) return { codigo: null, recomendadoPor, premios: null, recomendados: [] };
+    const r = await this.resumen(empresaId);
+    return { codigo: r.codigo, recomendadoPor, premios: r.premios, recomendados: r.recomendados };
+  }
+
   async resumen(empresaId: string) {
     const { id, codigo } = await this.codigoDe(empresaId);
     const [recomendados, premios] = await Promise.all([
