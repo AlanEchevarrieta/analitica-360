@@ -16,6 +16,8 @@ import { VentasModule } from './modules/ventas/ventas.module.js';
 import { DevolucionesModule } from './modules/devoluciones/devoluciones.module.js';
 import { PedidosModule } from './modules/pedidos/pedidos.module.js';
 import { InformesModule } from './modules/informes/informes.module.js';
+import { CacheLecturasModule } from './common/cache/cache-lecturas.module.js';
+import { CotizacionesModule } from './modules/cotizaciones/cotizaciones.module.js';
 import { ArchivosModule } from './common/archivos/archivos.module.js';
 import { CuentaCorrienteModule } from './modules/cuenta-corriente/cuenta-corriente.module.js';
 import { ProduccionModule } from './modules/produccion/produccion.module.js';
@@ -69,6 +71,8 @@ import { ConfiguracionModule } from './modules/configuracion/configuracion.modul
     TiendaModule,
     ConfiguracionModule,
     InformesModule,
+    CacheLecturasModule,
+    CotizacionesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { diaAR } from './fecha-sql.js';
 import type { PrismaService } from '../../database/prisma.service.js';
+import { EN_PESOS, type Conversor } from '../cotizaciones/conversor.js';
 
 export interface DineroDevolucionProducto {
   productoId: string;
@@ -24,13 +25,14 @@ export async function dineroDevoluciones(
   empresaId: string,
   desde: Date,
   hasta: Date,
+  conv: Conversor = EN_PESOS,
 ): Promise<DineroDevolucionProducto[]> {
   const filas = await prisma.$queryRaw<{ producto_id: string; nombre: string; unidades: string; ingreso: string; costo: string }[]>(Prisma.sql`
     SELECT
       di.producto_id,
       p.nombre,
       SUM(CASE WHEN di.tipo = 'devuelto' THEN -di.cantidad ELSE di.cantidad END) AS unidades,
-      SUM(CASE WHEN di.tipo = 'devuelto' THEN -1 ELSE 1 END * di.cantidad * di.precio_unitario) AS ingreso,
+      SUM(CASE WHEN di.tipo = 'devuelto' THEN -1 ELSE 1 END * di.cantidad * di.precio_unitario * ${conv.factor(diaAR(Prisma.raw('d.fecha')))}) AS ingreso,
       SUM(CASE WHEN di.tipo = 'devuelto' THEN -1 ELSE 1 END * di.cantidad * COALESCE(
         CASE WHEN di.tipo = 'devuelto' THEN (
           SELECT NULLIF(vi.costo_unitario, 0) FROM ventas_items vi
@@ -39,7 +41,7 @@ export async function dineroDevoluciones(
           LIMIT 1
         ) END,
         pv.costo, p.costo, 0
-      )) AS costo
+      ) * ${conv.factor(diaAR(Prisma.raw('d.fecha')))}) AS costo
     FROM devoluciones d
     JOIN devoluciones_items di ON di.devolucion_id = d.id
     JOIN productos p ON p.id = di.producto_id
@@ -67,11 +69,12 @@ export async function dineroDevolucionesPorDia(
   empresaId: string,
   desde: Date,
   hasta: Date,
+  conv: Conversor = EN_PESOS,
 ): Promise<{ fecha: string; ingreso: number; costo: number }[]> {
   const filas = await prisma.$queryRaw<{ fecha: string; ingreso: string; costo: string }[]>(Prisma.sql`
     SELECT
       (${diaAR(Prisma.raw('d.fecha'))})::text AS fecha,
-      SUM(CASE WHEN di.tipo = 'devuelto' THEN -1 ELSE 1 END * di.cantidad * di.precio_unitario) AS ingreso,
+      SUM(CASE WHEN di.tipo = 'devuelto' THEN -1 ELSE 1 END * di.cantidad * di.precio_unitario * ${conv.factor(diaAR(Prisma.raw('d.fecha')))}) AS ingreso,
       SUM(CASE WHEN di.tipo = 'devuelto' THEN -1 ELSE 1 END * di.cantidad * COALESCE(
         CASE WHEN di.tipo = 'devuelto' THEN (
           SELECT NULLIF(vi.costo_unitario, 0) FROM ventas_items vi
@@ -80,7 +83,7 @@ export async function dineroDevolucionesPorDia(
           LIMIT 1
         ) END,
         pv.costo, p.costo, 0
-      )) AS costo
+      ) * ${conv.factor(diaAR(Prisma.raw('d.fecha')))}) AS costo
     FROM devoluciones d
     JOIN devoluciones_items di ON di.devolucion_id = d.id
     JOIN productos p ON p.id = di.producto_id

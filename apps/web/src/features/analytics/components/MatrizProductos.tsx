@@ -4,7 +4,7 @@ import { CartesianGrid, Cell, LabelList, ReferenceLine, Scatter, ScatterChart, X
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SinDatos } from "@/components/shared/estado-datos";
-import { formatoNumero, formatoPesos } from "@/lib/formato";
+import { formatoNumero, formatoMoneda } from "@/lib/formato";
 import type { GananciaProducto } from "../hooks/use-ganancia-productos";
 
 type Cuadrante = "Estrella" | "Premium" | "Volumen" | "Revisar";
@@ -72,7 +72,7 @@ export function MatrizProductos({ productos }: { productos: GananciaProducto[] }
                         <div className="grid gap-1 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
                           <p className="font-medium">{p.producto}</p>
                           <p className="text-muted-foreground">
-                            {formatoNumero(p.unidades)} unidades · margen {p.margenPct.toFixed(1)}% · ganancia {formatoPesos(p.margen)}
+                            {formatoNumero(p.unidades)} unidades · margen {p.margenPct.toFixed(1)}% · ganancia {formatoMoneda(p.margen)}
                           </p>
                           <p style={{ color: CUADRANTES[p.cuadrante].color }} className="font-medium">
                             {p.cuadrante}

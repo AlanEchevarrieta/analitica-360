@@ -5,7 +5,7 @@ import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartToo
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { SelectorPeriodo, useRangoFechas } from "@/components/shared/selector-periodo";
-import { formatoNumero, formatoPesos } from "@/lib/formato";
+import { formatoNumero, formatoMoneda } from "@/lib/formato";
 import { etiquetaFecha } from "@/lib/periodos";
 import { useContabilidad } from "../hooks/use-analytics";
 import { GastosPanel } from "./GastosPanel";
@@ -25,7 +25,7 @@ function Fila({ etiqueta, valor, fuerte, negativo }: { etiqueta: string; valor: 
   return (
     <div className={`flex justify-between gap-4 py-1.5 ${fuerte ? "border-t font-semibold" : ""}`}>
       <dt className={fuerte ? "" : "text-muted-foreground"}>{etiqueta}</dt>
-      <dd className={`tabular-nums ${valor < 0 ? "text-destructive" : ""}`}>{negativo ? `−${formatoPesos(valor)}` : formatoPesos(valor)}</dd>
+      <dd className={`tabular-nums ${valor < 0 ? "text-destructive" : ""}`}>{negativo ? `−${formatoMoneda(valor)}` : formatoMoneda(valor)}</dd>
     </div>
   );
 }
@@ -46,9 +46,9 @@ export function ContabilidadVista() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Kpi titulo="Resultado neto" valor={formatoPesos(data.totales.neto)} semaforo={data.semaforoMargenNeto} detalle={`Margen neto ${pct(data.ratios.margenNetoPct)} · Rinde ${pct(data.ratios.roiPct)} sobre costo + gastos`} />
+            <Kpi titulo="Resultado neto" valor={formatoMoneda(data.totales.neto)} semaforo={data.semaforoMargenNeto} detalle={`Margen neto ${pct(data.ratios.margenNetoPct)} · Rinde ${pct(data.ratios.roiPct)} sobre costo + gastos`} />
             <Kpi titulo="Margen bruto" valor={pct(data.ratios.margenBrutoPct)} semaforo={data.semaforoMargenBruto} />
-            <Kpi titulo="Punto de equilibrio" valor={formatoPesos(data.ratios.puntoEquilibrio)} detalle="Ventas necesarias para cubrir los gastos" />
+            <Kpi titulo="Punto de equilibrio" valor={formatoMoneda(data.ratios.puntoEquilibrio)} detalle="Ventas necesarias para cubrir los gastos" />
             <Kpi titulo="Días de inventario" valor={formatoNumero(Math.round(data.ratios.diasInventario))} detalle="Cuánto dura el stock al ritmo actual" />
           </div>
 
@@ -79,8 +79,8 @@ export function ContabilidadVista() {
                   <ComposedChart data={[...data.serie6, ...data.proyeccion.map((p) => ({ ...p, clave: `${p.clave} (proy.)` }))]} margin={{ left: 8, right: 8 }}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="clave" tickFormatter={(c: string) => etiquetaFecha(c.slice(0, 7)) + (c.includes("proy") ? "*" : "")} tickLine={false} axisLine={false} fontSize={12} />
-                    <YAxis tickFormatter={(v: number) => formatoPesos(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
-                    <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} />} />
+                    <YAxis tickFormatter={(v: number) => formatoMoneda(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
+                    <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoMoneda(Number(v))} />} />
                     <ChartLegend content={<ChartLegendContent />} />
                     <Bar dataKey="ingresos" fill="var(--color-ingresos)" radius={[3, 3, 0, 0]} />
                     <Bar dataKey="cogs" fill="var(--color-cogs)" radius={[3, 3, 0, 0]} />
@@ -93,9 +93,9 @@ export function ContabilidadVista() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <Kpi titulo="Stock a costo (invertido)" valor={formatoPesos(data.valorStock.invertido)} />
-            <Kpi titulo="Stock a precio de venta" valor={formatoPesos(data.valorStock.valorVenta)} />
-            <Kpi titulo="Ganancia potencial del stock" valor={formatoPesos(data.valorStock.gananciaPotencial)} detalle="Si vendieras todo el stock a precio de lista" />
+            <Kpi titulo="Stock a costo (invertido)" valor={formatoMoneda(data.valorStock.invertido)} />
+            <Kpi titulo="Stock a precio de venta" valor={formatoMoneda(data.valorStock.valorVenta)} />
+            <Kpi titulo="Ganancia potencial del stock" valor={formatoMoneda(data.valorStock.gananciaPotencial)} detalle="Si vendieras todo el stock a precio de lista" />
           </div>
 
           <GastosPanel desde={desde} hasta={hasta} />

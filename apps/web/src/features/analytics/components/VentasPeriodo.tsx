@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { SelectorPeriodo, useRangoFechas } from "@/components/shared/selector-periodo";
-import { formatoNumero, formatoPesos } from "@/lib/formato";
+import { formatoNumero, formatoMoneda } from "@/lib/formato";
 import { claveGranularidad, diasEntre, etiquetaGranularidad, granularidadPara, type Granularidad } from "@/lib/periodos";
 import { etiquetaPago as etiquetaMedio } from "@/features/ventas/types/nueva-venta";
 import { usePeriodo } from "../hooks/use-analytics";
@@ -124,10 +124,10 @@ export function VentasPeriodo() {
       ) : (
         <div className={`flex flex-col gap-4 ${isFetching ? "opacity-60 transition-opacity" : ""}`}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Kpi titulo="Cobrado" valor={formatoPesos(data.data.total)} detalle={data.data.devoluciones.ingreso ? `Neto de devoluciones (${formatoPesos(data.data.devoluciones.ingreso)})` : undefined} />
+            <Kpi titulo="Cobrado" valor={formatoMoneda(data.data.total)} detalle={data.data.devoluciones.ingreso ? `Neto de devoluciones (${formatoMoneda(data.data.devoluciones.ingreso)})` : undefined} />
             <Kpi titulo="Ventas" valor={formatoNumero(data.data.cantidad)} />
-            <Kpi titulo="Ticket promedio" valor={formatoPesos(data.data.cantidad ? data.data.total / data.data.cantidad : 0)} />
-            <Kpi titulo="Por cobrar (señas)" valor={formatoPesos(data.data.porCobrar)} />
+            <Kpi titulo="Ticket promedio" valor={formatoMoneda(data.data.cantidad ? data.data.total / data.data.cantidad : 0)} />
+            <Kpi titulo="Por cobrar (señas)" valor={formatoMoneda(data.data.porCobrar)} />
           </div>
 
           <Card>
@@ -147,11 +147,11 @@ export function VentasPeriodo() {
                 <LineChart data={evolucion} margin={{ left: 8, right: 8 }}>
                   <CartesianGrid vertical={false} />
                   <XAxis dataKey="clave" tickFormatter={(c: string) => etiquetaGranularidad(c, granularidad)} tickLine={false} axisLine={false} fontSize={12} minTickGap={16} />
-                  <YAxis tickFormatter={(v: number) => formatoPesos(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
+                  <YAxis tickFormatter={(v: number) => formatoMoneda(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
                   <ChartTooltip
                     content={
                       <ChartTooltipContent
-                        valueFormatter={(v) => formatoPesos(Number(v))}
+                        valueFormatter={(v) => formatoMoneda(Number(v))}
                         labelFormatter={(l) => `${granularidad === "semana" ? "Semana del " : ""}${etiquetaGranularidad(String(l), granularidad)}`}
                       />
                     }
@@ -172,10 +172,10 @@ export function VentasPeriodo() {
                   <CardDescription>
                     {vistaCuando === "dias"
                       ? diasSemana.mejor
-                        ? `Tu mejor día es el ${diasSemana.mejor.nombre.toLowerCase()}: ${formatoPesos(diasSemana.mejor.total)} en ${formatoNumero(diasSemana.mejor.cantidad)} ventas.`
+                        ? `Tu mejor día es el ${diasSemana.mejor.nombre.toLowerCase()}: ${formatoMoneda(diasSemana.mejor.total)} en ${formatoNumero(diasSemana.mejor.cantidad)} ventas.`
                         : "Sin ventas en el período."
                       : horas.mejor
-                        ? `Tu mejor horario es de ${horas.mejor.hora} a ${horas.mejor.hora + 1} h: ${formatoPesos(horas.mejor.total)} en ${formatoNumero(horas.mejor.cantidad)} ventas.`
+                        ? `Tu mejor horario es de ${horas.mejor.hora} a ${horas.mejor.hora + 1} h: ${formatoMoneda(horas.mejor.total)} en ${formatoNumero(horas.mejor.cantidad)} ventas.`
                         : "Sin ventas en el período."}
                     {vistaCuando === "horas" && (data.data.ventasSinHora ?? 0) > 0 && (
                       <span className="mt-1 block text-xs">
@@ -198,8 +198,8 @@ export function VentasPeriodo() {
                     <BarChart data={horas.filas} margin={{ left: 8, right: 8 }}>
                       <CartesianGrid vertical={false} />
                       <XAxis dataKey="etiqueta" tickLine={false} axisLine={false} fontSize={12} interval="preserveStartEnd" minTickGap={8} />
-                      <YAxis tickFormatter={(v: number) => formatoPesos(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
-                      <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} labelFormatter={(_, p) => { const h = Number(p?.[0]?.payload?.hora ?? 0); return `De ${h} a ${h + 1} h`; }} />} />
+                      <YAxis tickFormatter={(v: number) => formatoMoneda(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
+                      <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoMoneda(Number(v))} labelFormatter={(_, p) => { const h = Number(p?.[0]?.payload?.hora ?? 0); return `De ${h} a ${h + 1} h`; }} />} />
                       <Bar dataKey="total" radius={[4, 4, 0, 0]}>
                         {horas.filas.map((f) => (
                           <Cell key={f.hora} fill={f.total === horas.max && f.total > 0 ? "var(--chart-2)" : "var(--color-total)"} fillOpacity={f.total === horas.max ? 1 : 0.55} />
@@ -212,8 +212,8 @@ export function VentasPeriodo() {
                   <BarChart data={diasSemana.filas} margin={{ left: 8, right: 8 }}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="dia" tickLine={false} axisLine={false} fontSize={12} />
-                    <YAxis tickFormatter={(v: number) => formatoPesos(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
-                    <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} labelFormatter={(_, p) => String(p?.[0]?.payload?.nombre ?? "")} />} />
+                    <YAxis tickFormatter={(v: number) => formatoMoneda(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
+                    <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoMoneda(Number(v))} labelFormatter={(_, p) => String(p?.[0]?.payload?.nombre ?? "")} />} />
                     <Bar dataKey="total" radius={[4, 4, 0, 0]}>
                       {diasSemana.filas.map((f) => (
                         <Cell key={f.dia} fill={f.total === diasSemana.max && f.total > 0 ? "var(--chart-2)" : "var(--color-total)"} fillOpacity={f.total === diasSemana.max ? 1 : 0.55} />
@@ -243,8 +243,8 @@ export function VentasPeriodo() {
                         <BarChart data={ventasVsCompras.filas} margin={{ left: 8, right: 8 }}>
                           <CartesianGrid vertical={false} />
                           <XAxis dataKey="clave" tickFormatter={(c: string) => etiquetaGranularidad(c, granularidadVC)} tickLine={false} axisLine={false} fontSize={12} minTickGap={12} />
-                          <YAxis tickFormatter={(v: number) => formatoPesos(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
-                          <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} labelFormatter={(l) => etiquetaGranularidad(String(l), granularidadVC)} />} />
+                          <YAxis tickFormatter={(v: number) => formatoMoneda(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
+                          <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoMoneda(Number(v))} labelFormatter={(l) => etiquetaGranularidad(String(l), granularidadVC)} />} />
                           <ChartLegend content={<ChartLegendContent />} />
                           <Bar dataKey="ventas" fill="var(--color-ventas)" radius={[3, 3, 0, 0]} />
                           <Bar dataKey="compras" fill="var(--color-compras)" radius={[3, 3, 0, 0]} />
@@ -257,7 +257,7 @@ export function VentasPeriodo() {
                           📈 Tu mejor {NOMBRE_PERIODO[granularidadVC]} fue {etiquetaGranularidad(ventasVsCompras.mejor.clave, granularidadVC)}:{" "}
                           {ventasVsCompras.mejor.compras > 0
                             ? `vendiste ${(ventasVsCompras.mejor.ventas / ventasVsCompras.mejor.compras).toLocaleString("es-AR", { maximumFractionDigits: 1 })} veces lo que compraste.`
-                            : `vendiste ${formatoPesos(ventasVsCompras.mejor.ventas)} sin compras.`}
+                            : `vendiste ${formatoMoneda(ventasVsCompras.mejor.ventas)} sin compras.`}
                         </p>
                       )}
                       {ventasVsCompras.peor && ventasVsCompras.peor.compras > ventasVsCompras.peor.ventas && (
@@ -285,7 +285,7 @@ export function VentasPeriodo() {
                   <div className="flex flex-col items-center gap-4 sm:flex-row">
                     <ChartContainer config={pagos.config} className="aspect-square h-56 shrink-0">
                       <PieChart>
-                        <ChartTooltip content={<ChartTooltipContent nameKey="nombre" hideLabel valueFormatter={(v) => formatoPesos(Number(v))} />} />
+                        <ChartTooltip content={<ChartTooltipContent nameKey="nombre" hideLabel valueFormatter={(v) => formatoMoneda(Number(v))} />} />
                         <Pie data={pagos.filas} dataKey="total" nameKey="nombre" innerRadius="62%" outerRadius="92%" paddingAngle={2} cornerRadius={4} strokeWidth={0}>
                           <Label
                             content={({ viewBox }) => {
@@ -294,7 +294,7 @@ export function VentasPeriodo() {
                               return (
                                 <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
                                   <tspan x={cx} y={cy - 8} className="fill-foreground text-lg font-semibold">
-                                    {formatoPesos(pagos.total)}
+                                    {formatoMoneda(pagos.total)}
                                   </tspan>
                                   <tspan x={cx} y={cy + 14} className="fill-muted-foreground text-xs">
                                     total cobrado
@@ -312,7 +312,7 @@ export function VentasPeriodo() {
                           <span className="size-2.5 shrink-0 rounded-full" style={{ background: f.fill }} aria-hidden />
                           <span className="flex-1 truncate">{f.nombre}</span>
                           <span className="text-muted-foreground tabular-nums">{pagos.total ? Math.round((f.total / pagos.total) * 100) : 0}%</span>
-                          <span className="w-28 text-right font-medium tabular-nums">{formatoPesos(f.total)}</span>
+                          <span className="w-28 text-right font-medium tabular-nums">{formatoMoneda(f.total)}</span>
                         </li>
                       ))}
                     </ul>

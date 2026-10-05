@@ -5,9 +5,11 @@ import { RequireModulo } from '../../common/decorators/permiso.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { ContabilidadService } from './contabilidad.service.js';
 import { contabilidadQuerySchema, type ContabilidadQuery } from './contabilidad.dto.js';
+import { CacheLectura } from '../../common/cache/cache-lecturas.js';
 
 @Controller('contabilidad')
 @RequireModulo('contabilidad')
+@CacheLectura()
 export class ContabilidadController {
   constructor(private readonly contabilidadService: ContabilidadService) {}
 
@@ -16,6 +18,6 @@ export class ContabilidadController {
     @CurrentEmpresa() empresa: EmpresaContext,
     @Query(new ZodValidationPipe(contabilidadQuerySchema)) query: ContabilidadQuery,
   ) {
-    return this.contabilidadService.contabilidad(empresa.id, query.desde, query.hasta);
+    return this.contabilidadService.contabilidad(empresa.id, query.desde, query.hasta, query.moneda);
   }
 }

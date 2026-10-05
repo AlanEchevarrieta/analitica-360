@@ -3,16 +3,21 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
 import { useApiFetch } from "@/hooks/use-api";
+import { paramMoneda, useMoneda } from "@/lib/moneda";
 import type { Contabilidad, EstadosContables, Gasto, Inflacion, Insights, Combo, MovimientoFinanciero, Periodo, TipoMovimientoFinanciero } from "../types";
 
-function useConsulta<T>(clave: unknown[], ruta: string | null) {
+/** `conMoneda`: el reporte se puede ver en dólares (botón $ / US$). */
+function useConsulta<T>(clave: unknown[], ruta: string | null, conMoneda = false) {
   const api = useApiFetch();
   const { orgId } = useAuth();
+  const moneda = useMoneda();
+  const m = conMoneda ? moneda : "ARS";
   return useQuery({
-    queryKey: [...clave, orgId],
-    queryFn: () => api<T>(ruta!),
+    queryKey: [...clave, orgId, m],
+    queryFn: () => api<T>(`${ruta!}${paramMoneda(m)}`),
     enabled: Boolean(orgId && ruta),
-    placeholderData: keepPreviousData,
+    // Mientras carga se muestra lo anterior, pero nunca pesos con el signo de dólar (ni al revés).
+    placeholderData: (anterior, consulta) => (consulta?.queryKey.at(-1) === m ? keepPreviousData(anterior) : undefined),
   });
 }
 
@@ -20,6 +25,7 @@ export const usePeriodo = (desde: string, hasta: string, granularidad: "dia" | "
   useConsulta<{ avisoLimite: number | null; data: Periodo | null }>(
     ["periodo", desde, hasta, granularidad],
     `/analytics/periodo?desde=${desde}&hasta=${hasta}&granularidad=${granularidad}`,
+    true,
   );
 
 export interface FilaRendimiento {
@@ -37,10 +43,11 @@ export const useRendimiento = (desde: string, hasta: string) =>
   useConsulta<{ periodoAnterior: { desde: string; hasta: string }; porUbicacion: FilaRendimiento[]; porVendedor: FilaRendimiento[] }>(
     ["rendimiento", desde, hasta],
     `/analytics/rendimiento?desde=${desde}&hasta=${hasta}`,
+    true,
   );
 
 export const useContabilidad = (desde: string, hasta: string) =>
-  useConsulta<Contabilidad>(["contabilidad", desde, hasta], `/contabilidad?desde=${desde}&hasta=${hasta}`);
+  useConsulta<Contabilidad>(["contabilidad", desde, hasta], `/contabilidad?desde=${desde}&hasta=${hasta}`, true);
 
 export const useGastos = (desde: string, hasta: string) =>
   useConsulta<Gasto[]>(["gastos", desde, hasta], `/gastos?desde=${desde}&hasta=${hasta}`);

@@ -1,3 +1,4 @@
+import type { Conversor } from '../cotizaciones/conversor.js';
 export interface DashboardHoy {
   cantidad: number;
   total: number;
@@ -57,7 +58,7 @@ export const DASHBOARD_REPOSITORY = Symbol('DASHBOARD_REPOSITORY');
  * real y portar la lógica 1:1 en vez de adivinarla.
  */
 export interface DashboardRepository {
-  inicio(empresaId: string): Promise<DashboardInicioBase>;
+  inicio(empresaId: string, conv?: Conversor): Promise<DashboardInicioBase>;
   /** Serie diaria de ventas de los últimos `dias` (7/30/90), sin RPC en el legacy - consulta directa. */
   serieHome(empresaId: string, dias: RangoHome): Promise<DashboardDiaSerie[]>;
 }

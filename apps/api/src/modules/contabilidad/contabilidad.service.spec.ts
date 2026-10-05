@@ -2,6 +2,8 @@ import { Test } from '@nestjs/testing';
 import { ContabilidadService } from './contabilidad.service.js';
 import { CONTABILIDAD_REPOSITORY, type ContabilidadRepository } from './contabilidad.repository.js';
 import { GASTO_REPOSITORY, type GastoRepository } from './gasto.repository.js';
+import { CotizacionesService } from '../cotizaciones/cotizaciones.service.js';
+import { EN_PESOS } from '../cotizaciones/conversor.js';
 
 describe('ContabilidadService', () => {
   let service: ContabilidadService;
@@ -12,7 +14,7 @@ describe('ContabilidadService', () => {
     repository = { ventasConItems: vi.fn(), valorStock: vi.fn(), perdidasPorDia: vi.fn().mockResolvedValue([]) };
     gastoRepository = { listar: vi.fn(), crear: vi.fn(), anular: vi.fn() };
     const module = await Test.createTestingModule({
-      providers: [
+      providers: [{ provide: CotizacionesService, useValue: { conversor: async () => EN_PESOS } }, 
         ContabilidadService,
         { provide: CONTABILIDAD_REPOSITORY, useValue: repository },
         { provide: GASTO_REPOSITORY, useValue: gastoRepository },

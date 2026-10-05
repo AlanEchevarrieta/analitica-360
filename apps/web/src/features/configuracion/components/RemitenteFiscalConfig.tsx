@@ -60,6 +60,7 @@ export function FiscalConfig({ config }: { config: Configuracion }) {
     mostrarIva: config.mostrarIvaVentas,
     condicion: config.condicionFiscal,
     categoria: config.categoriaMonotributo ?? "",
+    dolar: config.dolarTipo ?? "blue",
   });
   return (
     <div className="grid max-w-xl gap-3 sm:grid-cols-3">
@@ -97,6 +98,14 @@ export function FiscalConfig({ config }: { config: Configuracion }) {
           <option value="otro">Otro</option>
         </select>
       </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="fis-dolar">Dólar para ver en US$</Label>
+        <select id="fis-dolar" className="h-8 rounded-lg border bg-transparent px-2 text-sm" value={f.dolar} onChange={(e) => setF({ ...f, dolar: e.target.value })}>
+          <option value="blue">Blue</option>
+          <option value="oficial">Oficial (BNA)</option>
+          <option value="bolsa">MEP</option>
+        </select>
+      </div>
       <Campo id="fis-moneda" etiqueta="Moneda" valor={f.moneda} onCambiar={(v) => setF({ ...f, moneda: v.toUpperCase() })} maxLength={3} />
       <Campo id="fis-simbolo" etiqueta="Símbolo" valor={f.simbolo} onCambiar={(v) => setF({ ...f, simbolo: v })} maxLength={4} />
       <Campo id="fis-nombre-iva" etiqueta="Impuesto" valor={f.nombreIva} onCambiar={(v) => setF({ ...f, nombreIva: v })} />
@@ -119,6 +128,7 @@ export function FiscalConfig({ config }: { config: Configuracion }) {
               mostrarIvaVentas: f.mostrarIva,
               condicionFiscal: f.condicion,
               categoriaMonotributo: f.condicion === "monotributo" && f.categoria ? f.categoria : null,
+              dolarTipo: f.dolar,
             },
             aviso,
           )

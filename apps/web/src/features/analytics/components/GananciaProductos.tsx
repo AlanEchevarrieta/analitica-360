@@ -5,7 +5,7 @@ import { Info } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
-import { formatoNumero, formatoPesos } from "@/lib/formato";
+import { formatoNumero, formatoMoneda } from "@/lib/formato";
 import { diasEntre, hoyAR } from "@/lib/periodos";
 import { SelectorPeriodo, useRangoFechas } from "@/components/shared/selector-periodo";
 import { Kpi } from "./comunes";
@@ -58,9 +58,9 @@ export function GananciaProductos() {
       ) : (
         <div className={`flex flex-col gap-4 ${isFetching ? "opacity-60 transition-opacity" : ""}`}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Kpi titulo="Vendido (neto de descuentos)" valor={formatoPesos(totales.total)} detalle={`${formatoNumero(totales.unidades)} unidades`} />
-            <Kpi titulo="Costo de lo vendido" valor={formatoPesos(totales.costo)} />
-            <Kpi titulo="Ganancia bruta" valor={formatoPesos(ganancia)} />
+            <Kpi titulo="Vendido (neto de descuentos)" valor={formatoMoneda(totales.total)} detalle={`${formatoNumero(totales.unidades)} unidades`} />
+            <Kpi titulo="Costo de lo vendido" valor={formatoMoneda(totales.costo)} />
+            <Kpi titulo="Ganancia bruta" valor={formatoMoneda(ganancia)} />
             <Kpi titulo="Margen" valor={`${margenPct.toFixed(1)}%`} />
           </div>
 
@@ -101,10 +101,10 @@ export function GananciaProductos() {
                             {(p.unidades / diasPeriodo).toLocaleString("es-AR", { maximumFractionDigits: 1 })} u/día
                           </TableCell>
                         )}
-                        <TableCell className="text-right tabular-nums">{formatoPesos(p.total)}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">{formatoPesos(p.costo)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatoMoneda(p.total)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted-foreground">{formatoMoneda(p.costo)}</TableCell>
                         <TableCell className={`text-right font-medium tabular-nums ${p.margen < 0 ? "text-destructive" : ""}`}>
-                          {formatoPesos(p.margen)}
+                          {formatoMoneda(p.margen)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{p.margenPct.toFixed(1)}%</TableCell>
                       </TableRow>

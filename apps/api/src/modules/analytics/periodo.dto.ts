@@ -7,6 +7,8 @@ export const periodoQuerySchema = z
     desde: fechaIso,
     hasta: fechaIso,
     granularidad: z.enum(['dia', 'semana', 'mes', 'anio']).default('dia'),
+    /** USD: montos pasados a dólares con la cotización del día de cada venta. */
+    moneda: z.enum(['ARS', 'USD']).optional(),
   })
   .refine((q) => q.hasta >= q.desde, { message: 'PERIODO_INVALIDO', path: ['hasta'] });
 export type PeriodoQuery = z.infer<typeof periodoQuerySchema>;

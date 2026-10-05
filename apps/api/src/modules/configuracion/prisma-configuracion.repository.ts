@@ -53,6 +53,7 @@ export function aRecord(c: ConfiguracionEmpresa | null): ConfiguracionRecord {
     nombreIva: c?.nombreIva ?? 'IVA',
     mostrarIvaVentas: c?.mostrarIvaVentas ?? false,
     condicionFiscal: c?.condicionFiscal ?? 'monotributo',
+    dolarTipo: c?.dolarTipo ?? 'blue',
     valorHora: c?.valorHora?.toNumber() ?? null,
     categoriaMonotributo: c?.categoriaMonotributo ?? null,
   };
@@ -103,6 +104,7 @@ export class PrismaConfiguracionRepository implements ConfiguracionRepository {
         ...(input.nombreIva ? { nombreIva: input.nombreIva } : {}),
         ...(input.mostrarIvaVentas !== undefined ? { mostrarIvaVentas: input.mostrarIvaVentas } : {}),
         ...(input.condicionFiscal ? { condicionFiscal: input.condicionFiscal } : {}),
+        ...(input.dolarTipo ? { dolarTipo: input.dolarTipo } : {}),
         ...(input.valorHora !== undefined ? { valorHora: input.valorHora } : {}),
         ...(input.categoriaMonotributo !== undefined ? { categoriaMonotributo: input.categoriaMonotributo } : {}),
         inventario: inventario as Prisma.InputJsonValue,

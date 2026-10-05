@@ -2,18 +2,24 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import { diaAR } from './fecha-sql.js';
+import type { Conversor } from '../cotizaciones/conversor.js';
+import { CotizacionesService, type Moneda } from '../cotizaciones/cotizaciones.service.js';
 import { periodoAnterior, rendimiento, type FilaVentas } from './rendimiento.util.js';
 
 @Injectable()
 export class RendimientoService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cotizaciones: CotizacionesService,
+  ) {}
 
   /** Ventas del período por stand (ubicación de la que salió la mercadería) y por vendedor (quién la cargó). */
-  private async filas(empresaId: string, desde: string, hasta: string) {
+  private async filas(empresaId: string, desde: string, hasta: string, conv: Conversor) {
     const dia = diaAR(Prisma.raw('v.fecha'));
+    const f = conv.factor(dia);
     const [ubicaciones, vendedores] = await Promise.all([
       this.prisma.$queryRaw<{ clave: string; ventas: bigint; total: string }[]>(Prisma.sql`
-        SELECT COALESCE(u.ubicacion, '') AS clave, COUNT(*) AS ventas, SUM(COALESCE(v.total_con_interes, 0)) AS total
+        SELECT COALESCE(u.ubicacion, '') AS clave, COUNT(*) AS ventas, SUM(COALESCE(v.total_con_interes, 0) * ${f}) AS total
         FROM ventas v
         LEFT JOIN LATERAL (
           SELECT m.ubicacion_origen AS ubicacion FROM movimientos_inventario m
@@ -22,7 +28,7 @@ export class RendimientoService {
         WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL AND ${dia} BETWEEN ${desde}::date AND ${hasta}::date
         GROUP BY 1`),
       this.prisma.$queryRaw<{ clave: string; nombre: string; ventas: bigint; total: string }[]>(Prisma.sql`
-        SELECT v.usuario_id::text AS clave, COALESCE(us.nombre, us.email, 'Sin usuario') AS nombre, COUNT(*) AS ventas, SUM(COALESCE(v.total_con_interes, 0)) AS total
+        SELECT v.usuario_id::text AS clave, COALESCE(us.nombre, us.email, 'Sin usuario') AS nombre, COUNT(*) AS ventas, SUM(COALESCE(v.total_con_interes, 0) * ${f}) AS total
         FROM ventas v
         LEFT JOIN usuarios us ON us.id = v.usuario_id
         WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL AND ${dia} BETWEEN ${desde}::date AND ${hasta}::date
@@ -35,9 +41,10 @@ export class RendimientoService {
     };
   }
 
-  async rendimiento(empresaId: string, desde: string, hasta: string) {
+  async rendimiento(empresaId: string, desde: string, hasta: string, moneda?: Moneda) {
     const previo = periodoAnterior(desde, hasta);
-    const [actual, anterior] = await Promise.all([this.filas(empresaId, desde, hasta), this.filas(empresaId, previo.desde, previo.hasta)]);
+    const conv = await this.cotizaciones.conversor(empresaId, moneda, previo.desde, hasta);
+    const [actual, anterior] = await Promise.all([this.filas(empresaId, desde, hasta, conv), this.filas(empresaId, previo.desde, previo.hasta, conv)]);
     return {
       periodoAnterior: previo,
       porUbicacion: rendimiento(actual.porUbicacion, anterior.porUbicacion),

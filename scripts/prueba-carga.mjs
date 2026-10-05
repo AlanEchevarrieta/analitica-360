@@ -31,6 +31,9 @@ const { jwt } = await clerk(`/sessions/${sesion.id}/tokens`); // dura 60 s: alca
 const fin = Date.now() + Number(seg) * 1000;
 const tiempos = [];
 let errores = 0;
+/** Qué fallaron: código HTTP o tipo de error de red. */
+const fallas = new Map();
+const fallo = (k) => fallas.set(k, (fallas.get(k) ?? 0) + 1);
 const porRuta = new Map();
 
 async function usuarioVirtual(i) {
@@ -41,9 +44,13 @@ async function usuarioVirtual(i) {
     try {
       const r = await fetch(`http://localhost:3001${ruta}`, { headers: { Authorization: `Bearer ${jwt}` } });
       await r.arrayBuffer();
-      if (!r.ok) errores++;
-    } catch {
+      if (!r.ok) {
+        errores++;
+        fallo(`${r.status} ${ruta.split('?')[0]}`);
+      }
+    } catch (e) {
       errores++;
+      fallo(`${e.cause?.code ?? e.name} ${ruta.split('?')[0]}`);
     }
     const ms = performance.now() - t0;
     tiempos.push(ms);
@@ -60,5 +67,6 @@ await clerk(`/sessions/${sesion.id}/revoke`);
 
 const p = (arr, q) => { const s = [...arr].sort((a, b) => a - b); return Math.round(s[Math.min(s.length - 1, Math.floor(s.length * q))]); };
 console.log(`${n} usuarios simultáneos, ${duracion.toFixed(0)} s: ${tiempos.length} pedidos (${Math.round(tiempos.length / duracion)} por segundo), errores: ${errores}`);
+if (fallas.size) console.log(`errores: ${[...fallas].map(([k, v]) => `${v}× ${k}`).join(' · ')}`);
 console.log(`tiempo de respuesta: mediana ${p(tiempos, 0.5)} ms · 95% por debajo de ${p(tiempos, 0.95)} ms · peor ${p(tiempos, 1)} ms`);
 for (const [ruta, arr] of [...porRuta].sort((a, b) => p(b[1], 0.95) - p(a[1], 0.95)).slice(0, 5)) console.log(`  p95 ${String(p(arr, 0.95)).padStart(5)} ms  ${ruta}`);

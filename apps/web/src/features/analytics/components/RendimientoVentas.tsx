@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SinDatos } from "@/components/shared/estado-datos";
-import { formatoNumero, formatoPesos } from "@/lib/formato";
+import { formatoNumero, formatoMoneda } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { useRendimiento, type FilaRendimiento } from "../hooks/use-analytics";
 
@@ -77,13 +77,13 @@ export function RendimientoVentas({ desde, hasta }: { desde: string; hasta: stri
                     <TableCell className="font-medium">
                       {f.nombre}
                       <span className="block text-xs font-normal text-muted-foreground sm:hidden">
-                        {formatoNumero(f.ventas)} {f.ventas === 1 ? "venta" : "ventas"} · {formatoPesos(f.total)}
+                        {formatoNumero(f.ventas)} {f.ventas === 1 ? "venta" : "ventas"} · {formatoMoneda(f.total)}
                       </span>
                     </TableCell>
                     <TableCell className="hidden text-right tabular-nums sm:table-cell">{formatoNumero(f.ventas)}</TableCell>
-                    <TableCell className="hidden text-right tabular-nums sm:table-cell">{formatoPesos(f.total)}</TableCell>
+                    <TableCell className="hidden text-right tabular-nums sm:table-cell">{formatoMoneda(f.total)}</TableCell>
                     <TableCell className={cn("text-right font-medium tabular-nums", !unoSolo && f.ticket > ticketGeneral * 1.1 && "text-emerald-600 dark:text-emerald-400")}>
-                      {formatoPesos(f.ticket)}
+                      {formatoMoneda(f.ticket)}
                       <span className={cn("block text-xs font-normal sm:hidden", colorVariacion(f.variacion))}>{f.variacion == null ? "nuevo" : `${textoVariacion(f.variacion)} vs. antes`}</span>
                     </TableCell>
                     <TableCell className={cn("hidden text-right tabular-nums sm:table-cell", colorVariacion(f.variacion))}>{textoVariacion(f.variacion)}</TableCell>

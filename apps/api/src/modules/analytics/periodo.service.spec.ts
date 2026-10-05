@@ -1,6 +1,8 @@
 import { Test } from '@nestjs/testing';
 import { AnalyticsPeriodoService, LIMITE_ANALYTICS_VENTAS } from './periodo.service.js';
 import { ANALYTICS_PERIODO_REPOSITORY, type AnalyticsPeriodoRepository } from './periodo.repository.js';
+import { CotizacionesService } from '../cotizaciones/cotizaciones.service.js';
+import { EN_PESOS } from '../cotizaciones/conversor.js';
 
 describe('AnalyticsPeriodoService', () => {
   let service: AnalyticsPeriodoService;
@@ -16,7 +18,7 @@ describe('AnalyticsPeriodoService', () => {
       comprasPorDia: vi.fn().mockResolvedValue([]),
     };
     const module = await Test.createTestingModule({
-      providers: [AnalyticsPeriodoService, { provide: ANALYTICS_PERIODO_REPOSITORY, useValue: repository }],
+      providers: [{ provide: CotizacionesService, useValue: { conversor: async () => EN_PESOS } }, AnalyticsPeriodoService, { provide: ANALYTICS_PERIODO_REPOSITORY, useValue: repository }],
     }).compile();
     service = module.get(AnalyticsPeriodoService);
   });

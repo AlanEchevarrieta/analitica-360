@@ -8,7 +8,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
-import { formatoNumero, formatoPesos } from "@/lib/formato";
+import { formatoNumero, formatoMoneda } from "@/lib/formato";
 import { useDashboard } from "../hooks/use-dashboard";
 import { AvisoMonotributo } from "@/features/analytics/components/MonotributoCard";
 
@@ -52,12 +52,12 @@ export function InicioDashboard() {
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Kpi
           titulo="Ventas de hoy"
-          valor={formatoPesos(data.hoy.total)}
+          valor={formatoMoneda(data.hoy.total)}
           detalle={`${data.hoy.cantidad} ${data.hoy.cantidad === 1 ? "venta" : "ventas"}`}
         />
-        <Kpi titulo="Esta semana" valor={formatoPesos(data.semana)} />
-        <Kpi titulo="Este mes" valor={formatoPesos(data.mes)} />
-        <Kpi titulo="Compras del mes" valor={formatoPesos(data.comprasMes)} />
+        <Kpi titulo="Esta semana" valor={formatoMoneda(data.semana)} />
+        <Kpi titulo="Este mes" valor={formatoMoneda(data.mes)} />
+        <Kpi titulo="Compras del mes" valor={formatoMoneda(data.comprasMes)} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -76,9 +76,9 @@ export function InicioDashboard() {
                   axisLine={false}
                   fontSize={12}
                   width={70}
-                  tickFormatter={(v: number) => formatoPesos(v)}
+                  tickFormatter={(v: number) => formatoMoneda(v)}
                 />
-                <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoPesos(Number(v))} />} />
+                <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoMoneda(Number(v))} />} />
                 <Bar dataKey="total" fill="var(--color-total)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ChartContainer>

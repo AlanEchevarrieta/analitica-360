@@ -2,6 +2,8 @@ import { Test } from '@nestjs/testing';
 import { DashboardService } from './dashboard.service.js';
 import { DASHBOARD_REPOSITORY, type DashboardInicioBase, type DashboardRepository } from './dashboard.repository.js';
 import { ClientesService } from '../clientes/clientes.service.js';
+import { CotizacionesService } from '../cotizaciones/cotizaciones.service.js';
+import { EN_PESOS } from '../cotizaciones/conversor.js';
 
 const baseInicio: DashboardInicioBase = {
   hoy: { cantidad: 2, total: 500 },
@@ -24,7 +26,7 @@ describe('DashboardService', () => {
     repository = { inicio: vi.fn(), serieHome: vi.fn() };
     clientesService = { cumpleanosProximos: vi.fn() };
     const module = await Test.createTestingModule({
-      providers: [
+      providers: [{ provide: CotizacionesService, useValue: { conversor: async () => EN_PESOS } }, 
         DashboardService,
         { provide: DASHBOARD_REPOSITORY, useValue: repository },
         { provide: ClientesService, useValue: clientesService },

@@ -1,3 +1,4 @@
+import type { Conversor } from '../cotizaciones/conversor.js';
 export type GranularidadPeriodo = 'dia' | 'semana' | 'mes' | 'anio';
 
 export interface AnalyticsPeriodoProducto {
@@ -73,13 +74,13 @@ export interface AnalyticsPeriodoRepository {
   /** Puerto de analytics_contar_ventas() - gate de LIMITE_ANALYTICS_VENTAS antes de cargar el resto. */
   contarVentas(empresaId: string, desde: string, hasta: string): Promise<number>;
   /** Puerto de analytics_periodo(): total/cantidad/ticket/costo/por_cobrar + detalle de ventas y productos del período. */
-  periodoBase(empresaId: string, desde: string, hasta: string): Promise<AnalyticsPeriodoBase>;
+  periodoBase(empresaId: string, desde: string, hasta: string, conv?: Conversor): Promise<AnalyticsPeriodoBase>;
   /** Puerto de analytics_evolucion(): serie por día/semana/mes con comparación contra el período anterior de igual duración. */
-  evolucion(empresaId: string, desde: string, hasta: string, granularidad: GranularidadPeriodo): Promise<AnalyticsEvolucionPunto[]>;
+  evolucion(empresaId: string, desde: string, hasta: string, granularidad: GranularidadPeriodo, conv?: Conversor): Promise<AnalyticsEvolucionPunto[]>;
   /** Compras del período por día (total real con flete e impuestos), para "Ventas vs Compras". */
-  comprasPorDia(empresaId: string, desde: string, hasta: string): Promise<{ fecha: string; total: number }[]>;
+  comprasPorDia(empresaId: string, desde: string, hasta: string, conv?: Conversor): Promise<{ fecha: string; total: number }[]>;
   /** Puerto de analytics_formas_pago(). */
-  formasPago(empresaId: string, desde: string, hasta: string): Promise<AnalyticsFormaPago[]>;
+  formasPago(empresaId: string, desde: string, hasta: string, conv?: Conversor): Promise<AnalyticsFormaPago[]>;
   /** Puerto de analytics_top_productos(): top 10 por facturación (no por unidades). */
-  topProductos(empresaId: string, desde: string, hasta: string): Promise<AnalyticsTopProducto[]>;
+  topProductos(empresaId: string, desde: string, hasta: string, conv?: Conversor): Promise<AnalyticsTopProducto[]>;
 }

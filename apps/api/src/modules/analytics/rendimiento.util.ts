@@ -36,7 +36,8 @@ export function rendimiento(actual: FilaVentas[], anterior: FilaVentas[]): FilaR
       return {
         ...f,
         pct: total > 0 ? r1((f.total / total) * 100) : 0,
-        ticket: f.ventas > 0 ? Math.round(f.total / f.ventas) : 0,
+        // Con centavos: en dólares un ticket de US$ 46,73 no se puede redondear a 47.
+        ticket: f.ventas > 0 ? Math.round((f.total / f.ventas) * 100) / 100 : 0,
         totalAnterior,
         variacion: totalAnterior > 0 ? r1(((f.total - totalAnterior) / totalAnterior) * 100) : null,
       };

@@ -260,6 +260,8 @@ model ConfiguracionEmpresa {
   alicuotaIva             Decimal  @default(21.00) @map("alicuota_iva") @db.Decimal(5, 2)
   nombreIva               String   @default("IVA") @map("nombre_iva")
   mostrarIvaVentas        Boolean  @default(false) @map("mostrar_iva_ventas")
+  /// Dólar para ver los reportes en US$: blue | oficial | bolsa (MEP).
+  dolarTipo               String   @default("blue") @map("dolar_tipo") @db.VarChar(10)
   /// monotributo | responsable_inscripto | exento | otro
   condicionFiscal         String   @default("monotributo") @map("condicion_fiscal")
   /// Letra de la categoría de monotributo (A a K), si corresponde.
@@ -480,6 +482,8 @@ model MovimientoInventario {
 
   @@index([empresaId, productoId, fecha])
   @@index([referenciaId]) // movimientos de un documento (anular venta/compra, remito)
+  /// Stock y valorización sumando movimientos sin leer la tabla (index-only scan).
+  @@index([empresaId, productoId, deletedAt, cantidad, signo, varianteId, tipo, referenciaId, fecha], map: "movimientos_inventario_stock_idx")
   @@map("movimientos_inventario")
 }
 
@@ -1689,4 +1693,16 @@ model InformeEnviado {
   @@unique([empresaId, tipo, desde])
   @@index([creadoEn])
   @@map("informes_enviados")
+}
+
+/// Cotización del dólar por día (fuente: api.argentinadatos.com). Los fines de semana y feriados no hay fila: vale la del último día anterior.
+model CotizacionDolar {
+  /// blue | oficial | bolsa (MEP)
+  casa   String   @db.VarChar(10)
+  fecha  DateTime @db.Date
+  compra Decimal  @db.Decimal(12, 2)
+  venta  Decimal  @db.Decimal(12, 2)
+
+  @@id([casa, fecha])
+  @@map("cotizaciones_dolar")
 }

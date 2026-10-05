@@ -13,9 +13,11 @@ import {
   type CrearMovimientoFinancieroDto,
   type PeriodoEstados,
 } from './estados-contables.dto.js';
+import { CacheLectura } from '../../common/cache/cache-lecturas.js';
 
 @Controller('estados-contables')
 @RequireModulo('contabilidad')
+@CacheLectura()
 export class EstadosContablesController {
   constructor(private readonly service: EstadosContablesService) {}
 
@@ -58,6 +60,7 @@ export class MovimientosFinancierosController {
 /** Libro diario y mayor del período, armados a partir de las operaciones. */
 @Controller('libro-diario')
 @RequireModulo('contabilidad')
+@CacheLectura()
 export class LibroDiarioController {
   constructor(private readonly service: LibroDiarioService) {}
 

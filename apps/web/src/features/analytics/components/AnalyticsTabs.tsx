@@ -5,6 +5,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAcceso } from "@/hooks/use-acceso";
 import type { ModuloClave } from "@/lib/rol";
+import { SelectorMoneda } from "@/components/shared/selector-moneda";
+
+/** Secciones que se ven solo en pesos: los balances y el libro no cierran si cada línea va con otra cotización; Insights mezcla precios de hoy e históricos. */
+const SOLO_PESOS = ["/analytics/estados", "/analytics/libro", "/analytics/insights"];
+
+/** Título de Analytics con el botón $ / US$. */
+export function EncabezadoAnalytics() {
+  const pathname = usePathname();
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h1 className="text-xl font-semibold">Analytics</h1>
+      <SelectorMoneda soloPesos={SOLO_PESOS.some((r) => pathname.startsWith(r))} />
+    </div>
+  );
+}
 
 const TABS: { href: string; etiqueta: string; modulo?: ModuloClave }[] = [
   { href: "/analytics/ventas", etiqueta: "Ventas" },

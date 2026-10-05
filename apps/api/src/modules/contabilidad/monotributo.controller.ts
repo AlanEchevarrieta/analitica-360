@@ -7,10 +7,12 @@ import { RequireModulo } from '../../common/decorators/permiso.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { MonotributoService } from './monotributo.service.js';
 import { CATEGORIAS_MONOTRIBUTO } from './monotributo.util.js';
+import { CacheLectura } from '../../common/cache/cache-lecturas.js';
 
 /** Estado del monotributo de la empresa: facturación de 12 meses contra el tope de su categoría. */
 @Controller('monotributo')
 @RequireModulo('contabilidad')
+@CacheLectura()
 export class MonotributoController {
   constructor(private readonly service: MonotributoService) {}
 

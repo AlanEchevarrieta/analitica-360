@@ -17,6 +17,7 @@ import {
   type TotalesPeriodo,
 } from './contabilidad.util.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
+import { CotizacionesService, type Moneda } from '../cotizaciones/cotizaciones.service.js';
 
 export interface ContabilidadRespuesta {
   totales: TotalesPeriodo;
@@ -35,24 +36,38 @@ export class ContabilidadService {
   constructor(
     @Inject(CONTABILIDAD_REPOSITORY) private readonly repository: ContabilidadRepository,
     @Inject(GASTO_REPOSITORY) private readonly gastoRepository: GastoRepository,
+    private readonly cotizaciones: CotizacionesService,
   ) {}
 
-  async contabilidad(empresaId: string, desde: string, hasta: string): Promise<ContabilidadRespuesta> {
+  async contabilidad(empresaId: string, desde: string, hasta: string, moneda?: Moneda): Promise<ContabilidadRespuesta> {
     const hoy = fechaHoyAR();
     const claves6 = mesesAtras(hoy, 6);
     const desdeHist = `${claves6[0]}-01`;
 
-    const [{ ventas, items }, gastosCargados, valorStock, perdidas] = await Promise.all([
+    const [{ ventas: ventasArs, items: itemsArs }, gastosCargados, valorStockArs, perdidasArs, conv] = await Promise.all([
       this.repository.ventasConItems(empresaId, desdeHist, hoy),
       // Desde el principio: un recurrente cargado hace un año sigue generando gasto este mes.
       this.gastoRepository.listar(empresaId, '2000-01-01', hoy),
       this.repository.valorStock(empresaId),
       this.repository.perdidasPorDia(empresaId, desdeHist, hoy),
+      this.cotizaciones.conversor(empresaId, moneda, desde < desdeHist ? desde : desdeHist, hoy),
     ]);
+    // En dólares: cada venta, costo, gasto y pérdida con la cotización de su día; el stock (a costo actual), con la de hoy.
+    const ventas = ventasArs.map((v) => ({ ...v, total: conv.a(v.total, v.fecha) }));
+    const fechaVenta = new Map(ventasArs.map((v) => [v.id, v.fecha]));
+    const items = itemsArs.map((i) => ({ ...i, cogs: conv.a(i.cogs, fechaVenta.get(i.ventaId) ?? hoy) }));
+    const perdidas = perdidasArs.map((p) => ({ ...p, monto: conv.a(p.monto, p.fecha) }));
+    const valorStock = {
+      invertido: valorStockArs.invertido / conv.hoy,
+      valorVenta: valorStockArs.valorVenta / conv.hoy,
+      gananciaPotencial: valorStockArs.gananciaPotencial / conv.hoy,
+    };
 
     // La mercadería perdida (mermas, roturas…) cuenta como un gasto más, igual que en el estado de resultados.
     const gastosHist = [
-      ...expandirRecurrentes(gastosCargados, hoy).filter((g) => g.fecha >= desdeHist),
+      ...expandirRecurrentes(gastosCargados, hoy)
+        .filter((g) => g.fecha >= desdeHist)
+        .map((g) => ({ ...g, monto: conv.a(g.monto, g.fecha) })),
       ...perdidas.map((p) => ({ fecha: p.fecha, monto: p.monto, recurrente: false })),
     ];
     const serie6 = serieMensual(claves6, ventas, items, gastosHist);

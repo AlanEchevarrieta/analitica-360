@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
-import { dineroDevoluciones, sumarDinero } from './devoluciones-dinero.js';
+import { dineroDevoluciones, dineroDevolucionesPorDia, sumarDinero } from './devoluciones-dinero.js';
+import { EN_PESOS, type Conversor } from '../cotizaciones/conversor.js';
 import type {
   DashboardDiaSerie,
   DashboardInicioBase,
@@ -42,14 +43,16 @@ function rangoDelDiaAR(iso: string): { desde: Date; hasta: Date } {
 export class PrismaDashboardRepository implements DashboardRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async totalYCantidadEnRango(empresaId: string, desde: Date, hasta: Date): Promise<{ cantidad: number; total: number }> {
+  private async totalYCantidadEnRango(empresaId: string, desde: Date, hasta: Date, conv: Conversor): Promise<{ cantidad: number; total: number }> {
     const ventas = await this.prisma.venta.findMany({
       where: { empresaId, deletedAt: null, fecha: { gte: desde, lte: hasta } },
-      select: selectParaTotal,
+      select: { fecha: true, ...selectParaTotal },
     });
     // Neto de devoluciones y cambios del rango (reintegros restan, diferencias a favor suman).
-    const devoluciones = sumarDinero(await dineroDevoluciones(this.prisma, empresaId, desde, hasta));
-    return { cantidad: ventas.length, total: ventas.reduce((acc, v) => acc + totalDeVenta(v), 0) + devoluciones.ingreso };
+    const devoluciones = conv.casa
+      ? (await dineroDevolucionesPorDia(this.prisma, empresaId, desde, hasta)).reduce((a, d) => a + conv.a(d.ingreso, d.fecha), 0)
+      : sumarDinero(await dineroDevoluciones(this.prisma, empresaId, desde, hasta)).ingreso;
+    return { cantidad: ventas.length, total: ventas.reduce((acc, v) => acc + conv.a(totalDeVenta(v), fechaLocalAR(v.fecha)), 0) + devoluciones };
   }
 
   private async topProductos(empresaId: string, desde: Date, hasta: Date, limite: number): Promise<DashboardTopProducto[]> {
@@ -67,7 +70,7 @@ export class PrismaDashboardRepository implements DashboardRepository {
     return filas.map((f) => ({ nombre: f.nombre, unidades: Number(f.unidades) }));
   }
 
-  private async serieDias(empresaId: string, hoy: string, dias: number, conCantidad: boolean): Promise<DashboardDiaSerie[]> {
+  private async serieDias(empresaId: string, hoy: string, dias: number, conCantidad: boolean, conv: Conversor = EN_PESOS): Promise<DashboardDiaSerie[]> {
     const desde = sumarDiasIso(hoy, -(dias - 1));
     const { desde: desdeDate } = rangoDelDiaAR(desde);
     const { hasta: hastaDate } = rangoDelDiaAR(hoy);
@@ -79,7 +82,7 @@ export class PrismaDashboardRepository implements DashboardRepository {
     for (const v of ventas) {
       const clave = fechaLocalAR(v.fecha);
       const actual = porDia.get(clave) ?? { total: 0, cantidad: 0 };
-      actual.total += totalDeVenta(v);
+      actual.total += conv.a(totalDeVenta(v), clave);
       actual.cantidad += 1;
       porDia.set(clave, actual);
     }
@@ -118,7 +121,7 @@ export class PrismaDashboardRepository implements DashboardRepository {
     return Number.isFinite(umbral) && umbral >= 0 ? umbral : 5;
   }
 
-  async inicio(empresaId: string): Promise<DashboardInicioBase> {
+  async inicio(empresaId: string, conv: Conversor = EN_PESOS): Promise<DashboardInicioBase> {
     const hoy = fechaHoyAR();
     const lunes = lunesIso(hoy);
     const inicioMes = `${hoy.slice(0, 7)}-01`;
@@ -127,16 +130,17 @@ export class PrismaDashboardRepository implements DashboardRepository {
     const mesDesde = rangoDelDiaAR(inicioMes).desde;
 
     const [hoyAgg, semanaAgg, mesAgg, comprasMesAgg, topHoyLista, top5, ultimos7, stock, umbral] = await Promise.all([
-      this.totalYCantidadEnRango(empresaId, hoyDesde, hoyHasta),
-      this.totalYCantidadEnRango(empresaId, semanaDesde, hoyHasta),
-      this.totalYCantidadEnRango(empresaId, mesDesde, hoyHasta),
-      this.prisma.compra.aggregate({
+      this.totalYCantidadEnRango(empresaId, hoyDesde, hoyHasta, conv),
+      this.totalYCantidadEnRango(empresaId, semanaDesde, hoyHasta, conv),
+      this.totalYCantidadEnRango(empresaId, mesDesde, hoyHasta, conv),
+      this.prisma.compra.groupBy({
+        by: ['fecha'],
         where: { empresaId, deletedAt: null, fecha: { gte: mesDesde, lte: hoyHasta } },
         _sum: { total: true },
       }),
       this.topProductos(empresaId, hoyDesde, hoyHasta, 1),
       this.topProductos(empresaId, semanaDesde, hoyHasta, 5),
-      this.serieDias(empresaId, hoy, 7, false),
+      this.serieDias(empresaId, hoy, 7, false, conv),
       this.stockActivoPorProducto(empresaId),
       this.umbralStockBajo(empresaId),
     ]);
@@ -149,7 +153,7 @@ export class PrismaDashboardRepository implements DashboardRepository {
       hoy: hoyAgg,
       semana: semanaAgg.total,
       mes: mesAgg.total,
-      comprasMes: comprasMesAgg._sum.total?.toNumber() ?? 0,
+      comprasMes: comprasMesAgg.reduce((a, c) => a + conv.a(c._sum.total?.toNumber() ?? 0, c.fecha.toISOString().slice(0, 10)), 0),
       topHoy: topHoyLista[0] ?? null,
       ultimos7,
       top5,

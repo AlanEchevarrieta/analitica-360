@@ -27,6 +27,7 @@ export interface ConfiguracionRecord {
   nombreIva: string;
   mostrarIvaVentas: boolean;
   condicionFiscal: string;
+  dolarTipo: string;
   valorHora: number | null;
   categoriaMonotributo: string | null;
 }

@@ -5,9 +5,11 @@ import { RequireModulo } from '../../common/decorators/permiso.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { InsightsCombosService } from './combos.service.js';
 import { combosQuerySchema, type CombosQuery } from './combos.dto.js';
+import { CacheLectura } from '../../common/cache/cache-lecturas.js';
 
 @Controller('analytics/insights')
 @RequireModulo('insights')
+@CacheLectura()
 export class InsightsCombosController {
   constructor(private readonly combosService: InsightsCombosService) {}
 

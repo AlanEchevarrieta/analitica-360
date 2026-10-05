@@ -7,7 +7,8 @@ import {
   type AnalyticsTopProducto,
   type GranularidadPeriodo,
 } from './periodo.repository.js';
-import { fechaLocalAR } from './analytics.util.js';
+import { fechaLocalAR, sumarDiasIso } from './analytics.util.js';
+import { CotizacionesService, type Moneda } from '../cotizaciones/cotizaciones.service.js';
 
 /** Mismo tope que LIMITE_ANALYTICS_VENTAS en src/lib/analytics.ts - por encima de esto no se carga el detalle. */
 export const LIMITE_ANALYTICS_VENTAS = 50_000;
@@ -79,20 +80,24 @@ export function ventasPorDiaSemana(ventas: { fecha: Date; total: number }[]): { 
 export class AnalyticsPeriodoService {
   constructor(
     @Inject(ANALYTICS_PERIODO_REPOSITORY) private readonly repository: AnalyticsPeriodoRepository,
+    private readonly cotizaciones: CotizacionesService,
   ) {}
 
-  async periodo(empresaId: string, desde: string, hasta: string, granularidad: GranularidadPeriodo): Promise<AnalyticsPeriodoRespuesta> {
+  async periodo(empresaId: string, desde: string, hasta: string, granularidad: GranularidadPeriodo, moneda?: Moneda): Promise<AnalyticsPeriodoRespuesta> {
     const conteo = await this.repository.contarVentas(empresaId, desde, hasta);
     if (conteo > LIMITE_ANALYTICS_VENTAS) {
       return { avisoLimite: conteo, data: null };
     }
 
+    // La evolución compara con el período anterior de igual duración: el rango arranca ahí.
+    const dias = Math.round((Date.parse(hasta) - Date.parse(desde)) / 86_400_000) + 1;
+    const conv = await this.cotizaciones.conversor(empresaId, moneda, sumarDiasIso(desde, -dias), hasta);
     const [base, evolucion, formasPago, topProductos, comprasDiarias] = await Promise.all([
-      this.repository.periodoBase(empresaId, desde, hasta),
-      this.repository.evolucion(empresaId, desde, hasta, granularidad),
-      this.repository.formasPago(empresaId, desde, hasta),
-      this.repository.topProductos(empresaId, desde, hasta),
-      this.repository.comprasPorDia(empresaId, desde, hasta),
+      this.repository.periodoBase(empresaId, desde, hasta, conv),
+      this.repository.evolucion(empresaId, desde, hasta, granularidad, conv),
+      this.repository.formasPago(empresaId, desde, hasta, conv),
+      this.repository.topProductos(empresaId, desde, hasta, conv),
+      this.repository.comprasPorDia(empresaId, desde, hasta, conv),
     ]);
 
     return {

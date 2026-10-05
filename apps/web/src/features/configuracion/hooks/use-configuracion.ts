@@ -33,6 +33,8 @@ export interface Configuracion {
   mostrarIvaVentas: boolean;
   condicionFiscal: string;
   categoriaMonotributo: string | null;
+  /** Dólar para ver los reportes en US$: blue | oficial | bolsa (MEP). */
+  dolarTipo: string;
 }
 
 export interface Ubicacion {
@@ -70,7 +72,7 @@ export function useGuardarConfiguracion() {
   return useMutation({
     mutationFn: (cambios: Partial<Configuracion>) => api<Configuracion>("/configuracion", { method: "PATCH", body: JSON.stringify(cambios) }),
     onSuccess: () => {
-      for (const k of ["configuracion", "ventas-configuracion", "dashboard", "pedidos-remitente", "monotributo"]) void queryClient.invalidateQueries({ queryKey: [k] });
+      for (const k of ["configuracion", "ventas-configuracion", "dashboard", "pedidos-remitente", "monotributo", "dolar-hoy", "periodo", "rendimiento", "contabilidad", "ganancia-productos"]) void queryClient.invalidateQueries({ queryKey: [k] });
     },
   });
 }

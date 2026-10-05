@@ -8,6 +8,7 @@
 // RUTAS=/inicio,/ventas limita el recorrido a esas rutas.
 // CLIC="Mes pasado" toca ese texto en cada pantalla antes de la captura.
 // PALETA=acacia y MODO=light|dark eligen la apariencia (cookie y localStorage).
+// MONEDA=USD muestra el Inicio y Analytics en dólares (botón $ / US$).
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -46,6 +47,7 @@ const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: Number(ancho), height: 900 }, locale: 'es-AR' });
 if (process.env.PALETA) await context.addCookies([{ name: 'a360-paleta', value: process.env.PALETA, url: WEB }]);
 if (process.env.MODO) await context.addInitScript((modo) => localStorage.setItem('theme', modo), process.env.MODO);
+if (process.env.MONEDA) await context.addInitScript((m) => localStorage.setItem('a360-moneda', m), process.env.MONEDA);
 const page = await context.newPage();
 
 const problemas = [];

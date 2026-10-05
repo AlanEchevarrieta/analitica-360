@@ -12,6 +12,7 @@ import type {
   GranularidadPeriodo,
 } from './periodo.repository.js';
 import { sumarDiasIso } from './analytics.util.js';
+import { EN_PESOS, type Conversor } from '../cotizaciones/conversor.js';
 
 const DIA_VENTA = diaAR(Prisma.raw('v.fecha'));
 
@@ -53,7 +54,7 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
     return Number(filas[0]?.total ?? 0);
   }
 
-  async periodoBase(empresaId: string, desde: string, hasta: string): Promise<AnalyticsPeriodoBase> {
+  async periodoBase(empresaId: string, desde: string, hasta: string, conv: Conversor = EN_PESOS): Promise<AnalyticsPeriodoBase> {
     const filas = await this.prisma.$queryRaw<
       {
         total_ventas: string;
@@ -65,9 +66,11 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
         productos: { producto: string; unidades: number; total: number; costo: number; margen: number; margen_pct: number }[];
       }[]
     >(Prisma.sql`
-      WITH periodo AS (
+      WITH base AS (
         SELECT
           v.id, v.fecha, v.forma_pago,
+          -- 1 en pesos; 1/cotización del día de la venta en dólares.
+          ${conv.factor(DIA_VENTA)} AS f,
           GREATEST(COALESCE(v.total_con_interes, 0) - COALESCE(v.saldo_pendiente, 0), 0) AS cobrado,
           COALESCE(v.saldo_pendiente, 0) AS saldo,
           -- Proporción de lo facturado que quedó después del descuento (sin
@@ -81,8 +84,11 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
           AND ${DIA_VENTA} BETWEEN ${desde}::date AND ${hasta}::date
           AND v.deleted_at IS NULL
       ),
+      periodo AS (
+        SELECT id, fecha, forma_pago, f, cobrado * f AS cobrado, saldo * f AS saldo, factor_descuento FROM base
+      ),
       costos AS (
-        SELECT COALESCE(SUM(COALESCE(NULLIF(vi.costo_unitario, 0), pr.costo, 0) * vi.cantidad), 0) AS costo
+        SELECT COALESCE(SUM(COALESCE(NULLIF(vi.costo_unitario, 0), pr.costo, 0) * vi.cantidad * p.f), 0) AS costo
         FROM ventas_items vi
         JOIN periodo p ON p.id = vi.venta_id
         LEFT JOIN productos pr ON pr.id = vi.producto_id
@@ -91,8 +97,8 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
         SELECT
           COALESCE(pr.nombre, 'Producto') AS nombre,
           SUM(vi.cantidad)::int AS unidades,
-          SUM(vi.cantidad * vi.precio_unitario * p.factor_descuento) AS total,
-          SUM(vi.cantidad * COALESCE(NULLIF(vi.costo_unitario, 0), pr.costo, 0)) AS costo
+          SUM(vi.cantidad * vi.precio_unitario * p.factor_descuento * p.f) AS total,
+          SUM(vi.cantidad * COALESCE(NULLIF(vi.costo_unitario, 0), pr.costo, 0) * p.f) AS costo
         FROM ventas_items vi
         JOIN periodo p ON p.id = vi.venta_id
         LEFT JOIN productos pr ON pr.id = vi.producto_id
@@ -123,6 +129,7 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
       empresaId,
       new Date(`${desde}T00:00:00.000-03:00`),
       new Date(`${hasta}T23:59:59.999-03:00`),
+      conv,
     );
     const netoDevoluciones = sumarDinero(devoluciones);
     if (!fila) {
@@ -161,9 +168,9 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
     };
   }
 
-  async comprasPorDia(empresaId: string, desde: string, hasta: string): Promise<{ fecha: string; total: number }[]> {
+  async comprasPorDia(empresaId: string, desde: string, hasta: string, conv: Conversor = EN_PESOS): Promise<{ fecha: string; total: number }[]> {
     const filas = await this.prisma.$queryRaw<{ fecha: string; total: string }[]>(Prisma.sql`
-      SELECT fecha::text AS fecha, SUM(COALESCE(NULLIF(total_real, 0), total, 0)) AS total
+      SELECT fecha::text AS fecha, SUM(COALESCE(NULLIF(total_real, 0), total, 0) * ${conv.factor(Prisma.raw('fecha'))}) AS total
       FROM compras
       WHERE empresa_id = ${empresaId}::uuid AND deleted_at IS NULL AND fecha BETWEEN ${desde}::date AND ${hasta}::date
       GROUP BY fecha ORDER BY fecha
@@ -171,7 +178,7 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
     return filas.map((f) => ({ fecha: f.fecha, total: Number(f.total) }));
   }
 
-  async evolucion(empresaId: string, desde: string, hasta: string, granularidad: GranularidadPeriodo): Promise<AnalyticsEvolucionPunto[]> {
+  async evolucion(empresaId: string, desde: string, hasta: string, granularidad: GranularidadPeriodo, conv: Conversor = EN_PESOS): Promise<AnalyticsEvolucionPunto[]> {
     const unit = UNIDAD_TRUNC[granularidad];
     const dias = Math.round((Date.parse(hasta) - Date.parse(desde)) / 86_400_000) + 1;
     const hastaAnt = sumarDiasIso(desde, -1);
@@ -180,7 +187,7 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
       WITH actual AS (
         SELECT
           date_trunc(${unit}, (${DIA_VENTA})::timestamp)::date AS periodo,
-          SUM(${MONTO_VENTA}) AS total,
+          SUM(${MONTO_VENTA} * ${conv.factor(DIA_VENTA)}) AS total,
           COUNT(*)::int AS cantidad
         FROM ventas v
         WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL
@@ -190,7 +197,7 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
       anterior AS (
         SELECT
           date_trunc(${unit}, ((${DIA_VENTA}) + ${dias}::int)::timestamp)::date AS periodo,
-          SUM(${MONTO_VENTA}) AS total
+          SUM(${MONTO_VENTA} * ${conv.factor(DIA_VENTA)}) AS total
         FROM ventas v
         WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL
           AND ${DIA_VENTA} BETWEEN ${desdeAnt}::date AND ${hastaAnt}::date
@@ -214,7 +221,7 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
     }));
   }
 
-  async formasPago(empresaId: string, desde: string, hasta: string): Promise<AnalyticsFormaPago[]> {
+  async formasPago(empresaId: string, desde: string, hasta: string, conv: Conversor = EN_PESOS): Promise<AnalyticsFormaPago[]> {
     const filas = await this.prisma.$queryRaw<{ forma: string; total: string; cantidad: bigint }[]>(Prisma.sql`
       SELECT p.forma, p.total, p.cantidad
       FROM (
@@ -227,7 +234,7 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
             WHEN 'qr' THEN 'MP QR'
             ELSE v.forma_pago
           END AS forma,
-          SUM(${MONTO_VENTA}) AS total,
+          SUM(${MONTO_VENTA} * ${conv.factor(DIA_VENTA)}) AS total,
           COUNT(*)::int AS cantidad
         FROM ventas v
         WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL
@@ -240,9 +247,9 @@ export class PrismaAnalyticsPeriodoRepository implements AnalyticsPeriodoReposit
     return filas.map((f) => ({ nombre: f.forma, total: Number(f.total), cantidad: Number(f.cantidad) }));
   }
 
-  async topProductos(empresaId: string, desde: string, hasta: string): Promise<AnalyticsTopProducto[]> {
+  async topProductos(empresaId: string, desde: string, hasta: string, conv: Conversor = EN_PESOS): Promise<AnalyticsTopProducto[]> {
     const filas = await this.prisma.$queryRaw<{ nombre: string; unidades: number; total: string }[]>(Prisma.sql`
-      SELECT p.nombre, SUM(vi.cantidad)::int AS unidades, SUM(vi.cantidad * vi.precio_unitario) AS total
+      SELECT p.nombre, SUM(vi.cantidad)::int AS unidades, SUM(vi.cantidad * vi.precio_unitario * ${conv.factor(DIA_VENTA)}) AS total
       FROM ventas_items vi
       JOIN ventas v ON v.id = vi.venta_id
       JOIN productos p ON p.id = vi.producto_id
