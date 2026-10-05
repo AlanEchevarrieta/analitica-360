@@ -15,9 +15,9 @@ export const MATRIZ = [
   { clave: 'asvs-v5', marco: 'OWASP ASVS', ref: 'V5', titulo: 'Validación de entradas y codificación de salidas' },
   { clave: 'asvs-v7', marco: 'OWASP ASVS', ref: 'V7', titulo: 'Registro de eventos y su protección' },
   { clave: 'asvs-v8', marco: 'OWASP ASVS', ref: 'V8', titulo: 'Protección de datos', estadoManual: 'parcial', motivo: 'Datos aislados por empresa y sin claves en el código. Falta definir cifrado en reposo y retención de backups al elegir el hosting.' },
-  { clave: 'asvs-v9', marco: 'OWASP ASVS', ref: 'V9', titulo: 'Comunicaciones cifradas (HTTPS/TLS)', estadoManual: 'falta', motivo: 'En local va por HTTP. En producción hace falta HTTPS con un proxy (Caddy) antes de publicar.' },
+  { clave: 'asvs-v9', marco: 'OWASP ASVS', ref: 'V9', titulo: 'Comunicaciones cifradas (HTTPS/TLS)', estadoManual: 'parcial', motivo: 'Listo en deploy/Caddyfile: HTTPS automático con HSTS y certificados solo para tiendas activas. Se activa al publicar en el hosting; en local va por HTTP.' },
   { clave: 'asvs-v11', marco: 'OWASP ASVS', ref: 'V11', titulo: 'Lógica de negocio' },
-  { clave: 'asvs-v13', marco: 'OWASP ASVS', ref: 'V13', titulo: 'API y límites de uso', estadoManual: 'parcial', motivo: 'Validación con Zod en todos los endpoints y límite de pedidos en la tienda. Falta límite general para usuarios con sesión.' },
+  { clave: 'asvs-v13', marco: 'OWASP ASVS', ref: 'V13', titulo: 'API y límites de uso', estadoManual: 'cumple', motivo: 'Validación con Zod en todos los endpoints y límite de pedidos por minuto para todos (con y sin sesión), detrás del proxy con la IP real.' },
   { clave: 'asvs-v14', marco: 'OWASP ASVS', ref: 'V14', titulo: 'Configuración y dependencias' },
   { clave: 'asvs-v14.4', marco: 'OWASP ASVS', ref: 'V14.4', titulo: 'Cabeceras de seguridad HTTP' },
 
