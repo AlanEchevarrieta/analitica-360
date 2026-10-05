@@ -19,6 +19,9 @@ const envSchema = z.object({
   TIENDA_SESIONES_SECRETO: z.string().min(16).optional(),
   // Ingreso con Google en las tiendas: el Client ID de Google Cloud (OAuth). Sin esto, solo código por email.
   GOOGLE_CLIENT_ID_TIENDAS: z.string().min(10).optional(),
+  // SOLO entorno local (Docker de desarrollo): sin Resend, el código de ingreso va al log en vez de por email.
+  // En producción no se define: sin Resend, el ingreso por email responde 503.
+  CODIGOS_INGRESO_EN_LOG: z.enum(['0', '1']).default('0'),
   // Aviso por email de registros nuevos (opcional; sin esto el aviso queda solo
   // en la consola de administración). Resend: resend.com, plan gratis.
   RESEND_API_KEY: z.string().min(1).optional(),

@@ -75,6 +75,8 @@ services:
       # Las fotos guardadas en la base apuntan a http://localhost:3001/archivos/...
       ARCHIVOS_URL_PUBLICA: http://localhost:3001/archivos
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+      # Solo local: sin Resend, los códigos de ingreso de las tiendas van al log (docker logs analitica-360-api-1).
+      CODIGOS_INGRESO_EN_LOG: "1"
       AVISOS_EMAIL: ${AVISOS_EMAIL:-}
     volumes:
       # La misma carpeta de fotos que usa la API en desarrollo.

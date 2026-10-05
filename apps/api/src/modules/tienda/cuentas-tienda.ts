@@ -117,7 +117,8 @@ export class CuentasTiendaService {
   private async enviarCodigo(empresaId: string, para: string, codigo: string) {
     const clave = this.config.get('RESEND_API_KEY', { infer: true });
     if (!clave) {
-      if (process.env.NODE_ENV === 'production') throw new ServiceUnavailableException('El ingreso por email todavía no está disponible');
+      const enLog = process.env.NODE_ENV !== 'production' || this.config.get('CODIGOS_INGRESO_EN_LOG', { infer: true }) === '1';
+      if (!enLog) throw new ServiceUnavailableException('El ingreso por email todavía no está disponible');
       this.logger.warn(`[desarrollo, sin RESEND_API_KEY] Código de ingreso para ${para}: ${codigo}`);
       return;
     }
