@@ -6,8 +6,10 @@ import { RequireModulo, RequirePermiso } from '../../common/decorators/permiso.d
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { ProductosImportService } from './productos-import.service.js';
 import { importarProductosSchema, type ImportarProductosDto } from './productos-import.dto.js';
+import { RequireFuncion } from '../../common/decorators/funcion.decorator.js';
 
 @Controller('import-export/productos')
+@RequireFuncion('importar')
 @RequireModulo('productos')
 export class ProductosImportController {
   constructor(private readonly productosImportService: ProductosImportService) {}

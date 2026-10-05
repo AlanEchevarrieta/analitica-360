@@ -21,6 +21,7 @@ import { UNIDADES } from "@/lib/unidades";
 import { CategoriaSelector } from "./CategoriaSelector";
 import { FotosProducto } from "./FotosProducto";
 import { OfertaProducto } from "./OfertaProducto";
+import { usePlan } from "@/hooks/use-plan";
 import { RepartoStock, repartoParaApi } from "./RepartoStock";
 import { VariantesEditor, type VarianteEditable } from "./VariantesEditor";
 
@@ -55,6 +56,7 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
   const router = useRouter();
   const atributos = useAtributos();
   const guardar = useGuardarProducto();
+  const plan = usePlan();
   const [nombre, setNombre] = useState(inicial?.nombre ?? "");
   const [categoriaId, setCategoriaId] = useState<string | null>(inicial?.categoriaId ?? null);
   const [precio, setPrecio] = useState(aTexto(inicial?.precioVenta));
@@ -210,7 +212,7 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
         </Card>
 
         {inicial && !esInsumo && <FotosProducto productoId={inicial.id} />}
-        {inicial && !esInsumo && enTienda && <OfertaProducto productoId={inicial.id} precioVenta={inicial.precioVenta} usaVariantes={inicial.usaVariantes} />}
+        {inicial && !esInsumo && enTienda && plan.incluye("tienda") && <OfertaProducto productoId={inicial.id} precioVenta={inicial.precioVenta} usaVariantes={inicial.usaVariantes} />}
 
         <Card>
           <CardHeader>

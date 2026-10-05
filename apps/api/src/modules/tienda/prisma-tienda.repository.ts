@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
+import { AccesoCuentaService } from '../planes/acceso-cuenta.service.js';
 import type { CuponTienda, Oferta } from './precios-tienda.util.js';
 import type { CondicionesTienda, ProductoCatalogoBase, ProductoVendible, TiendaRepository } from './tienda.repository.js';
 
@@ -19,7 +20,10 @@ function atributosComoTexto(raw: unknown): Record<string, string> {
 
 @Injectable()
 export class PrismaTiendaRepository implements TiendaRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly acceso: AccesoCuentaService,
+  ) {}
 
   async empresaActiva(empresaId: string): Promise<boolean> {
     // Empresa activa y con la tienda online activada en Configuración.
@@ -27,7 +31,8 @@ export class PrismaTiendaRepository implements TiendaRepository {
       where: { id: empresaId, activo: true, deletedAt: null, tienda: { activa: true } },
       select: { id: true },
     });
-    return empresa !== null;
+    // La tienda online es del plan E-commerce: sin él, la tienda no está publicada.
+    return empresa !== null && (await this.acceso.planDe(empresaId)).funciones.includes('tienda');
   }
 
   async pedidoMinimo(empresaId: string): Promise<number | null> {

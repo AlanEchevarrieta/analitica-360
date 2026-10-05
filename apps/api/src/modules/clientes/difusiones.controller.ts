@@ -6,8 +6,10 @@ import { RequireModulo, RequirePermiso } from '../../common/decorators/permiso.d
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { ClientesService } from './clientes.service.js';
 import { guardarDifusionSchema, type GuardarDifusionInput } from './clientes.dto.js';
+import { RequireFuncion } from '../../common/decorators/funcion.decorator.js';
 
 @Controller('difusiones')
+@RequireFuncion('difusiones')
 @RequireModulo('clientes')
 export class DifusionesController {
   constructor(private readonly clientesService: ClientesService) {}

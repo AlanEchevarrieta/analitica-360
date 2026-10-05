@@ -9,6 +9,7 @@ import { Test } from '@nestjs/testing';
 import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { suscripcionActiva } from './e2e-helpers.js';
 
 const URL_E2E = process.env.E2E_DATABASE_URL;
 
@@ -42,7 +43,7 @@ describe.skipIf(!URL_E2E)('Uso de la app (e2e)', () => {
     ]) {
       await db.query(`INSERT INTO empresas (id, nombre, clerk_org_id) VALUES ($1, $2, $3)`, [empresa, `Uso ${org}`, org]);
       await db.query(`INSERT INTO usuarios (id, empresa_id, nombre, email, clerk_user_id, rol) VALUES ($1, $2, 'Persona', $3, $4, 'dueno')`, [usuario, empresa, email, user]);
-      await db.query(`INSERT INTO suscripciones (id, empresa_id, estado, fecha_vencimiento) VALUES ($1, $2, 'activa', '2099-01-01')`, [randomUUID(), empresa]);
+      await suscripcionActiva(db, empresa);
     }
     await db.query(`INSERT INTO admin_emails (email) VALUES ($1)`, [`uadmin_${sufijo}@e2e.test`]);
     const { AppModule } = await import('../src/app.module.js');

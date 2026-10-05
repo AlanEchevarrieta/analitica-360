@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePlan } from "@/hooks/use-plan";
 import { useAuth } from "@clerk/nextjs";
 import { useApiFetch } from "@/hooks/use-api";
 
@@ -45,9 +46,10 @@ export function mensajeRecordatorio(nombreCliente: string, negocio: string, sald
 }
 
 export function useCuentaCorriente() {
+  const { incluye } = usePlan();
   const api = useApiFetch();
   const { orgId } = useAuth();
-  return useQuery({ queryKey: ["cuenta-corriente", orgId], queryFn: () => api<ResumenCuentaCorriente>("/cuenta-corriente"), enabled: Boolean(orgId) });
+  return useQuery({ queryKey: ["cuenta-corriente", orgId], queryFn: () => api<ResumenCuentaCorriente>("/cuenta-corriente"), enabled: Boolean(orgId) && incluye("cuenta_corriente") });
 }
 
 export function useCuentaCliente(clienteId: string) {

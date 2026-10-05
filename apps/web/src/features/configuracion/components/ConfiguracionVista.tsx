@@ -18,6 +18,8 @@ import { FlujoVentasConfig, InventarioPedidosConfig } from "./OperacionConfig";
 import { FiscalConfig, RemitenteConfig } from "./RemitenteFiscalConfig";
 import { AuditoriaConfig } from "./AuditoriaConfig";
 import { CuponesTiendaConfig } from "./CuponesTiendaConfig";
+import { CandadoPlan, MejorarPlan } from "@/components/shared/mejorar-plan";
+import { usePlan } from "@/hooks/use-plan";
 
 interface Opcion {
   clave: string;
@@ -25,6 +27,8 @@ interface Opcion {
   titulo: string;
   subtitulo: string;
   panel: (config: Configuracion) => ReactNode;
+  /** Función del plan que necesita (sin ella: candado y "mejorar plan"). */
+  funcion?: string;
 }
 
 /** Opciones agrupadas por tema; la clave va en la URL (?s=tienda) para poder linkear directo. */
@@ -35,7 +39,7 @@ const GRUPOS: { titulo: string; opciones: Opcion[] }[] = [
       { clave: "medios", icono: "💳", titulo: "Medios de pago", subtitulo: "Cómo aceptás pagos", panel: (c) => <MediosConfig config={c} /> },
       { clave: "cuotas", icono: "📊", titulo: "Cuotas y tasas", subtitulo: "Intereses por cantidad de cuotas", panel: (c) => <CuotasConfig config={c} /> },
       { clave: "flujo", icono: "💸", titulo: "Flujo de ventas", subtitulo: "Qué se pide al cargar una venta", panel: (c) => <FlujoVentasConfig config={c} /> },
-      { clave: "precios", icono: "💲", titulo: "Listas de precios", subtitulo: "Mayorista, revendedor: precios distintos por cliente", panel: () => <ListasPreciosConfig /> },
+      { clave: "precios", icono: "💲", titulo: "Listas de precios", subtitulo: "Mayorista, revendedor: precios distintos por cliente", panel: () => <ListasPreciosConfig />, funcion: "listas_precios" },
     ],
   },
   {
@@ -51,8 +55,8 @@ const GRUPOS: { titulo: string; opciones: Opcion[] }[] = [
   {
     titulo: "Tienda online",
     opciones: [
-      { clave: "tienda", icono: "🛍️", titulo: "Tienda online", subtitulo: "Tu catálogo en internet: marca, contacto y datos para cobrar", panel: () => <TiendaOnlineConfig /> },
-      { clave: "cupones", icono: "🎟️", titulo: "Cupones de la tienda", subtitulo: "Códigos de descuento para el checkout (ej. ACACIA10)", panel: () => <CuponesTiendaConfig /> },
+      { clave: "tienda", icono: "🛍️", titulo: "Tienda online", subtitulo: "Tu catálogo en internet: marca, contacto y datos para cobrar", panel: () => <TiendaOnlineConfig />, funcion: "tienda" },
+      { clave: "cupones", icono: "🎟️", titulo: "Cupones de la tienda", subtitulo: "Códigos de descuento para el checkout (ej. ACACIA10)", panel: () => <CuponesTiendaConfig />, funcion: "tienda" },
     ],
   },
   {
@@ -67,7 +71,7 @@ const GRUPOS: { titulo: string; opciones: Opcion[] }[] = [
     titulo: "Equipo y datos",
     opciones: [
       { clave: "equipo", icono: "👥", titulo: "Equipo", subtitulo: "Invitá al equipo y asigná roles", panel: () => <EquipoConfig /> },
-      { clave: "auditoria", icono: "🔍", titulo: "Auditoría", subtitulo: "Quién cambió qué y cuándo, con el antes y el después", panel: () => <AuditoriaConfig /> },
+      { clave: "auditoria", icono: "🔍", titulo: "Auditoría", subtitulo: "Quién cambió qué y cuándo, con el antes y el después", panel: () => <AuditoriaConfig />, funcion: "auditoria" },
       { clave: "exportar", icono: "📥", titulo: "Exportar mis datos", subtitulo: "Descargá tu historial. Tus datos son tuyos, siempre.", panel: () => <ExportarConfig /> },
     ],
   },
@@ -84,6 +88,7 @@ export function ConfiguracionVista() {
   const pedida = OPCIONES.find((o) => o.clave === s);
   const actual = pedida ?? OPCIONES[0];
   const { data: config, isPending, isError, error, refetch } = useConfiguracion();
+  const plan = usePlan();
   if (isPending) return <CargandoFilas filas={8} />;
   if (isError) return <ErrorDatos error={error} onReintentar={() => refetch()} />;
   const ir = (clave: string | null) => router.replace(clave ? `/configuracion?s=${clave}` : "/configuracion", { scroll: false });
@@ -108,6 +113,7 @@ export function ConfiguracionVista() {
                   >
                     <span aria-hidden>{o.icono}</span>
                     <span className="flex-1">{o.titulo}</span>
+                    {o.funcion && !plan.incluye(o.funcion) && <CandadoPlan funcion={o.funcion} />}
                     <ChevronRight className="size-4 text-muted-foreground lg:hidden" aria-hidden />
                   </button>
                 </li>
@@ -132,7 +138,7 @@ export function ConfiguracionVista() {
             <p className="text-sm text-muted-foreground">{actual.subtitulo}</p>
           </div>
         </header>
-        <div className="p-4">{actual.panel(config)}</div>
+        <div className="p-4">{actual.funcion && !plan.incluye(actual.funcion) ? <MejorarPlan funcion={actual.funcion} compacto /> : actual.panel(config)}</div>
       </section>
     </div>
   );

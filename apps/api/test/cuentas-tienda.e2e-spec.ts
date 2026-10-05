@@ -11,6 +11,7 @@ import { Test } from '@nestjs/testing';
 import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { suscripcionActiva } from './e2e-helpers.js';
 
 const URL_E2E = process.env.E2E_DATABASE_URL;
 
@@ -52,6 +53,7 @@ describe.skipIf(!URL_E2E)('Cuentas de la tienda online (e2e)', () => {
     for (const [id, sub] of [[empresa, 'a'], [otraEmpresa, 'b']]) {
       await db.query(`INSERT INTO empresas (id, nombre, clerk_org_id) VALUES ($1, $2, $3)`, [id, `Cuentas ${sub} ${sufijo}`, `org_cuentas_${sub}_${sufijo}`]);
       await db.query(`INSERT INTO tiendas_config (id, empresa_id, subdominio, nombre, activa) VALUES ($1, $2, $3, 'Tienda', true)`, [randomUUID(), id, `cuentas-${sub}-${sufijo}`]);
+      await suscripcionActiva(db, id);
     }
     await db.query(`INSERT INTO productos (id, empresa_id, nombre, precio_venta, en_tienda) VALUES ($1, $3, 'Mate', 10000, true), ($2, $4, 'Ajeno', 10000, true)`, [producto, productoAjeno, empresa, otraEmpresa]);
     // Ana ya era clienta (la cargaron a mano) y además había comprado como invitada.

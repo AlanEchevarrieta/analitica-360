@@ -174,15 +174,17 @@ export function cotizarPeriodo(
   tipo: TipoPeriodo,
   indiceRenovacion = 1,
   cuotasGenerales: CuotasGenerales = {},
+  /** Precio especial acordado con la empresa para este plan (reemplaza al de lista). */
+  precioMensual?: number | null,
 ): Cotizacion {
-  const lista = precioLista(plan, ciclo);
+  const lista = precioMensual != null ? precioMensual * MESES_CICLO[ciclo] : precioLista(plan, ciclo);
   const base = { plan, ciclo, tipo, lista };
   const cuotas = cuotasDelPeriodo(ciclo, regla, cuotasGenerales);
   if (!regla) return { ...base, total: lista, descuento: 0, cuotas, montoCuota: redondear(lista / cuotas), regla: 'sin_cupon' };
 
   let total: number;
   if (tipo === 'entrada') {
-    const listaMes = PRECIO_MENSUAL[plan];
+    const listaMes = precioMensual ?? PRECIO_MENSUAL[plan];
     let restantes = MESES_CICLO[ciclo];
     total = 0;
     for (const tramo of regla.entrada) {

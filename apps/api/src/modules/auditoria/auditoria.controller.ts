@@ -7,9 +7,11 @@ import { PermitidoSinSuscripcion } from '../../common/decorators/suscripcion.dec
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { auditoriaQuerySchema, type AuditoriaQuery } from './auditoria.dto.js';
 import { AuditoriaService } from './auditoria.service.js';
+import { RequireFuncion } from '../../common/decorators/funcion.decorator.js';
 
 /** Configuración → Auditoría: el dueño ve quién cambió qué en su empresa. */
 @Controller('auditoria')
+@RequireFuncion('auditoria')
 @Roles('dueno')
 @PermitidoSinSuscripcion()
 export class AuditoriaController {

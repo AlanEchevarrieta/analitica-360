@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { CandadoPlan } from "@/components/shared/mejorar-plan";
+import { usePlan } from "@/hooks/use-plan";
 import { usePathname } from "next/navigation";
 import { useOrganization, UserButton } from "@clerk/nextjs";
 import { SoloCliente } from "@/components/shared/solo-cliente";
@@ -87,6 +89,7 @@ export function AppSidebar() {
   const enTrial = suscripcion?.enTrial ?? false;
   const verSoporte = enTrial || true;
 
+  const plan = usePlan();
   const activo = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
@@ -118,9 +121,10 @@ export function AppSidebar() {
               <SidebarMenu>
                 {NAV_PRINCIPAL.filter((item) => puede(item.modulo)).map((item) => (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton render={<Link href={item.href} />} isActive={activo(item.href)} tooltip={item.label}>
+                    <SidebarMenuButton render={<Link href={item.href} />} isActive={activo(item.href)} tooltip={item.label} className={plan.incluye(item.modulo) ? undefined : "text-muted-foreground"}>
                       <item.icon />
                       <span>{item.label}</span>
+                      {!plan.incluye(item.modulo) && <CandadoPlan funcion={item.modulo} />}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -136,9 +140,10 @@ export function AppSidebar() {
               <SidebarMenu>
                 {NAV_OPERACIONES.filter((item) => puede(item.modulo)).map((item) => (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton render={<Link href={item.href} />} isActive={activo(item.href)} tooltip={item.label}>
+                    <SidebarMenuButton render={<Link href={item.href} />} isActive={activo(item.href)} tooltip={item.label} className={plan.incluye(item.modulo) ? undefined : "text-muted-foreground"}>
                       <item.icon />
                       <span>{item.label}</span>
+                      {!plan.incluye(item.modulo) && <CandadoPlan funcion={item.modulo} />}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -152,9 +157,10 @@ export function AppSidebar() {
             <SidebarGroupLabel>Inteligencia</SidebarGroupLabel>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton render={<Link href="/analytics" />} isActive={activo("/analytics")} tooltip="Analytics">
+                <SidebarMenuButton render={<Link href="/analytics" />} isActive={activo("/analytics")} tooltip="Analytics" className={plan.incluye("analytics") ? undefined : "text-muted-foreground"}>
                   <BarChart3 />
                   <span>Analytics</span>
+                  {!plan.incluye("analytics") && <CandadoPlan funcion="analytics" />}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

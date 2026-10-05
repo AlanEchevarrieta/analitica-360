@@ -5,6 +5,7 @@ import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorato
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { ListasPreciosService } from './listas-precios.service.js';
+import { RequireFuncion } from '../../common/decorators/funcion.decorator.js';
 
 const guardarListaSchema = z.object({
   nombre: z.string().trim().min(1, 'El nombre es obligatorio').max(60),
@@ -15,6 +16,7 @@ type GuardarLista = z.infer<typeof guardarListaSchema>;
 
 /** Listas de precios (mayorista, revendedor…): las lee cualquier usuario, las cambia el dueño. */
 @Controller('listas-precios')
+@RequireFuncion('listas_precios')
 export class ListasPreciosController {
   constructor(private readonly service: ListasPreciosService) {}
 

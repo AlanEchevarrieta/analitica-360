@@ -7,6 +7,7 @@ import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { PermissionsGuard } from '../../common/guards/permissions.guard.js';
 import { AdminAppGuard } from '../../common/guards/admin-app.guard.js';
 import { SuscripcionGuard } from '../../common/guards/suscripcion.guard.js';
+import { PlanGuard } from '../../common/guards/plan.guard.js';
 import { PlanesModule } from '../planes/planes.module.js';
 
 /**
@@ -30,6 +31,8 @@ import { PlanesModule } from '../planes/planes.module.js';
     { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_GUARD, useClass: AdminAppGuard },
     { provide: APP_GUARD, useClass: SuscripcionGuard },
+    // 7. Lo que el plan contratado no incluye (y el límite de usuarios del plan).
+    { provide: APP_GUARD, useClass: PlanGuard },
   ],
 })
 export class AuthModule {}

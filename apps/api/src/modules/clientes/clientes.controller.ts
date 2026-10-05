@@ -14,6 +14,7 @@ import {
   type CumpleanosProximosQuery,
   type GuardarClienteInput,
 } from './clientes.dto.js';
+import { RequireFuncion } from '../../common/decorators/funcion.decorator.js';
 
 @Controller('clientes')
 @RequireModulo('clientes')
@@ -29,6 +30,7 @@ export class ClientesController {
   }
 
   @Get('segmentos')
+  @RequireFuncion('difusiones')
   segmentos(@CurrentEmpresa() empresa: EmpresaContext) {
     return this.clientesService.segmentos(empresa.id);
   }

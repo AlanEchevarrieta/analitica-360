@@ -23,6 +23,29 @@ function masDias(dias: number): Date {
 export class PrismaSuscripcionRepository implements SuscripcionRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async datosPlan(empresaId: string) {
+    const [empresa, fila, usuarios, ubicaciones] = await Promise.all([
+      this.prisma.empresa.findUnique({ where: { id: empresaId }, select: { esDemo: true } }),
+      this.prisma.suscripcion.findFirst({
+        where: { empresaId },
+        orderBy: [{ fechaVencimiento: { sort: 'desc', nulls: 'last' } }],
+        select: { estado: true, plan: { select: { nombre: true } } },
+      }),
+      this.prisma.usuario.findMany({ where: { empresaId, deletedAt: null, activo: true }, select: { id: true, rolCrudo: true, createdAt: true } }),
+      this.prisma.ubicacion.count({ where: { empresaId } }),
+    ]);
+    // Dueños primero (nunca quedan afuera por el límite) y después por antigüedad.
+    const orden = [...usuarios].sort((a, b) => Number(b.rolCrudo === 'dueno') - Number(a.rolCrudo === 'dueno') || a.createdAt.getTime() - b.createdAt.getTime());
+    return {
+      esDemo: empresa?.esDemo ?? false,
+      plan: fila?.plan?.nombre ?? null,
+      // Sin suscripción todavía: se le crea la prueba al pedir su estado.
+      enPrueba: !fila || fila.estado === 'periodo_prueba',
+      usuarios: orden.map((u) => u.id),
+      ubicaciones,
+    };
+  }
+
   async datosAcceso(empresaId: string): Promise<{ esDemo: boolean; suscripcion: SuscripcionActiva | null }> {
     const [empresa, fila] = await Promise.all([
       this.prisma.empresa.findUnique({ where: { id: empresaId }, select: { esDemo: true } }),

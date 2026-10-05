@@ -1,38 +1,61 @@
 /**
- * Catálogo de planes - fuente compartida entre apps/api
- * (modules/planes/planes.util.ts) y apps/web (nav, gating de UI). Puerto
- * fiel de src/lib/planes.ts (legacy). Sin dependencia de zod - son datos y
- * funciones puras.
- *
- * TODO: apps/api todavía tiene su propia copia idéntica en
- * modules/planes/planes.util.ts (no se migró a este paquete compartido
- * para no tocar un módulo ya construido y testeado fuera de la tarea que
- * originó este archivo - el sidebar de Fase 5). Si se edita el catálogo,
- * hay que actualizar los dos lugares hasta que se unifiquen.
+ * Catálogo de planes: qué funciones trae cada uno y sus límites (aprobado el
+ * 2026-10-04). Lo aplican el PlanGuard (cada endpoint) y AccesoCuentaService
+ * (usuarios). La web tiene la misma definición en
+ * apps/api/src/modules/planes/planes.util.ts: un test (planes.sincronia.spec.ts)
+ * falla si se separan.
  */
 
 export type PlanId = "starter" | "basico" | "pro" | "ecommerce";
+export type CicloFacturacion = "mensual" | "trimestral" | "anual";
 export type PlanPagoId = "basico" | "pro" | "ecommerce";
+
+/**
+ * Funciones que se habilitan por plan. Las que coinciden con un módulo
+ * (@RequireModulo) se controlan solas; el resto usa @RequireFuncion.
+ * "configuracion" no se limita por plan: siempre se puede configurar.
+ */
+export type Funcion =
+  | "inicio"
+  | "productos"
+  | "ventas"
+  | "clientes"
+  | "compras"
+  | "proveedores"
+  | "inventario"
+  | "soporte"
+  | "analytics"
+  | "insights"
+  | "contabilidad"
+  | "pedidos"
+  | "produccion"
+  | "listas_precios"
+  | "cuenta_corriente"
+  | "difusiones"
+  | "importar"
+  | "auditoria"
+  | "tienda";
 
 export interface PlanDef {
   nombre: string;
-  modulos: readonly string[];
+  funciones: readonly Funcion[];
+  /** null = sin límite. */
   maxUsuarios: number | null;
+  maxUbicaciones: number | null;
   maxProductos: number | null;
 }
 
-const OPERACION = ["inicio", "productos", "ventas", "clientes", "compras", "proveedores", "inventario", "soporte"];
-/** Pro (2026-10-02) absorbe al ex Premium. PENDIENTE: definir módulos y límites de cada plan. */
-const PRO = [...OPERACION, "analytics", "pedidos", "produccion", "insights", "contabilidad"];
+const BASICO: Funcion[] = ["inicio", "productos", "ventas", "clientes", "compras", "proveedores", "inventario", "soporte"];
+const PRO: Funcion[] = [...BASICO, "analytics", "insights", "contabilidad", "pedidos", "produccion", "listas_precios", "cuenta_corriente", "difusiones", "importar", "auditoria"];
 
 export const PLANES: Record<PlanId, PlanDef> = {
-  starter: { nombre: "Starter", modulos: ["inicio", "productos", "ventas", "clientes"], maxUsuarios: 1, maxProductos: 100 },
-  basico: { nombre: "Básico", modulos: OPERACION, maxUsuarios: 2, maxProductos: null },
-  pro: { nombre: "Pro", modulos: PRO, maxUsuarios: null, maxProductos: null },
-  ecommerce: { nombre: "E-commerce", modulos: [...PRO, "tienda"], maxUsuarios: null, maxProductos: null },
+  starter: { nombre: "Starter", funciones: ["inicio", "productos", "ventas", "clientes", "soporte"], maxUsuarios: 1, maxUbicaciones: 1, maxProductos: 100 },
+  basico: { nombre: "Básico", funciones: BASICO, maxUsuarios: 2, maxUbicaciones: 2, maxProductos: null },
+  pro: { nombre: "Pro", funciones: PRO, maxUsuarios: 10, maxUbicaciones: null, maxProductos: null },
+  ecommerce: { nombre: "E-commerce", funciones: [...PRO, "tienda"], maxUsuarios: null, maxUbicaciones: null, maxProductos: null },
 };
 
-export const modulosDuranteTrial = PLANES.pro.modulos;
+export const PLAN_DE_PRUEBA: PlanId = "pro";
 
 /** Normaliza nombres históricos: "Básico" -> basico; "Premium" y "business" -> pro. */
 export function clavePlan(nombre: string | null | undefined): string {
@@ -52,8 +75,20 @@ export function defPlan(plan: string | null | undefined): PlanDef {
   return PLANES[idPlan(plan)];
 }
 
-/** Durante el trial, siempre los módulos de Pro; fuera de trial, según el plan contratado. */
-export function tieneAcceso(plan: string, modulo: string, enTrial: boolean): boolean {
-  if (enTrial) return modulosDuranteTrial.includes(modulo);
-  return defPlan(plan).modulos.includes(modulo);
+/** Lo que puede usar la empresa: en prueba, lo del Pro; si no, lo de su plan. */
+export function planEfectivo(plan: string | null | undefined, enPrueba: boolean): PlanId {
+  return enPrueba ? PLAN_DE_PRUEBA : idPlan(plan);
+}
+
+/** ¿El plan (o la prueba) incluye esta función? */
+export function tieneAcceso(plan: string, funcion: string, enTrial: boolean): boolean {
+  return (PLANES[planEfectivo(plan, enTrial)].funciones as readonly string[]).includes(funcion);
+}
+
+/** El plan pago más económico que incluye esa función. */
+export function planMinimoPara(funcion: string): PlanPagoId {
+  for (const id of ["basico", "pro", "ecommerce"] as const) {
+    if ((PLANES[id].funciones as readonly string[]).includes(funcion)) return id;
+  }
+  return "ecommerce";
 }

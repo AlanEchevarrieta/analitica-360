@@ -10,6 +10,7 @@ import { Test } from '@nestjs/testing';
 import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { suscripcionActiva } from './e2e-helpers.js';
 
 const URL_E2E = process.env.E2E_DATABASE_URL;
 
@@ -46,7 +47,7 @@ describe.skipIf(!URL_E2E)('Bitácora de auditoría (e2e)', () => {
     const empresas = { a: empresaA, b: randomUUID(), admin: randomUUID() };
     for (const [k, id] of Object.entries(empresas)) {
       await db.query(`INSERT INTO empresas (id, nombre, clerk_org_id) VALUES ($1, $2, $3)`, [id, `Aud ${k} ${sufijo}`, `org_aud_${k}_${sufijo}`]);
-      await db.query(`INSERT INTO suscripciones (id, empresa_id, estado, fecha_vencimiento) VALUES ($1, $2, 'activa', '2099-01-01')`, [randomUUID(), id]);
+      await suscripcionActiva(db, id);
     }
     const usuarios: [string, string, string, string][] = [
       ['a', empresas.a, 'dueno', 'Dueña A'],

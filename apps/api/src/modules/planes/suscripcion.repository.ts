@@ -43,6 +43,8 @@ export interface SuscripcionRepository {
   activa(empresaId: string): Promise<SuscripcionActiva | null>;
   /** Lectura liviana para el control de acceso de cada request (sin el self-healing de activa()). */
   datosAcceso(empresaId: string): Promise<{ esDemo: boolean; suscripcion: SuscripcionActiva | null }>;
+  /** Plan, si está en prueba, y los usuarios activos (dueños primero, después por antigüedad) para el límite del plan. */
+  datosPlan(empresaId: string): Promise<{ esDemo: boolean; plan: string | null; enPrueba: boolean; usuarios: string[]; ubicaciones: number }>;
   iniciarPrueba(empresaId: string, usuarioId: string, userAgent: string | null): Promise<void>;
 
   listarPlanes(): Promise<PlanAdmin[]>;

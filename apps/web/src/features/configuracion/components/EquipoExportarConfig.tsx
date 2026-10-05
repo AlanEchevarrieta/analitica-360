@@ -12,11 +12,28 @@ import { hoyAR } from "@/lib/periodos";
 import { descargarCsv } from "@/lib/csv";
 import { PermisosEquipo } from "./PermisosEquipo";
 import { usePuedeExportar } from "@/hooks/use-suscripcion";
+import { usePlan } from "@/hooks/use-plan";
 
 /** Usuarios de la empresa: invitaciones, roles y bajas los maneja Clerk (organización = empresa). */
 export function EquipoConfig() {
+  const { plan } = usePlan();
+  const lleno = plan?.maxUsuarios != null && plan.usuarios >= plan.maxUsuarios;
   return (
     <div className="flex flex-col gap-4">
+      {plan?.maxUsuarios != null && (
+        <p className={lleno ? "rounded-lg bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300" : "text-sm text-muted-foreground"}>
+          Tu plan {plan.nombre} permite {plan.maxUsuarios} usuarios y tenés {plan.usuarios}.
+          {lleno ? (
+            <>
+              {" "}
+              Si invitás a alguien más no va a poder entrar hasta que pases a un plan con más usuarios.{" "}
+              <Link href="/planes" className="underline">
+                Ver planes
+              </Link>
+            </>
+          ) : null}
+        </p>
+      )}
       <div className="flex flex-col gap-2">
         <h3 className="font-medium">Permisos de cada persona</h3>
         <PermisosEquipo />

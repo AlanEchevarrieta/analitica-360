@@ -12,6 +12,7 @@ import { Test } from '@nestjs/testing';
 import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { suscripcionActiva } from './e2e-helpers.js';
 
 const URL_E2E = process.env.E2E_DATABASE_URL;
 
@@ -45,7 +46,7 @@ describe.skipIf(!URL_E2E)('Descuentos de la tienda online (e2e)', () => {
     db = new pg.Client({ connectionString: URL_E2E });
     await db.connect();
     await db.query(`INSERT INTO empresas (id, nombre, clerk_org_id) VALUES ($1, $2, $3)`, [empresa, `Desc ${sufijo}`, `org_desc_${sufijo}`]);
-    await db.query(`INSERT INTO suscripciones (id, empresa_id, estado, fecha_vencimiento) VALUES ($1, $2, 'activa', '2099-01-01')`, [randomUUID(), empresa]);
+    await suscripcionActiva(db, empresa);
     const duena = randomUUID();
     await db.query(`INSERT INTO usuarios (id, empresa_id, nombre, email, clerk_user_id, rol) VALUES ($1, $2, 'Dueña', $3, $4, 'dueno')`, [duena, empresa, `desc_${sufijo}@e2e.test`, `user_desc_${sufijo}`]);
     await db.query(`INSERT INTO usuarios (id, empresa_id, nombre, email, clerk_user_id, rol) VALUES ($1, $2, 'Empleado', $3, $4, 'operador')`, [randomUUID(), empresa, `desc_op_${sufijo}@e2e.test`, `user_desc_op_${sufijo}`]);

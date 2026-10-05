@@ -64,6 +64,12 @@ export interface RegistrarCobroInput {
   referenciaExterna?: string;
 }
 
+
+/** Precio especial acordado con la empresa (ej. cliente piloto), si es para este plan. */
+function precioEspecial(empresa: { precioEspecialPlan: string | null; precioEspecialMensual: { toNumber(): number } | null }, plan: string): number | null {
+  return empresa.precioEspecialPlan === plan && empresa.precioEspecialMensual ? empresa.precioEspecialMensual.toNumber() : null;
+}
+
 @Injectable()
 export class CobrosService {
   constructor(
@@ -111,7 +117,7 @@ export class CobrosService {
       const plan = proxima.plan as PlanPagoId;
       const ciclo = proxima.ciclo as CicloFacturacion;
       const generales = await this.cuotasGenerales(db, plan);
-      const cotizacion = cotizarPeriodo(plan, ciclo, empresa.cupon ? reglas[ciclo] : null, proxima.tipoPeriodo as 'entrada' | 'renovacion', 1, generales);
+      const cotizacion = cotizarPeriodo(plan, ciclo, empresa.cupon ? reglas[ciclo] : null, proxima.tipoPeriodo as 'entrada' | 'renovacion', 1, generales, precioEspecial(empresa, plan));
       return {
         empresaId: input.empresaId, plan, ciclo, cotizacion, cupon: cuponInfo, cuota: proxima.numero, cuotas: proxima.cuotas, grupoId: input.grupoId,
         periodoDesde: fecha(proxima.periodoDesde)!,
@@ -124,7 +130,7 @@ export class CobrosService {
     const { periodos, coberturaHasta } = await this.periodosPagados(db, input.empresaId);
     const regla = empresa.cupon ? reglas[input.ciclo] : null;
     const { tipo, indiceRenovacion } = tipoDelProximoPeriodo(periodos, input.ciclo, regla);
-    const cotizacion = cotizarPeriodo(input.plan, input.ciclo, regla, tipo, indiceRenovacion, await this.cuotasGenerales(db, input.plan));
+    const cotizacion = cotizarPeriodo(input.plan, input.ciclo, regla, tipo, indiceRenovacion, await this.cuotasGenerales(db, input.plan), precioEspecial(empresa, input.plan));
     const hoy = fechaHoyAR();
     const desde = input.desde ?? (coberturaHasta && coberturaHasta > hoy ? coberturaHasta : hoy);
     const cuotas = input.enCuotas && cotizacion.cuotas > 1 ? cotizacion.cuotas : 1;
@@ -306,6 +312,7 @@ export class CobrosService {
   /** Tabla de precios para el emprendedor: por plan y ciclo, el primer pago y la renovación (con sus cuotas). */
   async tablaDePrecios(empresaId: string | null, reglas: ReglasCupon | null) {
     const { periodos } = empresaId ? await this.periodosPagados(this.prisma, empresaId) : { periodos: [] };
+    const especial = empresaId ? await this.prisma.empresa.findUnique({ where: { id: empresaId }, select: { precioEspecialPlan: true, precioEspecialMensual: true } }) : null;
     return Promise.all(
       PLANES_PAGOS.map(async (plan) => {
         const generales = await this.cuotasGenerales(this.prisma, plan);
@@ -315,8 +322,8 @@ export class CobrosService {
           ciclos: (['mensual', 'trimestral', 'anual'] as const).map((ciclo) => {
             const regla = reglas?.[ciclo] ?? null;
             const { tipo, indiceRenovacion } = tipoDelProximoPeriodo(periodos, ciclo, regla);
-            const proximo = cotizarPeriodo(plan, ciclo, regla, tipo, indiceRenovacion, generales);
-            const renovacion = cotizarPeriodo(plan, ciclo, regla, 'renovacion', tipo === 'entrada' ? 1 : indiceRenovacion + 1, generales);
+            const proximo = cotizarPeriodo(plan, ciclo, regla, tipo, indiceRenovacion, generales, especial ? precioEspecial(especial, plan) : null);
+            const renovacion = cotizarPeriodo(plan, ciclo, regla, 'renovacion', tipo === 'entrada' ? 1 : indiceRenovacion + 1, generales, especial ? precioEspecial(especial, plan) : null);
             return {
               ciclo,
               meses: MESES_CICLO[ciclo],

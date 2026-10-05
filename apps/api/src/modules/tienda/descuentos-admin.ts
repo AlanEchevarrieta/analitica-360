@@ -8,6 +8,7 @@ import { Roles } from '../../common/decorators/roles.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { hoyAR, normalizarCodigo, precioConOferta } from './precios-tienda.util.js';
+import { RequireFuncion } from '../../common/decorators/funcion.decorator.js';
 
 // Ofertas por producto y cupones de la tienda online: los carga el dueño desde la app.
 // Todo pasa por Prisma, así queda en la bitácora de auditoría.
@@ -146,6 +147,7 @@ export class DescuentosTiendaService {
 
 /** Oferta de un producto en la tienda online (quien puede editar productos). */
 @Controller('productos/:productoId/oferta')
+@RequireFuncion('tienda')
 @RequirePermiso('editar_productos')
 export class OfertasController {
   constructor(private readonly service: DescuentosTiendaService) {}
@@ -168,6 +170,7 @@ export class OfertasController {
 
 /** Cupones de la tienda online (los ve el equipo; los crea y cambia el dueño). */
 @Controller('tienda-config/cupones')
+@RequireFuncion('tienda')
 export class CuponesTiendaController {
   constructor(private readonly service: DescuentosTiendaService) {}
 

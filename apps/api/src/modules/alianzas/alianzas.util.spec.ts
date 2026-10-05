@@ -253,3 +253,11 @@ describe('beneficios en palabras (armados desde las reglas del cupón)', () => {
     expect(b.etiquetas).toEqual({ mensual: '-10%', trimestral: null, anual: '-15% AL RENOVAR' });
   });
 });
+
+describe('precio especial', () => {
+  it('reemplaza al de lista en ese plan (y el cupón se aplica sobre él)', () => {
+    expect(cotizarPeriodo('ecommerce', 'mensual', null, 'renovacion', 1, {}, 89000)).toMatchObject({ lista: 89000, total: 89000 });
+    expect(cotizarPeriodo('ecommerce', 'anual', null, 'renovacion', 1, {}, 89000)).toMatchObject({ lista: 1068000 });
+    expect(cotizarPeriodo('ecommerce', 'mensual', null, 'renovacion')).toMatchObject({ lista: 149000 });
+  });
+});

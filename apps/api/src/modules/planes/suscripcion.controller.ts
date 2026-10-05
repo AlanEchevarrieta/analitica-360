@@ -4,17 +4,35 @@ import type { EmpresaContext, UsuarioContext } from '../../common/auth/request-c
 import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { SuscripcionService } from './suscripcion.service.js';
+import { AccesoCuentaService } from './acceso-cuenta.service.js';
+import { PLANES } from './planes.util.js';
 import { PermitidoSinSuscripcion } from '../../common/decorators/suscripcion.decorator.js';
 
 // Estado de la cuenta y alta de la prueba: tienen que funcionar estando vencida.
 @PermitidoSinSuscripcion()
 @Controller('suscripcion')
 export class SuscripcionController {
-  constructor(private readonly suscripcionService: SuscripcionService) {}
+  constructor(
+    private readonly suscripcionService: SuscripcionService,
+    private readonly acceso: AccesoCuentaService,
+  ) {}
 
   @Get()
-  estado(@CurrentEmpresa() empresa: EmpresaContext) {
-    return this.suscripcionService.estado(empresa.id);
+  async estado(@CurrentEmpresa() empresa: EmpresaContext) {
+    const [estado, p] = await Promise.all([this.suscripcionService.estado(empresa.id), this.acceso.planDe(empresa.id)]);
+    // Lo que el plan permite: la web pone candados y avisa los límites (la API igual lo controla).
+    return {
+      ...estado,
+      plan: {
+        id: p.plan,
+        nombre: PLANES[p.plan].nombre,
+        funciones: p.funciones,
+        maxUsuarios: p.maxUsuarios,
+        maxUbicaciones: p.maxUbicaciones,
+        usuarios: p.usuariosTotales,
+        ubicaciones: p.ubicaciones,
+      },
+    };
   }
 
   @Post('iniciar-prueba')

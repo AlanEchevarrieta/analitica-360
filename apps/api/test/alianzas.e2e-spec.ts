@@ -14,6 +14,7 @@ import { Test } from '@nestjs/testing';
 import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { suscripcionActiva } from './e2e-helpers.js';
 
 const URL_E2E = process.env.E2E_DATABASE_URL;
 
@@ -69,7 +70,7 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
     const adminEmpresa = randomUUID();
     await db.query(`INSERT INTO empresas (id, nombre, clerk_org_id) VALUES ($1, 'Analítica 360 E2E', $2)`, [adminEmpresa, `org_admin_${sufijo}`]);
     await db.query(`INSERT INTO usuarios (id, empresa_id, nombre, email, clerk_user_id, rol) VALUES ($1, $2, 'Admin', $3, $4, 'dueno')`, [randomUUID(), adminEmpresa, `admin_${sufijo}@e2e.test`, `user_admin_${sufijo}`]);
-    await db.query(`INSERT INTO suscripciones (id, empresa_id, estado, fecha_vencimiento) VALUES ($1, $2, 'activa', '2099-01-01')`, [randomUUID(), adminEmpresa]);
+    await suscripcionActiva(db, adminEmpresa);
     await db.query(`INSERT INTO admin_emails (email) VALUES ($1)`, [`admin_${sufijo}@e2e.test`]);
 
     const { AppModule } = await import('../src/app.module.js');

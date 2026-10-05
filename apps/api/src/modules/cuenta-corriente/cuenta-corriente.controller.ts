@@ -7,6 +7,7 @@ import { RequireModulo, RequirePermiso } from '../../common/decorators/permiso.d
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { FORMAS_PAGO } from '../ventas/ventas.util.js';
 import { CuentaCorrienteService } from './cuenta-corriente.service.js';
+import { RequireFuncion } from '../../common/decorators/funcion.decorator.js';
 
 const cobroSchema = z.object({
   monto: z.number().positive('El monto tiene que ser mayor a 0'),
@@ -17,6 +18,7 @@ const cobroSchema = z.object({
 
 /** Cuenta corriente de clientes: quién debe, resumen de cuenta y cobros. */
 @Controller('cuenta-corriente')
+@RequireFuncion('cuenta_corriente')
 @RequireModulo('clientes')
 export class CuentaCorrienteController {
   constructor(private readonly service: CuentaCorrienteService) {}

@@ -1,3 +1,5 @@
+import { PLANES as COMPARTIDO } from "@analitica360/shared-types";
+
 /**
  * Catálogo de planes y precios (puerto de src/lib/planes.ts del sistema
  * anterior). Precios en pesos, sin IVA.
@@ -23,38 +25,41 @@ export interface PlanDef {
   popular?: boolean;
   modulos: readonly string[];
   usuarios: string;
+  /** Ubicaciones (local, depósito, ferias). */
   productos: string;
 }
 
-const BASE = ["inicio", "productos", "ventas", "clientes"];
-const OPERACION = [...BASE, "compras", "proveedores", "inventario", "soporte"];
-/** Pro absorbe al ex Premium (2026-10-02). PENDIENTE: definir módulos y límites de cada plan. */
-const PRO = [...OPERACION, "analytics", "pedidos", "produccion", "insights", "contabilidad"];
+const limite = (n: number | null, uno: string, varios: string) => (n == null ? `${varios[0].toUpperCase()}${varios.slice(1)} ilimitados` : n === 1 ? `1 ${uno}` : `Hasta ${n} ${varios}`);
+const ubicaciones = (n: number | null) => (n == null ? "Ubicaciones ilimitadas" : n === 1 ? "1 ubicación" : `Hasta ${n} ubicaciones`);
+
+/** Lo que trae cada plan sale del catálogo compartido con la API (packages/shared-types): lo que se muestra es lo que se aplica. */
+function def(id: PlanId, popular = false): PlanDef {
+  const p = COMPARTIDO[id];
+  return { nombre: p.nombre, popular, modulos: p.funciones, usuarios: limite(p.maxUsuarios, "usuario", "usuarios"), productos: ubicaciones(p.maxUbicaciones) };
+}
 
 export const PLANES: Record<PlanId, PlanDef> = {
-  starter: { nombre: "Starter", modulos: BASE, usuarios: "1 usuario", productos: "Hasta 100 productos" },
-  basico: { nombre: "Básico", modulos: OPERACION, usuarios: "Hasta 2 usuarios", productos: "Productos ilimitados" },
-  pro: { nombre: "Pro", popular: true, modulos: PRO, usuarios: "Usuarios ilimitados", productos: "Productos ilimitados" },
-  ecommerce: { nombre: "E-commerce", modulos: [...PRO, "tienda"], usuarios: "Usuarios ilimitados", productos: "Productos ilimitados" },
+  starter: def("starter"),
+  basico: def("basico"),
+  pro: def("pro", true),
+  ecommerce: def("ecommerce"),
 };
 
 export const PLANES_PAGOS: PlanPagoId[] = ["basico", "pro", "ecommerce"];
 
 export const MODULOS: { id: string; etiqueta: string }[] = [
-  { id: "inicio", etiqueta: "Inicio" },
-  { id: "productos", etiqueta: "Productos" },
-  { id: "ventas", etiqueta: "Ventas" },
-  { id: "clientes", etiqueta: "Clientes" },
-  { id: "compras", etiqueta: "Compras" },
-  { id: "proveedores", etiqueta: "Proveedores" },
-  { id: "inventario", etiqueta: "Inventario" },
-  { id: "soporte", etiqueta: "Soporte" },
+  { id: "ventas", etiqueta: "Ventas, productos y clientes" },
+  { id: "inventario", etiqueta: "Compras, proveedores e inventario" },
   { id: "analytics", etiqueta: "Analytics" },
-  { id: "pedidos", etiqueta: "Pedidos" },
-  { id: "produccion", etiqueta: "Producción (recetas, fabricación y kits)" },
-  { id: "insights", etiqueta: "Insights" },
+  { id: "insights", etiqueta: "Insights (pronósticos y combos)" },
   { id: "contabilidad", etiqueta: "Contabilidad y estados contables" },
-  { id: "tienda", etiqueta: "Tienda online" },
+  { id: "pedidos", etiqueta: "Pedidos con preparación y remitos" },
+  { id: "produccion", etiqueta: "Producción (recetas, fabricación y kits)" },
+  { id: "listas_precios", etiqueta: "Listas de precios y cuenta corriente" },
+  { id: "difusiones", etiqueta: "Segmentos y difusiones por WhatsApp" },
+  { id: "importar", etiqueta: "Importar desde Excel" },
+  { id: "auditoria", etiqueta: "Bitácora de auditoría" },
+  { id: "tienda", etiqueta: "Tienda online (ofertas, cupones y cuentas de compradores)" },
 ];
 
 /** "Básico" → basico; "Premium" y "business" (nombres viejos) → pro. */

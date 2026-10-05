@@ -25,10 +25,23 @@ describe('clavePlan / idPlan / defPlan', () => {
     expect(idPlan(null)).toBe('starter');
   });
 
-  it('defPlan devuelve la definición completa; Pro hereda los módulos del ex Premium', () => {
+  it('defPlan devuelve la definición completa; Pro hereda las funciones del ex Premium', () => {
     expect(defPlan('pro').nombre).toBe('Pro');
-    expect(defPlan('pro').modulos).toEqual(expect.arrayContaining(['analytics', 'insights', 'contabilidad', 'produccion']));
+    expect(defPlan('pro').funciones).toEqual(expect.arrayContaining(['analytics', 'insights', 'contabilidad', 'produccion']));
     expect(defPlan('premium').nombre).toBe('Pro');
+  });
+
+  it('reparto aprobado (2026-10-04): qué trae cada plan y sus límites', () => {
+    const b = defPlan('basico');
+    expect(b.funciones).toEqual(['inicio', 'productos', 'ventas', 'clientes', 'compras', 'proveedores', 'inventario', 'soporte']);
+    expect([b.maxUsuarios, b.maxUbicaciones]).toEqual([2, 2]);
+    const pro = defPlan('pro');
+    for (const f of ['analytics', 'insights', 'contabilidad', 'pedidos', 'produccion', 'listas_precios', 'cuenta_corriente', 'difusiones', 'importar', 'auditoria']) expect(pro.funciones).toContain(f);
+    expect(pro.funciones).not.toContain('tienda');
+    expect([pro.maxUsuarios, pro.maxUbicaciones]).toEqual([10, null]);
+    const e = defPlan('ecommerce');
+    expect(e.funciones).toEqual([...pro.funciones, 'tienda']);
+    expect([e.maxUsuarios, e.maxUbicaciones]).toEqual([null, null]);
   });
 
   it('solo Básico, Pro y E-commerce son planes pagos', () => {

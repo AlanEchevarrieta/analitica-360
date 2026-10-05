@@ -9,6 +9,7 @@ import { Test } from '@nestjs/testing';
 import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { suscripcionActiva } from './e2e-helpers.js';
 
 const URL_E2E = process.env.E2E_DATABASE_URL;
 
@@ -45,7 +46,7 @@ describe.skipIf(!URL_E2E)('Aislamiento entre empresas (e2e)', () => {
         `iso_${letra}_${sufijo}@e2e.test`,
         `user_iso_${letra}_${sufijo}`,
       ]);
-      await db.query(`INSERT INTO suscripciones (id, empresa_id, estado, fecha_vencimiento) VALUES ($1, $2, 'activa', '2099-01-01')`, [randomUUID(), empresa]);
+      await suscripcionActiva(db, empresa);
     }
     const a = empresas.a;
     await db.query(`INSERT INTO productos (id, empresa_id, nombre, precio_venta, costo) VALUES ($1, $2, 'Secreto A', 1000, 500)`, [ids.producto, a]);

@@ -57,6 +57,10 @@ model Empresa {
   comisionPct        Decimal?  @map("comision_pct") @db.Decimal(5, 2)
   /// Fin (excluido) de la comisión de la cámara por este cliente.
   comisionHasta      DateTime? @map("comision_hasta") @db.Date
+  /// Precio especial acordado (ej. clientes piloto): en ese plan se cobra este precio mensual en vez del de lista.
+  precioEspecialPlan    String?  @map("precio_especial_plan") @db.VarChar(20)
+  precioEspecialMensual Decimal? @map("precio_especial_mensual") @db.Decimal(12, 2)
+  precioEspecialNota    String?  @map("precio_especial_nota") @db.VarChar(200)
   createdAt          DateTime  @default(now()) @map("created_at")
   deletedAt          DateTime? @map("deleted_at")
 

@@ -3,8 +3,10 @@ import { UbicacionesController } from './ubicaciones.controller.js';
 import { UbicacionesService } from './ubicaciones.service.js';
 import { UBICACIONES_REPOSITORY } from './ubicaciones.repository.js';
 import { PrismaUbicacionesRepository } from './prisma-ubicaciones.repository.js';
+import { PlanesModule } from '../planes/planes.module.js';
 
 @Module({
+  imports: [PlanesModule],
   controllers: [UbicacionesController],
   providers: [
     UbicacionesService,

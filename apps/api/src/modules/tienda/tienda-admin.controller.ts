@@ -9,6 +9,7 @@ import { Roles } from '../../common/decorators/roles.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { BORDES, FONDOS, FORMAS_FOTO, SECCIONES, TIPOGRAFIAS, TiendaAdminService } from './tienda-admin.service.js';
 import { TiendaThrottlerGuard } from './tienda-throttler.guard.js';
+import { RequireFuncion } from '../../common/decorators/funcion.decorator.js';
 
 type Archivo = { buffer: Buffer; size: number; mimetype: string };
 /** Las imágenes se reciben en memoria (máx. 15 MB: fotos directas del celular), se validan por contenido y se guardan optimizadas. */
@@ -48,6 +49,7 @@ const tiendaSchema = z.object({
 
 /** Configuración de la tienda online (la cambia el dueño). */
 @Controller('tienda-config')
+@RequireFuncion('tienda')
 export class TiendaConfigController {
   constructor(private readonly service: TiendaAdminService) {}
 

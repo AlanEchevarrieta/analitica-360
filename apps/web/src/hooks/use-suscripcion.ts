@@ -26,6 +26,8 @@ export interface EstadoSuscripcionRespuesta {
   enTrial: boolean;
   trialVencido: boolean;
   acceso: AccesoCuenta;
+  /** Lo que permite el plan (en prueba, el de prueba). Ver hooks/use-plan.ts. */
+  plan: { id: string; nombre: string; funciones: string[]; maxUsuarios: number | null; maxUbicaciones: number | null; usuarios: number; ubicaciones: number };
 }
 
 /** GET /suscripcion (ver apps/api modules/planes/suscripcion.controller.ts). */

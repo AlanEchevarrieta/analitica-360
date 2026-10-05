@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
 import { useAcceso } from "@/hooks/use-acceso";
+import { usePlan } from "@/hooks/use-plan";
+import { MejorarPlan } from "@/components/shared/mejorar-plan";
 import type { ModuloClave } from "@/lib/rol";
 
 /** Pantalla de un módulo: si el usuario no lo tiene habilitado, un aviso claro en vez de errores. */
@@ -40,9 +42,21 @@ const MODULO_DE_RUTA: [string, ModuloClave][] = [
   ["/configuracion", "configuracion"],
 ];
 
-/** Aplica RequiereModulo según la dirección actual (va una vez, en el marco del panel). */
+/** Secciones que dependen de una función del plan que no es un módulo entero (el más específico primero). */
+const FUNCION_DE_RUTA: [string, string][] = [
+  ["/clientes/segmentos", "difusiones"],
+  ["/clientes/cuenta-corriente", "cuenta_corriente"],
+  ["/productos/importar", "importar"],
+];
+
+const coincide = (pathname: string, prefijo: string) => pathname === prefijo || pathname.startsWith(`${prefijo}/`);
+
+/** Aplica el plan (candado + mejorar) y después RequiereModulo según la dirección actual (va una vez, en el marco del panel). */
 export function GuardaDeRuta({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const modulo = MODULO_DE_RUTA.find(([prefijo]) => pathname === prefijo || pathname.startsWith(`${prefijo}/`))?.[1];
+  const { incluye } = usePlan();
+  const modulo = MODULO_DE_RUTA.find(([prefijo]) => coincide(pathname, prefijo))?.[1];
+  const funcion = FUNCION_DE_RUTA.find(([prefijo]) => coincide(pathname, prefijo))?.[1] ?? (modulo !== "configuracion" ? modulo : undefined);
+  if (funcion && !incluye(funcion)) return <MejorarPlan funcion={funcion} />;
   return modulo ? <RequiereModulo modulo={modulo}>{children}</RequiereModulo> : children;
 }

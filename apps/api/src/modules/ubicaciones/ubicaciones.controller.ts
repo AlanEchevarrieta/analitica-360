@@ -1,9 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import type { EmpresaContext } from '../../common/auth/request-context.types.js';
 import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
 import { RequireModulo } from '../../common/decorators/permiso.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { UbicacionesService } from './ubicaciones.service.js';
+import { AccesoCuentaService } from '../planes/acceso-cuenta.service.js';
+import { PLANES } from '../planes/planes.util.js';
 import {
   guardarUbicacionSchema,
   listarUbicacionesQuerySchema,
@@ -14,7 +16,10 @@ import {
 @Controller('ubicaciones')
 @RequireModulo('inventario')
 export class UbicacionesController {
-  constructor(private readonly ubicacionesService: UbicacionesService) {}
+  constructor(
+    private readonly ubicacionesService: UbicacionesService,
+    private readonly acceso: AccesoCuentaService,
+  ) {}
 
   @Get()
   listar(
@@ -25,10 +30,20 @@ export class UbicacionesController {
   }
 
   @Post()
-  crear(
+  async crear(
     @CurrentEmpresa() empresa: EmpresaContext,
     @Body(new ZodValidationPipe(guardarUbicacionSchema)) body: GuardarUbicacionInput,
   ) {
+    const plan = await this.acceso.planDe(empresa.id);
+    if (plan.maxUbicaciones != null && plan.ubicaciones >= plan.maxUbicaciones) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'plan_limite_ubicaciones',
+        planMinimo: 'pro',
+        message: `El plan ${PLANES[plan.plan].nombre} permite ${plan.maxUbicaciones} ubicaciones. Para sumar más, pasate a Pro.`,
+      });
+    }
+    this.acceso.olvidar(empresa.id);
     return this.ubicacionesService.crear(empresa.id, body);
   }
 

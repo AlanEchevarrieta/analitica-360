@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePlan } from "@/hooks/use-plan";
 import { useAuth } from "@clerk/nextjs";
 import { useApiFetch } from "@/hooks/use-api";
 
@@ -36,12 +37,14 @@ export function etiquetaAjuste(pct: number) {
 }
 
 export function useListasPrecios() {
+  // Las listas son del plan Pro: sin él, ni se piden (la API respondería 403).
+  const { incluye } = usePlan();
   const api = useApiFetch();
   const { orgId } = useAuth();
   return useQuery({
     queryKey: ["listas-precios", orgId],
     queryFn: () => api<ListaPrecio[]>("/listas-precios"),
-    enabled: Boolean(orgId),
+    enabled: Boolean(orgId) && incluye("listas_precios"),
     staleTime: 5 * 60_000,
   });
 }
