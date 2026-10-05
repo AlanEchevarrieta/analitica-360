@@ -91,7 +91,7 @@ export class AuditoriaService {
     const [r] = await this.prisma.$queryRaw<{ total: bigint; errores: bigint; primer_error: bigint | null; ultimo_hash: string | null; ultimo_id: bigint | null }[]>(Prisma.sql`
       WITH c AS (
         SELECT r.id, r.hash,
-          encode(sha256(convert_to(coalesce(lag(r.hash) OVER (ORDER BY r.id), 'genesis') || '|' || registro_auditoria_contenido(r), 'UTF8')), 'hex') AS esperado
+          registro_auditoria_esperado(r, lag(r.hash) OVER (ORDER BY r.id)) AS esperado
         FROM registro_auditoria r
       )
       SELECT count(*) AS total, count(*) FILTER (WHERE hash <> esperado) AS errores, min(id) FILTER (WHERE hash <> esperado) AS primer_error,

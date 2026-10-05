@@ -32,8 +32,8 @@ export class AccesoCuentaService {
   async de(empresaId: string): Promise<AccesoCuenta> {
     const guardado = this.cache.get(empresaId);
     if (guardado && guardado.vence > Date.now()) return guardado.valor;
-    const { esDemo, suscripcion } = await this.repository.datosAcceso(empresaId);
-    const valor = accesoCuenta(suscripcion, esDemo, fechaHoyAR());
+    const { esDemo, suscripcion, bajaProgramada } = await this.repository.datosAcceso(empresaId);
+    const valor = accesoCuenta(suscripcion, esDemo, fechaHoyAR(), bajaProgramada);
     this.cache.set(empresaId, { valor, vence: Date.now() + TTL_MS });
     return valor;
   }

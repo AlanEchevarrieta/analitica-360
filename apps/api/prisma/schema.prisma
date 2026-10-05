@@ -61,6 +61,11 @@ model Empresa {
   precioEspecialPlan    String?  @map("precio_especial_plan") @db.VarChar(20)
   precioEspecialMensual Decimal? @map("precio_especial_mensual") @db.Decimal(12, 2)
   precioEspecialNota    String?  @map("precio_especial_nota") @db.VarChar(200)
+  /// Baja de la cuenta a pedido del dueño: se pide, queda bloqueada 30 días y después se borran los datos.
+  bajaSolicitadaEn      DateTime? @map("baja_solicitada_en")
+  bajaProgramadaPara    DateTime? @map("baja_programada_para") @db.Date
+  bajaSolicitadaPor     String?   @map("baja_solicitada_por") @db.VarChar(160)
+  bajaEjecutadaEn       DateTime? @map("baja_ejecutada_en")
   createdAt          DateTime  @default(now()) @map("created_at")
   deletedAt          DateTime? @map("deleted_at")
 
@@ -1731,4 +1736,16 @@ model PremioReferido {
 
   @@index([empresaReferenteId, estado])
   @@map("premios_referidos")
+}
+
+/// Filas de la bitácora con los datos personales tapados (cuenta borrada a pedido).
+/// Guarda cómo quedaron y con qué hash anterior se encadenaban, para seguir verificando la cadena.
+model RegistroAuditoriaTachado {
+  registroId    BigInt   @id @map("registro_id")
+  contenidoHash String   @map("contenido_hash") @db.VarChar(64)
+  hashPrevio    String?  @map("hash_previo") @db.VarChar(64)
+  motivo        String   @db.VarChar(200)
+  tachadoEn     DateTime @default(now()) @map("tachado_en") @db.Timestamptz(3)
+
+  @@map("registro_auditoria_tachados")
 }

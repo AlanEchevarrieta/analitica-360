@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, rm, unlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -36,5 +36,12 @@ export class AlmacenArchivosService {
     if (!/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|webp)$/.test(clave)) return;
     const carpeta = AlmacenArchivosService.carpetaLocal(this.config.get('ARCHIVOS_DIR', { infer: true }));
     await unlink(join(carpeta, clave)).catch(() => {});
+  }
+
+  /** Borra todas las fotos y logos de una empresa (baja de la cuenta). */
+  async borrarEmpresa(empresaId: string): Promise<void> {
+    if (!/^[0-9a-f-]{36}$/.test(empresaId)) return;
+    const carpeta = AlmacenArchivosService.carpetaLocal(this.config.get('ARCHIVOS_DIR', { infer: true }));
+    await rm(join(carpeta, empresaId), { recursive: true, force: true });
   }
 }

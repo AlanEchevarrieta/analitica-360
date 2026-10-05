@@ -11,7 +11,7 @@ export const DIAS_GRACIA = 7;
  *   Con la prueba gratis vencida tampoco puede exportar sus datos.
  */
 export type NivelAcceso = 'activo' | 'gracia' | 'solo_lectura';
-export type MotivoBloqueo = 'prueba_vencida' | 'plan_vencido';
+export type MotivoBloqueo = 'prueba_vencida' | 'plan_vencido' | 'baja_programada';
 
 export interface AccesoCuenta {
   nivel: NivelAcceso;
@@ -33,7 +33,9 @@ function sumarDias(fecha: string, dias: number): string {
  * `hoy` en AAAA-MM-DD (día de Argentina). El vencimiento es el último día
  * incluido: con fecha 2026-11-01 el plan funciona completo ese día.
  */
-export function accesoCuenta(sub: SuscripcionActiva | null, esDemo: boolean, hoy: string): AccesoCuenta {
+export function accesoCuenta(sub: SuscripcionActiva | null, esDemo: boolean, hoy: string, bajaProgramada: string | null = null): AccesoCuenta {
+  // Pidió borrar la cuenta: queda en solo lectura (puede llevarse sus datos y cancelar la baja).
+  if (bajaProgramada) return { nivel: 'solo_lectura', motivo: 'baja_programada', puedeExportar: true, bloqueoDesde: bajaProgramada };
   // Sin suscripción la empresa recibe una prueba al pedir su estado (activa() la crea).
   if (esDemo || !sub) return ACTIVO;
 

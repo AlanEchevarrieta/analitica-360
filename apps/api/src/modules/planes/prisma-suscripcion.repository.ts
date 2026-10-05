@@ -46,9 +46,9 @@ export class PrismaSuscripcionRepository implements SuscripcionRepository {
     };
   }
 
-  async datosAcceso(empresaId: string): Promise<{ esDemo: boolean; suscripcion: SuscripcionActiva | null }> {
+  async datosAcceso(empresaId: string): Promise<{ esDemo: boolean; suscripcion: SuscripcionActiva | null; bajaProgramada: string | null }> {
     const [empresa, fila] = await Promise.all([
-      this.prisma.empresa.findUnique({ where: { id: empresaId }, select: { esDemo: true } }),
+      this.prisma.empresa.findUnique({ where: { id: empresaId }, select: { esDemo: true, bajaProgramadaPara: true } }),
       this.prisma.suscripcion.findFirst({
         where: { empresaId },
         orderBy: [{ fechaVencimiento: { sort: 'desc', nulls: 'last' } }],
@@ -57,6 +57,7 @@ export class PrismaSuscripcionRepository implements SuscripcionRepository {
     ]);
     return {
       esDemo: empresa?.esDemo ?? false,
+      bajaProgramada: empresa?.bajaProgramadaPara?.toISOString().slice(0, 10) ?? null,
       suscripcion: fila ? { id: fila.id, estado: fila.estado, fechaVencimiento: fila.fechaVencimiento?.toISOString().slice(0, 10) ?? null } : null,
     };
   }

@@ -14,7 +14,7 @@ export interface SuscripcionActiva {
 /** Qué puede hacer la empresa hoy (apps/api modules/planes/acceso-cuenta.util.ts). */
 export interface AccesoCuenta {
   nivel: "activo" | "gracia" | "solo_lectura";
-  motivo: "prueba_vencida" | "plan_vencido" | null;
+  motivo: "prueba_vencida" | "plan_vencido" | "baja_programada" | null;
   puedeExportar: boolean;
   /** AAAA-MM-DD en que pasa a solo lectura (solo en gracia). */
   bloqueoDesde: string | null;

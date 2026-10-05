@@ -19,6 +19,7 @@ import { FiscalConfig, RemitenteConfig } from "./RemitenteFiscalConfig";
 import { AuditoriaConfig } from "./AuditoriaConfig";
 import { CuponesTiendaConfig } from "./CuponesTiendaConfig";
 import { InformesConfig } from "./InformesConfig";
+import { BorrarCuentaConfig } from "./BorrarCuentaConfig";
 import { CandadoPlan, MejorarPlan } from "@/components/shared/mejorar-plan";
 import { usePlan } from "@/hooks/use-plan";
 
@@ -75,6 +76,7 @@ const GRUPOS: { titulo: string; opciones: Opcion[] }[] = [
       { clave: "equipo", icono: "👥", titulo: "Equipo", subtitulo: "Invitá al equipo y asigná roles", panel: () => <EquipoConfig /> },
       { clave: "auditoria", icono: "🔍", titulo: "Auditoría", subtitulo: "Quién cambió qué y cuándo, con el antes y el después", panel: () => <AuditoriaConfig />, funcion: "auditoria" },
       { clave: "exportar", icono: "📥", titulo: "Exportar mis datos", subtitulo: "Descargá tu historial. Tus datos son tuyos, siempre.", panel: () => <ExportarConfig /> },
+      { clave: "borrar", icono: "🗑️", titulo: "Borrar mi cuenta", subtitulo: "Todos los datos del negocio, con 30 días para arrepentirte", panel: () => <BorrarCuentaConfig /> },
     ],
   },
 ];

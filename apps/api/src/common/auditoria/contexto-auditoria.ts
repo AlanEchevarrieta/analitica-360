@@ -26,3 +26,9 @@ const almacen = new AsyncLocalStorage<ContextoAuditoria>();
 
 export const contextoAuditoria = () => almacen.getStore();
 export const conContextoAuditoria = <T>(ctx: ContextoAuditoria, fn: () => T): T => almacen.run(ctx, fn);
+/**
+ * Corre sin registrar en la bitácora. Solo para la baja de una cuenta: tapa los datos
+ * personales y deja su propia constancia; si se registraran los cambios (ej. el nombre
+ * viejo de la empresa), quedarían escritos después del tapado.
+ */
+export const sinContextoAuditoria = <T>(fn: () => T): T => almacen.exit(fn);

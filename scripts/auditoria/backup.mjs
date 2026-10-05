@@ -49,7 +49,7 @@ export async function simulacroBackup(dir) {
     const tablas = Object.keys(original);
     const distintas = tablas.filter((t) => Number(original[t]) !== Number(restaurada[t] ?? -1));
     const cadena = await correr('docker', ['exec', '-i', SIMULACRO, 'psql', '-X', '-q', '-A', '-t', '-U', 'postgres', '-d', 'restaurada', '-c',
-      `SELECT count(*) FILTER (WHERE hash <> encode(sha256(convert_to(coalesce(prev, 'genesis') || '|' || c, 'UTF8')), 'hex')) FROM (SELECT hash, lag(hash) OVER (ORDER BY id) AS prev, registro_auditoria_contenido(r) AS c FROM registro_auditoria r) x`]);
+      `SELECT count(*) FILTER (WHERE hash <> esperado) FROM (SELECT hash, registro_auditoria_esperado(r, lag(hash) OVER (ORDER BY id)) AS esperado FROM registro_auditoria r) x`]);
     const erroresCadena = Number(cadena.salida.trim() || -1);
     const filas = tablas.reduce((a, t) => a + Number(original[t]), 0);
 

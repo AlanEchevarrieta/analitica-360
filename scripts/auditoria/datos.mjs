@@ -138,7 +138,7 @@ export async function integridadBitacora() {
   const base = { id: 'AUD-01', titulo: 'Bitácora de auditoría íntegra (cadena de hashes)', normas: ['soc2-cc7.2', 'soc2-cc4.1', 'iso-a8.15', 'asvs-v7'] };
   try {
     const r = await sqlJson(`WITH c AS (
-        SELECT r.id, r.hash, encode(sha256(convert_to(coalesce(lag(r.hash) OVER (ORDER BY r.id), 'genesis') || '|' || registro_auditoria_contenido(r), 'UTF8')), 'hex') AS esperado
+        SELECT r.id, r.hash, registro_auditoria_esperado(r, lag(r.hash) OVER (ORDER BY r.id)) AS esperado
         FROM registro_auditoria r)
       SELECT json_build_object('total', count(*), 'errores', count(*) FILTER (WHERE hash <> esperado), 'primer', min(id) FILTER (WHERE hash <> esperado),
         'ultimo', (SELECT json_build_object('id', id, 'hash', hash, 'fecha', creado_en) FROM registro_auditoria ORDER BY id DESC LIMIT 1),

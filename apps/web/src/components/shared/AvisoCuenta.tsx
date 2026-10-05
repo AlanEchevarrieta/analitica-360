@@ -24,6 +24,26 @@ export function AvisoCuenta() {
   if (!data?.acceso) return null;
   const { acceso } = data;
 
+  // Pidió borrar la cuenta: aviso propio, con la fecha y cómo arrepentirse.
+  if (acceso.motivo === "baja_programada") {
+    return (
+      <div role="alert" className="flex flex-col gap-3 rounded-xl bg-destructive/10 p-4 text-sm ring-1 ring-destructive/30 sm:flex-row sm:items-center print:hidden">
+        <AlertTriangle className="size-5 shrink-0 text-destructive" aria-hidden />
+        <p className="flex-1">
+          Pediste borrar esta cuenta: el {acceso.bloqueoDesde ? fechaCorta(acceso.bloqueoDesde) : "día indicado"} se borran todos tus datos. Hasta entonces podés verlos y descargarlos, pero no cargar nada.
+        </p>
+        <div className="flex shrink-0 gap-2">
+          <Link href="/configuracion?s=borrar" className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+            Cancelar la baja
+          </Link>
+          <Link href="/configuracion?s=exportar" className="rounded-md px-3 py-1.5 text-sm font-medium ring-1 ring-border hover:bg-muted">
+            Descargar mis datos
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   let grave = false;
   let texto: string | null = null;
   if (acceso.nivel === "solo_lectura") {
