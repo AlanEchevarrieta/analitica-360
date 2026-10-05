@@ -110,6 +110,7 @@ model Empresa {
 
   eventosUso EventoUso[]
   cuponesTienda CuponTienda[]
+  cuentasTienda CuentaTienda[]
   @@unique([camaraId, ordenCamara])
   @@map("empresas")
 }
@@ -844,6 +845,7 @@ model Cliente {
   cobros        CobroCliente[]
   pedidos       Pedido[]
 
+  cuentaTienda  CuentaTienda?
   @@index([empresaId])
   @@map("clientes")
 }
@@ -1569,4 +1571,74 @@ model CuponTienda {
 
   @@unique([empresaId, codigo])
   @@map("cupones_tienda")
+}
+
+/// Cuenta de un comprador en la tienda online de una empresa. Siempre es un
+/// Cliente de esa empresa (así el dueño lo ve en Clientes y sus pedidos quedan atados).
+model CuentaTienda {
+  id            String    @id @default(uuid()) @db.Uuid
+  empresaId     String    @map("empresa_id") @db.Uuid
+  clienteId     String    @unique @map("cliente_id") @db.Uuid
+  /// En minúsculas. Verificado: se entra con un código que llega a ese email (o con Google).
+  email         String    @db.VarChar(160)
+  googleSub     String?   @map("google_sub") @db.VarChar(64)
+  nombre        String?   @db.VarChar(120)
+  telefono      String?   @db.VarChar(40)
+  calle         String?   @db.VarChar(120)
+  numero        String?   @db.VarChar(20)
+  piso          String?   @db.VarChar(40)
+  ciudad        String?   @db.VarChar(80)
+  provincia     String?   @db.VarChar(60)
+  codigoPostal  String?   @map("codigo_postal") @db.VarChar(12)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  ultimoIngreso DateTime? @map("ultimo_ingreso")
+
+  empresa    Empresa          @relation(fields: [empresaId], references: [id])
+  cliente    Cliente          @relation(fields: [clienteId], references: [id])
+  sesiones   SesionTienda[]
+  favoritos  FavoritoTienda[]
+
+  @@unique([empresaId, email])
+  @@unique([empresaId, googleSub])
+  @@map("cuentas_tienda")
+}
+
+/// Código de ingreso por email (6 dígitos). Solo se guarda su hash.
+model CodigoIngresoTienda {
+  id         String   @id @default(uuid()) @db.Uuid
+  empresaId  String   @map("empresa_id") @db.Uuid
+  email      String   @db.VarChar(160)
+  codigoHash String   @map("codigo_hash") @db.VarChar(64)
+  expira     DateTime
+  intentos   Int      @default(0)
+  usado      Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([empresaId, email, createdAt])
+  @@map("codigos_ingreso_tienda")
+}
+
+/// Sesión de una cuenta de la tienda: el navegador guarda el token en una cookie httpOnly; acá, su hash.
+model SesionTienda {
+  id        String   @id @default(uuid()) @db.Uuid
+  cuentaId  String   @map("cuenta_id") @db.Uuid
+  tokenHash String   @unique @map("token_hash") @db.VarChar(64)
+  expira    DateTime
+  createdAt DateTime @default(now()) @map("created_at")
+
+  cuenta CuentaTienda @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+
+  @@index([cuentaId])
+  @@map("sesiones_tienda")
+}
+
+model FavoritoTienda {
+  cuentaId   String   @map("cuenta_id") @db.Uuid
+  productoId String   @map("producto_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  cuenta CuentaTienda @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+
+  @@id([cuentaId, productoId])
+  @@map("favoritos_tienda")
 }

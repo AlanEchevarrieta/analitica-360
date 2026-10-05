@@ -15,6 +15,10 @@ const envSchema = z.object({
   // Clave compartida con las tiendas online para reenviar la IP del cliente
   // (límite de requests por cliente, ver TiendaThrottlerGuard). Opcional.
   TIENDA_PROXY_KEY: z.string().min(16).optional(),
+  // Secreto para los códigos de ingreso de las cuentas de las tiendas (si falta, usa INTERNAL_WEBHOOK_SECRET).
+  TIENDA_SESIONES_SECRETO: z.string().min(16).optional(),
+  // Ingreso con Google en las tiendas: el Client ID de Google Cloud (OAuth). Sin esto, solo código por email.
+  GOOGLE_CLIENT_ID_TIENDAS: z.string().min(10).optional(),
   // Aviso por email de registros nuevos (opcional; sin esto el aviso queda solo
   // en la consola de administración). Resend: resend.com, plan gratis.
   RESEND_API_KEY: z.string().min(1).optional(),

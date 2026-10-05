@@ -59,7 +59,7 @@ export class TiendaService {
    * endpoint es público y el carrito vive en el browser del cliente (el legacy
    * crear_pedido_tienda confiaba en el precio que mandaba la tienda).
    */
-  async crearPedido(empresaId: string, input: CrearPedidoTiendaInput): Promise<PedidoTiendaCreado> {
+  async crearPedido(empresaId: string, input: CrearPedidoTiendaInput, clienteId: string | null = null): Promise<PedidoTiendaCreado> {
     await this.exigirEmpresaActiva(empresaId);
     const hoy = hoyAR();
 
@@ -109,6 +109,7 @@ export class TiendaService {
     try {
       resultado = await this.pedidosRepository.crear(empresaId, {
         origen: 'tienda_online',
+        clienteId,
         clienteNombre: input.clienteNombre,
         clienteEmail: input.clienteEmail,
         clienteTelefono: input.clienteTelefono,

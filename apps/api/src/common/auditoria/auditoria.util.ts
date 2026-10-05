@@ -54,6 +54,7 @@ export const AUDITADOS: Record<string, ConfigEntidad> = {
   Camara: { nombre: 'cámara', campoNombre: ['nombre'] },
   Cupon: { nombre: 'cupón', campoNombre: ['codigo'] },
   CuponTienda: { nombre: 'cupón de la tienda', campoNombre: ['codigo'] },
+  CuentaTienda: { nombre: 'cuenta de la tienda', campoNombre: ['email'] },
   Liquidacion: { nombre: 'liquidación', campoNombre: ['periodo'] },
 };
 
