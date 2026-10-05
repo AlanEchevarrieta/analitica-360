@@ -1,7 +1,7 @@
 # Levanta TODO dockerizado en esta computadora (misma base y mismas fotos que en desarrollo):
 #   - Postgres                     localhost:5433
 #   - API (NestJS)                 http://localhost:3001
-#   - Web (gestion)                http://localhost:3000
+#   - Web (gestion)                http://localhost:4001
 #   - Tienda modelo                http://acacia.localhost:3010
 #   - Tienda de Acacia             http://localhost:3002   (repo ~/acacia-store)
 # Uso: .\scripts\levantar-docker.ps1 [-Compilar] [-SinAbrir]   (-Compilar recompila las imagenes con el codigo actual;
@@ -36,7 +36,7 @@ function Responde($url) {
 }
 
 # Los servidores de desarrollo (pnpm dev) usan los mismos puertos: avisar si estan prendidos.
-$ocupados = foreach ($p in 3000, 3001, 3002, 3010) {
+$ocupados = foreach ($p in 4001, 3001, 3002, 3010) {
   $c = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($c -and (Get-Process -Id $c.OwningProcess -ErrorAction SilentlyContinue).ProcessName -eq 'node') { $p }
 }
@@ -68,8 +68,8 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'No se pudo levantar la tienda de Acacia' }
 } finally { Pop-Location }
 
-if ((Esperar 'la web' { Responde 'http://localhost:3000/sign-in' }) -and -not $SinAbrir) {
+if ((Esperar 'la web' { Responde 'http://localhost:4001/sign-in' }) -and -not $SinAbrir) {
   Start-Process 'http://localhost:3002'
-  Start-Process 'http://localhost:3000'
+  Start-Process 'http://localhost:4001'
 }
 Write-Host "`nTodo levantado en Docker. Estado: docker ps" -ForegroundColor Green

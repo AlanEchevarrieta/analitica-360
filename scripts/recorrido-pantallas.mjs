@@ -3,7 +3,7 @@
 // ruta, junta errores de página/consola y requests fallidos a la API, y saca
 // una captura de cada pantalla.
 //
-// Uso (web en :3000 y API en :3001 levantadas):
+// Uso (web en :4001 y API en :3001 levantadas):
 //   node scripts/recorrido-pantallas.mjs <clerkUserId> <carpetaCapturas> [ancho]
 // RUTAS=/inicio,/ventas limita el recorrido a esas rutas.
 // CLIC="Mes pasado" toca ese texto en cada pantalla antes de la captura.
@@ -19,7 +19,7 @@ if (!clerkUserId || !carpeta) {
   console.error('Uso: node scripts/recorrido-pantallas.mjs <clerkUserId> <carpetaCapturas> [ancho]');
   process.exit(1);
 }
-const WEB = process.env.WEB_URL ?? 'http://localhost:3000';
+const WEB = process.env.WEB_URL ?? 'http://localhost:4001';
 const API = process.env.API_URL ?? 'http://localhost:3001';
 const env = Object.fromEntries(
   fs.readFileSync(new URL('../apps/api/.env', import.meta.url), 'utf8')

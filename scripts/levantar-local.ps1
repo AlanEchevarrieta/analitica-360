@@ -1,7 +1,7 @@
 # Levanta todo el entorno local de Analítica 360 + Acacia Store.
 #   - Postgres (Docker)            localhost:5433
 #   - API NestJS (apps/api)        http://localhost:3001
-#   - Web nueva (apps/web)         http://localhost:3000
+#   - Web nueva (apps/web)         http://localhost:4001
 #   - Tienda (acacia-store)        http://localhost:3002
 # Cada servicio abre su propia ventana; cerrarla detiene ese servicio.
 
@@ -45,12 +45,12 @@ Pop-Location
 
 # 2. Servicios (cada uno en su ventana)
 Abrir 'API Analitica 360 (3001)' (Join-Path $raiz 'apps\api') 'pnpm start:dev' 3001
-Abrir 'Web Analitica 360 (3000)' (Join-Path $raiz 'apps\web') 'pnpm dev' 3000
+Abrir 'Web Analitica 360 (4001)' (Join-Path $raiz 'apps\web') 'pnpm dev' 4001
 Abrir 'Acacia Store (3002)' $tienda 'npx next dev -p 3002' 3002
 
 # 3. Abrir en el navegador cuando respondan
 if (Esperar 'la API' { PuertoAbierto 3001 } 900) { }
 if (Esperar 'la tienda' { PuertoAbierto 3002 } 900) { Start-Process 'http://localhost:3002' }
-if (Esperar 'la web' { PuertoAbierto 3000 } 900) { Start-Process 'http://localhost:3000' }
+if (Esperar 'la web' { PuertoAbierto 4001 } 900) { Start-Process 'http://localhost:4001' }
 
 Write-Host "`nTodo levantado. Para apagar: cerrá las ventanas de cada servicio." -ForegroundColor Green
