@@ -12,12 +12,9 @@ import type {
 /**
  * Mapea el rol de Organization Membership de Clerk a nuestro RolCrudo.
  *
- * TODO Fase 3: 'contador' no es un rol nativo de Clerk — hay que crear un
- * Custom Role 'org:contador' en Configure -> Organizations -> Roles del
- * dashboard de Clerk para que este mapeo funcione end-to-end. Hasta
- * entonces, invitar a alguien como contador requiere asignar el rol acá
- * manualmente (o vía un endpoint admin propio, análogo a invitar_contador()
- * en supabase/070_rol_contador.sql).
+ * 'contador' no es un rol nativo de Clerk: para invitar contadores desde Clerk
+ * hay que crear el rol personalizado 'org:contador' en el panel de Clerk
+ * (Configure → Organizations → Roles). Ver Pendientes en Obsidian.
  */
 function mapearRolClerk(rolClerk: string): RolCrudo {
   if (rolClerk === 'org:admin') return 'dueno';

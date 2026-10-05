@@ -9,7 +9,6 @@ import type {
   DashboardRepository,
   DashboardStockItem,
   DashboardTopProducto,
-  RangoHome,
 } from './dashboard.repository.js';
 import { etiquetaDiaEs, fechaHoyAR, fechaLocalAR, lunesIso, sumarDiasIso } from './analytics.util.js';
 
@@ -162,7 +161,4 @@ export class PrismaDashboardRepository implements DashboardRepository {
     };
   }
 
-  async serieHome(empresaId: string, dias: RangoHome): Promise<DashboardDiaSerie[]> {
-    return this.serieDias(empresaId, fechaHoyAR(), dias, true);
-  }
 }

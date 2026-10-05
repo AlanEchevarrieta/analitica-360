@@ -7,10 +7,10 @@ import { tieneAccion, tieneModulo, type AccionClave, type ModuloClave } from '..
 
 /**
  * Corre después de EmpresaScopeGuard/RolesGuard. Replica tieneModulo()/
- * tieneAccion() del legacy (src/lib/permisos.ts). Para rol 'operador', hoy
- * depende de `request.usuario.acceso` (TODO Fase 3: persistencia real de
- * colaborador_permisos) — sin ese dato, un operador no pasa ningún check de
- * permiso granular (fail-closed, no fail-open).
+ * tieneAccion() del legacy (src/lib/permisos.ts). Para rol 'operador' usa
+ * `request.usuario.acceso` (colaborador_permisos, lo carga EmpresaScopeGuard);
+ * sin ese dato, un operador no pasa ningún check de permiso granular
+ * (fail-closed, no fail-open).
  */
 @Injectable()
 export class PermissionsGuard implements CanActivate {

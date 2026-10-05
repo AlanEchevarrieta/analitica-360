@@ -17,7 +17,7 @@ export interface ClerkOrganizationMembershipEvent {
     organization: { id: string; name: string };
     public_user_data: { user_id: string; identifier: string };
     // Rol de Clerk: 'org:admin' | 'org:member' | 'org:contador' (custom role,
-    // ver TODO en usuarios.service.ts) | otros roles custom.
+    // ver mapearRolClerk en usuarios.service.ts) | otros roles custom.
     role: string;
   };
 }

@@ -1,9 +1,5 @@
 import { z } from 'zod';
 
-// TODO Fase 5: cuando exista apps/web, mover estos schemas a
-// packages/shared-types para reusarlos en los forms (react-hook-form + zod)
-// - hoy ese paquete no tiene consumidores todavía.
-
 export const estadoProductoSchema = z.enum(['todos', 'activos', 'inactivos']);
 export const margenProductoSchema = z.enum(['todos', 'alto', 'medio', 'bajo']);
 

@@ -23,7 +23,7 @@ describe('DashboardService', () => {
   let clientesService: { cumpleanosProximos: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    repository = { inicio: vi.fn(), serieHome: vi.fn() };
+    repository = { inicio: vi.fn() };
     clientesService = { cumpleanosProximos: vi.fn() };
     const module = await Test.createTestingModule({
       providers: [{ provide: CotizacionesService, useValue: { conversor: async () => EN_PESOS } }, 
@@ -47,9 +47,4 @@ describe('DashboardService', () => {
     expect(resultado.hoy).toEqual(baseInicio.hoy);
   });
 
-  it('serieHome() delega al repositorio', async () => {
-    repository.serieHome.mockResolvedValue([]);
-    await service.serieHome('empresa-1', 30);
-    expect(repository.serieHome).toHaveBeenCalledWith('empresa-1', 30);
-  });
 });

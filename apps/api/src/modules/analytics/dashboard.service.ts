@@ -4,10 +4,8 @@ import { CotizacionesService, type Moneda } from '../cotizaciones/cotizaciones.s
 import { fechaHoyAR, sumarDiasIso } from './analytics.util.js';
 import {
   DASHBOARD_REPOSITORY,
-  type DashboardDiaSerie,
   type DashboardInicio,
   type DashboardRepository,
-  type RangoHome,
 } from './dashboard.repository.js';
 
 const CUMPLES_LIMITE = 5;
@@ -33,7 +31,4 @@ export class DashboardService {
     };
   }
 
-  serieHome(empresaId: string, dias: RangoHome): Promise<DashboardDiaSerie[]> {
-    return this.dashboardRepository.serieHome(empresaId, dias);
-  }
 }

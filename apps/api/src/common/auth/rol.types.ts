@@ -126,9 +126,8 @@ export type AccesoColaborador = {
 /**
  * Resuelve si un usuario tiene acceso a un módulo, replicando tieneModulo()
  * del legacy: dueño = todo, contador = lista fija de solo lectura,
- * operador = según AccesoColaborador (TODO Fase 3: persistencia real en
- * Postgres — hoy la fuente de datos es el repositorio en memoria de
- * PermissionsGuard).
+ * operador = según AccesoColaborador (tabla colaborador_permisos; lo carga
+ * EmpresaScopeGuard en request.usuario.acceso).
  */
 export function tieneModulo(rol: Rol, modulo: ModuloClave, acceso?: AccesoColaborador): boolean {
   if (rol === 'dueno') return true;

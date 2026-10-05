@@ -44,8 +44,6 @@ export interface DashboardInicio extends DashboardInicioBase {
   cumples: DashboardCumple[];
 }
 
-export type RangoHome = 7 | 30 | 90;
-
 export const DASHBOARD_REPOSITORY = Symbol('DASHBOARD_REPOSITORY');
 
 /**
@@ -59,6 +57,4 @@ export const DASHBOARD_REPOSITORY = Symbol('DASHBOARD_REPOSITORY');
  */
 export interface DashboardRepository {
   inicio(empresaId: string, conv?: Conversor): Promise<DashboardInicioBase>;
-  /** Serie diaria de ventas de los últimos `dias` (7/30/90), sin RPC en el legacy - consulta directa. */
-  serieHome(empresaId: string, dias: RangoHome): Promise<DashboardDiaSerie[]>;
 }
