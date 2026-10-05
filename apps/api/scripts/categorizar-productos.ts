@@ -35,7 +35,7 @@ const ctx: ContextoAuditoria = {
 
 try {
   // Primero se valida todo: si algo no existe, no se toca nada.
-  const plan = [];
+  const plan: { id: string; nombre: string; sku: string | null; usaVariantes: boolean; categoria: { id: string | null; nombre: string } }[] = [];
   for (const [nombre, categoria] of pedidos) {
     const p = await prisma.producto.findFirst({ where: { empresaId: empresa, nombre, deletedAt: null }, select: { id: true, categoriaId: true, sku: true, usaVariantes: true } });
     const c = await prisma.categoria.findFirst({ where: { empresaId: empresa, nombre: categoria } });

@@ -138,7 +138,7 @@ export function ConfiguracionVista() {
             <p className="text-sm text-muted-foreground">{actual.subtitulo}</p>
           </div>
         </header>
-        <div className="p-4">{actual.funcion && !plan.incluye(actual.funcion) ? <MejorarPlan funcion={actual.funcion} compacto /> : actual.panel(config)}</div>
+        <div className="p-4">{actual.funcion && !plan.listo ? null : actual.funcion && !plan.incluye(actual.funcion) ? <MejorarPlan funcion={actual.funcion} compacto /> : actual.panel(config)}</div>
       </section>
     </div>
   );

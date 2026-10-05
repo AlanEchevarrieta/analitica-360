@@ -1,13 +1,16 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import type { EmpresaContext } from '../../common/auth/request-context.types.js';
 import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
+import { RequireFuncion } from '../../common/decorators/funcion.decorator.js';
 import { RequireModulo } from '../../common/decorators/permiso.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { DashboardService } from './dashboard.service.js';
 import { serieHomeQuerySchema, type SerieHomeQuery } from './dashboard.dto.js';
 
+// Los números del Inicio son de todos los planes (el permiso del usuario sigue siendo el de analytics).
 @Controller('analytics/dashboard')
 @RequireModulo('analytics')
+@RequireFuncion('inicio')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 

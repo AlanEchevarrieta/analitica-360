@@ -7,6 +7,7 @@ const fichaBase: PedidoFicha = {
   id: 'ped-1',
   empresaId: 'empresa-1',
   numeroPedido: 'PED-1',
+  descuentos: { subtotal: 0, ofertas: 0, cuponCodigo: null, cupon: 0, transferencia: 0, formaPagoTienda: null },
   clienteId: null,
   clienteNombre: 'Juan',
   origen: 'manual',

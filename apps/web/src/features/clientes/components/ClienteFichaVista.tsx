@@ -13,6 +13,7 @@ import { useListasPrecios } from "@/features/listas-precios/listas-precios";
 import { TIPOS_INTERACCION, linkWhatsApp, useAccionesClientes, useCliente } from "../hooks/use-clientes";
 import { ClienteForm } from "./ClienteForm";
 import { CuentaCliente } from "./CuentaCliente";
+import { usePlan } from "@/hooks/use-plan";
 
 export function ClienteFichaVista({ id }: { id: string }) {
   const { data: c, isPending, isError, error, refetch } = useCliente(id);
@@ -21,6 +22,7 @@ export function ClienteFichaVista({ id }: { id: string }) {
   const [tipo, setTipo] = useState<keyof typeof TIPOS_INTERACCION>("nota");
   const [texto, setTexto] = useState("");
   const listas = useListasPrecios();
+  const plan = usePlan();
 
   if (isPending) return <CargandoFilas filas={6} />;
   if (isError) return <ErrorDatos error={error} onReintentar={() => refetch()} />;
@@ -67,7 +69,7 @@ export function ClienteFichaVista({ id }: { id: string }) {
         </div>
       )}
 
-      <CuentaCliente clienteId={c.id} />
+      {plan.disponible("cuenta_corriente") && <CuentaCliente clienteId={c.id} />}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

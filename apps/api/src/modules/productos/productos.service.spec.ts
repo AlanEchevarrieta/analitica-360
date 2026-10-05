@@ -8,6 +8,7 @@ const productoBase: ProductoRecord = {
   id: 'prod-1',
   empresaId: 'empresa-1',
   nombre: 'Yerba',
+  oferta: null,
   categoriaId: null,
   categoriaNombre: null,
   codigoBarra: null,

@@ -61,11 +61,12 @@ describe.skipIf(!URL_E2E)('Planes (e2e)', () => {
   const estado = async (k: string, ruta: string) => (await request(s()).get(ruta).set(dueno(k))).status;
   const rango = `desde=${hoy}&hasta=${hoy}`;
 
-  it('Básico: lo básico sí; analytics, listas, pedidos, auditoría y tienda no (y dice desde qué plan)', async () => {
+  it('Básico: lo básico (y el Inicio) sí; analytics, listas, pedidos, auditoría y tienda no (y dice desde qué plan)', async () => {
     expect(await estado('basico', '/productos')).toBe(200);
     expect(await estado('basico', '/ventas')).toBe(200);
     expect(await estado('basico', '/inventario/movimientos?' + rango)).toBe(200);
-    const r = await request(s()).get('/analytics/dashboard').set(dueno('basico')).expect(403);
+    expect(await estado('basico', '/analytics/dashboard')).toBe(200); // los números del Inicio
+    const r = await request(s()).get(`/analytics/periodo?${rango}&granularidad=dia`).set(dueno('basico')).expect(403);
     expect(r.body).toMatchObject({ code: 'plan_insuficiente', funcion: 'analytics', planMinimo: 'pro' });
     for (const ruta of ['/listas-precios', '/pedidos', '/cuenta-corriente', '/difusiones', `/auditoria?${rango}`, '/clientes/segmentos']) expect(await estado('basico', ruta), ruta).toBe(403);
     const t = await request(s()).get('/tienda-config').set(dueno('basico')).expect(403);

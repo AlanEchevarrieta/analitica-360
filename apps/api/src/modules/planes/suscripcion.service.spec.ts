@@ -12,6 +12,7 @@ describe('SuscripcionService', () => {
     repository = {
       activa: vi.fn(),
       datosAcceso: vi.fn().mockResolvedValue({ esDemo: false, suscripcion: null }),
+      datosPlan: vi.fn(),
       iniciarPrueba: vi.fn(),
       listarPlanes: vi.fn(),
       listarSuscripciones: vi.fn(),

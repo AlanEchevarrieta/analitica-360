@@ -54,9 +54,11 @@ const coincide = (pathname: string, prefijo: string) => pathname === prefijo || 
 /** Aplica el plan (candado + mejorar) y después RequiereModulo según la dirección actual (va una vez, en el marco del panel). */
 export function GuardaDeRuta({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { incluye } = usePlan();
+  const { incluye, listo } = usePlan();
   const modulo = MODULO_DE_RUTA.find(([prefijo]) => coincide(pathname, prefijo))?.[1];
   const funcion = FUNCION_DE_RUTA.find(([prefijo]) => coincide(pathname, prefijo))?.[1] ?? (modulo !== "configuracion" ? modulo : undefined);
+  // Hasta saber el plan no se monta la pantalla: si no, sus consultas salen antes del candado.
+  if (funcion && !listo) return null;
   if (funcion && !incluye(funcion)) return <MejorarPlan funcion={funcion} />;
   return modulo ? <RequiereModulo modulo={modulo}>{children}</RequiereModulo> : children;
 }

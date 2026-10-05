@@ -95,7 +95,7 @@ describe.skipIf(!URL_E2E)('Aislamiento entre empresas (e2e)', () => {
       request(s).post(`/pedidos/${ids.pedido}/cancelar`).set(OTRA).send({ motivo: 'x' }),
       request(s).post(`/compras/${ids.compra}/anular`).set(OTRA).send({ motivo: 'x' }),
     ]);
-    for (const r of intentos) expect(r.status, `${r.req.method} ${r.req.path} → ${r.status}`).toBeGreaterThanOrEqual(400);
+    for (const r of intentos) expect(r.status, `intento ${intentos.indexOf(r)} → ${r.status}`).toBeGreaterThanOrEqual(400);
     const p = (await db.query(`SELECT nombre, precio_venta::float AS precio FROM productos WHERE id = $1`, [ids.producto])).rows[0];
     expect(p).toEqual({ nombre: 'Secreto A', precio: 1000 });
     expect((await db.query(`SELECT nombre FROM clientes WHERE id = $1`, [ids.cliente])).rows[0].nombre).toBe('Cliente A');

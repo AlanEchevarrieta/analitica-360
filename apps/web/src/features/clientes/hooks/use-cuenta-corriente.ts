@@ -46,16 +46,17 @@ export function mensajeRecordatorio(nombreCliente: string, negocio: string, sald
 }
 
 export function useCuentaCorriente() {
-  const { incluye } = usePlan();
+  const { disponible } = usePlan();
   const api = useApiFetch();
   const { orgId } = useAuth();
-  return useQuery({ queryKey: ["cuenta-corriente", orgId], queryFn: () => api<ResumenCuentaCorriente>("/cuenta-corriente"), enabled: Boolean(orgId) && incluye("cuenta_corriente") });
+  return useQuery({ queryKey: ["cuenta-corriente", orgId], queryFn: () => api<ResumenCuentaCorriente>("/cuenta-corriente"), enabled: Boolean(orgId) && disponible("cuenta_corriente") });
 }
 
 export function useCuentaCliente(clienteId: string) {
   const api = useApiFetch();
   const { orgId } = useAuth();
-  return useQuery({ queryKey: ["cuenta-corriente", orgId, clienteId], queryFn: () => api<CuentaCliente>(`/cuenta-corriente/${clienteId}`), enabled: Boolean(orgId) });
+  const { disponible } = usePlan();
+  return useQuery({ queryKey: ["cuenta-corriente", orgId, clienteId], queryFn: () => api<CuentaCliente>(`/cuenta-corriente/${clienteId}`), enabled: Boolean(orgId) && disponible("cuenta_corriente") });
 }
 
 export function useAccionesCuenta(clienteId: string) {

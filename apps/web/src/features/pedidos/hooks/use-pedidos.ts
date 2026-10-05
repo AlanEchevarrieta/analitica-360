@@ -3,6 +3,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
 import { useApiFetch } from "@/hooks/use-api";
+import { usePlan } from "@/hooks/use-plan";
 import type { EstadoPedido, OrigenPedido, PedidoDetalle, PedidoFila, Remitente } from "../types";
 
 export const PEDIDOS_POR_PAGINA = 25;
@@ -32,10 +33,11 @@ export function usePedido(id: string) {
 export function useColaboradores() {
   const api = useApiFetch();
   const { orgId } = useAuth();
+  const { disponible } = usePlan();
   return useQuery({
     queryKey: ["pedidos-colaboradores", orgId],
     queryFn: () => api<{ id: string; nombre: string }[]>("/pedidos/colaboradores"),
-    enabled: Boolean(orgId),
+    enabled: Boolean(orgId) && disponible("pedidos"),
     staleTime: 5 * 60_000,
   });
 }
@@ -43,10 +45,11 @@ export function useColaboradores() {
 export function useRemitente() {
   const api = useApiFetch();
   const { orgId } = useAuth();
+  const { disponible } = usePlan();
   return useQuery({
     queryKey: ["pedidos-remitente", orgId],
     queryFn: () => api<Remitente>("/pedidos/remitente"),
-    enabled: Boolean(orgId),
+    enabled: Boolean(orgId) && disponible("pedidos"),
     staleTime: 5 * 60_000,
   });
 }
