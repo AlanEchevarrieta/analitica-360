@@ -139,6 +139,16 @@ export class TiendaSitioController {
     return this.service.sitio(host);
   }
 
+  /**
+   * Para el proxy con HTTPS (Caddy, on_demand_tls → ask): solo pide certificado para
+   * direcciones que son de una tienda activa (si no, cualquiera podría hacerle pedir miles).
+   */
+  @Get('tls')
+  async tls(@Query('domain') domain = '') {
+    await this.service.sitio(String(domain).slice(0, 253));
+    return { ok: true };
+  }
+
   @Get(':empresaId')
   config(@Param('empresaId', ParseUUIDPipe) empresaId: string) {
     return this.service.configPublica(empresaId);

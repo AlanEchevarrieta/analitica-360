@@ -3,7 +3,9 @@
 #   cp .env.produccion.example .env.produccion   # completar las claves
 #   docker compose -f docker-compose.prod.yml --env-file .env.produccion up -d --build
 #
-# Orden de arranque: postgres (sano) → migrate (aplica migraciones y termina) → api → web.
+# Orden de arranque: postgres (sano) → migrate (aplica migraciones y termina) → api → web y tienda → caddy.
+# Caddy es la única entrada (puertos 80 y 443) y pone HTTPS solo (ver deploy/Caddyfile).
+# backup hace una copia diaria de la base (ver deploy/backup.sh).
 # Para usar imágenes ya publicadas por CI en vez de compilar: definir API_IMAGE / WEB_IMAGE
 # (ej. ghcr.io/alanechevarrieta/analitica-360-api:<sha>) y correr con --no-build.
 
@@ -56,10 +58,16 @@ services:
       ARCHIVOS_URL_PUBLICA: ${ARCHIVOS_URL_PUBLICA:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       AVISOS_EMAIL: ${AVISOS_EMAIL:-}
+      AVISOS_EMAIL_DESDE: ${AVISOS_EMAIL_DESDE:-}
+      # Links de los emails (baja de los informes) y certificados de las tiendas.
+      API_URL_PUBLICA: https://api.${DOMINIO:?Falta DOMINIO}
+      # Caddy está en la red interna de Docker: solo a él se le cree la IP del visitante.
+      TRUST_PROXY: uniquelocal
+      TIENDA_SESIONES_SECRETO: ${TIENDA_SESIONES_SECRETO:-}
+      GOOGLE_CLIENT_ID_TIENDAS: ${GOOGLE_CLIENT_ID_TIENDAS:-}
     volumes:
       - archivos:/data/archivos
-    ports:
-      - "${API_PORT:-3001}:3001"
+    # Sin puerto publicado: se entra por Caddy (https://api.DOMINIO).
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -79,12 +87,69 @@ services:
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
       CLERK_WEBHOOK_SECRET: ${CLERK_WEBHOOK_SECRET:-}
       INTERNAL_WEBHOOK_SECRET: ${INTERNAL_WEBHOOK_SECRET}
-    ports:
-      - "${WEB_PORT:-3000}:3000"
+    # Sin puerto publicado: se entra por Caddy (https://DOMINIO).
     depends_on:
       api:
+        condition: service_healthy
+
+  # Tienda modelo: cada negocio en su subdominio (acacia.DOMINIO) o su dominio propio.
+  tienda:
+    image: ${TIENDA_IMAGE:-analitica360-tienda}
+    build:
+      context: .
+      dockerfile: apps/tienda/Dockerfile
+      args:
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID_TIENDAS:-}
+    restart: unless-stopped
+    environment:
+      ANALITICA_API_URL: http://api:3001
+      ANALITICA_TIENDA_KEY: ${TIENDA_PROXY_KEY:?Falta TIENDA_PROXY_KEY}
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # La única puerta de entrada: HTTPS automático para la app, la API y las tiendas.
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMINIO: ${DOMINIO:?Falta DOMINIO}
+      ACME_EMAIL: ${ACME_EMAIL:?Falta ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+      - tienda
+
+  # Copia diaria de la base (formato pg_dump), 14 días de historia en el volumen "backups".
+  backup:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:-analitica360}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-analitica360}
+      BACKUP_HORA: ${BACKUP_HORA:-06}
+      BACKUP_DIAS: ${BACKUP_DIAS:-14}
+    volumes:
+      - ./deploy:/deploy:ro
+      - backups:/backups
+    entrypoint: ["bash", "/deploy/backup.sh"]
+    depends_on:
+      postgres:
         condition: service_healthy
 
 volumes:
   postgres_data:
   archivos:
+  backups:
+  caddy_data:
+  caddy_config:

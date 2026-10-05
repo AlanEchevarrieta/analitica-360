@@ -15,6 +15,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM deps AS build
 ENV NEXT_OUTPUT=standalone
+# "Continuar con Google" en el ingreso de compradores (opcional; se fija al compilar).
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=
+ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 COPY apps/tienda apps/tienda
 RUN pnpm --filter tienda build
 

@@ -13,6 +13,10 @@ async function bootstrap() {
   // Cabeceras de seguridad (nosniff, sin iframes ajenos, HSTS…) y sin anunciar Express.
   // Las fotos de /archivos/ las muestran la web y las tiendas desde otro origen: cross-origin.
   app.disable('x-powered-by');
+  // Detrás del proxy con HTTPS (Caddy): la IP real del visitante llega en x-forwarded-for.
+  // Solo se le cree a un proxy de la red interna (TRUST_PROXY=uniquelocal); sin proxy, no se configura.
+  const proxy = config.get('TRUST_PROXY', { infer: true });
+  if (proxy) app.set('trust proxy', proxy);
   // La API solo devuelve JSON y fotos: su CSP no permite nada (ZAP marcaba la de helmet por amplia).
   app.use(
     helmet({

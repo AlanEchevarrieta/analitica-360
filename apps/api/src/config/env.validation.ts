@@ -37,6 +37,10 @@ const envSchema = z.object({
   AVISOS_EMAIL_DESDE: z.string().default('Analítica 360 <onboarding@resend.dev>'),
   /** URL pública de esta API (para los links de baja de los informes por email). Por defecto http://localhost:PORT. */
   API_URL_PUBLICA: z.string().url().optional(),
+  /** Detrás de un proxy (Caddy): a quién creerle la IP del visitante. Ej. uniquelocal (la red interna de Docker). */
+  TRUST_PROXY: z.string().optional(),
+  /** Pedidos por minuto por cliente (600 por defecto; 0 = sin límite, ej. para la prueba de carga local). */
+  LIMITE_PEDIDOS_POR_MINUTO: z.coerce.number().int().min(0).default(600),
   /** Informes semanales y mensuales por email: '0' apaga el programador (ej. en una segunda instancia o en pruebas). */
   INFORMES_AUTOMATICOS: z.enum(['0', '1']).default('1'),
 });

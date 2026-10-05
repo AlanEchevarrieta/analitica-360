@@ -1,0 +1,43 @@
+# Proxy con HTTPS automático (Let's Encrypt) para Analítica 360. Lo usa docker-compose.prod.yml.
+#   DOMINIO        ej. analitica360.app (apuntar en el DNS: @, www, api y * al servidor)
+#   ACME_EMAIL     email para avisos de los certificados
+#
+#   https://DOMINIO, https://www.DOMINIO   → la app (web)
+#   https://api.DOMINIO                    → la API
+#   cualquier otra dirección               → la tienda modelo, SOLO si es de una tienda activa
+#                                            (subdominio o dominio propio: lo confirma la API)
+
+{
+	email {$ACME_EMAIL}
+	# Certificados a pedido para las tiendas: antes de emitir uno, Caddy pregunta a la API
+	# si esa dirección es de una tienda activa (así nadie lo hace pedir miles).
+	on_demand_tls {
+		ask http://api:3001/tienda-sitio/tls
+	}
+}
+
+(comun) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}
+
+{$DOMINIO}, www.{$DOMINIO} {
+	import comun
+	reverse_proxy web:3000
+}
+
+api.{$DOMINIO} {
+	import comun
+	reverse_proxy api:3001
+}
+
+https:// {
+	import comun
+	tls {
+		on_demand
+	}
+	reverse_proxy tienda:3010
+}
