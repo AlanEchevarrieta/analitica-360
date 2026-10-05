@@ -7,17 +7,34 @@ import { CarritoDrawer } from "@/components/CarritoDrawer";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { urlWhatsApp } from "@/lib/whatsapp";
+import { FavoritosProvider } from "@/lib/favoritos";
+import type { CategoriaTienda } from "@/lib/productos";
 
-export function AppShell({ sitio, children }: { sitio: Sitio; children: React.ReactNode }) {
+export function AppShell({
+  sitio,
+  categorias,
+  conSesion,
+  favoritos,
+  children,
+}: {
+  sitio: Sitio;
+  categorias: CategoriaTienda[];
+  conSesion: boolean;
+  favoritos: string[];
+  children: React.ReactNode;
+}) {
   return (
     <SitioProvider sitio={sitio}>
       <CarritoProvider>
+        {/* La key lo reinicia cuando el servidor manda otra sesión o lista (ej. al ingresar): si no, quedaba la de antes. */}
+        <FavoritosProvider key={`${conSesion}:${favoritos.join(",")}`} conSesion={conSesion} iniciales={favoritos}>
         {sitio.anuncio ? <p className="bg-[var(--marca-oscuro)] px-4 py-2 text-center text-sm font-medium text-white">{sitio.anuncio}</p> : null}
-        <Header />
+        <Header categorias={categorias} conSesion={conSesion} />
         <main className="flex-1">{children}</main>
         <Footer />
         <CarritoDrawer />
         <WhatsAppFlotante numero={sitio.whatsapp} nombre={sitio.nombre} />
+        </FavoritosProvider>
       </CarritoProvider>
     </SitioProvider>
   );

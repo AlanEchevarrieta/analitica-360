@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useCarrito } from "@/lib/carrito";
-import { etiquetaVariante, formatoARS, type ProductoTienda } from "@/lib/productos";
+import { etiquetaVariante, finOferta, formatoARS, type ProductoTienda } from "@/lib/productos";
+import { Precio } from "@/components/Precio";
+import { BotonFavorito } from "@/lib/favoritos";
 import { FotoProducto } from "@/components/ProductPlaceholder";
 import { useSitio } from "@/lib/sitio-contexto";
 import { urlWhatsApp } from "@/lib/whatsapp";
@@ -17,6 +19,7 @@ export function FichaProducto({ producto }: { producto: ProductoTienda }) {
 
   const variante = variantesActivas.find((v) => v.id === varianteId);
   const precio = variante?.precio || producto.precio;
+  const precioLista = variante?.precioLista || producto.precioLista;
   const stock = variante ? variante.stock : producto.stock;
   const sinStock = stock <= 0;
 
@@ -45,8 +48,14 @@ export function FichaProducto({ producto }: { producto: ProductoTienda }) {
         ) : null}
       </div>
       <div>
-        <h1 className="font-serif text-3xl text-[var(--tinta)] sm:text-4xl">{producto.nombre}</h1>
-        <p className="mt-3 text-2xl font-semibold text-[var(--marca)]">{formatoARS(precio)}</p>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="font-serif text-3xl text-[var(--tinta)] sm:text-4xl">{producto.nombre}</h1>
+          <BotonFavorito productoId={producto.id} nombre={producto.nombre} className="shrink-0 border border-[var(--marca-oscuro)]/15" />
+        </div>
+        <p className="mt-3 text-2xl font-semibold">
+          <Precio precio={precio} precioLista={precioLista} />
+        </p>
+        {precioLista > precio && producto.ofertaHasta ? <p className="mt-1 text-sm text-[var(--tinta)]/60">Oferta {finOferta(producto.ofertaHasta)}</p> : null}
         {producto.categoria ? <p className="mt-2 text-sm text-[var(--tinta)]/60">{producto.categoria}</p> : null}
         <p className="mt-3 text-sm font-medium text-[var(--marca-hero)]">
           {sinStock ? "Sin stock" : `${stock} unidades disponibles`}

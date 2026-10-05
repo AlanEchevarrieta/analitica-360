@@ -35,6 +35,8 @@ export type Sitio = {
   tiktok: string | null;
   /** Compra mínima en pesos (null = sin mínimo). */
   pedidoMinimo: number | null;
+  /** % de descuento si paga por transferencia (0 = no hay). Lo aplica la API al crear el pedido. */
+  descuentoTransferencia: number;
 };
 
 const POR_DEFECTO: Partial<Sitio> = {
@@ -45,6 +47,7 @@ const POR_DEFECTO: Partial<Sitio> = {
   columnasCelular: 1,
   seccionesOcultas: [],
   pedidoMinimo: null,
+  descuentoTransferencia: 0,
 };
 
 /**

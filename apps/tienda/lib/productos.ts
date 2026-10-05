@@ -5,7 +5,9 @@ export type VarianteTienda = {
   id: string;
   sku: string;
   atributos: Record<string, string>;
+  /** Precio final (con oferta) y el de lista, para tacharlo. */
   precio: number;
+  precioLista: number;
   activo: boolean;
   stock: number;
 };
@@ -16,7 +18,12 @@ export type ProductoTienda = {
   categoria: string | null;
   /** Clave de la categoría para filtrar ("mates", "sin-categoria"). */
   categoriaTienda: CategoriaId;
+  /** Precio final (con la oferta vigente, lo calcula la API) y el de lista; descuentoPct 0 = sin oferta. */
   precio: number;
+  precioLista: number;
+  descuentoPct: number;
+  ofertaHasta: string | null;
+  creadoEn: string;
   /** Fotos en orden (la primera es la principal). */
   imagenes: string[];
   /** Las mismas fotos en tamaño chico (listados y tarjetas). */
@@ -99,6 +106,7 @@ function mapVariantes(raw: unknown): VarianteTienda[] {
         sku: String(v.sku ?? ""),
         atributos: attrs(v.atributos),
         precio: Number(v.precio ?? 0),
+        precioLista: Number(v.precioLista ?? v.precio ?? 0),
         activo: v.activo !== false,
         stock: Number(v.stock ?? 0),
       };
@@ -119,6 +127,10 @@ function mapProducto(row: Record<string, unknown>): ProductoTienda {
     categoria,
     categoriaTienda: claveCategoria(categoria),
     precio: Number(row.precio_venta ?? row.precio ?? 0),
+    precioLista: Number(row.precioLista ?? row.precio ?? 0),
+    descuentoPct: Number(row.descuentoPct ?? 0),
+    ofertaHasta: row.ofertaHasta == null ? null : String(row.ofertaHasta),
+    creadoEn: String(row.creadoEn ?? ""),
     imagenes: Array.isArray(row.imagenes) ? (row.imagenes as unknown[]).map(String) : [],
     miniaturas: Array.isArray(row.miniaturas) ? (row.miniaturas as unknown[]).map(String) : Array.isArray(row.imagenes) ? (row.imagenes as unknown[]).map(String) : [],
     stock: variantes.some((v) => v.activo) ? stockVars : stockBase,
@@ -129,9 +141,13 @@ function mapProducto(row: Record<string, unknown>): ProductoTienda {
 }
 
 /** Catálogo público del negocio (sin insumos ni productos ocultos: lo filtra la API). */
-export async function listarProductos(sitio: Sitio): Promise<ProductoTienda[]> {
+/** `cacheSegundos`: para lo que puede esperar un poco (el menú, el buscador); sin él, siempre fresco (stock y precios). */
+export async function listarProductos(sitio: Sitio, cacheSegundos?: number): Promise<ProductoTienda[]> {
   try {
-    const res = await fetch(urlTienda(sitio.empresaId, "/catalogo"), { cache: "no-store", headers: await cabecerasTienda() });
+    const res = await fetch(urlTienda(sitio.empresaId, "/catalogo"), {
+      ...(cacheSegundos ? { next: { revalidate: cacheSegundos } } : { cache: "no-store" as const }),
+      headers: await cabecerasTienda(),
+    });
     if (!res.ok) {
       console.error(`Catálogo: la API respondió ${res.status}`);
       return [];
@@ -156,3 +172,6 @@ export function productosDestacados(productos: ProductoTienda[], n = 4) {
     .sort((a, b) => b.vendidos - a.vendidos || b.stock - a.stock || a.nombre.localeCompare(b.nombre, "es"))
     .slice(0, n);
 }
+
+/** "hasta el 12/10" para la etiqueta de la oferta. */
+export const finOferta = (hasta: string | null) => (hasta ? `hasta el ${hasta.slice(8, 10)}/${hasta.slice(5, 7)}` : null);

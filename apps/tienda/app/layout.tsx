@@ -3,6 +3,8 @@ import { Cormorant_Garamond, Inter, Montserrat, Nunito, Playfair_Display } from 
 import { AppShell } from "@/components/AppShell";
 import { TiendaNoEncontrada } from "@/components/TiendaNoEncontrada";
 import { obtenerSitio } from "@/lib/sitio";
+import { categoriasDe, listarProductos } from "@/lib/productos";
+import { idsFavoritos, tokenSesion } from "@/lib/sesion";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -24,6 +26,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const sitio = await obtenerSitio();
+  // Menú de categorías (catálogo cacheado 2 minutos) y sesión del comprador.
+  const [categorias, conSesion, favoritos] = sitio
+    ? await Promise.all([listarProductos(sitio, 120).then(categoriasDe), tokenSesion().then(Boolean), idsFavoritos()])
+    : [[], false, []];
   return (
     <html
       lang="es-AR"
@@ -36,7 +42,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       // El color de marca del negocio: de él salen todos los colores de la tienda (globals.css).
       style={sitio ? ({ "--marca": sitio.color } as React.CSSProperties) : undefined}
     >
-      <body className="flex min-h-full flex-col font-sans">{sitio ? <AppShell sitio={sitio}>{children}</AppShell> : <TiendaNoEncontrada />}</body>
+      <body className="flex min-h-full flex-col font-sans">{sitio ? (
+          <AppShell sitio={sitio} categorias={categorias} conSesion={conSesion} favoritos={favoritos}>
+            {children}
+          </AppShell>
+        ) : (
+          <TiendaNoEncontrada />
+        )}</body>
     </html>
   );
 }

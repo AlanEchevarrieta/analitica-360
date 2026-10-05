@@ -60,6 +60,9 @@ export function mensajeWhatsAppPedido(input: {
   envio: DatosEnvio;
   items: { nombre: string; varianteEtiqueta?: string; cantidad: number; precio: number }[];
   total: number;
+  cupon?: { codigo: string; descuento: number } | null;
+  descuentoTransferencia?: number;
+  formaPago?: "transferencia" | "a_coordinar";
 }) {
   const lineas = input.items
     .map((i) => {
@@ -77,7 +80,9 @@ ${lineas}
 ${input.envio.nombre}
 ${dir}
 
-💰 Total: ${formatoARS(input.total)}
+${input.cupon ? `🎟️ Cupón ${input.cupon.codigo}: −${formatoARS(input.cupon.descuento)}
+` : ""}${input.descuentoTransferencia ? `🏦 Descuento por transferencia: −${formatoARS(input.descuentoTransferencia)}
+` : ""}💰 Total: ${formatoARS(input.total)}${input.formaPago === "transferencia" ? " (pago por transferencia)" : ""}
 
 N° Pedido: ${input.numeroPedido}`;
 }

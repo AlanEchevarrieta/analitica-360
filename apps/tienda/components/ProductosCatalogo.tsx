@@ -1,106 +1,88 @@
-"use client";
-
-import { useMemo, useState } from "react";
-import { FiltrosSidebar, type Filtros } from "@/components/FiltrosSidebar";
+import Link from "next/link";
+import { ControlesCatalogo } from "@/components/ControlesCatalogo";
+import { Migas } from "@/components/Migas";
+import { Paginacion } from "@/components/Paginacion";
 import { ProductCard } from "@/components/ProductCard";
-import { type CategoriaId, type CategoriaTienda, type ProductoTienda } from "@/lib/productos";
+import { resolverCatalogo, urlConsulta, type Consulta } from "@/lib/catalogo";
+import type { CategoriaTienda, ProductoTienda } from "@/lib/productos";
 
-type Orden = "vendidos" | "menor" | "mayor";
-
-export function ProductosCatalogo({
-  productos,
-  categorias,
-  categoriaInicial = "todos",
-}: {
-  productos: ProductoTienda[];
-  categorias: CategoriaTienda[];
-  categoriaInicial?: CategoriaId | "todos";
-}) {
-  const bounds = useMemo(() => {
-    const precios = productos.map((p) => p.precio);
-    const min = precios.length ? Math.min(...precios) : 0;
-    const max = precios.length ? Math.max(...precios) : 0;
-    return { min: Math.floor(min), max: Math.ceil(max || 1) };
-  }, [productos]);
-
-  const [filtros, setFiltros] = useState<Filtros>({
-    categoria: categoriaInicial,
-    precioMin: bounds.min,
-    precioMax: bounds.max,
-    soloStock: false,
-  });
-  const [orden, setOrden] = useState<Orden>("vendidos");
-  const [drawer, setDrawer] = useState(false);
-
-  const lista = useMemo(() => {
-    const filtrados = productos.filter((p) => {
-      if (filtros.categoria !== "todos" && p.categoriaTienda !== filtros.categoria) return false;
-      if (p.precio < filtros.precioMin || p.precio > filtros.precioMax) return false;
-      if (filtros.soloStock && p.stock <= 0) return false;
-      return true;
-    });
-    filtrados.sort((a, b) => {
-      if (orden === "menor") return a.precio - b.precio;
-      if (orden === "mayor") return b.precio - a.precio;
-      return b.vendidos - a.vendidos || a.nombre.localeCompare(b.nombre, "es");
-    });
-    return filtrados;
-  }, [filtros, orden, productos]);
+/** Catálogo: categorías, búsqueda, filtros, orden y páginas, todo en la dirección (se puede compartir). */
+export function ProductosCatalogo({ productos, categorias, consulta }: { productos: ProductoTienda[]; categorias: CategoriaTienda[]; consulta: Consulta }) {
+  const { items, total, pagina, paginas, desde } = resolverCatalogo(productos, consulta);
+  const categoria = categorias.find((c) => c.id === consulta.cat);
+  const precios = productos.map((p) => p.precio);
+  const bounds = { min: precios.length ? Math.floor(Math.min(...precios)) : 0, max: precios.length ? Math.ceil(Math.max(...precios)) : 0 };
+  const titulo = consulta.q ? `“${consulta.q}”` : (categoria?.label ?? "Productos");
+  const pasos = [
+    { label: "Productos", href: "/productos" },
+    ...(categoria ? [{ label: categoria.label, href: `/productos?cat=${categoria.id}` }] : []),
+    ...(consulta.q ? [{ label: `Búsqueda: ${consulta.q}` }] : []),
+  ];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-serif text-3xl text-[var(--tinta)]">Productos</h1>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="rounded-[var(--r-boton)] border border-[var(--marca-oscuro)]/20 px-4 py-2 text-sm md:hidden"
-            onClick={() => setDrawer(true)}
-          >
-            Filtros
-          </button>
-          <label className="text-sm">
-            Ordenar por{" "}
-            <select
-              value={orden}
-              onChange={(e) => setOrden(e.target.value as Orden)}
-              className="rounded-lg border border-[var(--marca-oscuro)]/20 bg-white px-2 py-1"
-            >
-              <option value="vendidos">Más vendidos</option>
-              <option value="menor">Menor precio</option>
-              <option value="mayor">Mayor precio</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
-      <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
-        <div className="hidden lg:block">
-          <FiltrosSidebar categorias={categorias} filtros={filtros} onChange={setFiltros} bounds={bounds} />
-        </div>
+      <Migas pasos={pasos} />
+      <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          {lista.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-[var(--marca-oscuro)]/20 bg-white p-8 text-sm text-[var(--tinta)]/70">
-              No hay productos para mostrar.
-            </p>
-          ) : (
-            <div className="grilla-productos grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-3">
-              {lista.map((p) => (
-                <ProductCard key={p.id} producto={p} />
-              ))}
-            </div>
-          )}
+          <h1 className="break-words font-serif text-3xl text-[var(--tinta)] sm:text-4xl">{titulo}</h1>
+          <p className="mt-1 text-sm text-[var(--tinta)]/60">
+            {consulta.q ? (categoria ? `Resultados en ${categoria.label}` : "Resultados de búsqueda") : null}
+            {consulta.q ? " · " : null}
+            {total} {total === 1 ? "producto" : "productos"}
+          </p>
         </div>
       </div>
 
-      {drawer ? (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <button type="button" className="absolute inset-0 bg-[var(--tinta)]/40" onClick={() => setDrawer(false)} />
-          <div className="absolute left-0 top-0 h-full w-[min(100%,320px)] overflow-y-auto bg-[var(--crema)] p-5 shadow-2xl">
-            <FiltrosSidebar categorias={categorias} filtros={filtros} onChange={setFiltros} bounds={bounds} onClose={() => setDrawer(false)} />
-          </div>
+      <div className="mt-6 flex flex-col flex-wrap gap-4 md:flex-row md:items-center md:justify-between">
+        {/* Categorías: son links, así cada una tiene su propia dirección. */}
+        <nav aria-label="Categorías" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
+          {[{ id: "", label: "Todo", cantidad: productos.length }, ...categorias].map((c) => {
+            const activo = consulta.cat === c.id;
+            return (
+              <Link
+                key={c.id || "todo"}
+                href={urlConsulta(consulta, { cat: c.id })}
+                aria-current={activo ? "page" : undefined}
+                className={`shrink-0 rounded-full border px-4 py-1.5 text-sm transition ${
+                  activo ? "border-[var(--marca-oscuro)] bg-[var(--marca-oscuro)] text-white" : "border-[var(--marca-oscuro)]/20 bg-white text-[var(--tinta)]/80 hover:border-[var(--marca)]"
+                }`}
+              >
+                {c.label} <span className="opacity-60">{c.cantidad}</span>
+              </Link>
+            );
+          })}
+        </nav>
+        <ControlesCatalogo key={urlConsulta(consulta)} consulta={consulta} bounds={bounds} />
+      </div>
+
+      {total === 0 ? (
+        <div className="mt-8 rounded-2xl border border-dashed border-[var(--marca-oscuro)]/20 bg-white p-8 text-sm text-[var(--tinta)]/70">
+          <p>
+            {productos.length === 0
+              ? "Estamos actualizando el catálogo. Volvé a pasar en un rato."
+              : consulta.q
+                ? `No encontramos productos para “${consulta.q}”.`
+                : "No hay productos con esos filtros."}
+          </p>
+          {productos.length > 0 ? (
+            <Link href="/productos" className="mt-3 inline-block font-medium text-[var(--marca)] underline">
+              Ver todos los productos
+            </Link>
+          ) : null}
         </div>
-      ) : null}
+      ) : (
+        <>
+          <p className="mt-6 text-sm text-[var(--tinta)]/55">
+            Mostrando {desde + 1}–{desde + items.length} de {total}
+          </p>
+          <div className="grilla-productos mt-3 grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-3">
+            {items.map((p) => (
+              <ProductCard key={p.id} producto={p} />
+            ))}
+          </div>
+          <Paginacion consulta={consulta} pagina={pagina} paginas={paginas} />
+        </>
+      )}
     </div>
   );
 }
