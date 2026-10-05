@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_apps_api_prisma_migrations_20260926022831_precios_planes_migration_sql", "label": "migration.sql", "file_type": "code", "source_file": "apps/api/prisma/migrations/20260926022831_precios_planes/migration.sql", "source_location": null}], "edges": []}
