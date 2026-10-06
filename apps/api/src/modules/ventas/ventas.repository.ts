@@ -24,6 +24,10 @@ export interface VentaRecord {
   productos: string;
   /** totalConInteres || totalSinInteres || suma de items - descuento. */
   total: number;
+  /** Nombre de quien la cargó (null si el usuario no tiene nombre). */
+  cargadoPor: string | null;
+  /** Ubicación de donde salió la mercadería (la del movimiento de stock de la venta). */
+  ubicacion: string | null;
 }
 
 export interface VentaItemRecord {

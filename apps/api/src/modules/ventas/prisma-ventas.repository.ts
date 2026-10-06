@@ -20,7 +20,15 @@ import type {
 } from './ventas.repository.js';
 import { calcularTotalesCredito, configuracionVentaDesde } from './ventas.util.js';
 
-type VentaConItemsNombre = Venta & { items: (VentaItem & { producto: { nombre: string } })[] };
+type VentaConItemsNombre = Venta & {
+  items: (VentaItem & { producto: { nombre: string } })[];
+  usuario?: { nombre: string } | null;
+};
+
+const CON_ITEMS_Y_USUARIO = {
+  items: { include: { producto: { select: { nombre: true } } } },
+  usuario: { select: { nombre: true } },
+} as const;
 
 function calcularTotal(v: Venta, itemsTotal: number): number {
   const descuento = v.descuento.toNumber();
@@ -35,7 +43,7 @@ function calcularTotal(v: Venta, itemsTotal: number): number {
 export class PrismaVentasRepository implements VentasRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private toRecord(v: VentaConItemsNombre): VentaRecord {
+  private toRecord(v: VentaConItemsNombre, ubicacion: string | null = null): VentaRecord {
     const itemsTotal = v.items.reduce((acc, i) => acc + i.cantidad * i.precioUnitario.toNumber(), 0);
     return {
       id: v.id,
@@ -59,7 +67,25 @@ export class PrismaVentasRepository implements VentasRepository {
       fechaCobroSaldo: v.fechaCobroSaldo,
       productos: v.items.map((i) => `${i.producto.nombre} × ${i.cantidad}`).join(', '),
       total: calcularTotal(v, itemsTotal),
+      cargadoPor: v.usuario?.nombre.trim() || null,
+      ubicacion,
     };
+  }
+
+  /** Ubicación de cada venta: la del movimiento de stock que generó (como el legacy). */
+  private async ubicaciones(empresaId: string, ventaIds: string[]): Promise<Map<string, string>> {
+    if (ventaIds.length === 0) return new Map();
+    const movs = await this.prisma.movimientoInventario.findMany({
+      where: { empresaId, tipo: 'venta', referenciaId: { in: ventaIds }, ubicacionOrigen: { not: null } },
+      select: { referenciaId: true, ubicacionOrigen: true },
+      distinct: ['referenciaId'],
+    });
+    const porVenta = new Map<string, string>();
+    for (const m of movs) {
+      const u = (m.ubicacionOrigen ?? '').trim();
+      if (m.referenciaId && u) porVenta.set(m.referenciaId, u);
+    }
+    return porVenta;
   }
 
   async listar(empresaId: string, filtro: FiltrosVentas): Promise<ListaVentas> {
@@ -81,14 +107,15 @@ export class PrismaVentasRepository implements VentasRepository {
     const [filas, total] = await Promise.all([
       this.prisma.venta.findMany({
         where,
-        include: { items: { include: { producto: { select: { nombre: true } } } } },
+        include: CON_ITEMS_Y_USUARIO,
         orderBy: { fecha: 'desc' },
         skip: from,
         take: filtro.pageSize,
       }),
       this.prisma.venta.count({ where }),
     ]);
-    return { items: filas.map((v) => this.toRecord(v)), total };
+    const ubic = await this.ubicaciones(empresaId, filas.map((v) => v.id));
+    return { items: filas.map((v) => this.toRecord(v, ubic.get(v.id) ?? null)), total };
   }
 
   async ficha(empresaId: string, id: string): Promise<VentaFicha | null> {
@@ -97,9 +124,11 @@ export class PrismaVentasRepository implements VentasRepository {
       include: {
         items: { include: { producto: { select: { nombre: true } }, variante: { select: { atributos: true } } } },
         listaPrecio: { select: { nombre: true } },
+        usuario: { select: { nombre: true } },
       },
     });
     if (!venta) return null;
+    const ubic = await this.ubicaciones(empresaId, [id]);
     const devueltas = await this.prisma.devolucionItem.groupBy({
       by: ['productoId', 'varianteId'],
       where: { tipo: 'devuelto', devolucion: { ventaId: id, empresaId, estado: { not: 'cancelado' } } },
@@ -108,7 +137,7 @@ export class PrismaVentasRepository implements VentasRepository {
     const devueltasDe = (productoId: string, varianteId: string | null) =>
       devueltas.find((d) => d.productoId === productoId && d.varianteId === varianteId)?._sum.cantidad?.toNumber() ?? 0;
     return {
-      ...this.toRecord(venta),
+      ...this.toRecord(venta, ubic.get(id) ?? null),
       listaPrecio: venta.listaPrecio?.nombre ?? null,
       items: venta.items.map((i) => ({
         productoNombre: i.producto.nombre,

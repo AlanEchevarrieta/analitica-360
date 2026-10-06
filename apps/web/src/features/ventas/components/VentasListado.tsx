@@ -84,6 +84,8 @@ export function VentasListado() {
                   <TableHead className="hidden md:table-cell">Cliente</TableHead>
                   <TableHead className="hidden md:table-cell">Productos</TableHead>
                   <TableHead className="hidden md:table-cell">Pago</TableHead>
+                  <TableHead className="hidden lg:table-cell">Ubicación</TableHead>
+                  <TableHead className="hidden lg:table-cell">Cargó</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="hidden md:table-cell">Estado</TableHead>
                 </TableRow>
@@ -99,6 +101,8 @@ export function VentasListado() {
                       <div className="mt-0.5 max-w-[55vw] truncate text-xs text-muted-foreground md:hidden">
                         {formatoFechaHora(v.fecha)}
                         {v.clienteNombre ? ` · ${v.clienteNombre}` : ""}
+                        {v.ubicacion ? ` · ${v.ubicacion}` : ""}
+                        {v.cargadoPor ? ` · ${v.cargadoPor}` : ""}
                       </div>
                       <div className="max-w-[55vw] truncate text-xs text-muted-foreground md:hidden">{v.productos}</div>
                     </TableCell>
@@ -108,6 +112,8 @@ export function VentasListado() {
                       {v.productos}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{ETIQUETA_FORMA[v.formaPago] ?? v.formaPago}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{v.ubicacion ?? <span className="text-muted-foreground/60">—</span>}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{v.cargadoPor ?? <span className="text-muted-foreground/60">—</span>}</TableCell>
                     <TableCell className="text-right align-top font-medium tabular-nums md:align-middle">
                       {formatoPesos(v.total)}
                       <div className="mt-0.5 text-xs font-normal md:hidden">

@@ -25,6 +25,8 @@ const ventaBase: VentaRecord = {
   fechaCobroSaldo: null,
   productos: 'Yerba × 10',
   total: 1000,
+  cargadoPor: null,
+  ubicacion: null,
 };
 
 const itemBase = { productoId: 'prod-1', cantidad: 10, precioUnitario: 100 };

@@ -11,6 +11,9 @@ export interface VentaFila {
   estadoCobro: string;
   productos: string;
   total: number;
+  /** Quién la cargó y de qué ubicación salió la mercadería (null si no hay dato). */
+  cargadoPor: string | null;
+  ubicacion: string | null;
 }
 
 export interface ListaVentas {

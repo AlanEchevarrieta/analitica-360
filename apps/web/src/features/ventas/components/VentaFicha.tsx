@@ -123,6 +123,8 @@ export function VentaFichaVista({ id }: { id: string }) {
             <p>Cliente: {v.clienteNombre ?? "—"}</p>
             {v.listaPrecio && <p>Lista de precios: {v.listaPrecio}</p>}
             <p>Pago: {formaPago(v.formaPago)}</p>
+            {v.ubicacion && <p>Ubicación: {v.ubicacion}</p>}
+            <p>Cargó: {v.cargadoPor ?? "—"}</p>
             {v.esSenia && <p>Seña: {formatoPesos(v.montoSenia)} · Debe: {formatoPesos(v.saldoPendiente)}</p>}
             {v.notas && <p className="whitespace-pre-line rounded-md bg-muted/50 p-2 text-xs">{v.notas}</p>}
             {!v.anulada && v.saldoPendiente > 0 && <CobrarSaldo ventaId={v.id} saldo={v.saldoPendiente} />}
