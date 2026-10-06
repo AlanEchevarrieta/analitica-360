@@ -12,3 +12,4 @@ overrides:
   dompurify: ">=3.4.16"
   mysql2: ">=3.23.1"
   deepmerge-ts: ">=8.0.0"
+  source-map-js: ">=1.2.2"
