@@ -138,6 +138,15 @@ export const useEvolucionAdmin = () => useConsulta<MesAdmin[]>(["evolucion"], "/
 export const useEmpresasAdmin = () => useConsulta<EmpresaAdmin[]>(["empresas"], "/admin/empresas");
 export const useEmpresaAdmin = (id: string) => useConsulta<EmpresaDetalleAdmin>(["empresa", id], `/admin/empresas/${id}`);
 export const useCapacidadAdmin = () => useConsulta<CapacidadAdmin>(["capacidad"], "/admin/capacidad");
+export interface VencimientoAdmin {
+  clave: "dolar" | "topes_monotributo";
+  titulo: string;
+  estado: "ok" | "aviso" | "vencido";
+  ultimo: string | null;
+  detalle: string;
+  queHacer: string;
+}
+export const useVencimientosAdmin = () => useConsulta<VencimientoAdmin[]>(["vencimientos"], "/admin/vencimientos");
 export const usePlanesAdmin = () => useConsulta<{ id: string; nombre: string }[]>(["planes"], "/admin/planes");
 export const usePagosAdmin = (estado: string, periodo: string) =>
   useConsulta<PagoAdmin[]>(["pagos", estado, periodo], `/admin/pagos?estado=${estado}&periodo=${periodo}`);

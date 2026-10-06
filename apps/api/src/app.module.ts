@@ -19,6 +19,7 @@ import { InformesModule } from './modules/informes/informes.module.js';
 import { CacheLecturasModule } from './common/cache/cache-lecturas.module.js';
 import { CotizacionesModule } from './modules/cotizaciones/cotizaciones.module.js';
 import { BajasModule } from './modules/bajas/bajas.module.js';
+import { VencimientosModule } from './modules/vencimientos/vencimientos.module.js';
 import { APP_GUARD } from '@nestjs/core';
 import { LimitePedidosGuard } from './common/limites/limite-pedidos.guard.js';
 import { ArchivosModule } from './common/archivos/archivos.module.js';
@@ -77,6 +78,7 @@ import { ConfiguracionModule } from './modules/configuracion/configuracion.modul
     CacheLecturasModule,
     CotizacionesModule,
     BajasModule,
+    VencimientosModule,
   ],
   controllers: [AppController],
   // Límite general de pedidos por cliente (ver LimitePedidosGuard).

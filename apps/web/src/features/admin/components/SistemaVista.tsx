@@ -6,6 +6,7 @@ import { formatoNumero } from "@/lib/formato";
 import { useCapacidadAdmin } from "../hooks/use-admin";
 import { Indicador, Panel } from "./comunes";
 import { TopesMonotributo } from "./TopesMonotributo";
+import { VencimientosPanel } from "./Vencimientos";
 
 function tamano(bytes: number) {
   if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toLocaleString("es-AR", { maximumFractionDigits: 2 })} GB`;
@@ -25,8 +26,9 @@ export function SistemaVista() {
     <>
       <div>
         <h1 className="text-xl font-semibold">Sistema</h1>
-        <p className="text-sm text-muted-foreground">Cuánto ocupa la base de datos y a qué ritmo crece. Sirve para elegir y dimensionar el hosting.</p>
+        <p className="text-sm text-muted-foreground">Datos que vencen, cuánto ocupa la base de datos y a qué ritmo crece.</p>
       </div>
+      <VencimientosPanel />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Indicador etiqueta="Base de datos" valor={tamano(c.baseBytes)} detalle="Tamaño total en disco" />
         <Indicador etiqueta="Registros" valor={formatoNumero(c.totalRegistros)} detalle="Ventas, productos, clientes y movimientos" />

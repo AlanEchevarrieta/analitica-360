@@ -173,3 +173,48 @@ export async function integridadBitacora() {
     return control({ ...base, estado: 'gris', resumen: `No se pudo verificar: ${e.message.slice(0, 150)}` });
   }
 }
+
+/**
+ * Datos que vencen (mismas reglas que apps/api/src/modules/vencimientos/vencimientos.util.ts):
+ * el dólar (la fuente puede dejar de responder) y los topes del monotributo (ARCA los cambia
+ * el 1° de febrero y el 1° de agosto y se cargan a mano en la consola).
+ */
+export async function vencimientos() {
+  const base = { id: 'DAT-02', titulo: 'Datos que vencen (dólar y topes del monotributo)', normas: ['soc2-pi1.2'] };
+  try {
+    const r = await sqlJson(`SELECT json_build_object(
+        'hoy', (now() AT TIME ZONE 'America/Argentina/Buenos_Aires')::date::text,
+        'dolar', (SELECT MIN(u)::text FROM (SELECT MAX(fecha) AS u FROM cotizaciones_dolar GROUP BY casa) x),
+        'topes', (SELECT MAX(vigencia_desde)::text FROM monotributo_topes WHERE vigencia_desde <= CURRENT_DATE))`);
+    const habilesEntre = (desde, hasta) => {
+      let n = 0;
+      for (let d = new Date(`${desde}T12:00:00Z`); ; ) {
+        d.setUTCDate(d.getUTCDate() + 1);
+        const iso = d.toISOString().slice(0, 10);
+        if (iso >= hasta) return n;
+        if (d.getUTCDay() !== 0 && d.getUTCDay() !== 6) n++;
+      }
+    };
+    const [a, m] = r.hoy.split('-').map(Number);
+    const corte = m >= 8 ? `${a}-08-01` : m >= 2 ? `${a}-02-01` : `${a - 1}-08-01`;
+    const faltanDolar = r.dolar ? habilesEntre(r.dolar, r.hoy) : 99;
+    const diasCorte = Math.round((Date.parse(r.hoy) - Date.parse(corte)) / 86_400_000);
+    const dolar = !r.dolar ? 'rojo' : faltanDolar >= 2 ? 'rojo' : faltanDolar === 1 ? 'amarillo' : 'verde';
+    const topes = r.topes && r.topes >= corte ? 'verde' : r.topes && diasCorte <= 30 ? 'amarillo' : 'rojo';
+    const icono = { verde: '✅', amarillo: '🟡', rojo: '🔴' };
+    const peor = [dolar, topes].includes('rojo') ? 'rojo' : [dolar, topes].includes('amarillo') ? 'amarillo' : 'verde';
+    const detalle = [
+      `${icono[dolar]} Dólar: última cotización ${r.dolar ?? 'ninguna'}${faltanDolar && r.dolar ? ` (faltan ${faltanDolar} días hábiles)` : ''}. Se sincroniza sola cada 3 horas.`,
+      `${icono[topes]} Topes del monotributo: rigen desde ${r.topes ?? 'ninguno'}; ARCA los cambió el ${corte}.${topes === 'verde' ? '' : ' Cargar los nuevos en Consola → Sistema → Topes del monotributo.'}`,
+    ];
+    return control({
+      ...base,
+      estado: peor,
+      resumen: peor === 'verde' ? 'Dólar y topes del monotributo al día.' : detalle.filter((d) => !d.startsWith('✅')).map((d) => d.replace(/^\S+\s/u, '').split('.')[0]).join(' · '),
+      detalle,
+      evidencia: r,
+    });
+  } catch (e) {
+    return control({ ...base, estado: 'gris', resumen: `No se pudo revisar: ${e.message.slice(0, 150)}` });
+  }
+}

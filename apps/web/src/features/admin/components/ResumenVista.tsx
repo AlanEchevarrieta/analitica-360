@@ -8,6 +8,7 @@ import { formatoNumero, formatoPesos } from "@/lib/formato";
 import { etiquetaGranularidad } from "@/lib/periodos";
 import { useEmpresasAdmin, useEvolucionAdmin, useMetricasAdmin, NOMBRE_PLAN, type AlertaEmpresa } from "../hooks/use-admin";
 import { AvisosRegistro } from "./AvisosRegistro";
+import { AvisoVencimientos } from "./Vencimientos";
 import { EtiquetaAlerta, Indicador, Panel, variacion } from "./comunes";
 import { ResumenAlianzasPanel } from "./alianzas/ResumenAlianzasPanel";
 
@@ -56,6 +57,7 @@ export function ResumenVista() {
         <p className="text-sm text-muted-foreground">Sin contar empresas marcadas como DEMO ni dadas de baja.</p>
       </div>
 
+      <AvisoVencimientos />
       <AvisosRegistro />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">

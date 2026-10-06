@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { calidadDatos, integridadBitacora } from './datos.mjs';
+import { calidadDatos, integridadBitacora, vencimientos } from './datos.mjs';
 import { carga } from './carga.mjs';
 import { COLOR, leerJson, peor, RAIZ } from './comun.mjs';
 import { evaluarMatriz } from './cumplimiento.mjs';
@@ -45,6 +45,7 @@ const PASOS = [
   ['carga', 'Carga (k6)', () => carga(dir, { usuario: usuarioCarga, rapido })],
   ['datos', 'Calidad de datos', () => calidadDatos()],
   ['datos', 'Integridad de la bitácora', () => integridadBitacora()],
+  ['datos', 'Datos que vencen', () => vencimientos()],
   ['backup', 'Simulacro de backup', () => simulacroBackup(dir)],
 ];
 
