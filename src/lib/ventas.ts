@@ -21,6 +21,8 @@ export type VentaFila = {
   saldoPendiente: number
   estadoCobro: EstadoCobro
   fechaCobroSaldo: string | null
+  cargadoPor: string | null
+  ubicacion: string | null
 }
 
 export type VentaFicha = VentaFila & {
@@ -75,7 +77,7 @@ async function hidratarVentas(
   let ventasRes = await client
     .from('ventas')
     .select(
-      'id, numero_venta, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_sin_interes, total_con_interes, notas, deleted_at, es_senia, monto_senia, saldo_pendiente, estado_cobro, fecha_cobro_saldo',
+      'id, numero_venta, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_sin_interes, total_con_interes, notas, deleted_at, es_senia, monto_senia, saldo_pendiente, estado_cobro, fecha_cobro_saldo, usuario_id',
     )
     .in('id', ids)
   if (ventasRes.error) {
@@ -83,7 +85,7 @@ async function hidratarVentas(
     if (t.includes('es_senia') || t.includes('schema cache') || t.includes('does not exist')) {
       ventasRes = (await client
         .from('ventas')
-        .select('id, numero_venta, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_sin_interes, total_con_interes, notas, deleted_at')
+        .select('id, numero_venta, fecha, forma_pago, cliente_nombre, cuotas, descuento, total_sin_interes, total_con_interes, notas, deleted_at, usuario_id')
         .in('id', ids)) as typeof ventasRes
     }
   }
@@ -110,6 +112,39 @@ async function hidratarVentas(
   }
 
   const porId = new Map((ventasRes.data ?? []).map((row) => [String(row.id), row as Record<string, unknown>]))
+  const userIds = [
+    ...new Set(
+      [...porId.values()]
+        .map((row) => (row.usuario_id == null || row.usuario_id === '' ? '' : String(row.usuario_id)))
+        .filter(Boolean),
+    ),
+  ]
+  const nombres = new Map<string, string>()
+  const PAGE = 100
+  for (let i = 0; i < userIds.length; i += PAGE) {
+    const { data } = await client.from('usuarios').select('id, nombre').in('id', userIds.slice(i, i + PAGE))
+    for (const u of data ?? []) {
+      const uid = String((u as { id: string }).id)
+      const nom = String((u as { nombre?: string }).nombre ?? '').trim()
+      if (uid && nom) nombres.set(uid, nom)
+    }
+  }
+  const ubicPorVenta = new Map<string, string>()
+  for (let i = 0; i < ids.length; i += PAGE) {
+    const chunk = ids.slice(i, i + PAGE)
+    const { data } = await client
+      .from('movimientos_inventario')
+      .select('referencia_id, ubicacion_origen')
+      .eq('tipo', 'venta')
+      .in('referencia_id', chunk)
+      .is('deleted_at', null)
+    for (const row of (data ?? []) as Record<string, unknown>[]) {
+      const vid = String(row.referencia_id ?? '')
+      const ubi = row.ubicacion_origen == null ? '' : String(row.ubicacion_origen).trim()
+      if (vid && ubi && !ubicPorVenta.has(vid)) ubicPorVenta.set(vid, ubi)
+    }
+  }
+
   const filas: VentaFila[] = ids.map((id) => {
     const row = porId.get(id) ?? {}
     const items = itemsPorVenta.get(id)
@@ -117,6 +152,7 @@ async function hidratarVentas(
     const totalCon = Number(row.total_con_interes ?? 0)
     const totalSin = Number(row.total_sin_interes ?? 0)
     const totalCalc = (items?.total ?? 0) - descuento
+    const uid = row.usuario_id == null || row.usuario_id === '' ? '' : String(row.usuario_id)
     return {
       id,
       numeroVenta: row.numero_venta == null || row.numero_venta === '' ? null : String(row.numero_venta),
@@ -137,6 +173,8 @@ async function hidratarVentas(
         ? row.estado_cobro
         : 'pagado') as EstadoCobro,
       fechaCobroSaldo: row.fecha_cobro_saldo ? String(row.fecha_cobro_saldo) : null,
+      cargadoPor: uid ? nombres.get(uid) ?? null : null,
+      ubicacion: ubicPorVenta.get(id) ?? null,
     }
   })
   return { filas, error: null }
