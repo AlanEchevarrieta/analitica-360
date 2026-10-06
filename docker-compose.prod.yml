@@ -147,6 +147,23 @@ services:
       postgres:
         condition: service_healthy
 
+  # Copia fuera del servidor: sube las copias de la base y las fotos a Cloudflare R2 (deploy/backup-nube.sh).
+  backup-nube:
+    image: rclone/rclone:1
+    restart: unless-stopped
+    environment:
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-analitica360-backups}
+      BACKUP_HORA: ${BACKUP_HORA:-06}
+      BACKUP_NUBE_DIAS: ${BACKUP_NUBE_DIAS:-30}
+    volumes:
+      - ./deploy:/deploy:ro
+      - backups:/backups:ro
+      - archivos:/archivos:ro
+    entrypoint: ["sh", "/deploy/backup-nube.sh"]
+
 volumes:
   postgres_data:
   archivos:
