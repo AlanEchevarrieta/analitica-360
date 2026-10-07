@@ -111,110 +111,103 @@ export function MaquetaVentaCelular({ className }: { className?: string }) {
   );
 }
 
-/** Mini maqueta para cada módulo. */
-export function MaquetaModulo({ id }: { id: string }) {
-  const caja = "rounded-xl border border-slate-100 bg-white p-3 text-[11px] text-slate-600";
-  switch (id) {
-    case "stock":
-      return (
-        <div className={caja}>
-          {[
-            ["Remera · M · Negro", "24 u.", false],
-            ["Remera · L · Blanco", "3 u. · bajo", true],
-            ["Buzo · S · Gris", "11 u.", false],
-          ].map(([n, s, bajo]) => (
-            <div key={n as string} className="flex items-center justify-between gap-2 border-b border-slate-50 py-1.5 last:border-0">
-              <span className="truncate">{n}</span>
-              <span className={cn("shrink-0 tabular-nums", bajo ? "font-medium text-amber-600" : "text-slate-400")}>{s}</span>
+/** Fondo suave con la maqueta de cada bloque destacado. */
+function Lienzo({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-100 via-indigo-50 to-white p-6 ring-1 ring-indigo-100 sm:p-10">
+      <div className="pointer-events-none absolute -top-6 -right-6 size-32 rounded-full bg-violet-300/30 blur-2xl" aria-hidden />
+      {children}
+    </div>
+  );
+}
+
+const tarjeta = "rounded-2xl border border-slate-200/80 bg-white p-4 shadow-lg shadow-indigo-900/5";
+
+/** Maqueta grande de cada bloque destacado (operacion, numeros, online). */
+export function MaquetaDestacada({ id }: { id: string }) {
+  if (id === "numeros")
+    return (
+      <Lienzo>
+        <div className={tarjeta}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs text-slate-500">Ganancia del mes</p>
+              <p className="text-2xl font-semibold text-slate-900 tabular-nums">$ 2.214.500</p>
+              <p className="text-xs font-medium text-emerald-600">▲ 18 % · margen 32 %</p>
             </div>
-          ))}
-        </div>
-      );
-    case "analytics":
-      return (
-        <div className={caja}>
-          <div className="flex items-center justify-between">
-            <span className="font-medium text-slate-700">Ganancia por mes</span>
-            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px]">US$</span>
+            <span className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] text-slate-500">$ · US$</span>
           </div>
-          <svg viewBox="0 0 200 60" className="mt-2 h-16 w-full" aria-hidden>
-            <path d="M0 50 L25 44 L50 46 L75 34 L100 36 L125 24 L150 26 L175 14 L200 8" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" />
-            <path d="M0 50 L25 44 L50 46 L75 34 L100 36 L125 24 L150 26 L175 14 L200 8 L200 60 L0 60Z" fill="#6366f1" opacity=".08" />
+          <svg viewBox="0 0 300 90" className="mt-4 h-24 w-full" aria-hidden>
+            <defs>
+              <linearGradient id="area-numeros" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#6366f1" stopOpacity=".25" />
+                <stop offset="1" stopColor="#6366f1" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d="M0 72 C30 66 50 70 75 58 S120 50 150 44 S200 36 225 26 S270 18 300 10 L300 90 L0 90Z" fill="url(#area-numeros)" />
+            <path d="M0 72 C30 66 50 70 75 58 S120 50 150 44 S200 36 225 26 S270 18 300 10" fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" />
           </svg>
         </div>
-      );
-    case "contabilidad":
-      return (
-        <div className={caja}>
-          <p className="font-medium text-slate-700">Monotributo · categoría D</p>
-          <div className="mt-2 h-2 rounded-full bg-slate-100">
-            <div className="h-full w-[68%] rounded-full bg-emerald-500" />
+        <div className={cn(tarjeta, "relative mt-4 ml-auto w-[85%] sm:-mt-6 sm:w-[70%]")}>
+          <p className="text-xs font-medium text-slate-700">Monotributo · categoría D</p>
+          <div className="mt-2.5 h-2 rounded-full bg-slate-100">
+            <div className="h-full w-[68%] rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500" />
           </div>
-          <p className="mt-1.5">Facturaste el 68 % del tope anual. Te quedan $ 9,8 millones.</p>
+          <p className="mt-2 text-xs text-slate-500">68 % del tope anual · te quedan $ 9,8 millones</p>
         </div>
-      );
-    case "tienda":
-      return (
-        <div className={caja}>
-          <div className="grid grid-cols-3 gap-2">
-            {["#e0e7ff", "#fce7f3", "#dcfce7"].map((c, i) => (
-              <div key={c} className="flex flex-col gap-1">
-                <div className="aspect-square rounded-lg" style={{ background: c }} />
+      </Lienzo>
+    );
+  if (id === "online")
+    return (
+      <Lienzo>
+        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-lg shadow-indigo-900/5">
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <span className="text-sm font-semibold tracking-tight text-slate-900">tu-tienda.com.ar</span>
+            <span className="rounded-full bg-indigo-600 px-2.5 py-0.5 text-[11px] font-medium text-white">Carrito · 2</span>
+          </div>
+          <div className="grid grid-cols-3 gap-3 p-4">
+            {[
+              ["from-indigo-100 to-violet-200", "$ 21.500", "−15 %"],
+              ["from-rose-100 to-orange-100", "$ 14.800", ""],
+              ["from-emerald-100 to-teal-100", "$ 32.900", ""],
+            ].map(([g, p, o]) => (
+              <div key={g} className="flex flex-col gap-1.5">
+                <div className={cn("relative aspect-[4/5] rounded-xl bg-gradient-to-br", g)}>
+                  {o && <span className="absolute top-1.5 left-1.5 rounded-md bg-white px-1.5 py-0.5 text-[10px] font-semibold text-rose-600">{o}</span>}
+                </div>
                 <span className="h-1.5 w-4/5 rounded bg-slate-200" />
-                <span className="text-[10px] font-medium text-slate-700">$ {(i + 2) * 7}.500</span>
+                <span className="text-xs font-semibold text-slate-800 tabular-nums">{p}</span>
               </div>
             ))}
           </div>
         </div>
-      );
-    case "clientes":
-      return (
-        <div className={caja}>
+        <div className={cn(tarjeta, "relative mt-4 flex items-center gap-3 sm:-mt-5 sm:mr-8 sm:ml-auto sm:w-fit")}>
+          <span className="flex size-9 items-center justify-center rounded-full bg-emerald-100 text-sm">🛍️</span>
+          <div>
+            <p className="text-xs font-semibold text-slate-900">Pedido nuevo · $ 36.300</p>
+            <p className="text-[11px] text-slate-500">Ya descontado del stock</p>
+          </div>
+        </div>
+      </Lienzo>
+    );
+  return (
+    <Lienzo>
+      <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-end">
+        <MaquetaVentaCelular className="shrink-0" />
+        <div className={cn(tarjeta, "w-full sm:mb-6")}>
+          <p className="text-xs font-medium text-slate-700">Stock</p>
           {[
-            ["Ferretería Norte", "Debe $ 120.400", "text-red-500"],
-            ["María López", "Al día", "text-emerald-600"],
-            ["Kiosco Plaza", "Debe $ 35.000", "text-red-500"],
-          ].map(([n, s, c]) => (
-            <div key={n} className="flex items-center justify-between border-b border-slate-50 py-1.5 last:border-0">
-              <span>{n}</span>
-              <span className={cn("font-medium", c)}>{s}</span>
+            ["Remera · M · Negro", "24 u.", false],
+            ["Remera · L · Blanco", "3 u.", true],
+            ["Buzo · S · Gris", "11 u.", false],
+          ].map(([n, c, bajo]) => (
+            <div key={n as string} className="flex items-center justify-between gap-2 border-b border-slate-100 py-2 text-xs last:border-0">
+              <span className="text-slate-600">{n}</span>
+              <span className={cn("whitespace-nowrap tabular-nums", bajo ? "rounded-md bg-amber-50 px-1.5 font-medium text-amber-700" : "text-slate-400")}>{bajo ? `${c} · bajo` : c}</span>
             </div>
           ))}
         </div>
-      );
-    case "compras":
-      return (
-        <div className={caja}>
-          <div className="flex justify-between gap-2"><span>Compra · Dist. Sur</span><span className="tabular-nums">$ 812.000</span></div>
-          <div className="mt-1.5 flex justify-between gap-2 text-slate-400"><span>Flete repartido</span><span className="tabular-nums">$ 24.000</span></div>
-          <div className="mt-1.5 flex justify-between gap-2 font-medium text-indigo-600"><span>Costo promedio</span><span className="tabular-nums">$ 6.480</span></div>
-        </div>
-      );
-    case "informes":
-      return (
-        <div className={caja}>
-          <p className="font-medium text-slate-700">📩 Tu semana en Analítica 360</p>
-          <p className="mt-1">Vendiste $ 1.640.000 (▲ 9 %). Lo más vendido: Mate de calabaza.</p>
-          <p className="mt-1 text-indigo-600">Ver el informe en PDF →</p>
-        </div>
-      );
-    default:
-      return (
-        <div className={caja}>
-          {[
-            ["V-000325", "Efectivo", "$ 21.300"],
-            ["V-000324", "Tarjeta · 3 cuotas", "$ 64.900"],
-            ["V-000323", "Transferencia", "$ 15.200"],
-          ].map(([n, f, t]) => (
-            <div key={n} className="flex items-center justify-between gap-2 border-b border-slate-50 py-1.5 last:border-0">
-              <span className="flex flex-col">
-                <span className="font-medium text-slate-700">{n}</span>
-                <span className="text-[10px] text-slate-400">{f}</span>
-              </span>
-              <span className="font-medium tabular-nums text-slate-700">{t}</span>
-            </div>
-          ))}
-        </div>
-      );
-  }
+      </div>
+    </Lienzo>
+  );
 }

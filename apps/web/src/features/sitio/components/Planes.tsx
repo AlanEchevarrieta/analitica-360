@@ -2,82 +2,133 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, Minus } from "lucide-react";
+import { Check, Minus, Sparkles } from "lucide-react";
+import { PLANES as CATALOGO } from "@analitica360/shared-types";
 import { cn } from "@/lib/utils";
-import { CICLOS, MODULOS as MODULOS_PLAN, PLANES, PLANES_PAGOS, type Ciclo, type PlanPagoId } from "@/features/planes/planes";
-import { CUOTAS_ANUAL, DESCUENTO_CICLO, DIAS_PRUEBA, linkWhatsApp, MESES, precioPeriodo, precioPorMes } from "../contenido";
+import { CICLOS, PLANES, PLANES_PAGOS, PRECIO_MENSUAL, type Ciclo, type PlanPagoId } from "@/features/planes/planes";
+import { ahorroAnual, COMPARACION, CUOTAS_ANUAL, DESCUENTO_CICLO, DIAS_PRUEBA, linkWhatsApp, MESES, precioPeriodo, precioPorMes, type FilaComparacion } from "../contenido";
 
 const pesos = (n: number) => `$ ${n.toLocaleString("es-AR")}`;
 
 const PARA_QUIEN: Record<PlanPagoId, string> = {
-  basico: "Para empezar a ordenar ventas, stock y compras.",
+  basico: "Para ordenar ventas, stock y compras.",
   pro: "Para conocer tu negocio a fondo y trabajar en equipo.",
-  ecommerce: "Para vender también por internet con tu propia tienda.",
+  ecommerce: "Para vender también por internet con tu tienda.",
 };
 
 const DESTACADOS: Record<PlanPagoId, string[]> = {
-  basico: ["Ventas, productos y clientes", "Compras, proveedores e inventario", "Informe semanal por email", "Soporte por WhatsApp"],
-  pro: ["Todo lo del Básico", "Analytics, Insights y vista en dólares", "Contabilidad y control del monotributo", "Cuenta corriente y listas de precios", "Producción, pedidos e importar de Excel"],
-  ecommerce: ["Todo lo del Pro", "Tienda online con tu dominio", "Ofertas, cupones y descuento por transferencia", "Usuarios y ubicaciones ilimitados"],
+  basico: ["Ventas, productos y clientes", "Compras, proveedores e inventario", "Informe semanal por email", "2 usuarios y 2 locales"],
+  pro: ["Todo lo del Básico", "Analytics, Insights y vista en dólares", "Contabilidad y monotributo", "Cuenta corriente y listas de precios", "Producción, pedidos e importar de Excel"],
+  ecommerce: ["Todo lo del Pro", "Tienda online con tu dominio", "Ofertas, cupones y cuentas de compradores", "Usuarios y locales ilimitados"],
 };
+
+const MENSAJE_CICLO: Record<Ciclo, string> = {
+  mensual: "Pagás mes a mes, sin permanencia.",
+  trimestral: "Ahorrás 15 % pagando cada 3 meses.",
+  anual: `Pagás 9 meses y usás 12, en hasta ${CUOTAS_ANUAL} cuotas sin interés.`,
+};
+
+function celda(fila: FilaComparacion, id: PlanPagoId) {
+  if (fila.limite) {
+    const n = CATALOGO[id][fila.limite];
+    return <span className="text-sm font-medium text-slate-700">{n == null ? "Ilimitados" : n}</span>;
+  }
+  return PLANES[id].modulos.includes(fila.funcion ?? "") ? (
+    <Check className="mx-auto size-5 text-indigo-600" aria-label="Incluido" />
+  ) : (
+    <Minus className="mx-auto size-4 text-slate-300" aria-label="No incluido" />
+  );
+}
 
 export function Planes() {
   const [ciclo, setCiclo] = useState<Ciclo>("anual");
   return (
-    <div className="flex flex-col gap-10">
-      <div className="mx-auto inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm" role="radiogroup" aria-label="Forma de pago">
-        {CICLOS.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            role="radio"
-            aria-checked={ciclo === c.id}
-            onClick={() => setCiclo(c.id)}
-            className={cn("rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:px-4", ciclo === c.id ? "bg-indigo-600 text-white shadow" : "text-slate-600 hover:text-slate-900")}
-          >
-            {c.nombre}
-            {DESCUENTO_CICLO[c.id] > 0 && <span className={cn("ml-1.5 text-xs", ciclo === c.id ? "text-indigo-100" : "text-emerald-600")}>−{DESCUENTO_CICLO[c.id] * 100}%</span>}
-          </button>
-        ))}
+    <div className="flex flex-col gap-12">
+      {/* Ciclo de pago */}
+      <div className="flex flex-col items-center gap-3">
+        <div className="inline-flex rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm" role="radiogroup" aria-label="Forma de pago">
+          {CICLOS.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              role="radio"
+              aria-checked={ciclo === c.id}
+              onClick={() => setCiclo(c.id)}
+              className={cn(
+                "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all sm:px-5",
+                ciclo === c.id ? "bg-slate-900 text-white shadow" : "text-slate-600 hover:text-slate-900",
+              )}
+            >
+              {c.nombre}
+              {DESCUENTO_CICLO[c.id] > 0 && (
+                <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", ciclo === c.id ? "bg-emerald-400 text-slate-900" : "bg-emerald-50 text-emerald-700")}>
+                  −{DESCUENTO_CICLO[c.id] * 100}%
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        <p className="text-sm font-medium text-emerald-700">{MENSAJE_CICLO[ciclo]}</p>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-3">
+      {/* Tarjetas */}
+      <div className="grid gap-6 lg:grid-cols-3 lg:items-stretch">
         {PLANES_PAGOS.map((id) => {
           const destacado = PLANES[id].popular;
+          const conDescuento = DESCUENTO_CICLO[ciclo] > 0;
           return (
             <div
               key={id}
               className={cn(
-                "relative flex flex-col rounded-2xl border bg-white p-6 shadow-sm",
-                destacado ? "border-indigo-500 shadow-xl shadow-indigo-500/10 ring-1 ring-indigo-500" : "border-slate-200",
+                "relative flex flex-col rounded-3xl p-7",
+                destacado ? "bg-slate-900 text-white shadow-2xl shadow-indigo-900/30 lg:-my-3 lg:py-10" : "border border-slate-200 bg-white text-slate-900 shadow-sm",
               )}
             >
-              {destacado && <span className="absolute -top-3 left-6 rounded-full bg-indigo-600 px-3 py-1 text-xs font-medium text-white">El más elegido</span>}
-              <h3 className="text-lg font-semibold text-slate-900">{PLANES[id].nombre}</h3>
-              <p className="mt-1 text-sm text-slate-500">{PARA_QUIEN[id]}</p>
-              <p className="mt-5 flex items-baseline gap-1">
-                <span className="text-4xl font-bold tracking-tight text-slate-900 tabular-nums">{pesos(precioPorMes(id, ciclo))}</span>
-                <span className="text-sm text-slate-500">/ mes + IVA</span>
-              </p>
-              <p className="mt-1 min-h-10 text-xs text-slate-500">
-                {ciclo === "mensual"
-                  ? "Pagás mes a mes, sin permanencia."
-                  : `${pesos(precioPeriodo(id, ciclo))} cada ${MESES[ciclo]} meses${ciclo === "anual" ? `, en hasta ${CUOTAS_ANUAL} cuotas sin interés` : ""}.`}
-              </p>
+              {destacado && (
+                <span className="absolute -top-3.5 left-7 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-3 py-1 text-xs font-semibold text-white shadow">
+                  <Sparkles className="size-3.5" /> El más elegido
+                </span>
+              )}
+              <h3 className="text-xl font-semibold">{PLANES[id].nombre}</h3>
+              <p className={cn("mt-1 text-sm", destacado ? "text-slate-300" : "text-slate-500")}>{PARA_QUIEN[id]}</p>
+
+              <div className="mt-6 min-h-[7.5rem]">
+                {conDescuento && (
+                  <p className={cn("text-sm line-through", destacado ? "text-slate-400" : "text-slate-400")}>{pesos(PRECIO_MENSUAL[id])} / mes</p>
+                )}
+                <p className="flex items-baseline gap-1.5">
+                  <span className="text-[2.6rem] leading-none font-bold tracking-tight tabular-nums">{pesos(precioPorMes(id, ciclo))}</span>
+                  <span className={cn("text-sm", destacado ? "text-slate-300" : "text-slate-500")}>/ mes + IVA</span>
+                </p>
+                {conDescuento ? (
+                  <p className="mt-3 inline-flex rounded-lg bg-emerald-400/15 px-2.5 py-1 text-sm font-semibold text-emerald-600">
+                    <span className={destacado ? "text-emerald-300" : ""}>Ahorrás {pesos(ahorroAnual(id, ciclo))} por año</span>
+                  </p>
+                ) : (
+                  <p className={cn("mt-3 text-sm", destacado ? "text-slate-300" : "text-slate-500")}>Sin permanencia</p>
+                )}
+                {ciclo !== "mensual" && (
+                  <p className={cn("mt-2 text-xs", destacado ? "text-slate-400" : "text-slate-500")}>
+                    {pesos(precioPeriodo(id, ciclo))} cada {MESES[ciclo]} meses
+                    {ciclo === "anual" ? ` · hasta ${CUOTAS_ANUAL} cuotas sin interés` : ""}
+                  </p>
+                )}
+              </div>
+
               <Link
                 prefetch={false}
                 href="/sign-up"
                 className={cn(
-                  "mt-5 rounded-lg py-2.5 text-center text-sm font-medium",
-                  destacado ? "bg-indigo-600 text-white hover:bg-indigo-700" : "border border-slate-200 text-slate-800 hover:bg-slate-50",
+                  "mt-6 rounded-xl py-3 text-center text-sm font-semibold transition-colors",
+                  destacado ? "bg-white text-slate-900 hover:bg-indigo-50" : "bg-indigo-600 text-white hover:bg-indigo-700",
                 )}
               >
                 Probar {DIAS_PRUEBA} días gratis
               </Link>
-              <ul className="mt-6 flex flex-col gap-2.5 text-sm text-slate-600">
+              <ul className={cn("mt-7 flex flex-col gap-3 border-t pt-6 text-sm", destacado ? "border-white/10 text-slate-200" : "border-slate-100 text-slate-600")}>
                 {DESTACADOS[id].map((d) => (
-                  <li key={d} className="flex gap-2">
-                    <Check className="mt-0.5 size-4 shrink-0 text-indigo-600" />
+                  <li key={d} className="flex gap-2.5">
+                    <Check className={cn("mt-0.5 size-4 shrink-0", destacado ? "text-indigo-300" : "text-indigo-600")} />
                     {d}
                   </li>
                 ))}
@@ -87,62 +138,61 @@ export function Planes() {
         })}
       </div>
 
-      <details className="group rounded-2xl border border-slate-200 bg-white">
-        <summary className="cursor-pointer list-none px-6 py-4 text-center text-sm font-medium text-indigo-700 hover:bg-slate-50">
-          Comparar todo lo que trae cada plan <span className="inline-block transition-transform group-open:rotate-180">⌄</span>
-        </summary>
-        <div className="overflow-x-auto border-t border-slate-100">
-          <table className="w-full min-w-[34rem] text-sm">
+      {/* Comparación, siempre a la vista */}
+      <div className="mt-6">
+        <h3 className="text-center text-2xl font-bold tracking-tight text-slate-900">Compará los planes en detalle</h3>
+        <p className="mt-2 text-center text-slate-500">Todo lo que trae cada uno, para que elijas sin dudas.</p>
+        <p className="mt-6 text-center text-xs text-slate-400 sm:hidden">Deslizá la tabla para ver los tres planes →</p>
+        <div className="mt-3 overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm sm:mt-8">
+          <table className="w-full min-w-[40rem] border-collapse text-left">
             <thead>
-              <tr className="text-left text-slate-500">
-                <th className="px-6 py-3 font-medium">Incluye</th>
+              <tr>
+                <th className="w-[40%] px-6 py-5 align-bottom text-sm font-medium text-slate-500">Incluye</th>
                 {PLANES_PAGOS.map((id) => (
-                  <th key={id} className="px-3 py-3 text-center font-medium text-slate-900">
-                    {PLANES[id].nombre}
+                  <th key={id} className={cn("px-4 py-5 text-center align-bottom", PLANES[id].popular && "bg-indigo-50/70")}>
+                    <span className="block text-base font-semibold text-slate-900">{PLANES[id].nombre}</span>
+                    <span className="mt-0.5 block text-sm font-normal text-slate-500 tabular-nums">{pesos(precioPorMes(id, ciclo))} / mes</span>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {[
-                ["Usuarios", PLANES_PAGOS.map((id) => PLANES[id].usuarios)],
-                ["Ubicaciones (local, depósito, ferias)", PLANES_PAGOS.map((id) => PLANES[id].productos)],
-              ].map(([n, vals]) => (
-                <tr key={n as string} className="border-t border-slate-100">
-                  <td className="px-6 py-2.5 text-slate-700">{n}</td>
-                  {(vals as string[]).map((v, i) => (
-                    <td key={i} className="px-3 py-2.5 text-center text-slate-600">
-                      {v}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-              {MODULOS_PLAN.map((m) => (
-                <tr key={m.id} className="border-t border-slate-100">
-                  <td className="px-6 py-2.5 text-slate-700">{m.etiqueta}</td>
-                  {PLANES_PAGOS.map((id) => (
-                    <td key={id} className="px-3 py-2.5 text-center">
-                      {PLANES[id].modulos.includes(m.id) ? (
-                        <Check className="mx-auto size-4 text-indigo-600" aria-label="Incluido" />
-                      ) : (
-                        <Minus className="mx-auto size-4 text-slate-300" aria-label="No incluido" />
-                      )}
-                    </td>
-                  ))}
-                </tr>
+              {COMPARACION.map((g) => (
+                <GrupoComparacion key={g.grupo} grupo={g.grupo} filas={g.filas} />
               ))}
             </tbody>
           </table>
         </div>
-      </details>
-
-      <p className="text-center text-sm text-slate-500">
-        ¿Tenés dudas sobre qué plan te conviene?{" "}
-        <a href={linkWhatsApp("Hola, quiero que me ayuden a elegir un plan de Analítica 360")} className="font-medium text-indigo-700 hover:underline" target="_blank" rel="noopener noreferrer">
-          Escribinos por WhatsApp
-        </a>
-        .
-      </p>
+        <p className="mt-6 text-center text-sm text-slate-500">
+          Precios en pesos argentinos, más IVA. ¿Dudas sobre qué plan te conviene?{" "}
+          <a href={linkWhatsApp("Hola, quiero que me ayuden a elegir un plan de Analítica 360")} className="font-semibold text-indigo-700 hover:underline" target="_blank" rel="noopener noreferrer">
+            Escribinos por WhatsApp
+          </a>
+          .
+        </p>
+      </div>
     </div>
+  );
+}
+
+function GrupoComparacion({ grupo, filas }: { grupo: string; filas: FilaComparacion[] }) {
+  return (
+    <>
+      <tr>
+        <th colSpan={4} scope="colgroup" className="border-t border-slate-200 bg-slate-50 px-6 py-2.5 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+          {grupo}
+        </th>
+      </tr>
+      {filas.map((f) => (
+        <tr key={f.etiqueta} className="border-t border-slate-100">
+          <td className="px-6 py-3.5 text-sm text-slate-700">{f.etiqueta}</td>
+          {PLANES_PAGOS.map((id) => (
+            <td key={id} className={cn("px-4 py-3.5 text-center", PLANES[id].popular && "bg-indigo-50/40")}>
+              {celda(f, id)}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
   );
 }

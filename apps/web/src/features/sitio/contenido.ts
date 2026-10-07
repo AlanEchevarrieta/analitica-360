@@ -23,74 +23,94 @@ export function precioPeriodo(plan: PlanPagoId, ciclo: Ciclo): number {
   return precioPorMes(plan, ciclo) * MESES[ciclo];
 }
 
+/** Cuánto se ahorra en un año frente a pagar mes a mes. */
+export function ahorroAnual(plan: PlanPagoId, ciclo: Ciclo): number {
+  return (PRECIO_MENSUAL[plan] - precioPorMes(plan, ciclo)) * 12;
+}
+
 export const WHATSAPP = (process.env.NEXT_PUBLIC_WHATSAPP_CONTACT ?? "").replace(/\D/g, "");
 export const linkWhatsApp = (texto = "Hola, quiero conocer Analítica 360") =>
   WHATSAPP ? `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(texto)}` : "/sign-up";
 
-export interface Modulo {
-  id: string;
-  titulo: string;
-  bajada: string;
-  puntos: string[];
-  plan: "Todos los planes" | "Desde Pro" | "E-commerce";
-}
+/** Las tres cosas grandes que hace el sistema, cada una con su maqueta. */
+export const DESTACADAS = [
+  {
+    id: "operacion",
+    etiqueta: "Operación diaria",
+    titulo: "Vendé rápido y tené el stock siempre al día",
+    texto: "Cada venta descuenta el stock, suma a la caja y calcula tu ganancia real. Desde la compu o el celular, con lector de códigos.",
+    puntos: ["Efectivo, tarjeta, transferencia y cuotas con recargo", "Variantes de talle y color, en varios locales o depósitos", "Compras que actualizan el costo real con flete incluido"],
+  },
+  {
+    id: "numeros",
+    etiqueta: "Números claros",
+    titulo: "Sabé cuánto ganás, no solo cuánto vendés",
+    texto: "Ganancia por producto, punto de equilibrio y el tope de tu monotributo, sin planillas. También en dólares, con el valor de cada día.",
+    puntos: ["Estado de resultados, libro diario y balance automáticos", "Pronósticos, combos y precio sugerido", "Informe por email cada semana, para vos o tu contador"],
+  },
+  {
+    id: "online",
+    etiqueta: "Ventas online",
+    titulo: "Tu tienda online, conectada al mismo stock",
+    texto: "Publicá tu catálogo con tu dominio. Los pedidos entran directo al sistema y nunca vendés algo que no tenés.",
+    puntos: ["Ofertas, cupones y descuento por transferencia", "Cuentas de compradores con sus pedidos", "Subdominio gratis o tu propio dominio"],
+  },
+] as const;
 
-export const MODULOS: Modulo[] = [
+/** El resto, en una grilla simple de íconos (clave de ícono en Sitio.tsx). */
+export const EXTRAS = [
+  { icono: "clientes", titulo: "Clientes y cuenta corriente", texto: "Quién te debe, cuánto y desde cuándo." },
+  { icono: "precios", titulo: "Listas de precios", texto: "Mayorista, minorista o las que necesites." },
+  { icono: "produccion", titulo: "Producción", texto: "Recetas, fabricación y kits con su costo." },
+  { icono: "pedidos", titulo: "Pedidos y remitos", texto: "Preparación, despacho y remito impreso." },
+  { icono: "whatsapp", titulo: "Difusiones por WhatsApp", texto: "Segmentá clientes y avisales novedades." },
+  { icono: "excel", titulo: "Importar desde Excel", texto: "Traé tus productos y clientes en minutos." },
+  { icono: "equipo", titulo: "Equipo con permisos", texto: "Cada persona ve y hace solo lo que corresponde." },
+  { icono: "celular", titulo: "En el celular", texto: "Se instala como app, sin descargar nada." },
+] as const;
+
+/** Comparación de planes, agrupada. `funcion` sale del catálogo; `valores` es fijo por plan. */
+export type FilaComparacion = { etiqueta: string; funcion?: string; limite?: "maxUsuarios" | "maxUbicaciones" };
+export const COMPARACION: { grupo: string; filas: FilaComparacion[] }[] = [
   {
-    id: "ventas",
-    titulo: "Ventas y caja",
-    bajada: "Vendé en segundos desde la compu o el celular, con lector de códigos.",
-    puntos: ["Efectivo, tarjeta, transferencia y cuotas con recargo", "Señas y saldos pendientes", "Devoluciones y cambios que vuelven al stock"],
-    plan: "Todos los planes",
+    grupo: "Ventas y stock",
+    filas: [
+      { etiqueta: "Ventas, productos y clientes", funcion: "ventas" },
+      { etiqueta: "Compras, proveedores e inventario", funcion: "inventario" },
+      { etiqueta: "Pedidos con preparación y remitos", funcion: "pedidos" },
+      { etiqueta: "Producción: recetas, fabricación y kits", funcion: "produccion" },
+      { etiqueta: "Importar desde Excel", funcion: "importar" },
+    ],
   },
   {
-    id: "stock",
-    titulo: "Stock e inventario",
-    bajada: "Sabé qué tenés, dónde está y qué se está por terminar.",
-    puntos: ["Variantes (talle, color) y varias ubicaciones", "Aviso de stock bajo", "Historial de cada movimiento, tipo kardex"],
-    plan: "Todos los planes",
+    grupo: "Clientes",
+    filas: [
+      { etiqueta: "Listas de precios y cuenta corriente", funcion: "listas_precios" },
+      { etiqueta: "Segmentos y difusiones por WhatsApp", funcion: "difusiones" },
+    ],
   },
   {
-    id: "compras",
-    titulo: "Compras y proveedores",
-    bajada: "Cada compra actualiza el stock y el costo real de tus productos.",
-    puntos: ["Costo promedio con flete e impuestos repartidos", "Ficha de cada proveedor con sus compras", "Ganancia real por venta"],
-    plan: "Todos los planes",
+    grupo: "Números y control",
+    filas: [
+      { etiqueta: "Informe semanal por email", funcion: "ventas" },
+      { etiqueta: "Analytics y vista en dólares", funcion: "analytics" },
+      { etiqueta: "Insights: pronósticos y combos", funcion: "insights" },
+      { etiqueta: "Contabilidad y monotributo", funcion: "contabilidad" },
+      { etiqueta: "Informe mensual por email", funcion: "informe_mensual" },
+      { etiqueta: "Bitácora de auditoría", funcion: "auditoria" },
+    ],
   },
   {
-    id: "clientes",
-    titulo: "Clientes y cuenta corriente",
-    bajada: "Conocé a quién le vendés y cobrá lo que te deben.",
-    puntos: ["Cuenta corriente y listas de precios mayorista y minorista", "Segmentos y difusiones por WhatsApp", "Cumpleaños y clientes que dejaron de comprar"],
-    plan: "Desde Pro",
+    grupo: "Ventas online",
+    filas: [{ etiqueta: "Tienda online con ofertas, cupones y cuentas de compradores", funcion: "tienda" }],
   },
   {
-    id: "analytics",
-    titulo: "Analytics e Insights",
-    bajada: "Entendé tu negocio con números claros, también en dólares.",
-    puntos: ["Ventas, ganancia por producto y punto de equilibrio", "Pronósticos, combos y precio sugerido", "Botón $ / US$ con el dólar de cada día"],
-    plan: "Desde Pro",
-  },
-  {
-    id: "contabilidad",
-    titulo: "Contabilidad y monotributo",
-    bajada: "Los números contables salen solos de lo que ya cargás.",
-    puntos: ["Estado de resultados, libro diario y balance", "Control del tope de tu categoría de monotributo", "Exportación para tu contador"],
-    plan: "Desde Pro",
-  },
-  {
-    id: "tienda",
-    titulo: "Tienda online propia",
-    bajada: "Tu catálogo en internet, conectado al mismo stock.",
-    puntos: ["Con tu dominio o un subdominio gratis", "Ofertas, cupones y descuento por transferencia", "Cuentas de compradores y pedidos que llegan al sistema"],
-    plan: "E-commerce",
-  },
-  {
-    id: "informes",
-    titulo: "Informes automáticos",
-    bajada: "Cada semana te llega por email cómo viene tu negocio.",
-    puntos: ["PDF semanal en todos los planes y mensual desde Pro", "Para vos, tus socios o tu contador", "Producción con recetas y kits, y pedidos con remito (Pro)"],
-    plan: "Todos los planes",
+    grupo: "Equipo y soporte",
+    filas: [
+      { etiqueta: "Usuarios", limite: "maxUsuarios" },
+      { etiqueta: "Locales, depósitos o ferias", limite: "maxUbicaciones" },
+      { etiqueta: "Soporte por WhatsApp", funcion: "ventas" },
+    ],
   },
 ];
 
@@ -109,7 +129,10 @@ export const SEGURIDAD = [
 
 export const PREGUNTAS = [
   { p: "¿Necesito tarjeta para probar?", r: `No. Creás la cuenta y tenés ${DIAS_PRUEBA} días gratis con todo el plan Pro, sin tarjeta y sin compromiso. Al terminar, elegís un plan o la cuenta queda en solo lectura: no perdés nada.` },
-  { p: "¿Sirve para mi rubro?", r: "Sirve para cualquier comercio que venda productos: indumentaria, ferretería, almacén, artesanías, librería, cosmética, regalería y más. Si vendés en el local, en ferias y por internet, todo queda en el mismo lugar." },
+  {
+    p: "¿Sirve para mi rubro?",
+    r: "Sí. Está pensado para cualquier negocio que compre, fabrique o venda productos, sea cual sea el rubro: comercios minoristas y mayoristas, distribuidoras, industrias y talleres que producen, emprendimientos y quienes venden por internet, en ferias o en varios locales. Si tenés dudas sobre tu caso, escribinos y lo vemos juntos.",
+  },
   { p: "¿Puedo pasar mis datos desde Excel u otro sistema?", r: "Sí. Importás productos y clientes desde Excel, y si venís de otro sistema te ayudamos a pasar tu información." },
   { p: "¿Funciona en el celular?", r: "Sí. Funciona en el navegador de la compu, la tablet o el celular, y se puede instalar como una app. Para vender podés usar la cámara del celular como lector de códigos." },
   { p: "¿Mis datos están seguros?", r: "Hacemos copias de seguridad todos los días, la conexión va cifrada y cada cambio queda registrado en una bitácora que no se puede alterar. Los datos son tuyos: los exportás cuando quieras." },

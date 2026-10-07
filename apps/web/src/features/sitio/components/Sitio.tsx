@@ -1,22 +1,24 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Building2, Calculator, ChartLine, Check, FileText, MessageCircle, Package, ShieldCheck, ShoppingBag, ShoppingCart, Store, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, Check, ClipboardList, DatabaseBackup, Factory, FileSpreadsheet, History, KeyRound, Lock, Megaphone, MessageCircle, ShieldCheck, Smartphone, Tags, UserCog, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DIAS_PRUEBA, linkWhatsApp, MODULOS, PASOS, PREGUNTAS, SEGURIDAD, UCIM, WHATSAPP } from "../contenido";
+import { DESTACADAS, DIAS_PRUEBA, EXTRAS, linkWhatsApp, PASOS, PREGUNTAS, SEGURIDAD, UCIM, WHATSAPP } from "../contenido";
 import { Encabezado } from "./Encabezado";
 import { Logo } from "./Logo";
-import { MaquetaInicio, MaquetaModulo, MaquetaVentaCelular } from "./Maquetas";
+import { MaquetaDestacada, MaquetaInicio, MaquetaVentaCelular } from "./Maquetas";
 import { Planes } from "./Planes";
 
-const ICONOS: Record<string, typeof ChartLine> = {
-  ventas: ShoppingCart,
-  stock: Package,
-  compras: ShoppingBag,
+const ICONOS_EXTRAS: Record<string, typeof Check> = {
   clientes: Users,
-  analytics: ChartLine,
-  contabilidad: Calculator,
-  tienda: Store,
-  informes: FileText,
+  precios: Tags,
+  produccion: Factory,
+  pedidos: ClipboardList,
+  whatsapp: Megaphone,
+  excel: FileSpreadsheet,
+  equipo: UserCog,
+  celular: Smartphone,
 };
+
+const ICONOS_SEGURIDAD = [DatabaseBackup, History, Lock, KeyRound];
 
 function Titulo({ etiqueta, titulo, bajada, className }: { etiqueta: string; titulo: string; bajada?: string; className?: string }) {
   return (
@@ -109,51 +111,65 @@ export function Sitio() {
         </section>
 
         {/* Funciones */}
-        <section id="funciones" className="scroll-mt-20 py-20 sm:py-24">
+        <section id="funciones" className="scroll-mt-20 py-20 sm:py-28">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <Titulo etiqueta="Funciones" titulo="Lo que necesitás para manejar tu negocio" bajada="Cada venta actualiza el stock, la caja, la ganancia y tus números contables. Cargás una vez y el resto sale solo." />
-            <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {MODULOS.map((m) => {
-                const I = ICONOS[m.id] ?? Check;
-                return (
-                  <article key={m.id} className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-                    <div className="flex items-center justify-between">
-                      <span className="flex size-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                        <I className="size-5" />
-                      </span>
-                      <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", m.plan === "Todos los planes" ? "bg-slate-100 text-slate-600" : m.plan === "Desde Pro" ? "bg-indigo-50 text-indigo-700" : "bg-violet-50 text-violet-700")}>
-                        {m.plan}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900">{m.titulo}</h3>
-                      <p className="mt-1 text-sm text-slate-600">{m.bajada}</p>
-                    </div>
-                    <MaquetaModulo id={m.id} />
-                    <ul className="mt-auto flex flex-col gap-1.5 text-sm text-slate-600">
-                      {m.puntos.map((p) => (
-                        <li key={p} className="flex gap-2">
-                          <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+            <Titulo etiqueta="Funciones" titulo="Lo que necesitás para manejar tu negocio" bajada="Cargás una vez y todo se conecta: cada venta actualiza el stock, la caja, tu ganancia y tus números contables." />
+            <div className="mt-16 flex flex-col gap-20 sm:gap-28">
+              {DESTACADAS.map((d, i) => (
+                <div key={d.id} className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+                  <div className={cn(i % 2 === 1 && "lg:order-2")}>
+                    <p className="text-sm font-semibold tracking-wide text-indigo-600 uppercase">{d.etiqueta}</p>
+                    <h3 className="mt-2 text-2xl font-bold tracking-tight text-balance text-slate-900 sm:text-3xl">{d.titulo}</h3>
+                    <p className="mt-4 text-lg text-pretty text-slate-600">{d.texto}</p>
+                    <ul className="mt-6 flex flex-col gap-3">
+                      {d.puntos.map((p) => (
+                        <li key={p} className="flex gap-3 text-slate-700">
+                          <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-indigo-100">
+                            <Check className="size-3 text-indigo-700" strokeWidth={3} />
+                          </span>
                           {p}
                         </li>
                       ))}
                     </ul>
-                  </article>
-                );
-              })}
+                  </div>
+                  <div className={cn(i % 2 === 1 && "lg:order-1")}>
+                    <MaquetaDestacada id={d.id} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-24 rounded-3xl border border-slate-200 bg-slate-50/60 p-8 sm:p-12">
+              <h3 className="text-center text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Y además</h3>
+              <div className="mt-10 grid grid-cols-2 gap-x-5 gap-y-8 sm:gap-x-8 sm:gap-y-10 lg:grid-cols-4">
+                {EXTRAS.map((e) => {
+                  const I = ICONOS_EXTRAS[e.icono] ?? Check;
+                  return (
+                    <div key={e.titulo} className="flex flex-col gap-3">
+                      <span className="flex size-11 items-center justify-center rounded-xl bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200">
+                        <I className="size-5" />
+                      </span>
+                      <div>
+                        <p className="font-semibold text-slate-900">{e.titulo}</p>
+                        <p className="mt-1 text-sm text-slate-500">{e.texto}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
 
         {/* Cómo empezás */}
-        <section className="bg-slate-50 py-20 sm:py-24">
+        <section className="bg-gradient-to-b from-violet-50/80 to-white py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <Titulo etiqueta="Cómo empezás" titulo="En marcha el mismo día" />
             <ol className="mt-12 grid gap-6 md:grid-cols-3">
               {PASOS.map((p, i) => (
-                <li key={p.titulo} className="rounded-2xl border border-slate-200 bg-white p-6">
-                  <span className="flex size-9 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">{i + 1}</span>
-                  <h3 className="mt-4 font-semibold text-slate-900">{p.titulo}</h3>
+                <li key={p.titulo} className="relative rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+                  <span className="text-5xl font-bold text-indigo-100 tabular-nums">0{i + 1}</span>
+                  <h3 className="mt-2 text-lg font-semibold text-slate-900">{p.titulo}</h3>
                   <p className="mt-1.5 text-sm text-slate-600">{p.texto}</p>
                 </li>
               ))}
@@ -162,27 +178,30 @@ export function Sitio() {
         </section>
 
         {/* Seguridad */}
-        <section className="py-20 sm:py-24">
+        <section className="bg-slate-950 py-20 sm:py-28">
           <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2">
             <div>
-              <p className="text-sm font-semibold tracking-wide text-indigo-600 uppercase">Seguridad</p>
-              <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Tu información, cuidada como corresponde</h2>
-              <p className="mt-4 text-lg text-slate-600">Cumplimos la Ley 25.326 de protección de datos personales y revisamos la seguridad del sistema todas las semanas.</p>
+              <p className="text-sm font-semibold tracking-wide text-indigo-300 uppercase">Seguridad</p>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">Tu información, cuidada como corresponde</h2>
+              <p className="mt-4 text-lg text-slate-300">Cumplimos la Ley 25.326 de protección de datos personales y revisamos la seguridad del sistema todas las semanas.</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              {SEGURIDAD.map((s) => (
-                <div key={s.titulo} className="rounded-2xl border border-slate-200 p-5">
-                  <ShieldCheck className="size-5 text-indigo-600" />
-                  <h3 className="mt-3 font-semibold text-slate-900">{s.titulo}</h3>
-                  <p className="mt-1 text-sm text-slate-600">{s.texto}</p>
-                </div>
-              ))}
+              {SEGURIDAD.map((s, i) => {
+                const I = ICONOS_SEGURIDAD[i] ?? ShieldCheck;
+                return (
+                  <div key={s.titulo} className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                    <I className="size-6 text-indigo-300" />
+                    <h3 className="mt-4 font-semibold text-white">{s.titulo}</h3>
+                    <p className="mt-1.5 text-sm text-slate-300">{s.texto}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
 
         {/* Planes */}
-        <section id="planes" className="scroll-mt-20 bg-gradient-to-b from-indigo-50/60 to-white py-20 sm:py-24">
+        <section id="planes" className="scroll-mt-20 bg-gradient-to-b from-violet-50/80 via-white to-white pt-20 pb-10 sm:pt-28 sm:pb-14">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <Titulo etiqueta="Planes" titulo="Precios simples, sin sorpresas" bajada={`Probá ${DIAS_PRUEBA} días gratis con todo el plan Pro. Después elegís el que te sirve y lo cambiás cuando quieras.`} className="mb-10" />
             <Planes />
@@ -190,7 +209,7 @@ export function Sitio() {
         </section>
 
         {/* UCIM */}
-        <section id="ucim" className="scroll-mt-20 py-20 sm:py-24">
+        <section id="ucim" className="scroll-mt-20 pt-6 pb-20 sm:pb-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-700 p-8 text-white sm:p-12">
               <div className="grid items-center gap-10 lg:grid-cols-[1.2fr_1fr]">
