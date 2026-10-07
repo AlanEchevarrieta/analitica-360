@@ -8,6 +8,8 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/terminos",
   "/privacidad",
+  "/robots.txt",
+  "/sitemap.xml",
   // Estas dos validan la sesión en la propia página: con la sesión "pendiente"
   // (cuenta nueva sin empresa) auth.protect() la trataría como deslogueada.
   "/bienvenida",

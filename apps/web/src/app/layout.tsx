@@ -14,6 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITIO_URL ?? "https://analitica360.app"),
   title: "Analítica 360",
   description: "Gestión comercial: stock, ventas, compras, clientes y analytics.",
 };

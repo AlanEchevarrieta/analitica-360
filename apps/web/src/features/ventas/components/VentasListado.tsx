@@ -108,7 +108,7 @@ export function VentasListado() {
                     </TableCell>
                     <TableCell className="hidden whitespace-nowrap tabular-nums md:table-cell">{formatoFechaHora(v.fecha)}</TableCell>
                     <TableCell className="hidden md:table-cell">{v.clienteNombre ?? <span className="text-muted-foreground/60">—</span>}</TableCell>
-                    <TableCell className="hidden max-w-72 truncate md:table-cell" title={v.productos}>
+                    <TableCell className="hidden max-w-72 truncate md:table-cell lg:max-w-52" title={v.productos}>
                       {v.productos}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{ETIQUETA_FORMA[v.formaPago] ?? v.formaPago}</TableCell>
