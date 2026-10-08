@@ -12,7 +12,7 @@ describe('ContabilidadService', () => {
 
   beforeEach(async () => {
     repository = { ventasConItems: vi.fn(), valorStock: vi.fn(), perdidasPorDia: vi.fn().mockResolvedValue([]) };
-    gastoRepository = { listar: vi.fn(), crear: vi.fn(), anular: vi.fn() };
+    gastoRepository = { listar: vi.fn(), crear: vi.fn(), anular: vi.fn(), cambiarTipoCosto: vi.fn() };
     const module = await Test.createTestingModule({
       providers: [{ provide: CotizacionesService, useValue: { conversor: async () => EN_PESOS } }, 
         ContabilidadService,

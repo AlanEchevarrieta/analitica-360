@@ -1,4 +1,4 @@
-import { acumuladoSerie, expandirRecurrentes, mesesAtras, proyectarFlujo, ratiosFinancieros, semaforoMargenBruto, semaforoMargenNeto, serieMensual, sumarPeriodo, type PuntoMes } from './contabilidad.util.js';
+import { acumuladoSerie, equilibrioDelMes, expandirRecurrentes, mesesAtras, proyectarFlujo, ratiosFinancieros, semaforoMargenBruto, semaforoMargenNeto, serieMensual, sumarPeriodo, type PuntoMes } from './contabilidad.util.js';
 
 describe('mesesAtras', () => {
   it('devuelve las últimas N claves YYYY-MM terminando en el mes de hoy', () => {
@@ -141,5 +141,31 @@ describe('ratiosFinancieros: días de inventario', () => {
     // Costo diario 90.000/90 = 1.000 -> el stock de 30.000 dura 30 días.
     expect(ratiosFinancieros({ ...base, diasPeriodo: 90 }).diasInventario).toBeCloseTo(30);
     expect(ratiosFinancieros(base).diasInventario).toBeCloseTo(10);
+  });
+});
+
+describe('equilibrioDelMes', () => {
+  const mes = { desde: '2026-10-01', hasta: '2026-10-31' };
+  // De cada $100: 35 de mercadería y 5 de gastos variables → quedan 60 para los fijos.
+  const referencia = { ventas: 1_000_000, mercaderia: 350_000, gastosVariables: 50_000 };
+
+  it('fijos ÷ contribución, cuánto falta, qué día se cubre y cuánto vender por día', () => {
+    const e = equilibrioDelMes({ fijos: 960_000, ventasMes: 1_000_000, referencia, ...mes, hoy: '2026-10-10' });
+    expect(e).toMatchObject({ contribucionPct: 60, variablesPct: 40, puntoEquilibrio: 1_600_000, falta: 600_000, porcentaje: 62.5, cubierto: false });
+    expect(e.diaQueCubre).toBe('2026-10-16'); // 100.000 por día → 16 días
+    expect(e.ventaDiariaNecesaria).toBe(28_571); // 600.000 en los 21 días que quedan
+  });
+
+  it('cubierto: ya no falta nada', () => {
+    const e = equilibrioDelMes({ fijos: 960_000, ventasMes: 2_000_000, referencia, ...mes, hoy: '2026-10-20' });
+    expect(e).toMatchObject({ cubierto: true, falta: 0, ventaDiariaNecesaria: null });
+  });
+
+  it('a este ritmo no llega en el mes', () => {
+    expect(equilibrioDelMes({ fijos: 960_000, ventasMes: 100_000, referencia, ...mes, hoy: '2026-10-10' }).diaQueCubre).toBeNull();
+  });
+
+  it('si los costos variables se comen toda la venta, no hay punto de equilibrio', () => {
+    expect(equilibrioDelMes({ fijos: 1, ventasMes: 10, referencia: { ventas: 100, mercaderia: 90, gastosVariables: 20 }, ...mes, hoy: '2026-10-10' }).puntoEquilibrio).toBeNull();
   });
 });

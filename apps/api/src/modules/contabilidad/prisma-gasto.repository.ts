@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
-import type { CategoriaGasto, CrearGastoInput, FrecuenciaGasto, Gasto, GastoRepository, ResultadoAnularGasto } from './gasto.repository.js';
+import type { CategoriaGasto, CrearGastoInput, FrecuenciaGasto, Gasto, GastoRepository, ResultadoAnularGasto, TipoCosto } from './gasto.repository.js';
 
 function toGasto(g: {
   id: string;
@@ -12,6 +12,7 @@ function toGasto(g: {
   fecha: Date;
   recurrente: boolean;
   frecuencia: string | null;
+  tipoCosto: string;
 }): Gasto {
   return {
     id: g.id,
@@ -23,6 +24,7 @@ function toGasto(g: {
     fecha: g.fecha.toISOString().slice(0, 10),
     recurrente: g.recurrente,
     frecuencia: g.frecuencia as FrecuenciaGasto | null,
+    tipoCosto: g.tipoCosto as TipoCosto,
   };
 }
 
@@ -54,9 +56,15 @@ export class PrismaGastoRepository implements GastoRepository {
         fecha: new Date(input.fecha),
         recurrente: input.recurrente,
         frecuencia: input.recurrente ? input.frecuencia : null,
+        tipoCosto: input.tipoCosto,
       },
     });
     return toGasto(gasto);
+  }
+
+  async cambiarTipoCosto(empresaId: string, id: string, tipoCosto: TipoCosto): Promise<boolean> {
+    const { count } = await this.prisma.gasto.updateMany({ where: { id, empresaId, deletedAt: null }, data: { tipoCosto } });
+    return count > 0;
   }
 
   async anular(empresaId: string, id: string): Promise<ResultadoAnularGasto> {

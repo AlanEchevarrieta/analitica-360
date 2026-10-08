@@ -1001,6 +1001,8 @@ model Gasto {
   fecha       DateTime  @default(now()) @db.Date
   recurrente  Boolean   @default(false)
   frecuencia  String? // mensual | quincenal | semanal
+  /// fijo | variable: para el punto de equilibrio (por defecto, recurrente = fijo).
+  tipoCosto   String    @default("variable") @map("tipo_costo") @db.VarChar(10)
   deletedAt   DateTime? @map("deleted_at")
   createdAt   DateTime  @default(now()) @map("created_at")
 

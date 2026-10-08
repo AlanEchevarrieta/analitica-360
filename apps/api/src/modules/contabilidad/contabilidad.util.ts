@@ -42,6 +42,8 @@ export interface ItemCogs {
 export interface GastoParaContabilidad {
   fecha: string;
   monto: number;
+  /** fijo | variable (sin dato = variable; las pérdidas de mercadería son variables). */
+  tipoCosto?: 'fijo' | 'variable';
   recurrente: boolean;
   frecuencia?: 'mensual' | 'quincenal' | 'semanal' | null;
 }
@@ -161,16 +163,20 @@ export function ratiosFinancieros(input: {
   cantidadVentas: number;
   valorInventario: number;
   gastosFijos: number;
+  /** Gastos variables (además de la mercadería): restan al margen que paga los fijos. */
+  gastosVariables?: number;
   /** Días que abarca el período (para el costo diario); antes se asumía siempre 30. */
   diasPeriodo?: number;
 }): RatiosFinancieros {
   const { ingresos, cogs, gastos, cantidadVentas, valorInventario, gastosFijos } = input;
+  const gastosVariables = input.gastosVariables ?? 0;
   const diasPeriodo = input.diasPeriodo && input.diasPeriodo > 0 ? input.diasPeriodo : 30;
   const margenBrutoPct = ingresos > 0 ? ((ingresos - cogs) / ingresos) * 100 : 0;
   const neto = ingresos - cogs - gastos;
   const margenNetoPct = ingresos > 0 ? (neto / ingresos) * 100 : 0;
-  const mbFrac = margenBrutoPct / 100;
-  const puntoEquilibrio = mbFrac > 0 ? gastosFijos / mbFrac : 0;
+  // Contribución: lo que queda de cada venta después de la mercadería y los gastos variables.
+  const contribucion = ingresos > 0 ? (ingresos - cogs - gastosVariables) / ingresos : 0;
+  const puntoEquilibrio = contribucion > 0 ? gastosFijos / contribucion : 0;
   const invertido = cogs + gastos;
   const roiPct = invertido > 0 ? (neto / invertido) * 100 : 0;
   const cogsDia = cogs / diasPeriodo;
@@ -224,4 +230,77 @@ export function acumuladoSerie(puntos: PuntoMes[]): PuntoMesAcumulado[] {
     acc += p.resultado;
     return { ...p, acumulado: acc };
   });
+}
+
+export interface Equilibrio {
+  /** Costos fijos de todo el mes (alquiler, sueldos…: lo marcado como fijo). */
+  fijos: number;
+  /** De cada $ 1 vendido, cuánto se va en costos variables (mercadería + gastos variables), en %. */
+  variablesPct: number;
+  mercaderiaPct: number;
+  gastosVariablesPct: number;
+  /** De cada $ 1 vendido, cuánto queda para pagar los fijos (y después es ganancia), en %. */
+  contribucionPct: number;
+  /** Ventas del mes necesarias para no perder plata (null si con este margen no se llega nunca). */
+  puntoEquilibrio: number | null;
+  ventas: number;
+  /** Cuánto falta vender este mes (0 si ya se cubrió). */
+  falta: number;
+  /** Ventas / punto de equilibrio, en %. */
+  porcentaje: number | null;
+  /** Cuánto del mes ya pasó, en %. */
+  esperado: number;
+  /** A este ritmo, qué día del mes se cubren los costos (null si no llega o si no hay ventas). */
+  diaQueCubre: string | null;
+  /** Lo que hay que vender por día, en lo que queda del mes, para llegar. */
+  ventaDiariaNecesaria: number | null;
+  cubierto: boolean;
+}
+
+/**
+ * Punto de equilibrio del mes: fijos ÷ % de contribución. El % sale de un período de
+ * referencia (ventas, mercadería y gastos variables; por ejemplo los últimos 90 días),
+ * que es más estable que unos pocos días del mes.
+ */
+export function equilibrioDelMes(input: {
+  fijos: number;
+  ventasMes: number;
+  referencia: { ventas: number; mercaderia: number; gastosVariables: number };
+  desde: string;
+  hasta: string;
+  hoy: string;
+}): Equilibrio {
+  const { fijos, ventasMes, referencia, desde, hasta, hoy } = input;
+  const ventasRef = referencia.ventas;
+  const mercaderiaPct = ventasRef > 0 ? (referencia.mercaderia / ventasRef) * 100 : 0;
+  const gastosVariablesPct = ventasRef > 0 ? (referencia.gastosVariables / ventasRef) * 100 : 0;
+  const variablesPct = mercaderiaPct + gastosVariablesPct;
+  const contribucionPct = ventasRef > 0 ? 100 - variablesPct : 0;
+  const puntoEquilibrio = contribucionPct > 0 ? fijos / (contribucionPct / 100) : null;
+  const dias = Math.round((Date.parse(hasta) - Date.parse(desde)) / 86_400_000) + 1;
+  const pasados = Math.min(dias, Math.max(1, Math.round((Date.parse(hoy) - Date.parse(desde)) / 86_400_000) + 1));
+  const redondo = (n: number) => Math.round(n * 10) / 10;
+  const falta = puntoEquilibrio == null ? 0 : Math.max(0, puntoEquilibrio - ventasMes);
+  const cubierto = puntoEquilibrio != null && ventasMes >= puntoEquilibrio;
+  let diaQueCubre: string | null = null;
+  if (puntoEquilibrio != null && ventasMes > 0) {
+    const n = Math.ceil(puntoEquilibrio / (ventasMes / pasados));
+    if (n <= dias) diaQueCubre = new Date(Date.parse(desde) + (n - 1) * 86_400_000).toISOString().slice(0, 10);
+  }
+  const quedan = dias - pasados;
+  return {
+    fijos,
+    variablesPct: redondo(variablesPct),
+    mercaderiaPct: redondo(mercaderiaPct),
+    gastosVariablesPct: redondo(gastosVariablesPct),
+    contribucionPct: redondo(contribucionPct),
+    puntoEquilibrio: puntoEquilibrio == null ? null : Math.round(puntoEquilibrio),
+    ventas: Math.round(ventasMes),
+    falta: Math.round(falta),
+    porcentaje: puntoEquilibrio ? redondo((ventasMes / puntoEquilibrio) * 100) : null,
+    esperado: redondo((pasados / dias) * 100),
+    diaQueCubre,
+    ventaDiariaNecesaria: puntoEquilibrio == null || cubierto ? null : Math.round(falta / Math.max(1, quedan)),
+    cubierto,
+  };
 }

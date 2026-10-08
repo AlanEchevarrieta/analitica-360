@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { GASTO_REPOSITORY, type CategoriaGasto, type Gasto, type GastoRepository } from './gasto.repository.js';
+import { GASTO_REPOSITORY, type CategoriaGasto, type Gasto, type GastoRepository, type TipoCosto } from './gasto.repository.js';
 import type { CrearGastoDto } from './gasto.dto.js';
 
 @Injectable()
@@ -12,6 +12,10 @@ export class GastoService {
 
   crear(empresaId: string, usuarioId: string, input: CrearGastoDto): Promise<Gasto> {
     return this.repository.crear({ empresaId, usuarioId, ...input });
+  }
+
+  async cambiarTipoCosto(empresaId: string, id: string, tipoCosto: TipoCosto): Promise<void> {
+    if (!(await this.repository.cambiarTipoCosto(empresaId, id, tipoCosto))) throw new NotFoundException('Gasto no encontrado');
   }
 
   async anular(empresaId: string, id: string): Promise<void> {

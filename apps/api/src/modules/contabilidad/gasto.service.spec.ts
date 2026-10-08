@@ -8,7 +8,7 @@ describe('GastoService', () => {
   let repository: { [K in keyof GastoRepository]: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    repository = { listar: vi.fn(), crear: vi.fn(), anular: vi.fn() };
+    repository = { listar: vi.fn(), crear: vi.fn(), anular: vi.fn(), cambiarTipoCosto: vi.fn() };
     const module = await Test.createTestingModule({
       providers: [GastoService, { provide: GASTO_REPOSITORY, useValue: repository }],
     }).compile();
@@ -24,6 +24,7 @@ describe('GastoService', () => {
       fecha: '2026-09-01',
       recurrente: true,
       frecuencia: 'mensual',
+      tipoCosto: 'fijo',
     });
     expect(repository.crear).toHaveBeenCalledWith({
       empresaId: 'empresa-1',
@@ -34,6 +35,7 @@ describe('GastoService', () => {
       fecha: '2026-09-01',
       recurrente: true,
       frecuencia: 'mensual',
+      tipoCosto: 'fijo',
     });
   });
 

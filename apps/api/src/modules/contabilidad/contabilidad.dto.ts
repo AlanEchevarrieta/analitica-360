@@ -6,3 +6,6 @@ export const contabilidadQuerySchema = z
   .object({ desde: fechaIso, hasta: fechaIso, moneda: z.enum(['ARS', 'USD']).optional() })
   .refine((q) => q.hasta >= q.desde, { message: 'PERIODO_INVALIDO', path: ['hasta'] });
 export type ContabilidadQuery = z.infer<typeof contabilidadQuerySchema>;
+
+export const equilibrioQuerySchema = z.object({ moneda: z.enum(['ARS', 'USD']).optional() });
+export type EquilibrioQuery = z.infer<typeof equilibrioQuerySchema>;

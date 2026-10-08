@@ -3,6 +3,8 @@ export type FrecuenciaGasto = 'mensual' | 'quincenal' | 'semanal';
 
 export const CATEGORIAS_GASTO: CategoriaGasto[] = ['alquiler', 'sueldos', 'servicios', 'marketing', 'logistica', 'impuestos', 'mantenimiento', 'otro'];
 export const FRECUENCIAS_GASTO: FrecuenciaGasto[] = ['mensual', 'quincenal', 'semanal'];
+export type TipoCosto = 'fijo' | 'variable';
+export const TIPOS_COSTO: TipoCosto[] = ['fijo', 'variable'];
 
 export interface Gasto {
   id: string;
@@ -14,6 +16,7 @@ export interface Gasto {
   fecha: string;
   recurrente: boolean;
   frecuencia: FrecuenciaGasto | null;
+  tipoCosto: TipoCosto;
 }
 
 export interface CrearGastoInput {
@@ -25,6 +28,7 @@ export interface CrearGastoInput {
   fecha: string;
   recurrente: boolean;
   frecuencia: FrecuenciaGasto | null;
+  tipoCosto: TipoCosto;
 }
 
 export type ResultadoAnularGasto = { ok: true } | { ok: false; motivo: 'no_encontrado' | 'ya_anulado' };
@@ -36,4 +40,6 @@ export interface GastoRepository {
   listar(empresaId: string, desde: string, hasta: string, categoria?: CategoriaGasto): Promise<Gasto[]>;
   crear(input: CrearGastoInput): Promise<Gasto>;
   anular(empresaId: string, id: string): Promise<ResultadoAnularGasto>;
+  /** false si no existe. */
+  cambiarTipoCosto(empresaId: string, id: string, tipoCosto: TipoCosto): Promise<boolean>;
 }

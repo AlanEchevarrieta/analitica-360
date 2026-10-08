@@ -1,11 +1,11 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import type { EmpresaContext, UsuarioContext } from '../../common/auth/request-context.types.js';
 import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { RequireModulo } from '../../common/decorators/permiso.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { GastoService } from './gasto.service.js';
-import { crearGastoSchema, listarGastosQuerySchema, type CrearGastoDto, type ListarGastosQuery } from './gasto.dto.js';
+import { crearGastoSchema, listarGastosQuerySchema, tipoCostoSchema, type CrearGastoDto, type ListarGastosQuery, type TipoCostoDto } from './gasto.dto.js';
 
 @Controller('gastos')
 @RequireModulo('contabilidad')
@@ -27,6 +27,17 @@ export class GastoController {
     @Body(new ZodValidationPipe(crearGastoSchema)) body: CrearGastoDto,
   ) {
     return this.gastoService.crear(empresa.id, usuario.id, body);
+  }
+
+  /** Fijo o variable (para el punto de equilibrio). */
+  @Patch(':id/tipo-costo')
+  @HttpCode(204)
+  async tipoCosto(
+    @CurrentEmpresa() empresa: EmpresaContext,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(tipoCostoSchema)) body: TipoCostoDto,
+  ) {
+    await this.gastoService.cambiarTipoCosto(empresa.id, id, body.tipoCosto);
   }
 
   @Post(':id/anular')

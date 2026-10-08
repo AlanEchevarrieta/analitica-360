@@ -2,6 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CONTABILIDAD_REPOSITORY, type ContabilidadRepository, type ValorStock } from './contabilidad.repository.js';
 import { GASTO_REPOSITORY, type GastoRepository } from './gasto.repository.js';
 import {
+  equilibrioDelMes,
+  type Equilibrio,
   acumuladoSerie,
   expandirRecurrentes,
   mesesAtras,
@@ -16,7 +18,7 @@ import {
   type Semaforo,
   type TotalesPeriodo,
 } from './contabilidad.util.js';
-import { fechaHoyAR } from '../analytics/analytics.util.js';
+import { fechaHoyAR, sumarDiasIso } from '../analytics/analytics.util.js';
 import { CotizacionesService, type Moneda } from '../cotizaciones/cotizaciones.service.js';
 
 export interface ContabilidadRespuesta {
@@ -68,16 +70,15 @@ export class ContabilidadService {
       ...expandirRecurrentes(gastosCargados, hoy)
         .filter((g) => g.fecha >= desdeHist)
         .map((g) => ({ ...g, monto: conv.a(g.monto, g.fecha) })),
-      ...perdidas.map((p) => ({ fecha: p.fecha, monto: p.monto, recurrente: false })),
+      ...perdidas.map((p) => ({ fecha: p.fecha, monto: p.monto, recurrente: false, tipoCosto: 'variable' as const })),
     ];
     const serie6 = serieMensual(claves6, ventas, items, gastosHist);
     const totales = sumarPeriodo(ventas, items, gastosHist, desde, hasta);
 
-    // gastosFijos se calcula sobre TODOS los gastos recurrentes del período pedido, no sobre
-    // una lista filtrada por categoría como en la página legacy (ahí era estado de UI, acá
-    // no hay ese filtro - un costo fijo no debería desaparecer del ratio por un filtro visual).
+    // Fijos = los gastos marcados como fijos (por defecto, los recurrentes); el resto, y las
+    // pérdidas de mercadería, son variables y restan al margen que paga los fijos.
     const gastosPeriodo = gastosHist.filter((g) => g.fecha >= desde && g.fecha <= hasta);
-    const gastosFijos = gastosPeriodo.filter((g) => g.recurrente).reduce((a, g) => a + g.monto, 0);
+    const gastosFijos = gastosPeriodo.filter((g) => g.tipoCosto === 'fijo').reduce((a, g) => a + g.monto, 0);
 
     const ratios = ratiosFinancieros({
       ingresos: totales.ingresos,
@@ -86,6 +87,7 @@ export class ContabilidadService {
       cantidadVentas: totales.cantidadVentas,
       valorInventario: valorStock.invertido,
       gastosFijos: gastosFijos > 0 ? gastosFijos : totales.gastos,
+      gastosVariables: gastosFijos > 0 ? totales.gastos - gastosFijos : 0,
       // Días transcurridos del período (hasta hoy si el período sigue abierto).
       diasPeriodo: Math.round((Date.parse(hasta < hoy ? hasta : hoy) - Date.parse(desde)) / 86_400_000) + 1,
     });
@@ -104,6 +106,53 @@ export class ContabilidadService {
       proyeccion,
       flujoHistorico,
       flujoProyectado,
+    };
+  }
+
+  /**
+   * Punto de equilibrio del mes en curso, para Inicio: cuánto hay que vender para cubrir los
+   * costos fijos del mes, con el % de contribución de los últimos 90 días.
+   */
+  async equilibrio(empresaId: string, moneda?: Moneda): Promise<Equilibrio & { desde: string; hasta: string; fijosPorCategoria: { categoria: string; monto: number }[]; hayGastos: boolean }> {
+    const hoy = fechaHoyAR();
+    const desde = `${hoy.slice(0, 7)}-01`;
+    const [a, m] = hoy.split('-').map(Number);
+    const hasta = new Date(Date.UTC(a, m, 0)).toISOString().slice(0, 10);
+    const desdeRef = sumarDiasIso(hoy, -89);
+    const inicio = desdeRef < desde ? desdeRef : desde;
+    const [{ ventas: ventasArs, items: itemsArs }, gastosCargados, perdidasArs, conv] = await Promise.all([
+      this.repository.ventasConItems(empresaId, inicio, hoy),
+      this.gastoRepository.listar(empresaId, '2000-01-01', hasta),
+      this.repository.perdidasPorDia(empresaId, inicio, hoy),
+      this.cotizaciones.conversor(empresaId, moneda, inicio, hoy),
+    ]);
+    const ventas = ventasArs.map((v) => ({ ...v, total: conv.a(v.total, v.fecha) }));
+    const fechaVenta = new Map(ventasArs.map((v) => [v.id, v.fecha]));
+    const items = itemsArs.map((i) => ({ ...i, cogs: conv.a(i.cogs, fechaVenta.get(i.ventaId) ?? hoy) }));
+    // Gastos hasta fin de mes: los recurrentes del resto del mes también son costos de este mes.
+    const gastos = expandirRecurrentes(gastosCargados, hasta).map((g) => ({ ...g, monto: conv.a(g.monto, g.fecha <= hoy ? g.fecha : hoy) }));
+    const fijosMes = gastos.filter((g) => g.tipoCosto === 'fijo' && g.fecha >= desde && g.fecha <= hasta);
+    const variablesRef = [
+      ...gastos.filter((g) => g.tipoCosto !== 'fijo' && g.fecha >= desdeRef && g.fecha <= hoy),
+      ...perdidasArs.filter((p) => p.fecha >= desdeRef).map((p) => ({ fecha: p.fecha, monto: conv.a(p.monto, p.fecha), recurrente: false })),
+    ];
+    const ref = sumarPeriodo(ventas, items, variablesRef, desdeRef, hoy);
+    const mes = sumarPeriodo(ventas, items, [], desde, hoy);
+    const porCategoria = new Map<string, number>();
+    for (const g of fijosMes) porCategoria.set(g.categoria, (porCategoria.get(g.categoria) ?? 0) + g.monto);
+    return {
+      ...equilibrioDelMes({
+        fijos: fijosMes.reduce((t, g) => t + g.monto, 0),
+        ventasMes: mes.ingresos,
+        referencia: { ventas: ref.ingresos, mercaderia: ref.cogs, gastosVariables: ref.gastos },
+        desde,
+        hasta,
+        hoy,
+      }),
+      desde,
+      hasta,
+      fijosPorCategoria: [...porCategoria].map(([categoria, monto]) => ({ categoria, monto: Math.round(monto) })).sort((x, y) => y.monto - x.monto),
+      hayGastos: gastosCargados.length > 0,
     };
   }
 }
