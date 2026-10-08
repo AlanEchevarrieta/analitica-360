@@ -9,6 +9,7 @@ import { SoloCliente } from "@/components/shared/solo-cliente";
 import { useAcceso } from "@/hooks/use-acceso";
 import {
   BarChart3,
+  Target,
   ClipboardList,
   Factory,
   Gift,
@@ -153,10 +154,10 @@ export function AppSidebar() {
           </>
         )}
 
-        {puede("analytics") && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Inteligencia</SidebarGroupLabel>
-            <SidebarMenu>
+        <SidebarGroup>
+          <SidebarGroupLabel>Inteligencia</SidebarGroupLabel>
+          <SidebarMenu>
+            {puede("analytics") && (
               <SidebarMenuItem>
                 <SidebarMenuButton render={<Link href="/analytics" />} isActive={activo("/analytics")} tooltip="Analytics" className={plan.incluye("analytics") ? undefined : "text-muted-foreground"}>
                   <BarChart3 />
@@ -164,9 +165,17 @@ export function AppSidebar() {
                   {!plan.incluye("analytics") && <CandadoPlan funcion="analytics" />}
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroup>
-        )}
+            )}
+            {/* Cada usuario ve sus propios objetivos: no depende del permiso de Analytics. */}
+            <SidebarMenuItem>
+              <SidebarMenuButton render={<Link href="/objetivos" />} isActive={activo("/objetivos")} tooltip="Objetivos" className={plan.incluye("objetivos") ? undefined : "text-muted-foreground"}>
+                <Target />
+                <span>Objetivos</span>
+                {!plan.incluye("objetivos") && <CandadoPlan funcion="objetivos" />}
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
 
         {verSoporte && (
           <SidebarGroup>
