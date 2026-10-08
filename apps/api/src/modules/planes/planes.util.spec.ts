@@ -33,10 +33,11 @@ describe('clavePlan / idPlan / defPlan', () => {
 
   it('reparto aprobado (2026-10-04): qué trae cada plan y sus límites', () => {
     const b = defPlan('basico');
-    expect(b.funciones).toEqual(['inicio', 'productos', 'ventas', 'clientes', 'compras', 'proveedores', 'inventario', 'soporte']);
+    expect(b.funciones).toEqual(['inicio', 'productos', 'ventas', 'clientes', 'compras', 'proveedores', 'inventario', 'soporte', 'objetivos']);
+    expect(b.funciones).not.toContain('objetivos_avanzados');
     expect([b.maxUsuarios, b.maxUbicaciones]).toEqual([2, 2]);
     const pro = defPlan('pro');
-    for (const f of ['analytics', 'insights', 'contabilidad', 'pedidos', 'produccion', 'listas_precios', 'cuenta_corriente', 'difusiones', 'importar', 'auditoria']) expect(pro.funciones).toContain(f);
+    for (const f of ['analytics', 'insights', 'contabilidad', 'pedidos', 'produccion', 'listas_precios', 'cuenta_corriente', 'difusiones', 'importar', 'auditoria', 'objetivos_avanzados']) expect(pro.funciones).toContain(f);
     expect(pro.funciones).not.toContain('tienda');
     expect([pro.maxUsuarios, pro.maxUbicaciones]).toEqual([10, null]);
     const e = defPlan('ecommerce');

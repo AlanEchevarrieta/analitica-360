@@ -21,9 +21,13 @@ export const crearPedidoSchema = z.object({
   provincia: z.string().trim().nullable().optional(),
   metodoEnvio: z.string().trim().nullable().optional(),
   notas: z.string().trim().nullable().optional(),
+  fechaComprometida: z.iso.date().nullable().optional(),
   items: z.array(itemPedidoSchema).min(1, 'Agregá al menos un producto'),
 });
 export type CrearPedidoInput = z.infer<typeof crearPedidoSchema>;
+
+export const fechaComprometidaSchema = z.object({ fecha: z.iso.date().nullable() });
+export type FechaComprometidaInput = z.infer<typeof fechaComprometidaSchema>;
 
 export const asignarPedidoSchema = z.object({
   usuarioId: z.uuid().nullable(),

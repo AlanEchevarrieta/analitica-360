@@ -64,6 +64,10 @@ export interface PedidoFicha extends PedidoRecord {
     formaPagoTienda: string | null;
   };
   items: PedidoItemRecord[];
+  /** Día en que se le prometió el despacho (AAAA-MM-DD) o null. */
+  fechaComprometida: string | null;
+  /** Historia de estados, del más viejo al más nuevo. */
+  estados: { estado: string; fecha: Date }[];
 }
 
 /** Datos del remitente para el remito (configuracion_empresa.inventario.remitente_*). */
@@ -95,6 +99,8 @@ export interface CrearPedidoInput {
   provincia: string | null;
   metodoEnvio: string | null;
   notas: string | null;
+  /** AAAA-MM-DD o null. */
+  fechaComprometida?: string | null;
   items: ItemPedidoInput[];
   /** Solo la tienda online: descuentos ya calculados por el servidor (ver tienda/precios-tienda.util). */
   descuentos?: {
@@ -169,6 +175,8 @@ export interface PedidosRepository {
   marcarEntregado(empresaId: string, id: string): Promise<ResultadoTransicion>;
   /** Solo permitido antes del despacho (no movió stock todavía). */
   cancelar(empresaId: string, id: string): Promise<ResultadoTransicion>;
+  /** false si el pedido no existe. */
+  fijarFechaComprometida(empresaId: string, id: string, fecha: string | null): Promise<boolean>;
   remitente(empresaId: string): Promise<RemitentePedido>;
   colaboradoresActivos(empresaId: string): Promise<{ id: string; nombre: string }[]>;
 }

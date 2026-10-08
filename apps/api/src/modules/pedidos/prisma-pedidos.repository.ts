@@ -28,6 +28,7 @@ const includeFicha = {
       lote: { select: { numeroLote: true } },
     },
   },
+  estados: { select: { estado: true, creadoEn: true }, orderBy: { creadoEn: 'asc' } },
 } satisfies Prisma.PedidoInclude;
 
 type PedidoConFicha = Prisma.PedidoGetPayload<{ include: typeof includeFicha }>;
@@ -97,6 +98,8 @@ export class PrismaPedidosRepository implements PedidosRepository {
         cantidadPreparada: i.cantidadPreparada.toNumber(),
         preparado: i.preparado,
       })),
+      fechaComprometida: p.fechaComprometida ? p.fechaComprometida.toISOString().slice(0, 10) : null,
+      estados: p.estados.map((e) => ({ estado: e.estado, fecha: e.creadoEn })),
     };
   }
 
@@ -240,6 +243,7 @@ export class PrismaPedidosRepository implements PedidosRepository {
           provincia: input.provincia,
           metodoEnvio: input.metodoEnvio,
           notas: input.notas,
+          fechaComprometida: input.fechaComprometida ? new Date(`${input.fechaComprometida}T00:00:00.000Z`) : null,
           asignadoAId,
           ...(input.descuentos
             ? {
@@ -418,6 +422,11 @@ export class PrismaPedidosRepository implements PedidosRepository {
     if (!ESTADOS_ASIGNABLES_CANCELAR.includes(pedido.estado as EstadoPedido)) return 'estado_invalido';
     await this.prisma.pedido.update({ where: { id }, data: { estado: 'cancelado' } });
     return 'ok';
+  }
+
+  async fijarFechaComprometida(empresaId: string, id: string, fecha: string | null): Promise<boolean> {
+    const r = await this.prisma.pedido.updateMany({ where: { id, empresaId }, data: { fechaComprometida: fecha ? new Date(`${fecha}T00:00:00.000Z`) : null } });
+    return r.count > 0;
   }
 
   async colaboradoresActivos(empresaId: string): Promise<{ id: string; nombre: string }[]> {

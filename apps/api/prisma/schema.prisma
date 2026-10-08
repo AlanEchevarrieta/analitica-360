@@ -30,56 +30,56 @@ datasource db {
 // ==== Empresas / Planes / Suscripciones ====
 
 model Empresa {
-  id                 String    @id @default(uuid()) @db.Uuid
-  clerkOrgId         String?   @unique @map("clerk_org_id")
-  nombre             String
-  rubro              String?
-  planActual         String    @default("starter") @map("plan_actual") // legacy display field; la fuente de verdad real es Suscripcion
-  activo             Boolean   @default(true)
-  esDemo             Boolean   @default(false) @map("es_demo")
-  umbralConfirmacion Decimal?  @map("umbral_confirmacion") @db.Decimal(12, 2)
+  id                    String    @id @default(uuid()) @db.Uuid
+  clerkOrgId            String?   @unique @map("clerk_org_id")
+  nombre                String
+  rubro                 String?
+  planActual            String    @default("starter") @map("plan_actual") // legacy display field; la fuente de verdad real es Suscripcion
+  activo                Boolean   @default(true)
+  esDemo                Boolean   @default(false) @map("es_demo")
+  umbralConfirmacion    Decimal?  @map("umbral_confirmacion") @db.Decimal(12, 2)
   /// WhatsApp de contacto que dejó al registrarse.
-  telefono           String?
+  telefono              String?
   /// Cómo nos conoció (registro propio).
-  origenRegistro     String?   @map("origen_registro")
+  origenRegistro        String?   @map("origen_registro")
   /// CUIT (opcional, sin guiones): también controla que el mes gratis de un cupón sea de un solo uso.
-  cuit               String?
+  cuit                  String?
   /// Cámara de la que vino (por su código) y el cupón que usó.
-  camaraId           String?   @map("camara_id") @db.Uuid
-  cuponId            String?   @map("cupon_id") @db.Uuid
+  camaraId              String?   @map("camara_id") @db.Uuid
+  cuponId               String?   @map("cupon_id") @db.Uuid
   /// Prueba gratis que recibió (14 días o la del cupón).
-  pruebaDesde        DateTime? @map("prueba_desde") @db.Date
-  pruebaHasta        DateTime? @map("prueba_hasta") @db.Date
+  pruebaDesde           DateTime? @map("prueba_desde") @db.Date
+  pruebaHasta           DateTime? @map("prueba_hasta") @db.Date
   /// Inicio del primer período pago: arranca la ventana de comisión.
-  primerPagoEn       DateTime? @map("primer_pago_en") @db.Date
+  primerPagoEn          DateTime? @map("primer_pago_en") @db.Date
   /// Número de orden dentro de la cámara (con el primer pago; no cambia aunque otros se den de baja).
-  ordenCamara        Int?      @map("orden_camara")
-  comisionPct        Decimal?  @map("comision_pct") @db.Decimal(5, 2)
+  ordenCamara           Int?      @map("orden_camara")
+  comisionPct           Decimal?  @map("comision_pct") @db.Decimal(5, 2)
   /// Fin (excluido) de la comisión de la cámara por este cliente.
-  comisionHasta      DateTime? @map("comision_hasta") @db.Date
+  comisionHasta         DateTime? @map("comision_hasta") @db.Date
   /// Precio especial acordado (ej. clientes piloto): en ese plan se cobra este precio mensual en vez del de lista.
-  precioEspecialPlan    String?  @map("precio_especial_plan") @db.VarChar(20)
-  precioEspecialMensual Decimal? @map("precio_especial_mensual") @db.Decimal(12, 2)
-  precioEspecialNota    String?  @map("precio_especial_nota") @db.VarChar(200)
+  precioEspecialPlan    String?   @map("precio_especial_plan") @db.VarChar(20)
+  precioEspecialMensual Decimal?  @map("precio_especial_mensual") @db.Decimal(12, 2)
+  precioEspecialNota    String?   @map("precio_especial_nota") @db.VarChar(200)
   /// Baja de la cuenta a pedido del dueño: se pide, queda bloqueada 30 días y después se borran los datos.
   bajaSolicitadaEn      DateTime? @map("baja_solicitada_en")
   bajaProgramadaPara    DateTime? @map("baja_programada_para") @db.Date
   bajaSolicitadaPor     String?   @map("baja_solicitada_por") @db.VarChar(160)
   bajaEjecutadaEn       DateTime? @map("baja_ejecutada_en")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  deletedAt          DateTime? @map("deleted_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  deletedAt             DateTime? @map("deleted_at")
 
-  camara                    Camara?                @relation(fields: [camaraId], references: [id])
-  cupon                     Cupon?                 @relation("EmpresaCupon", fields: [cuponId], references: [id])
-  cuponesReferido           Cupon[]                @relation("CuponReferente")
-  cambiosOrigen             CambioOrigen[]
-  comisiones                Comision[]
-  cuotasProgramadas         CuotaProgramada[]
+  camara            Camara?           @relation(fields: [camaraId], references: [id])
+  cupon             Cupon?            @relation("EmpresaCupon", fields: [cuponId], references: [id])
+  cuponesReferido   Cupon[]           @relation("CuponReferente")
+  cambiosOrigen     CambioOrigen[]
+  comisiones        Comision[]
+  cuotasProgramadas CuotaProgramada[]
 
-  informesConfig            InformesConfig?
-  premiosGanados            PremioReferido[]       @relation("PremioReferente")
-  premioComoReferida        PremioReferido?        @relation("PremioReferida")
-  informesEnviados          InformeEnviado[]
+  informesConfig     InformesConfig?
+  premiosGanados     PremioReferido[] @relation("PremioReferente")
+  premioComoReferida PremioReferido?  @relation("PremioReferida")
+  informesEnviados   InformeEnviado[]
 
   usuarios                  Usuario[]
   historialPlanes           HistorialPlan[]
@@ -122,9 +122,11 @@ model Empresa {
   tienda                    TiendaConfig?
   imagenesProductos         ProductoImagen[]
 
-  eventosUso EventoUso[]
+  eventosUso    EventoUso[]
+  objetivos     Objetivo[]
   cuponesTienda CuponTienda[]
   cuentasTienda CuentaTienda[]
+
   @@unique([camaraId, ordenCamara])
   @@map("empresas")
 }
@@ -147,14 +149,14 @@ model HistorialPlan {
 // src/lib/planes.ts (PLANES const: límites/módulos por plan viven en código,
 // no en esta tabla — acá solo lo que las funciones SQL leen/escriben).
 model Plan {
-  id        String   @id @default(uuid()) @db.Uuid
-  nombre    String
-  precioArs Decimal? @map("precio_ars") @db.Decimal(12, 2)
-  activo    Boolean  @default(true)
+  id               String   @id @default(uuid()) @db.Uuid
+  nombre           String
+  precioArs        Decimal? @map("precio_ars") @db.Decimal(12, 2)
+  activo           Boolean  @default(true)
   /// Cuotas sin interés para quien no tiene código (un cupón puede definir las suyas).
-  cuotasTrimestral Int @default(3) @map("cuotas_trimestral")
-  cuotasAnual      Int @default(3) @map("cuotas_anual")
-  createdAt DateTime @default(now()) @map("created_at")
+  cuotasTrimestral Int      @default(3) @map("cuotas_trimestral")
+  cuotasAnual      Int      @default(3) @map("cuotas_anual")
+  createdAt        DateTime @default(now()) @map("created_at")
 
   suscripciones Suscripcion[]
 
@@ -245,6 +247,7 @@ model Usuario {
   ticketsRespuestas      TicketRespuesta[]
   asignacionFijaDe       ConfiguracionEmpresa[] @relation("AsignacionFijaUsuario")
   eventosUso             EventoUso[]
+  objetivos              Objetivo[]             @relation("ObjetivoUsuario")
 
   @@index([empresaId])
   @@map("usuarios")
@@ -333,6 +336,7 @@ model Producto {
   usadoEnRecetas     RecetaItem[]           @relation("RecetaInsumo")
   ordenesProduccion  OrdenProduccion[]
   imagenes           ProductoImagen[]
+  objetivos          Objetivo[]
 
   @@index([empresaId])
   @@index([categoriaId]) // productos de una categoría
@@ -777,47 +781,93 @@ model PedidoNumeracion {
 }
 
 model Pedido {
-  id                 String   @id @default(uuid()) @db.Uuid
-  empresaId          String   @map("empresa_id") @db.Uuid
-  numeroPedido       String   @map("numero_pedido")
-  clienteId          String?  @map("cliente_id") @db.Uuid
-  clienteNombre      String?  @map("cliente_nombre")
-  clienteEmail       String?  @map("cliente_email")
-  clienteTelefono    String?  @map("cliente_telefono")
-  origen             String   @default("manual") // manual | tienda_online | importacion
-  estado             String   @default("nuevo") // nuevo | en_preparacion | listo_despacho | despachado | con_transportista | entregado | cancelado
-  direccionEnvio     String?  @map("direccion_envio")
-  codigoPostal       String?  @map("codigo_postal")
-  localidad          String?
-  provincia          String?
-  metodoEnvio        String?  @map("metodo_envio")
-  numeroSeguimiento  String?  @map("numero_seguimiento")
-  transportista      String?
-  notas              String?
+  id                     String    @id @default(uuid()) @db.Uuid
+  empresaId              String    @map("empresa_id") @db.Uuid
+  numeroPedido           String    @map("numero_pedido")
+  clienteId              String?   @map("cliente_id") @db.Uuid
+  clienteNombre          String?   @map("cliente_nombre")
+  clienteEmail           String?   @map("cliente_email")
+  clienteTelefono        String?   @map("cliente_telefono")
+  origen                 String    @default("manual") // manual | tienda_online | importacion
+  estado                 String    @default("nuevo") // nuevo | en_preparacion | listo_despacho | despachado | con_transportista | entregado | cancelado
+  direccionEnvio         String?   @map("direccion_envio")
+  codigoPostal           String?   @map("codigo_postal")
+  localidad              String?
+  provincia              String?
+  metodoEnvio            String?   @map("metodo_envio")
+  numeroSeguimiento      String?   @map("numero_seguimiento")
+  transportista          String?
+  notas                  String?
   // Remitente (053_pedidos_remitente.sql)
-  remitenteNombre    String?  @map("remitente_nombre")
-  remitenteDireccion String?  @map("remitente_direccion")
-  remitenteTelefono  String?  @map("remitente_telefono")
-  remitenteEmail     String?  @map("remitente_email")
-  asignadoAId        String?  @map("asignado_a") @db.Uuid
+  remitenteNombre        String?   @map("remitente_nombre")
+  remitenteDireccion     String?   @map("remitente_direccion")
+  remitenteTelefono      String?   @map("remitente_telefono")
+  remitenteEmail         String?   @map("remitente_email")
+  asignadoAId            String?   @map("asignado_a") @db.Uuid
   // Descuentos de la tienda online (la oferta ya va en el precio de cada ítem; acá queda cuánto fue).
-  cuponCodigo            String?  @map("cupon_codigo") @db.VarChar(40)
-  descuentoOfertas       Decimal  @default(0) @map("descuento_ofertas") @db.Decimal(12, 2)
-  descuentoCupon         Decimal  @default(0) @map("descuento_cupon") @db.Decimal(12, 2)
-  descuentoTransferencia Decimal  @default(0) @map("descuento_transferencia") @db.Decimal(12, 2)
+  cuponCodigo            String?   @map("cupon_codigo") @db.VarChar(40)
+  descuentoOfertas       Decimal   @default(0) @map("descuento_ofertas") @db.Decimal(12, 2)
+  descuentoCupon         Decimal   @default(0) @map("descuento_cupon") @db.Decimal(12, 2)
+  descuentoTransferencia Decimal   @default(0) @map("descuento_transferencia") @db.Decimal(12, 2)
   /// transferencia | a_coordinar (lo que eligió el cliente en la tienda)
-  formaPagoTienda        String?  @map("forma_pago_tienda") @db.VarChar(20)
+  formaPagoTienda        String?   @map("forma_pago_tienda") @db.VarChar(20)
   // Venta generada al despachar (ingreso + costo del pedido); null antes del despacho.
-  ventaId            String?  @unique @map("venta_id") @db.Uuid
-  createdAt          DateTime @default(now()) @map("created_at")
+  ventaId                String?   @unique @map("venta_id") @db.Uuid
+  /// Día en que se le prometió el despacho al cliente (objetivo "despachos a tiempo").
+  fechaComprometida      DateTime? @map("fecha_comprometida") @db.Date
+  createdAt              DateTime  @default(now()) @map("created_at")
 
-  empresa   Empresa      @relation(fields: [empresaId], references: [id])
-  venta     Venta?       @relation(fields: [ventaId], references: [id])
-  cliente   Cliente?     @relation(fields: [clienteId], references: [id])
-  asignadoA Usuario?     @relation("PedidoAsignadoA", fields: [asignadoAId], references: [id])
+  empresa   Empresa        @relation(fields: [empresaId], references: [id])
+  venta     Venta?         @relation(fields: [ventaId], references: [id])
+  cliente   Cliente?       @relation(fields: [clienteId], references: [id])
+  asignadoA Usuario?       @relation("PedidoAsignadoA", fields: [asignadoAId], references: [id])
   items     PedidoItem[]
+  estados   PedidoEstado[]
 
   @@map("pedidos")
+}
+
+/// Historia de estados de cada pedido: la llena un trigger en cada alta o cambio de estado.
+model PedidoEstado {
+  id        BigInt   @id @default(autoincrement())
+  pedidoId  String   @map("pedido_id") @db.Uuid
+  empresaId String   @map("empresa_id") @db.Uuid
+  estado    String
+  creadoEn  DateTime @default(now()) @map("creado_en")
+
+  pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@index([pedidoId, creadoEn])
+  @@index([empresaId, estado, creadoEn])
+  @@map("pedido_estados")
+}
+
+/// Objetivo que se repite cada período (semana, mes, trimestre o año). Ver modules/objetivos.
+model Objetivo {
+  id         String   @id @default(uuid()) @db.Uuid
+  empresaId  String   @map("empresa_id") @db.Uuid
+  /// facturacion | ganancia | produccion | despachos | dias_despacho | a_tiempo
+  tipo       String   @db.VarChar(20)
+  /// semana | mes | trimestre | anio
+  periodo    String   @db.VarChar(10)
+  meta       Decimal  @db.Decimal(16, 2)
+  /// ARS | USD (solo facturación y ganancia)
+  moneda     String   @default("ARS") @db.VarChar(3)
+  /// Alcance: null = toda la empresa.
+  ubicacion  String?
+  usuarioId  String?  @map("usuario_id") @db.Uuid
+  /// Solo producción: un producto en particular.
+  productoId String?  @map("producto_id") @db.Uuid
+  creadoPor  String?  @map("creado_por") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  empresa  Empresa   @relation(fields: [empresaId], references: [id])
+  usuario  Usuario?  @relation("ObjetivoUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+  producto Producto? @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+  @@map("objetivos")
 }
 
 model PedidoItem {
@@ -863,7 +913,8 @@ model Cliente {
   cobros        CobroCliente[]
   pedidos       Pedido[]
 
-  cuentaTienda  CuentaTienda?
+  cuentaTienda CuentaTienda?
+
   @@index([empresaId])
   @@map("clientes")
 }
@@ -1021,15 +1072,15 @@ model TicketNumeracion {
 // ==== Admin SaaS ====
 
 model Pago {
-  id        String    @id @default(uuid()) @db.Uuid
-  empresaId String    @map("empresa_id") @db.Uuid
+  id                String    @id @default(uuid()) @db.Uuid
+  empresaId         String    @map("empresa_id") @db.Uuid
   /// Monto cobrado (con el descuento ya aplicado), sin IVA.
-  montoArs  Decimal   @map("monto_ars") @db.Decimal(12, 2)
-  metodo    String
+  montoArs          Decimal   @map("monto_ars") @db.Decimal(12, 2)
+  metodo            String
   /// confirmado | devuelto
-  estado    String    @default("confirmado")
-  periodo   DateTime? @db.Date
-  notas     String?
+  estado            String    @default("confirmado")
+  periodo           DateTime? @db.Date
+  notas             String?
   /// Plan y ciclo pagados (basico | pro | ecommerce; mensual | trimestral | anual).
   plan              String?
   ciclo             String?
@@ -1053,11 +1104,11 @@ model Pago {
   referenciaExterna String?   @map("referencia_externa")
   devueltoEn        DateTime? @map("devuelto_en")
   devolucionMotivo  String?   @map("devolucion_motivo")
-  createdAt DateTime  @default(now()) @map("created_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
 
-  empresa    Empresa    @relation(fields: [empresaId], references: [id])
-  cupon      Cupon?     @relation(fields: [cuponId], references: [id])
-  comisiones Comision[]
+  empresa         Empresa          @relation(fields: [empresaId], references: [id])
+  cupon           Cupon?           @relation(fields: [cuponId], references: [id])
+  comisiones      Comision[]
   cuotaProgramada CuotaProgramada?
 
   @@index([empresaId, createdAt])
@@ -1244,52 +1295,52 @@ model CobroAplicacion {
 
 /// Tienda online de la empresa: dirección, marca, contacto y datos de pago.
 model TiendaConfig {
-  id              String   @id @default(uuid()) @db.Uuid
-  empresaId       String   @unique @map("empresa_id") @db.Uuid
-  activa          Boolean  @default(false)
+  id                     String   @id @default(uuid()) @db.Uuid
+  empresaId              String   @unique @map("empresa_id") @db.Uuid
+  activa                 Boolean  @default(false)
   /// acacia -> acacia.analitica360.app (único, minúsculas, letras/números/guiones).
-  subdominio      String   @unique
+  subdominio             String   @unique
   /// Dominio propio conectado (ej. acaciamates.com.ar), opcional.
-  dominioPropio   String?  @unique @map("dominio_propio")
-  nombre          String
-  descripcion     String?
+  dominioPropio          String?  @unique @map("dominio_propio")
+  nombre                 String
+  descripcion            String?
   /// Color principal de la marca (#RRGGBB).
-  color           String   @default("#6366f1")
-  logoUrl         String?  @map("logo_url")
-  whatsapp        String?
-  instagram       String?
-  textoEnvios     String?  @map("texto_envios")
+  color                  String   @default("#6366f1")
+  logoUrl                String?  @map("logo_url")
+  whatsapp               String?
+  instagram              String?
+  textoEnvios            String?  @map("texto_envios")
   /// Datos para transferir (se muestran al confirmar el pedido).
-  alias           String?
-  cbu             String?
-  titular         String?
-  mostrarSinStock Boolean  @default(true) @map("mostrar_sin_stock")
+  alias                  String?
+  cbu                    String?
+  titular                String?
+  mostrarSinStock        Boolean  @default(true) @map("mostrar_sin_stock")
   /// Estética: textura de fondo (puntos, lienzo, papel, rayas, ondas, liso),
   /// tipografía de títulos (clasica, elegante, moderna, amigable) y bordes
   /// (redondeados, suaves, rectos).
-  fondo           String   @default("puntos")
-  tipografia      String   @default("clasica")
-  bordes          String   @default("redondeados")
+  fondo                  String   @default("puntos")
+  tipografia             String   @default("clasica")
+  bordes                 String   @default("redondeados")
   /// Foto grande de la portada (opcional; si no hay, se usa una foto de producto).
-  portadaUrl      String?  @map("portada_url")
+  portadaUrl             String?  @map("portada_url")
   /// Franja de anuncio arriba de todo (ej. "Envío gratis desde $50.000").
-  anuncio         String?
+  anuncio                String?
   /// Forma de las fotos de producto (cuadrada, vertical, horizontal) y productos por fila en el celular (1 o 2).
-  formaFoto        String   @default("horizontal") @map("forma_foto")
-  columnasCelular  Int      @default(1) @map("columnas_celular")
+  formaFoto              String   @default("horizontal") @map("forma_foto")
+  columnasCelular        Int      @default(1) @map("columnas_celular")
   /// Secciones de la portada que no se muestran (beneficios, categorias, destacados, sobre).
-  seccionesOcultas String[] @default([]) @map("secciones_ocultas")
-  tituloDestacados String?  @map("titulo_destacados")
-  sobreNosotros    String?  @map("sobre_nosotros")
-  horario          String?
-  facebook         String?
-  tiktok           String?
+  seccionesOcultas       String[] @default([]) @map("secciones_ocultas")
+  tituloDestacados       String?  @map("titulo_destacados")
+  sobreNosotros          String?  @map("sobre_nosotros")
+  horario                String?
+  facebook               String?
+  tiktok                 String?
   /// Monto mínimo de compra en la tienda (null = sin mínimo).
   /// % de descuento si paga por transferencia (0 = sin descuento).
-  descuentoTransferencia Decimal @default(0) @map("descuento_transferencia") @db.Decimal(5, 2)
-  pedidoMinimo     Decimal? @map("pedido_minimo") @db.Decimal(12, 2)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+  descuentoTransferencia Decimal  @default(0) @map("descuento_transferencia") @db.Decimal(5, 2)
+  pedidoMinimo           Decimal? @map("pedido_minimo") @db.Decimal(12, 2)
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @default(now()) @updatedAt @map("updated_at")
 
   empresa Empresa @relation(fields: [empresaId], references: [id])
 
@@ -1298,17 +1349,17 @@ model TiendaConfig {
 
 /// Fotos de un producto (la primera es la principal).
 model ProductoImagen {
-  id         String   @id @default(uuid()) @db.Uuid
-  empresaId  String   @map("empresa_id") @db.Uuid
-  productoId String   @map("producto_id") @db.Uuid
-  url        String
+  id             String   @id @default(uuid()) @db.Uuid
+  empresaId      String   @map("empresa_id") @db.Uuid
+  productoId     String   @map("producto_id") @db.Uuid
+  url            String
   /// Clave en el almacenamiento (para poder borrarla).
-  clave      String
+  clave          String
   /// Versión chica para listados (las fotos se guardan optimizadas en WEBP).
-  urlMiniatura   String? @map("url_miniatura")
-  claveMiniatura String? @map("clave_miniatura")
-  orden      Int      @default(0)
-  createdAt  DateTime @default(now()) @map("created_at")
+  urlMiniatura   String?  @map("url_miniatura")
+  claveMiniatura String?  @map("clave_miniatura")
+  orden          Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
 
   empresa  Empresa  @relation(fields: [empresaId], references: [id])
   producto Producto @relation(fields: [productoId], references: [id])
@@ -1316,7 +1367,6 @@ model ProductoImagen {
   @@index([productoId, orden])
   @@map("productos_imagenes")
 }
-
 
 // ==== Alianzas con cámaras y cupones ====
 // Reglas de cálculo en src/modules/alianzas/alianzas.util.ts.
@@ -1568,22 +1618,22 @@ model RegistroAuditoria {
 /// Cupón de descuento de la tienda online de una empresa (ACACIA10). Distinto de
 /// `Cupon`, que es de las alianzas de Analítica 360.
 model CuponTienda {
-  id          String    @id @default(uuid()) @db.Uuid
-  empresaId   String    @map("empresa_id") @db.Uuid
+  id           String    @id @default(uuid()) @db.Uuid
+  empresaId    String    @map("empresa_id") @db.Uuid
   /// En mayúsculas, sin espacios; único por empresa.
-  codigo      String    @db.VarChar(40)
+  codigo       String    @db.VarChar(40)
   /// porcentaje | monto
-  tipo        String    @db.VarChar(10)
-  valor       Decimal   @db.Decimal(12, 2)
-  compraMinima Decimal? @map("compra_minima") @db.Decimal(12, 2)
-  desde       DateTime? @db.Date
-  hasta       DateTime? @db.Date
+  tipo         String    @db.VarChar(10)
+  valor        Decimal   @db.Decimal(12, 2)
+  compraMinima Decimal?  @map("compra_minima") @db.Decimal(12, 2)
+  desde        DateTime? @db.Date
+  hasta        DateTime? @db.Date
   /// null = sin límite
-  usosMax     Int?      @map("usos_max")
-  usos        Int       @default(0)
-  activo      Boolean   @default(true)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  usosMax      Int?      @map("usos_max")
+  usos         Int       @default(0)
+  activo       Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   empresa Empresa @relation(fields: [empresaId], references: [id])
 
@@ -1611,10 +1661,10 @@ model CuentaTienda {
   createdAt     DateTime  @default(now()) @map("created_at")
   ultimoIngreso DateTime? @map("ultimo_ingreso")
 
-  empresa    Empresa          @relation(fields: [empresaId], references: [id])
-  cliente    Cliente          @relation(fields: [clienteId], references: [id])
-  sesiones   SesionTienda[]
-  favoritos  FavoritoTienda[]
+  empresa   Empresa          @relation(fields: [empresaId], references: [id])
+  cliente   Cliente          @relation(fields: [clienteId], references: [id])
+  sesiones  SesionTienda[]
+  favoritos FavoritoTienda[]
 
   @@unique([empresaId, email])
   @@unique([empresaId, googleSub])

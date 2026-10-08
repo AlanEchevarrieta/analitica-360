@@ -61,6 +61,7 @@ export class PedidosService {
       provincia: input.provincia ?? null,
       metodoEnvio: input.metodoEnvio ?? null,
       notas: input.notas ?? null,
+      fechaComprometida: input.fechaComprometida ?? null,
       items: input.items,
     });
     if (!resultado.ok) throw new BadRequestException(MOTIVO_CREAR[resultado.motivo]);
@@ -141,6 +142,10 @@ export class PedidosService {
   async marcarEntregado(empresaId: string, id: string): Promise<void> {
     const resultado = await this.pedidosRepository.marcarEntregado(empresaId, id);
     this.lanzarSiTransicionInvalida(resultado, 'El pedido tiene que estar con el transportista');
+  }
+
+  async fijarFechaComprometida(empresaId: string, id: string, fecha: string | null): Promise<void> {
+    if (!(await this.pedidosRepository.fijarFechaComprometida(empresaId, id, fecha))) throw new NotFoundException('Pedido no encontrado');
   }
 
   async cancelar(empresaId: string, id: string): Promise<void> {

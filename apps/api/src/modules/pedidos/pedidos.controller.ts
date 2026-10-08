@@ -8,11 +8,13 @@ import { PedidosService } from './pedidos.service.js';
 import {
   asignarPedidoSchema,
   crearPedidoSchema,
+  fechaComprometidaSchema,
   guardarPreparacionItemSchema,
   listarPedidosQuerySchema,
   registrarDespachoSchema,
   type AsignarPedidoInput,
   type CrearPedidoInput,
+  type FechaComprometidaInput,
   type GuardarPreparacionItemInput,
   type ListarPedidosQuery,
   type RegistrarDespachoInput,
@@ -53,6 +55,16 @@ export class PedidosController {
     @Body(new ZodValidationPipe(crearPedidoSchema)) body: CrearPedidoInput,
   ) {
     return this.pedidosService.crear(empresa.id, body);
+  }
+
+  @Patch(':id/fecha-comprometida')
+  @RequirePermiso('crear_pedidos')
+  fijarFechaComprometida(
+    @CurrentEmpresa() empresa: EmpresaContext,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(fechaComprometidaSchema)) body: FechaComprometidaInput,
+  ) {
+    return this.pedidosService.fijarFechaComprometida(empresa.id, id, body.fecha);
   }
 
   @Patch(':id/asignar')
