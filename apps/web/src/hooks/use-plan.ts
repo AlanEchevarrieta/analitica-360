@@ -18,7 +18,7 @@ export const NOMBRE_FUNCION: Record<string, string> = {
   informe_mensual: "Informe mensual por email",
   tienda: "Tienda online",
   objetivos: "Objetivos",
-  objetivos_avanzados: "Objetivos de ganancia, producción, pedidos y por sucursal o usuario",
+  objetivos_avanzados: "Objetivos avanzados: todos los tipos y por sucursal o usuario",
 };
 
 /**

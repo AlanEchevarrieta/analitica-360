@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAccionesObjetivo, type GuardarObjetivo, type Objetivo, type OpcionesObjetivo, type TipoObjetivo } from "../hooks/use-objetivos";
-import { PERIODOS, TIPOS } from "../objetivos";
+import { CON_PRODUCTO, EN_DINERO, PERIODOS, TIPOS } from "../objetivos";
+import { MetasPorPeriodo } from "./MetasPorPeriodo";
 
 const selectCls = "h-9 w-full rounded-lg border bg-transparent px-2 text-sm";
 type Alcance = "empresa" | "sucursal" | "usuario";
@@ -24,7 +25,7 @@ export function ObjetivoForm({ opciones, inicial, onCerrar }: { opciones: Opcion
   const [usuarioId, setUsuarioId] = useState(inicial?.usuario?.id ?? opciones.usuarios[0]?.id ?? "");
   const [productoId, setProductoId] = useState(inicial?.producto?.id ?? "");
 
-  const conMoneda = tipo === "facturacion" || tipo === "ganancia";
+  const conMoneda = EN_DINERO.includes(tipo);
   const avanzado = opciones.avanzados;
 
   const enviar = (e: React.FormEvent) => {
@@ -38,7 +39,7 @@ export function ObjetivoForm({ opciones, inicial, onCerrar }: { opciones: Opcion
       moneda: conMoneda ? moneda : "ARS",
       ubicacion: alcance === "sucursal" ? ubicacion || null : null,
       usuarioId: alcance === "usuario" ? usuarioId || null : null,
-      productoId: tipo === "produccion" && productoId ? productoId : null,
+      productoId: CON_PRODUCTO.includes(tipo) && productoId ? productoId : null,
     };
     guardar.mutate(
       { id: inicial?.id, datos },
@@ -53,7 +54,8 @@ export function ObjetivoForm({ opciones, inicial, onCerrar }: { opciones: Opcion
   };
 
   const ayuda = TIPOS.find((t) => t.id === tipo)?.ayuda;
-  const unidad = tipo === "dias_despacho" ? "días (máximo)" : tipo === "a_tiempo" ? "%" : tipo === "produccion" ? "unidades" : tipo === "despachos" ? "pedidos" : moneda === "USD" ? "US$" : "$";
+  const unidad =
+    tipo === "dias_despacho" ? "días (máximo)" : tipo === "a_tiempo" ? "%" : CON_PRODUCTO.includes(tipo) ? "unidades" : tipo === "despachos" ? "pedidos" : tipo === "clientes_nuevos" ? "clientes" : moneda === "USD" ? "US$" : "$";
 
   return (
     <Card>
@@ -105,8 +107,8 @@ export function ObjetivoForm({ opciones, inicial, onCerrar }: { opciones: Opcion
             <Label htmlFor="obj-alcance">Para</Label>
             <select id="obj-alcance" className={selectCls} value={alcance} onChange={(e) => setAlcance(e.target.value as Alcance)}>
               <option value="empresa">Toda la empresa</option>
-              <option value="sucursal" disabled={!avanzado || opciones.ubicaciones.length === 0}>
-                Una sucursal{!avanzado ? " (desde Pro)" : ""}
+              <option value="sucursal" disabled={!avanzado || opciones.ubicaciones.length === 0 || tipo === "cobranza"}>
+                Una sucursal{!avanzado ? " (desde Pro)" : tipo === "cobranza" ? " (no aplica a cobranza)" : ""}
               </option>
               <option value="usuario" disabled={!avanzado}>
                 Un usuario{!avanzado ? " (desde Pro)" : ""}
@@ -137,7 +139,7 @@ export function ObjetivoForm({ opciones, inicial, onCerrar }: { opciones: Opcion
               </select>
             </div>
           )}
-          {tipo === "produccion" && (
+          {CON_PRODUCTO.includes(tipo) && (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="obj-producto">Producto</Label>
               <select id="obj-producto" className={selectCls} value={productoId} onChange={(e) => setProductoId(e.target.value)}>
@@ -150,6 +152,8 @@ export function ObjetivoForm({ opciones, inicial, onCerrar }: { opciones: Opcion
               </select>
             </div>
           )}
+
+          {inicial && <MetasPorPeriodo objetivo={inicial} />}
 
           <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-4 lg:justify-end">
             <Button type="button" variant="ghost" onClick={onCerrar}>

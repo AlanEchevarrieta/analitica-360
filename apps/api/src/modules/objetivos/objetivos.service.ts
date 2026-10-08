@@ -345,7 +345,7 @@ export class ObjetivosService {
   private async validar(empresaId: string, usuario: UsuarioContext, input: GuardarObjetivoInput) {
     if (usuario.rol !== 'dueno') throw new ForbiddenException('Solo el dueño o un administrador pueden definir objetivos');
     if (!ObjetivosService.esBasico(input) && !(await this.avanzados(empresaId))) {
-      throw new ForbiddenException({ statusCode: 403, code: 'plan_insuficiente', funcion: 'objetivos_avanzados', planMinimo: 'pro', message: 'Los objetivos de ganancia, producción, pedidos y por sucursal o usuario están disponibles desde el plan Pro.' });
+      throw new ForbiddenException({ statusCode: 403, code: 'plan_insuficiente', funcion: 'objetivos_avanzados', planMinimo: 'pro', message: 'En el plan Básico hay objetivos de facturación de toda la empresa. Los demás tipos y los objetivos por sucursal o usuario están disponibles desde el plan Pro.' });
     }
     const [ubicacion, usuarioObj, producto] = await Promise.all([
       input.ubicacion ? this.prisma.ubicacion.findFirst({ where: { empresaId, nombre: input.ubicacion } }) : true,

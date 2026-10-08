@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Target } from "lucide-react";
 import { useObjetivos } from "../hooks/use-objetivos";
+import { AvisosObjetivos } from "./AvisosObjetivos";
 import { TarjetaObjetivo } from "./TarjetaObjetivo";
 
 /** En Inicio: los objetivos del período actual (hasta 3), si hay. */
@@ -21,6 +22,7 @@ export function ObjetivosInicio() {
           Ver todos{data.length > 3 ? ` (${data.length})` : ""}
         </Link>
       </div>
+      <AvisosObjetivos />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {primeros.map((o) => (
           <TarjetaObjetivo key={o.id} o={o} compacta />

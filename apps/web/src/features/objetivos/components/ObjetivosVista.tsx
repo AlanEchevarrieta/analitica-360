@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { useRol } from "@/hooks/use-rol";
 import { useAccionesObjetivo, useObjetivos, useOpcionesObjetivo, type Objetivo } from "../hooks/use-objetivos";
+import { AvisosObjetivos } from "./AvisosObjetivos";
 import { ObjetivoForm } from "./ObjetivoForm";
+import { RankingObjetivos } from "./RankingObjetivos";
 import { TarjetaObjetivo } from "./TarjetaObjetivo";
 
-type Filtro = "todos" | "empresa" | "sucursales" | "usuarios";
+type Filtro = "todos" | "empresa" | "sucursales" | "usuarios" | "ranking";
 
 const GRUPOS: { id: Exclude<Filtro, "todos">; titulo: string; incluye: (o: Objetivo) => boolean }[] = [
   { id: "empresa", titulo: "Toda la empresa", incluye: (o) => !o.ubicacion && !o.usuario },
@@ -19,7 +21,9 @@ const GRUPOS: { id: Exclude<Filtro, "todos">; titulo: string; incluye: (o: Objet
 ];
 
 export function ObjetivosVista() {
-  const esDueno = useRol() === "dueno";
+  const rol = useRol();
+  const esDueno = rol === "dueno";
+  const veRanking = rol !== "operador";
   const { data, isPending, isError, error, refetch } = useObjetivos();
   const { data: opciones } = useOpcionesObjetivo(esDueno);
   const { borrar } = useAccionesObjetivo();
@@ -41,7 +45,7 @@ export function ObjetivosVista() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filtrar objetivos">
-          {(["todos", "empresa", "sucursales", "usuarios"] as const).map((f) => (
+          {(["todos", "empresa", "sucursales", "usuarios", ...(veRanking ? (["ranking"] as const) : [])] as const).map((f) => (
             <button
               key={f}
               type="button"
@@ -50,7 +54,7 @@ export function ObjetivosVista() {
               onClick={() => setFiltro(f)}
               className={filtro === f ? "rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground" : "rounded-lg px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"}
             >
-              {f === "todos" ? "Todos" : GRUPOS.find((g) => g.id === f)!.titulo}
+              {f === "todos" ? "Todos" : f === "ranking" ? "Ranking" : GRUPOS.find((g) => g.id === f)!.titulo}
             </button>
           ))}
         </div>
@@ -60,6 +64,8 @@ export function ObjetivosVista() {
           </Button>
         )}
       </div>
+
+      <AvisosObjetivos />
 
       {editando != null && opciones && <ObjetivoForm key={editando === "nuevo" ? "nuevo" : editando.id} opciones={opciones} inicial={editando === "nuevo" ? undefined : editando} onCerrar={() => setEditando(null)} />}
 
@@ -73,6 +79,8 @@ export function ObjetivosVista() {
               : "Cuando el dueño te asigne un objetivo, lo vas a ver acá con tu avance."}
           </p>
         </div>
+      ) : filtro === "ranking" ? (
+        <RankingObjetivos objetivos={data} />
       ) : (
         <>
           <p className="text-sm text-muted-foreground">

@@ -4,9 +4,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { Objetivo } from "../hooks/use-objetivos";
-import { adjetivoPeriodo, alcance, etiquetaPeriodo, formatoValor, nombreTipo, SEMAFORO } from "../objetivos";
-
-const ACUMULATIVOS = ["facturacion", "ganancia", "produccion", "despachos"];
+import { ACUMULATIVOS, adjetivoPeriodo, alcance, etiquetaPeriodo, formatoValor, nombreTipo, SEMAFORO } from "../objetivos";
 
 /** Avance de un objetivo: valor contra meta, ritmo esperado, proyección e historial. */
 export function TarjetaObjetivo({ o, compacta = false, onEditar, onBorrar }: { o: Objetivo; compacta?: boolean; onEditar?: () => void; onBorrar?: () => void }) {
@@ -44,7 +42,7 @@ export function TarjetaObjetivo({ o, compacta = false, onEditar, onBorrar }: { o
         <div>
           <p className="text-2xl font-semibold tabular-nums">{formatoValor(o, a.valor)}</p>
           <p className="text-xs text-muted-foreground">
-            {menosEsMejor ? "Máximo" : "Meta"}: {formatoValor(o, o.meta)}
+            {menosEsMejor ? "Máximo" : "Meta"}{a.meta !== o.meta ? " de este período" : ""}: {formatoValor(o, a.meta)}
             {a.porcentaje != null && !menosEsMejor && o.tipo !== "a_tiempo" && <> · {a.porcentaje.toLocaleString("es-AR")} %</>}
           </p>
         </div>
@@ -75,7 +73,7 @@ export function TarjetaObjetivo({ o, compacta = false, onEditar, onBorrar }: { o
             {o.historial.map((h) => {
               const alto = h.porcentaje == null ? 4 : Math.min(100, Math.max(6, h.porcentaje));
               return (
-                <div key={h.desde} className="flex flex-1 flex-col items-center gap-1" title={`${formatoValor(o, h.valor)} (${SEMAFORO[h.semaforo].texto})`}>
+                <div key={h.desde} className="flex flex-1 flex-col items-center gap-1" title={`${formatoValor(o, h.valor)} de ${formatoValor(o, h.meta)} (${SEMAFORO[h.semaforo].texto})`}>
                   <div className="flex h-10 w-full items-end">
                     <div className={cn("w-full rounded-sm", SEMAFORO[h.semaforo].barra)} style={{ height: `${alto}%` }} />
                   </div>
