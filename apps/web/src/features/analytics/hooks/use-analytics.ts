@@ -67,15 +67,19 @@ export function useAccionesGastos() {
   const api = useApiFetch();
   const queryClient = useQueryClient();
   const onSuccess = () => {
-    for (const k of ["gastos", "contabilidad", "estados-contables"]) void queryClient.invalidateQueries({ queryKey: [k] });
+    for (const k of ["gastos", "contabilidad", "estados-contables", "equilibrio"]) void queryClient.invalidateQueries({ queryKey: [k] });
   };
   const crear = useMutation({
-    mutationFn: (g: { categoria: string; descripcion: string; monto: number; fecha: string; recurrente: boolean; frecuencia: string | null }) =>
+    mutationFn: (g: { categoria: string; descripcion: string; monto: number; fecha: string; recurrente: boolean; frecuencia: string | null; tipoCosto?: "fijo" | "variable" }) =>
       api("/gastos", { method: "POST", body: JSON.stringify(g) }),
     onSuccess,
   });
   const anular = useMutation({ mutationFn: (id: string) => api(`/gastos/${id}/anular`, { method: "POST" }), onSuccess });
-  return { crear, anular };
+  const cambiarTipo = useMutation({
+    mutationFn: ({ id, tipoCosto }: { id: string; tipoCosto: "fijo" | "variable" }) => api(`/gastos/${id}/tipo-costo`, { method: "PATCH", body: JSON.stringify({ tipoCosto }) }),
+    onSuccess,
+  });
+  return { crear, anular, cambiarTipo };
 }
 
 export const useEstadosContables = (desde: string, hasta: string) =>

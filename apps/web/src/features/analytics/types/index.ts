@@ -48,6 +48,8 @@ export interface Gasto {
   fecha: string;
   recurrente: boolean;
   frecuencia: "mensual" | "quincenal" | "semanal" | null;
+  /** Para el punto de equilibrio: fijo (alquiler, sueldos…) o variable (comisiones, envíos…). */
+  tipoCosto: "fijo" | "variable";
 }
 
 export interface Insights {

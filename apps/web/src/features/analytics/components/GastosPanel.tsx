@@ -29,17 +29,19 @@ export function GastosPanel({ desde, hasta }: { desde: string; hasta: string }) 
   // Desde siempre: un recurrente cargado antes del período sigue vigente y cuenta.
   const gastos = useGastos("2000-01-01", hasta);
   const lista = (gastos.data ?? []).filter((x) => x.fecha.slice(0, 10) >= desde || x.recurrente);
-  const { crear, anular } = useAccionesGastos();
-  const [g, setG] = useState({ categoria: "alquiler", descripcion: "", monto: "", fecha: hoyAR(), frecuencia: "" as "" | keyof typeof FRECUENCIAS });
+  const { crear, anular, cambiarTipo } = useAccionesGastos();
+  const [g, setG] = useState({ categoria: "alquiler", descripcion: "", monto: "", fecha: hoyAR(), frecuencia: "" as "" | keyof typeof FRECUENCIAS, tipoCosto: "" as "" | "fijo" | "variable" });
+  // Si no se elige: recurrente = fijo, una sola vez = variable (igual que la API).
+  const tipoElegido = g.tipoCosto || (g.frecuencia ? "fijo" : "variable");
 
   function agregar() {
     if (!g.descripcion.trim() || aNumero(g.monto) <= 0) return toast.error("Completá descripción y monto.");
     crear.mutate(
-      { categoria: g.categoria, descripcion: g.descripcion.trim(), monto: aNumero(g.monto), fecha: g.fecha, recurrente: Boolean(g.frecuencia), frecuencia: g.frecuencia || null },
+      { categoria: g.categoria, descripcion: g.descripcion.trim(), monto: aNumero(g.monto), fecha: g.fecha, recurrente: Boolean(g.frecuencia), frecuencia: g.frecuencia || null, tipoCosto: tipoElegido },
       {
         onSuccess: () => {
           toast.success("Gasto cargado");
-          setG((x) => ({ ...x, descripcion: "", monto: "" }));
+          setG((x) => ({ ...x, descripcion: "", monto: "", tipoCosto: "" }));
         },
         onError: (e) => toast.error(e instanceof Error ? e.message : "No se pudo cargar"),
       },
@@ -50,7 +52,9 @@ export function GastosPanel({ desde, hasta }: { desde: string; hasta: string }) 
     <Card>
       <CardHeader>
         <CardTitle>Gastos del negocio</CardTitle>
-        <CardDescription>Alquiler, sueldos, servicios… Los recurrentes se cuentan solos en cada período según su frecuencia.</CardDescription>
+        <CardDescription>
+          Alquiler, sueldos, servicios… Los recurrentes se cuentan solos en cada período según su frecuencia. <strong>Fijo</strong> = lo pagás vendas o no (alquiler, sueldos); <strong>variable</strong> = depende de lo que vendés (comisiones, envíos). Con eso se calcula tu punto de equilibrio.
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-wrap items-end gap-2">
@@ -72,6 +76,10 @@ export function GastosPanel({ desde, hasta }: { desde: string; hasta: string }) 
               </option>
             ))}
           </select>
+          <select className="h-8 rounded-lg border bg-transparent px-2 text-sm" aria-label="Fijo o variable" value={tipoElegido} onChange={(e) => setG({ ...g, tipoCosto: e.target.value as "fijo" | "variable" })}>
+            <option value="fijo">Fijo</option>
+            <option value="variable">Variable</option>
+          </select>
           <Button onClick={agregar} disabled={crear.isPending}>
             Agregar
           </Button>
@@ -89,6 +97,16 @@ export function GastosPanel({ desde, hasta }: { desde: string; hasta: string }) 
                   {x.descripcion}
                   {x.frecuencia && <span className="ml-2 rounded bg-muted px-1.5 text-xs">{FRECUENCIAS[x.frecuencia]}</span>}
                 </span>
+                <button
+                  type="button"
+                  className={x.tipoCosto === "fijo" ? "rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary" : "rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"}
+                  title="Tocá para cambiar entre fijo y variable"
+                  aria-label={`${x.descripcion}: ${x.tipoCosto}. Cambiar a ${x.tipoCosto === "fijo" ? "variable" : "fijo"}`}
+                  disabled={cambiarTipo.isPending}
+                  onClick={() => cambiarTipo.mutate({ id: x.id, tipoCosto: x.tipoCosto === "fijo" ? "variable" : "fijo" }, { onError: (e) => toast.error(e instanceof Error ? e.message : "No se pudo cambiar") })}
+                >
+                  {x.tipoCosto === "fijo" ? "Fijo" : "Variable"}
+                </button>
                 <span className="font-medium tabular-nums">{formatoPesos(x.monto)}</span>
                 <Button
                   size="icon-sm"

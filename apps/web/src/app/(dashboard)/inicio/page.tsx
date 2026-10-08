@@ -2,6 +2,7 @@ import { InicioDashboard } from "@/features/dashboard/components/InicioDashboard
 import { PrimerosPasos } from "@/features/dashboard/components/PrimerosPasos";
 import { SelectorMoneda } from "@/components/shared/selector-moneda";
 import { ObjetivosInicio } from "@/features/objetivos/components/ObjetivosInicio";
+import { EquilibrioInicio } from "@/features/dashboard/components/EquilibrioInicio";
 
 export default async function Page(props: PageProps<"/inicio">) {
   const { bienvenida } = await props.searchParams;
@@ -12,6 +13,7 @@ export default async function Page(props: PageProps<"/inicio">) {
         <SelectorMoneda />
       </div>
       <PrimerosPasos bienvenida={bienvenida === "1"} />
+      <EquilibrioInicio />
       <ObjetivosInicio />
       <InicioDashboard />
     </div>
