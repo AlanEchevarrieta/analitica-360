@@ -50,7 +50,7 @@ export function TarjetaObjetivo({ o, compacta = false, onEditar, onBorrar }: { o
         </div>
 
         {acumulativo && (
-          <div className="relative h-2.5 rounded-full bg-muted" role="progressbar" aria-valuenow={a.porcentaje ?? 0} aria-valuemin={0} aria-valuemax={100} aria-label="Avance">
+          <div className="relative h-2.5 rounded-full bg-foreground/10" role="progressbar" aria-valuenow={a.porcentaje ?? 0} aria-valuemin={0} aria-valuemax={100} aria-label="Avance">
             <div className={cn("h-full rounded-full transition-all", s.barra)} style={{ width: `${ancho}%` }} />
             {a.esperado != null && a.esperado < 100 && (
               <span className="absolute -top-1 h-4.5 w-0.5 rounded bg-foreground/60" style={{ left: `${a.esperado}%` }} title={`Para hoy: ${a.esperado} %`} />
