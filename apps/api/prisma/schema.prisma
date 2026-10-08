@@ -248,6 +248,7 @@ model Usuario {
   asignacionFijaDe       ConfiguracionEmpresa[] @relation("AsignacionFijaUsuario")
   eventosUso             EventoUso[]
   objetivos              Objetivo[]             @relation("ObjetivoUsuario")
+  objetivoAvisos         ObjetivoAviso[]        @relation("ObjetivoAvisoUsuario")
 
   @@index([empresaId])
   @@map("usuarios")
@@ -846,7 +847,7 @@ model PedidoEstado {
 model Objetivo {
   id         String   @id @default(uuid()) @db.Uuid
   empresaId  String   @map("empresa_id") @db.Uuid
-  /// facturacion | ganancia | produccion | despachos | dias_despacho | a_tiempo
+  /// facturacion | ganancia | produccion | despachos | dias_despacho | a_tiempo | clientes_nuevos | ticket_promedio | unidades | cobranza
   tipo       String   @db.VarChar(20)
   /// semana | mes | trimestre | anio
   periodo    String   @db.VarChar(10)
@@ -866,8 +867,43 @@ model Objetivo {
   usuario  Usuario?  @relation("ObjetivoUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
   producto Producto? @relation(fields: [productoId], references: [id], onDelete: Cascade)
 
+  metas   ObjetivoMeta[]
+  avisos  ObjetivoAviso[]
+
   @@index([empresaId])
   @@map("objetivos")
+}
+
+/// Meta propia de un período (ej. diciembre más alto); si no hay, rige la meta general.
+model ObjetivoMeta {
+  objetivoId String   @map("objetivo_id") @db.Uuid
+  /// Primer día del período (AAAA-MM-DD).
+  desde      DateTime @db.Date
+  meta       Decimal  @db.Decimal(16, 2)
+
+  objetivo Objetivo @relation(fields: [objetivoId], references: [id], onDelete: Cascade)
+
+  @@id([objetivoId, desde])
+  @@map("objetivo_metas")
+}
+
+/// Aviso de que un objetivo no llega a este ritmo: uno por objetivo, período y destinatario.
+model ObjetivoAviso {
+  id         String    @id @default(uuid()) @db.Uuid
+  empresaId  String    @map("empresa_id") @db.Uuid
+  objetivoId String    @map("objetivo_id") @db.Uuid
+  desde      DateTime  @db.Date
+  usuarioId  String    @map("usuario_id") @db.Uuid
+  mensaje    String
+  creadoEn   DateTime  @default(now()) @map("creado_en")
+  leidoEn    DateTime? @map("leido_en")
+
+  objetivo Objetivo @relation(fields: [objetivoId], references: [id], onDelete: Cascade)
+  usuario  Usuario  @relation("ObjetivoAvisoUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([objetivoId, desde, usuarioId])
+  @@index([usuarioId, leidoEn])
+  @@map("objetivo_avisos")
 }
 
 model PedidoItem {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluar, periodosAnteriores, rangoPeriodo } from './objetivos.util.js';
+import { correspondeAviso, evaluar, periodosAnteriores, rangoPeriodo } from './objetivos.util.js';
 
 describe('rangoPeriodo', () => {
   it('semana de lunes a domingo', () => {
@@ -59,5 +59,26 @@ describe('evaluar', () => {
 
   it('sin datos', () => {
     expect(evaluar('dias_despacho', 2, null, octubre, '2026-10-10').semaforo).toBe('sin_datos');
+  });
+});
+
+describe('tipos nuevos y avisos', () => {
+  const octubre = { desde: '2026-10-01', hasta: '2026-10-31' };
+
+  it('ticket promedio: 10 % de margen; la meta del período viaja en el avance', () => {
+    expect(evaluar('ticket_promedio', 20_000, 19_000, octubre, '2026-10-10')).toMatchObject({ semaforo: 'justo', meta: 20_000, proyeccion: null });
+    expect(evaluar('ticket_promedio', 20_000, 17_000, octubre, '2026-10-10').semaforo).toBe('mal');
+  });
+
+  it('clientes nuevos, unidades y cobranza se proyectan', () => {
+    expect(evaluar('clientes_nuevos', 31, 10, octubre, '2026-10-10').proyeccion).toBe(31);
+  });
+
+  it('avisa solo si pasó un cuarto del período, va en rojo y sigue abierto', () => {
+    const rojo = evaluar('facturacion', 12_000_000, 3_000_000, octubre, '2026-10-10');
+    expect(correspondeAviso('facturacion', rojo, '2026-10-10')).toBe(true);
+    expect(correspondeAviso('facturacion', evaluar('facturacion', 12_000_000, 300_000, octubre, '2026-10-03'), '2026-10-03')).toBe(false); // muy temprano
+    expect(correspondeAviso('facturacion', evaluar('facturacion', 8_000_000, 3_000_000, octubre, '2026-10-10'), '2026-10-10')).toBe(false); // va bien
+    expect(correspondeAviso('dias_despacho', evaluar('dias_despacho', 2, 5, octubre, '2026-10-20'), '2026-10-20')).toBe(false); // no acumulativo
   });
 });

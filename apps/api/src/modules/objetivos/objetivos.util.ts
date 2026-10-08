@@ -1,12 +1,18 @@
 import { sumarDiasIso } from '../analytics/analytics.util.js';
 
-export const TIPOS_OBJETIVO = ['facturacion', 'ganancia', 'produccion', 'despachos', 'dias_despacho', 'a_tiempo'] as const;
+export const TIPOS_OBJETIVO = ['facturacion', 'ganancia', 'produccion', 'despachos', 'dias_despacho', 'a_tiempo', 'clientes_nuevos', 'ticket_promedio', 'unidades', 'cobranza'] as const;
 export type TipoObjetivo = (typeof TIPOS_OBJETIVO)[number];
 export const PERIODOS_OBJETIVO = ['semana', 'mes', 'trimestre', 'anio'] as const;
 export type PeriodoObjetivo = (typeof PERIODOS_OBJETIVO)[number];
 
 /** Se acumulan en el período (se puede proyectar); los otros son promedios o porcentajes. */
-export const ACUMULATIVOS: readonly TipoObjetivo[] = ['facturacion', 'ganancia', 'produccion', 'despachos'];
+export const ACUMULATIVOS: readonly TipoObjetivo[] = ['facturacion', 'ganancia', 'produccion', 'despachos', 'clientes_nuevos', 'unidades', 'cobranza'];
+/** En plata (pesos o dólares). */
+export const EN_DINERO: readonly TipoObjetivo[] = ['facturacion', 'ganancia', 'ticket_promedio', 'cobranza'];
+/** Aceptan un producto en particular. */
+export const CON_PRODUCTO: readonly TipoObjetivo[] = ['produccion', 'unidades'];
+/** No se pueden medir por sucursal (el dato no tiene ubicación). */
+export const SIN_SUCURSAL: readonly TipoObjetivo[] = ['cobranza'];
 /** Para estos, menos es mejor (la meta es un máximo). */
 export const MENOS_ES_MEJOR: readonly TipoObjetivo[] = ['dias_despacho'];
 
@@ -56,6 +62,10 @@ export const NOMBRE_TIPO: Record<TipoObjetivo, string> = {
   despachos: 'Pedidos despachados',
   dias_despacho: 'Días de despacho',
   a_tiempo: 'Despachos a tiempo',
+  clientes_nuevos: 'Clientes nuevos',
+  ticket_promedio: 'Ticket promedio',
+  unidades: 'Unidades vendidas',
+  cobranza: 'Cobranza de cuenta corriente',
 };
 export const ADJETIVO_PERIODO: Record<PeriodoObjetivo, string> = { semana: 'semanal', mes: 'mensual', trimestre: 'trimestral', anio: 'anual' };
 export const TEXTO_SEMAFORO: Record<Semaforo, string> = { bien: 'en camino', justo: 'va justo', mal: 'no llega', sin_datos: 'sin datos' };
@@ -64,16 +74,18 @@ export const TEXTO_SEMAFORO: Record<Semaforo, string> = { bien: 'en camino', jus
 export function valorObjetivo(tipo: TipoObjetivo, moneda: 'ARS' | 'USD', v: number | null): string {
   if (v == null) return '—';
   const n = (x: number, d = 0) => x.toLocaleString('es-AR', { maximumFractionDigits: d });
-  if (tipo === 'facturacion' || tipo === 'ganancia') return moneda === 'USD' ? `US$ ${n(v)}` : `$ ${n(v)}`;
+  if (EN_DINERO.includes(tipo)) return moneda === 'USD' ? `US$ ${n(v)}` : `$ ${n(v)}`;
   if (tipo === 'dias_despacho') return `${n(v, 1)} días`;
   if (tipo === 'a_tiempo') return `${n(v, 1)} %`;
-  if (tipo === 'produccion') return `${n(v)} u.`;
+  if (tipo === 'produccion' || tipo === 'unidades') return `${n(v)} u.`;
   return n(v);
 }
 
 export interface Avance {
   desde: string;
   hasta: string;
+  /** La meta de ese período (la propia del período si tiene, si no la general). */
+  meta: number;
   /** null = no hay datos para medir (ej. ningún pedido despachado). */
   valor: number | null;
   /** valor / meta, en %. Para "menos es mejor", meta / valor. */
@@ -90,7 +102,7 @@ export interface Avance {
  * (con ritmo y proyección); `hoy` después = cerrado (se juzga el valor final).
  */
 export function evaluar(tipo: TipoObjetivo, meta: number, valor: number | null, rango: Rango, hoy: string): Avance {
-  const base = { desde: rango.desde, hasta: rango.hasta };
+  const base = { desde: rango.desde, hasta: rango.hasta, meta };
   if (valor == null) return { ...base, valor: null, porcentaje: null, esperado: null, proyeccion: null, semaforo: 'sin_datos' };
   const cerrado = hoy > rango.hasta;
   const redondo = (n: number) => Math.round(n * 10) / 10;
@@ -100,7 +112,7 @@ export function evaluar(tipo: TipoObjetivo, meta: number, valor: number | null, 
     const porcentaje = menos ? (valor <= 0 ? 100 : (meta / valor) * 100) : (valor / meta) * 100;
     const semaforo: Semaforo = menos
       ? valor <= meta ? 'bien' : valor <= meta * 1.2 ? 'justo' : 'mal'
-      : valor >= meta ? 'bien' : valor >= meta - 5 ? 'justo' : 'mal';
+      : valor >= meta ? 'bien' : (tipo === 'a_tiempo' ? valor >= meta - 5 : valor >= meta * 0.9) ? 'justo' : 'mal';
     return { ...base, valor, porcentaje: redondo(porcentaje), esperado: null, proyeccion: null, semaforo };
   }
 
@@ -117,4 +129,9 @@ export function evaluar(tipo: TipoObjetivo, meta: number, valor: number | null, 
     proyeccion: Math.round(proyeccion * 100) / 100,
     semaforo: proyeccion >= meta ? 'bien' : proyeccion >= meta * 0.9 ? 'justo' : 'mal',
   };
+}
+
+/** ¿Hay que avisar? Acumulativo, período en curso, ya pasó al menos un cuarto y a este ritmo no llega. */
+export function correspondeAviso(tipo: TipoObjetivo, a: Avance, hoy: string): boolean {
+  return ACUMULATIVOS.includes(tipo) && hoy <= a.hasta && (a.esperado ?? 0) >= 25 && a.semaforo === 'mal';
 }
