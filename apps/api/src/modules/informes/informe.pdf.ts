@@ -86,6 +86,20 @@ export function pdfInforme(d: DatosInforme, generado: Date = new Date()): Promis
       (x, w, y0) => monotributo(doc, x, w, y0, d),
     );
   }
+  if (d.objetivos?.length) {
+    if (y + 30 + 16 * d.objetivos.length > 790) {
+      doc.addPage();
+      y = MARGEN;
+    }
+    let yy = titulito(doc, MARGEN, y + 16, 'Tus objetivos, hoy');
+    const color = { bien: C.sube, justo: C.alerta, mal: C.baja, sin_datos: C.gris } as const;
+    for (const o of d.objetivos) {
+      doc.circle(MARGEN + 3, yy + 4.5, 3).fill(color[o.semaforo]);
+      doc.font('Helvetica').fontSize(9).fillColor(C.texto).text(o.linea, MARGEN + 12, yy, { width: UTIL - 12 });
+      yy = doc.y + 4;
+    }
+    y = yy;
+  }
   pie(doc, generado);
   doc.end();
   return listo;

@@ -7,6 +7,7 @@ import { AnalyticsPeriodoService } from '../analytics/periodo.service.js';
 import { MonotributoService } from '../contabilidad/monotributo.service.js';
 import { CuentaCorrienteService } from '../cuenta-corriente/cuenta-corriente.service.js';
 import { CotizacionesService } from '../cotizaciones/cotizaciones.service.js';
+import { ObjetivosService } from '../objetivos/objetivos.service.js';
 import { completarDias, periodoPrevio, variacion, type Periodo, type TipoInforme } from './informes.util.js';
 
 export interface Cifra {
@@ -39,6 +40,8 @@ export interface DatosInforme {
   demasiadasVentas: boolean;
   /** Si la empresa lo pidió: los mismos números en dólares (con el dólar del día de cada venta). */
   usd?: { casa: string; ventas: number; ganancia: number; ticket: number; compras: number } | null;
+  /** Cómo vienen los objetivos en su período actual (vacío si no hay). */
+  objetivos?: { linea: string; semaforo: 'bien' | 'justo' | 'mal' | 'sin_datos' }[];
 }
 
 const cifra = (valor: number, anterior: number): Cifra => ({ valor, anterior, variacion: variacion(valor, anterior) });
@@ -53,6 +56,7 @@ export class InformesDatosService {
     private readonly cuentaCorriente: CuentaCorrienteService,
     private readonly monotributo: MonotributoService,
     private readonly cotizaciones: CotizacionesService,
+    private readonly objetivos: ObjetivosService,
   ) {}
 
   async armar(empresaId: string, tipo: TipoInforme, periodo: Periodo): Promise<DatosInforme> {
@@ -73,9 +77,10 @@ export class InformesDatosService {
     const gananciaAnt = b ? b.total - b.costo : 0;
     const comprasDe = (d: typeof a) => (d?.comprasDiarias ?? []).reduce((s, x) => s + x.total, 0);
     const [cc, mono] = mensual ?? [null, null];
-    const usd = await this.enDolares(empresaId, periodo);
+    const [usd, objetivos] = await Promise.all([this.enDolares(empresaId, periodo), this.objetivos.paraInforme(empresaId).catch(() => [])]);
     return {
       empresa: empresa.nombre,
+      objetivos,
       tipo,
       periodo,
       ventas: cifra(total, b?.total ?? 0),

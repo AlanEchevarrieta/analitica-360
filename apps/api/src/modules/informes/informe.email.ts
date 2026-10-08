@@ -38,6 +38,7 @@ export function htmlInforme(d: DatosInforme, urlApp: string, urlBaja: string): s
         ${celda('Ganancia', pesos(d.ganancia.valor), d.ganancia, d.usd ? dolares(d.usd.ganancia) : undefined)}
         ${celda('Cantidad de ventas', entero(d.cantidad.valor), d.cantidad)}
       </tr></table>
+      ${objetivosHtml(d)}
       <p style="margin:16px 0;font-size:14px;color:#374151">En el PDF adjunto tenés el detalle: ventas por día, lo más vendido, cómo te pagaron, stock bajo${d.tipo === 'mensual' ? ', quién te debe y tu monotributo' : ''}.</p>
       <p style="margin:24px 0;text-align:center"><a href="${esc(urlApp)}" style="background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;font-size:14px">Ver en la app</a></p>
     </td></tr>
@@ -48,6 +49,16 @@ export function htmlInforme(d: DatosInforme, urlApp: string, urlBaja: string): s
   </table></body></html>`;
 }
 
+const COLOR_SEMAFORO = { bien: '#15803d', justo: '#b45309', mal: '#b91c1c', sin_datos: '#6b7280' } as const;
+
+function objetivosHtml(d: DatosInforme): string {
+  if (!d.objetivos?.length) return '';
+  const filas = d.objetivos
+    .map((o) => `<li style="margin:4px 0;font-size:13px;color:#374151"><span style="color:${COLOR_SEMAFORO[o.semaforo]};font-weight:bold">●</span> ${esc(o.linea)}</li>`)
+    .join('');
+  return `<p style="margin:16px 0 4px;font-size:14px;font-weight:bold">Tus objetivos, hoy:</p><ul style="margin:0;padding-left:4px;list-style:none">${filas}</ul>`;
+}
+
 export function textoInforme(d: DatosInforme, urlApp: string, urlBaja: string): string {
   const linea = (e: string, v: string, c: Cifra) => `${e}: ${v}${c.variacion == null ? '' : ` (${pct(c.variacion)} vs. anterior)`}`;
   return [
@@ -56,6 +67,7 @@ export function textoInforme(d: DatosInforme, urlApp: string, urlBaja: string): 
     linea('Ventas', pesos(d.ventas.valor), d.ventas),
     linea('Ganancia', pesos(d.ganancia.valor), d.ganancia),
     linea('Cantidad de ventas', entero(d.cantidad.valor), d.cantidad),
+    ...(d.objetivos?.length ? ['', 'Tus objetivos, hoy:', ...d.objetivos.map((o) => `- ${o.linea}`)] : []),
     '',
     'El detalle está en el PDF adjunto.',
     `Ver en la app: ${urlApp}`,

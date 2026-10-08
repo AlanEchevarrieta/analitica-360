@@ -48,6 +48,10 @@ export interface PedidoDetalle extends PedidoFila {
   notas: string | null;
   ventaId: string | null;
   items: PedidoItem[];
+  /** Día prometido de despacho (AAAA-MM-DD) o null. */
+  fechaComprometida: string | null;
+  /** Historia de estados, del más viejo al más nuevo. */
+  estados: { estado: EstadoPedido; fecha: string }[];
 }
 
 export interface Remitente {

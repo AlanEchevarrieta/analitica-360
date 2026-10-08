@@ -49,6 +49,28 @@ export const diasEntre = (desde: string, hasta: string) => Math.round((Date.pars
 
 export type Semaforo = 'bien' | 'justo' | 'mal' | 'sin_datos';
 
+export const NOMBRE_TIPO: Record<TipoObjetivo, string> = {
+  facturacion: 'Facturación',
+  ganancia: 'Ganancia',
+  produccion: 'Producción',
+  despachos: 'Pedidos despachados',
+  dias_despacho: 'Días de despacho',
+  a_tiempo: 'Despachos a tiempo',
+};
+export const ADJETIVO_PERIODO: Record<PeriodoObjetivo, string> = { semana: 'semanal', mes: 'mensual', trimestre: 'trimestral', anio: 'anual' };
+export const TEXTO_SEMAFORO: Record<Semaforo, string> = { bien: 'en camino', justo: 'va justo', mal: 'no llega', sin_datos: 'sin datos' };
+
+/** Cómo se lee un valor: pesos, dólares, unidades, días o porcentaje. */
+export function valorObjetivo(tipo: TipoObjetivo, moneda: 'ARS' | 'USD', v: number | null): string {
+  if (v == null) return '—';
+  const n = (x: number, d = 0) => x.toLocaleString('es-AR', { maximumFractionDigits: d });
+  if (tipo === 'facturacion' || tipo === 'ganancia') return moneda === 'USD' ? `US$ ${n(v)}` : `$ ${n(v)}`;
+  if (tipo === 'dias_despacho') return `${n(v, 1)} días`;
+  if (tipo === 'a_tiempo') return `${n(v, 1)} %`;
+  if (tipo === 'produccion') return `${n(v)} u.`;
+  return n(v);
+}
+
 export interface Avance {
   desde: string;
   hasta: string;

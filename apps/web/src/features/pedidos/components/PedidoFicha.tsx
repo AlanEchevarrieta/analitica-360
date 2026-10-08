@@ -9,6 +9,7 @@ import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { formatoFechaHora, formatoPesos } from "@/lib/formato";
 import { useAccionesPedido, useColaboradores, usePedido } from "../hooks/use-pedidos";
 import { ORIGENES, type PedidoDetalle } from "../types";
+import { SeguimientoPedido } from "./SeguimientoPedido";
 import { AccionesPedido } from "./AccionesPedido";
 import { EstadoPedidoBadge } from "./EstadoPedidoBadge";
 import { PickingPedido } from "./PickingPedido";
@@ -130,6 +131,8 @@ export function PedidoFichaVista({ id }: { id: string }) {
               </label>
             </CardContent>
           </Card>
+
+          <SeguimientoPedido p={p} />
 
           <Card>
             <CardHeader>

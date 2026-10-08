@@ -18,9 +18,9 @@ import { useClientes } from "@/features/ventas/hooks/use-nueva-venta";
 
 const PROVINCIAS = ["Buenos Aires", "CABA", "Catamarca", "Chaco", "Chubut", "Córdoba", "Corrientes", "Entre Ríos", "Formosa", "Jujuy", "La Pampa", "La Rioja", "Mendoza", "Misiones", "Neuquén", "Río Negro", "Salta", "San Juan", "San Luis", "Santa Cruz", "Santa Fe", "Santiago del Estero", "Tierra del Fuego", "Tucumán"];
 
-type Datos = Record<"cliente" | "telefono" | "email" | "direccion" | "codigoPostal" | "localidad" | "provincia" | "envio" | "notas", string>;
+type Datos = Record<"cliente" | "telefono" | "email" | "direccion" | "codigoPostal" | "localidad" | "provincia" | "envio" | "notas" | "comprometida", string>;
 
-const VACIO: Datos = { cliente: "", telefono: "", email: "", direccion: "", codigoPostal: "", localidad: "", provincia: "Mendoza", envio: "", notas: "" };
+const VACIO: Datos = { cliente: "", telefono: "", email: "", direccion: "", codigoPostal: "", localidad: "", provincia: "Mendoza", envio: "", notas: "", comprometida: "" };
 
 /** Pedido cargado a mano (WhatsApp, teléfono, Instagram…): mismo circuito que los de la tienda. */
 export function NuevoPedidoForm() {
@@ -62,6 +62,7 @@ export function NuevoPedidoForm() {
         provincia: texto(d.provincia),
         metodoEnvio: texto(d.envio),
         notas: texto(d.notas),
+        fechaComprometida: d.comprometida || null,
         items: lineas.map((l) => ({ productoId: l.productoId, varianteId: l.varianteId, cantidad: l.cantidad, precioUnitario: l.precioUnitario })),
       },
       {
@@ -138,6 +139,7 @@ export function NuevoPedidoForm() {
             </select>
           </div>
           {campo("envio", "Envío", { placeholder: "Andreani, moto, retira en el local…" })}
+          {campo("comprometida", "Despachar a más tardar el (opcional)", { type: "date" })}
           {campo("notas", "Notas", { placeholder: "Horario, referencias, regalo…" })}
           <p className="flex justify-between border-t pt-3 text-lg font-semibold">
             <span>Total</span>

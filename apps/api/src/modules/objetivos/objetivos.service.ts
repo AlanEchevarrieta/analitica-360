@@ -8,7 +8,7 @@ import { diaAR } from '../analytics/fecha-sql.js';
 import { CotizacionesService } from '../cotizaciones/cotizaciones.service.js';
 import { AccesoCuentaService } from '../planes/acceso-cuenta.service.js';
 import type { GuardarObjetivoInput } from './objetivos.dto.js';
-import { evaluar, periodosAnteriores, rangoPeriodo, type Avance, type PeriodoObjetivo, type Rango, type TipoObjetivo } from './objetivos.util.js';
+import { ACUMULATIVOS, ADJETIVO_PERIODO, evaluar, NOMBRE_TIPO, periodosAnteriores, rangoPeriodo, TEXTO_SEMAFORO, valorObjetivo, type Avance, type PeriodoObjetivo, type Rango, type TipoObjetivo } from './objetivos.util.js';
 
 /** Períodos cerrados que se muestran en el historial de cada objetivo. */
 const HISTORIAL = 6;
@@ -183,6 +183,22 @@ export class ObjetivosService {
         AND ${dia} BETWEEN ${desde}::date AND ${hasta}::date
         ${filtro.usuarioId ? Prisma.sql`AND v.usuario_id = ${filtro.usuarioId}::uuid` : Prisma.empty}`);
     return filas.map((x) => ({ dia: x.dia, dias: Math.max(0, Number(x.dias)), comprometida: x.comprometida }));
+  }
+
+  /** Para el informe por email (lo reciben los dueños): una línea por objetivo, los que peor van primero. */
+  async paraInforme(empresaId: string, hoy: string = fechaHoyAR()): Promise<{ linea: string; semaforo: Avance['semaforo'] }[]> {
+    const lista = await this.listar(empresaId, { id: '', clerkUserId: '', empresaId, email: '', rol: 'dueno' }, hoy);
+    const orden = { mal: 0, justo: 1, bien: 2, sin_datos: 3 };
+    return lista
+      .sort((a, b) => orden[a.actual.semaforo] - orden[b.actual.semaforo])
+      .slice(0, 8)
+      .map((o) => {
+        const quien = o.usuario?.nombre ?? o.ubicacion ?? 'Toda la empresa';
+        const v = (x: number | null) => valorObjetivo(o.tipo, o.moneda, x);
+        const pct = o.actual.porcentaje != null && ACUMULATIVOS.includes(o.tipo) ? ` (${o.actual.porcentaje.toLocaleString('es-AR')} %)` : '';
+        const de = o.tipo === 'dias_despacho' ? 'máximo' : 'meta';
+        return { linea: `${NOMBRE_TIPO[o.tipo]} ${ADJETIVO_PERIODO[o.periodo]} · ${quien}: ${v(o.actual.valor)}, ${de} ${v(o.meta)}${pct} · ${TEXTO_SEMAFORO[o.actual.semaforo]}`, semaforo: o.actual.semaforo };
+      });
   }
 
   /** Para el formulario: sucursales, usuarios y productos de la empresa. */

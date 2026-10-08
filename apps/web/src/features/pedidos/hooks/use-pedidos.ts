@@ -90,5 +90,10 @@ export function useAccionesPedido(id: string) {
     onSettled,
   });
 
-  return { prepararItem, marcarTodo, confirmarListo, despachar, conTransportista, entregado, cancelar, asignar };
+  const fijarFechaComprometida = useMutation({
+    mutationFn: (fecha: string | null) => api(`/pedidos/${id}/fecha-comprometida`, { method: "PATCH", body: JSON.stringify({ fecha }) }),
+    onSettled,
+  });
+
+  return { prepararItem, marcarTodo, confirmarListo, despachar, conTransportista, entregado, cancelar, asignar, fijarFechaComprometida };
 }
