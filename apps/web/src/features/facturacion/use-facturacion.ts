@@ -35,6 +35,10 @@ export interface Comprobante {
   receptorNombre: string | null;
   asociadoId: string | null;
   prueba: boolean;
+  /** Último envío por email y el email del cliente de la venta (para proponerlo). */
+  enviadoA: string | null;
+  enviadoEn: string | null;
+  emailCliente: string | null;
 }
 
 export interface Receptor {
@@ -70,7 +74,11 @@ export function useAccionesFacturacion() {
     onSuccess: refrescar,
   });
   const notaCredito = useMutation({ mutationFn: (id: string) => api<Comprobante>(`/facturacion/comprobantes/${id}/nota-credito`, { method: "POST" }), onSuccess: refrescar });
-  return { guardarConfig, verificar, facturar, notaCredito };
+  const enviarEmail = useMutation({
+    mutationFn: ({ id, email }: { id: string; email: string | null }) => api<Comprobante>(`/facturacion/comprobantes/${id}/email`, { method: "POST", body: JSON.stringify({ email }) }),
+    onSuccess: refrescar,
+  });
+  return { guardarConfig, verificar, facturar, notaCredito, enviarEmail };
 }
 
 /** Abre el PDF del comprobante en otra pestaña. */

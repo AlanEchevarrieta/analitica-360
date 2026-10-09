@@ -20,7 +20,9 @@ export interface Monotributo {
   condicionFiscal: string;
   vigenciaTopes: string | null;
   topes: { categoria: string; topeAnual: number }[];
-  meses: { mes: string; ingresos: number }[];
+  meses: { mes: string; ingresos: number; facturado?: number }[];
+  /** Facturado con ARCA en 12 meses (facturas menos notas de crédito); null si no factura con el sistema. */
+  facturadoArca12m?: number | null;
   estado: {
     ingresos12m: number;
     categoriaSegunIngresos: string | null;
@@ -126,8 +128,16 @@ export function MonotributoCard() {
               </li>
             ))}
           </ul>
+          {data.facturadoArca12m != null && (
+            <p className="text-sm">
+              Facturado con ARCA en 12 meses: <span className="font-medium tabular-nums">{formatoPesos(data.facturadoArca12m)}</span>
+              {e.ingresos12m - data.facturadoArca12m >= 1 && (
+                <span className="text-muted-foreground"> · {formatoPesos(e.ingresos12m - data.facturadoArca12m)} vendido sin factura electrónica</span>
+              )}
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">
-            Se calcula con las ventas registradas en la app (netas de devoluciones). Es una ayuda: confirmá tu categoría con tu contador.
+            Se calcula con las ventas registradas en la app (netas de devoluciones){data.facturadoArca12m != null ? ", que es igual o más que lo facturado: el control queda del lado seguro" : ""}. Es una ayuda: confirmá tu categoría con tu contador.
           </p>
         </div>
         <div className="h-40">

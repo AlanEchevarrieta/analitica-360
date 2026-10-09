@@ -1,6 +1,6 @@
 // Factura electrónica (ARCA) de punta a punta con ARCA simulado: configuración, verificación,
 // Factura C de una venta (una sola), receptor con CUIT, rechazo de ARCA explicado, dos facturas
-// a la vez con números distintos, nota de crédito y PDF.
+// a la vez con números distintos, nota de crédito y PDF, envío por email y lo facturado en el monotributo.
 //
 // Misma base descartable que alianzas.e2e-spec.ts:
 //   E2E_DATABASE_URL=postgresql://postgres:e2e@localhost:5499/postgres pnpm exec vitest run --config vitest.config.e2e.ts facturacion
@@ -57,12 +57,25 @@ describe.skipIf(!URL_E2E)('Factura electrónica ARCA (e2e)', () => {
   const DUENO = { Authorization: `Bearer user_fcd_${sufijo}|org_fc_${sufijo}` };
   const VENDEDOR = { Authorization: `Bearer user_fcv_${sufijo}|org_fc_${sufijo}` };
   const ventas: string[] = [];
+  const cliente = randomUUID();
+  /** Emails que se mandaron por Resend (simulado). */
+  const emails: { to: string[]; subject: string; attachments: { filename: string; content: string }[] }[] = [];
   const CUIT = '20123456786';
 
   beforeAll(async () => {
     process.env.DATABASE_URL = URL_E2E;
     process.env.CLERK_SECRET_KEY = 'sk_test_e2e';
     process.env.INTERNAL_WEBHOOK_SECRET = 'e2e';
+    process.env.RESEND_API_KEY = 're_e2e';
+    // Resend simulado: el resto de las llamadas siguen igual.
+    const original = globalThis.fetch;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+      if (String(url).startsWith('https://api.resend.com/')) {
+        emails.push(JSON.parse(String(init?.body)));
+        return new Response(JSON.stringify({ id: 'email-e2e' }), { status: 200 });
+      }
+      return original(url, init);
+    });
     db = new pg.Client({ connectionString: URL_E2E });
     await db.connect();
     await db.query(`INSERT INTO empresas (id, nombre, clerk_org_id) VALUES ($1, $2, $3)`, [empresa, `Factura ${sufijo}`, `org_fc_${sufijo}`]);
@@ -70,9 +83,10 @@ describe.skipIf(!URL_E2E)('Factura electrónica ARCA (e2e)', () => {
     await db.query(`INSERT INTO usuarios (id, empresa_id, nombre, email, clerk_user_id, rol, permisos) VALUES ($1, $2, 'Vendedor', $3, $4, 'operador', '{"registrar_ventas": true}')`, [randomUUID(), empresa, `fcv_${sufijo}@e2e.test`, `user_fcv_${sufijo}`]);
     await suscripcionActiva(db, empresa, 'pro');
     await db.query(`INSERT INTO productos (id, empresa_id, nombre) VALUES ($1, $2, 'Mate imperial')`, [producto, empresa]);
+    await db.query(`INSERT INTO clientes (id, empresa_id, nombre, email) VALUES ($1, $2, 'Lucía', $3)`, [cliente, empresa, `lucia_${sufijo}@e2e.test`]);
     for (const total of [38_000, 12_500, 9_900, 4_000]) {
       const v = randomUUID();
-      await db.query(`INSERT INTO ventas (id, empresa_id, usuario_id, forma_pago, total_con_interes) VALUES ($1, $2, $3, 'efectivo', $4)`, [v, empresa, dueno, total]);
+      await db.query(`INSERT INTO ventas (id, empresa_id, usuario_id, forma_pago, total_con_interes, cliente_id) VALUES ($1, $2, $3, 'efectivo', $4, $5)`, [v, empresa, dueno, total, total === 38_000 ? cliente : null]);
       await db.query(`INSERT INTO ventas_items (id, empresa_id, venta_id, producto_id, cantidad, precio_unitario) VALUES ($1, $2, $3, $4, 1, $5)`, [randomUUID(), empresa, v, producto, total]);
       ventas.push(v);
     }
@@ -144,5 +158,44 @@ describe.skipIf(!URL_E2E)('Factura electrónica ARCA (e2e)', () => {
     }).expect(200);
     expect(pdf.headers['content-type']).toContain('application/pdf');
     expect((pdf.body as Buffer).subarray(0, 4).toString()).toBe('%PDF');
+  });
+
+  it('manda la factura por email al cliente de la venta, con el PDF adjunto, y queda registrado', async () => {
+    const [f] = (await request(app.getHttpServer()).get(`/facturacion/ventas/${ventas[0]}`).set(DUENO).expect(200)).body;
+    expect(f.emailCliente).toBe(`lucia_${sufijo}@e2e.test`);
+    const r = await request(app.getHttpServer()).post(`/facturacion/comprobantes/${f.id}/email`).set(VENDEDOR).send({}).expect(200);
+    expect(r.body).toMatchObject({ enviadoA: `lucia_${sufijo}@e2e.test`, enviadoEn: expect.any(String) });
+    const mail = emails.at(-1)!;
+    expect(mail.to).toEqual([`lucia_${sufijo}@e2e.test`]);
+    expect(mail.subject).toBe('Factura C 00002-00000001 de Mates del Sur (prueba)');
+    expect(mail.attachments[0].filename).toBe('Factura-C-00002-00000001.pdf');
+    expect(Buffer.from(mail.attachments[0].content, 'base64').subarray(0, 4).toString()).toBe('%PDF');
+  });
+
+  it('a otro email: se valida; una venta sin cliente con email pide escribirlo', async () => {
+    const [f] = (await request(app.getHttpServer()).get(`/facturacion/ventas/${ventas[0]}`).set(DUENO).expect(200)).body;
+    await request(app.getHttpServer()).post(`/facturacion/comprobantes/${f.id}/email`).set(DUENO).send({ email: 'no-es-un-email' }).expect(400);
+    await request(app.getHttpServer()).post(`/facturacion/comprobantes/${f.id}/email`).set(DUENO).send({ email: 'contador@e2e.test' }).expect(200);
+    expect(emails.at(-1)!.to).toEqual(['contador@e2e.test']);
+    const [sinCliente] = (await request(app.getHttpServer()).get(`/facturacion/ventas/${ventas[1]}`).set(DUENO).expect(200)).body;
+    const r = await request(app.getHttpServer()).post(`/facturacion/comprobantes/${sinCliente.id}/email`).set(DUENO).send({}).expect(400);
+    expect(r.body.message).toMatch(/escribí a dónde mandarla/);
+  });
+
+  it('monotributo: suma lo facturado en producción (la nota de crédito resta) y no las facturas de prueba', async () => {
+    const antes = (await request(app.getHttpServer()).get('/monotributo').set(DUENO).expect(200)).body;
+    expect(antes.facturadoArca12m).toBeNull(); // las de homologación no cuentan
+    const hoy = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
+    const comp = (tipo: number, numero: number, total: number) =>
+      db.query(
+        `INSERT INTO comprobantes (id, empresa_id, tipo, punto_venta, numero, fecha, total, doc_tipo, doc_nro, condicion_iva_receptor, cae, cae_vence, ambiente) VALUES ($1, $2, $3, 2, $4, $5, $6, 99, '0', 5, '1', $5, 'produccion')`,
+        [randomUUID(), empresa, tipo, numero, hoy, total],
+      );
+    await comp(11, 1, 50_000);
+    await comp(11, 2, 20_000);
+    await comp(13, 1, 20_000);
+    const despues = (await request(app.getHttpServer()).get('/monotributo').set(DUENO).expect(200)).body;
+    expect(despues.facturadoArca12m).toBe(50_000);
+    expect(despues.meses.at(-1)).toMatchObject({ facturado: 50_000 });
   });
 });

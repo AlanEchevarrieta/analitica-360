@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put, Query, StreamableFile } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Put, Query, StreamableFile } from '@nestjs/common';
 import { z } from 'zod';
 import type { EmpresaContext, UsuarioContext } from '../../common/auth/request-context.types.js';
 import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
@@ -27,6 +27,7 @@ const receptorSchema = z
   .default(null);
 const facturarSchema = z.object({ receptor: receptorSchema });
 const listarSchema = z.object({ desde: fecha, hasta: fecha });
+const emailSchema = z.object({ email: z.string().trim().max(160).nullable().default(null).transform((v) => v || null) });
 
 /** Factura electrónica (ARCA): configuración, Factura C de una venta, nota de crédito y PDF. */
 @Controller('facturacion')
@@ -73,6 +74,13 @@ export class FacturacionController {
   @Post('comprobantes/:id/nota-credito')
   notaCredito(@CurrentEmpresa() empresa: EmpresaContext, @CurrentUser() usuario: UsuarioContext, @Param('id', new ParseUUIDPipe()) id: string) {
     return this.servicio.notaDeCredito(empresa.id, usuario, id);
+  }
+
+  @Post('comprobantes/:id/email')
+  @HttpCode(200)
+  @RequirePermiso('registrar_ventas')
+  email(@CurrentEmpresa() empresa: EmpresaContext, @Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodValidationPipe(emailSchema)) body: { email: string | null }) {
+    return this.servicio.enviarPorEmail(empresa.id, id, body.email);
   }
 
   @Get('comprobantes/:id/pdf')

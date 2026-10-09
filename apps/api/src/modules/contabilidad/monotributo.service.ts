@@ -11,8 +11,14 @@ export interface MonotributoRespuesta {
   estado: EstadoMonotributo | null;
   vigenciaTopes: string | null;
   topes: TopeCategoria[];
-  /** Ingresos por mes de los últimos 12 meses (incluye el actual). */
-  meses: { mes: string; ingresos: number }[];
+  /** Ingresos por mes de los últimos 12 meses (incluye el actual) y lo facturado con ARCA en cada uno. */
+  meses: { mes: string; ingresos: number; facturado: number }[];
+  /**
+   * Facturado con ARCA en los últimos 12 meses (Facturas C menos notas de crédito, solo de producción).
+   * Es lo que ve ARCA; el control del tope usa lo vendido, que es igual o más (más prudente).
+   * null si la empresa no factura con el sistema.
+   */
+  facturadoArca12m: number | null;
 }
 
 const inicioDia = (fecha: string) => new Date(`${fecha}T00:00:00.000-03:00`);
@@ -39,7 +45,7 @@ export class MonotributoService {
     const desde12 = sumarDiasIso(hoy, -364);
     const desde3 = sumarDiasIso(hoy, -89);
     const fin = inicioDia(sumarDiasIso(hoy, 1));
-    const [config, { vigencia, topes }, ventasMes, devoluciones] = await Promise.all([
+    const [config, { vigencia, topes }, ventasMes, devoluciones, facturas] = await Promise.all([
       this.prisma.configuracionEmpresa.findUnique({ where: { empresaId }, select: { condicionFiscal: true, categoriaMonotributo: true } }),
       this.topesVigentes(),
       // Ingresos brutos (lo vendido, incluido el interés de cuotas) por día de los últimos 12 meses.
@@ -50,7 +56,15 @@ export class MonotributoService {
         GROUP BY 1
       `),
       dineroDevolucionesPorDia(this.prisma, empresaId, inicioDia(sumarDiasIso(hoy, -400)), fin),
+      // Facturado con ARCA (solo producción: las de prueba no cuentan). La nota de crédito resta.
+      this.prisma.$queryRaw<{ dia: string; total: string }[]>(Prisma.sql`
+        SELECT fecha::text AS dia, SUM(CASE WHEN tipo = 13 THEN -total ELSE total END) AS total
+        FROM comprobantes
+        WHERE empresa_id = ${empresaId}::uuid AND ambiente = 'produccion' AND fecha >= ${sumarDiasIso(hoy, -400)}::date AND fecha <= ${hoy}::date
+        GROUP BY 1
+      `),
     ]);
+    const facturadoPorDia = facturas.map((f) => ({ dia: f.dia, monto: Number(f.total) }));
     const porDia = [
       ...ventasMes.map((v) => ({ dia: v.dia, monto: Number(v.total) })),
       // Las devoluciones restan ingresos (y un cambio con diferencia a favor suma).
@@ -58,12 +72,16 @@ export class MonotributoService {
     ];
     const sumaDesde = (desde: string) => porDia.filter((x) => x.dia >= desde && x.dia <= hoy).reduce((a, x) => a + x.monto, 0);
 
-    const meses: { mes: string; ingresos: number }[] = [];
+    const meses: { mes: string; ingresos: number; facturado: number }[] = [];
     const [y, m] = hoy.split('-').map(Number);
     for (let i = 11; i >= 0; i--) {
       const d = new Date(Date.UTC(y, m - 1 - i, 1));
       const mes = d.toISOString().slice(0, 7);
-      meses.push({ mes, ingresos: Math.round(porDia.filter((x) => x.dia.startsWith(mes)).reduce((a, x) => a + x.monto, 0)) });
+      meses.push({
+        mes,
+        ingresos: Math.round(porDia.filter((x) => x.dia.startsWith(mes)).reduce((a, x) => a + x.monto, 0)),
+        facturado: Math.round(facturadoPorDia.filter((x) => x.dia.startsWith(mes)).reduce((a, x) => a + x.monto, 0)),
+      });
     }
 
     const condicionFiscal = config?.condicionFiscal ?? 'monotributo';
@@ -83,6 +101,7 @@ export class MonotributoService {
       vigenciaTopes: vigencia,
       topes,
       meses,
+      facturadoArca12m: facturadoPorDia.length ? Math.round(facturadoPorDia.filter((x) => x.dia >= desde12 && x.dia <= hoy).reduce((a, x) => a + x.monto, 0)) : null,
     };
   }
 

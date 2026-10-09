@@ -3,13 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
-import { FileText, MessageCircle } from "lucide-react";
+import { FileText, Mail, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useRol } from "@/hooks/use-rol";
-import { formatoPesos } from "@/lib/formato";
+import { formatoFechaHora, formatoPesos } from "@/lib/formato";
 import { abrirPdf, useAccionesFacturacion, useComprobantesDeVenta, useFacturacion, type Receptor } from "./use-facturacion";
 
 const selectCls = "h-9 rounded-lg border bg-transparent px-2 text-sm";
@@ -18,7 +18,8 @@ const selectCls = "h-9 rounded-lg border bg-transparent px-2 text-sm";
 export function FacturaVenta({ ventaId, anulada, telefono }: { ventaId: string; anulada: boolean; telefono?: string | null }) {
   const { data: estado } = useFacturacion();
   const { data: comprobantes } = useComprobantesDeVenta(ventaId);
-  const { facturar, notaCredito } = useAccionesFacturacion();
+  const { facturar, notaCredito, enviarEmail } = useAccionesFacturacion();
+  const [email, setEmail] = useState<string | null>(null);
   const { getToken } = useAuth();
   const esDueno = useRol() === "dueno";
   const [conCliente, setConCliente] = useState(false);
@@ -95,6 +96,34 @@ export function FacturaVenta({ ventaId, anulada, telefono }: { ventaId: string; 
                 >
                   Anular con nota de crédito
                 </Button>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                type="email"
+                aria-label="Email del cliente"
+                placeholder="email del cliente"
+                className="h-8 max-w-64"
+                value={email ?? factura.emailCliente ?? ""}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={enviarEmail.isPending}
+                onClick={() =>
+                  enviarEmail.mutate(
+                    { id: factura.id, email: (email ?? factura.emailCliente ?? "").trim() || null },
+                    { onSuccess: (c) => toast.success(`Enviada a ${c.enviadoA}`), onError: (e) => toast.error(e instanceof Error ? e.message : "No se pudo mandar", { duration: 12_000 }) },
+                  )
+                }
+              >
+                <Mail className="size-4" /> {enviarEmail.isPending ? "Mandando…" : "Mandar por email"}
+              </Button>
+              {factura.enviadoA && factura.enviadoEn && (
+                <span className="text-xs text-muted-foreground">
+                  Enviada a {factura.enviadoA} el {formatoFechaHora(factura.enviadoEn)}
+                </span>
               )}
             </div>
             {nota && (

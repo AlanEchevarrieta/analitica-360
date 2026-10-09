@@ -1,10 +1,13 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
+import type { Env } from '../../config/env.validation.js';
 import type { UsuarioContext } from '../../common/auth/request-context.types.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
 import { ArcaCliente } from './arca.cliente.js';
 import { CONDICION_IVA, cuitValido, DOC, NOMBRE_TIPO, numeroCompleto, TIPO, type DatosComprobante } from './arca.util.js';
+import { asuntoFactura, htmlFactura, textoFactura } from './factura.email.js';
 import { pdfFactura } from './factura.pdf.js';
 
 export interface ConfigFacturacionInput {
@@ -40,9 +43,12 @@ function explicar(errores: string[]): string {
  */
 @Injectable()
 export class FacturacionService {
+  private readonly logger = new Logger('Facturacion');
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly arca: ArcaCliente,
+    private readonly config_: ConfigService<Env, true>,
   ) {}
 
   async estado(empresaId: string) {
@@ -186,7 +192,10 @@ export class FacturacionService {
     return this.resumen(comp);
   }
 
-  private resumen(c: { id: string; tipo: number; puntoVenta: number; numero: number; fecha: Date; total: Prisma.Decimal; cae: string; caeVence: Date; ventaId: string | null; receptorNombre: string | null; asociadoId: string | null; ambiente: string }) {
+  private resumen(
+    c: { id: string; tipo: number; puntoVenta: number; numero: number; fecha: Date; total: Prisma.Decimal; cae: string; caeVence: Date; ventaId: string | null; receptorNombre: string | null; asociadoId: string | null; ambiente: string; emailEnviadoA?: string | null; emailEnviadoEn?: Date | null },
+    emailCliente: string | null = null,
+  ) {
     return {
       id: c.id,
       tipo: c.tipo,
@@ -200,12 +209,63 @@ export class FacturacionService {
       receptorNombre: c.receptorNombre,
       asociadoId: c.asociadoId,
       prueba: c.ambiente !== 'produccion',
+      /** Último envío por email (a quién y cuándo) y el email del cliente de la venta, para proponerlo. */
+      enviadoA: c.emailEnviadoA ?? null,
+      enviadoEn: c.emailEnviadoEn ?? null,
+      emailCliente,
     };
   }
 
   async deVenta(empresaId: string, ventaId: string) {
-    const lista = await this.prisma.comprobante.findMany({ where: { empresaId, ventaId }, orderBy: { creadoEn: 'asc' } });
-    return lista.map((c) => this.resumen(c));
+    const [lista, venta] = await Promise.all([
+      this.prisma.comprobante.findMany({ where: { empresaId, ventaId }, orderBy: { creadoEn: 'asc' } }),
+      this.prisma.venta.findFirst({ where: { id: ventaId, empresaId }, select: { cliente: { select: { email: true } } } }),
+    ]);
+    return lista.map((c) => this.resumen(c, venta?.cliente?.email ?? null));
+  }
+
+  /**
+   * Manda el comprobante en PDF por email (Resend). Sin email, usa el del cliente de la venta.
+   * Queda guardado a quién y cuándo se mandó.
+   */
+  async enviarPorEmail(empresaId: string, comprobanteId: string, email: string | null) {
+    const comp = await this.prisma.comprobante.findFirst({ where: { id: comprobanteId, empresaId }, include: { venta: { select: { cliente: { select: { email: true } } } } } });
+    if (!comp) throw new NotFoundException('Comprobante no encontrado');
+    const para = (email ?? comp.venta?.cliente?.email ?? '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(para)) throw new BadRequestException(email ? 'Ese email no es válido' : 'La venta no tiene un cliente con email: escribí a dónde mandarla');
+    const clave = this.config_.get('RESEND_API_KEY', { infer: true });
+    if (!clave) throw new ServiceUnavailableException('El envío de emails todavía no está habilitado en Analítica 360: por ahora descargá el PDF y mandalo por WhatsApp');
+    const c = await this.config(empresaId);
+    const { nombre, contenido } = await this.pdf(empresaId, comprobanteId);
+    const datos = {
+      emisor: c.razonSocial,
+      comprobante: NOMBRE_TIPO[comp.tipo],
+      numero: numeroCompleto(comp.puntoVenta, comp.numero),
+      fecha: fecha(comp.fecha)!.split('-').reverse().join('/'),
+      total: comp.total.toNumber(),
+      cae: comp.cae,
+      receptor: comp.receptorNombre,
+      prueba: comp.ambiente !== 'produccion',
+    };
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${clave}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: this.config_.get('AVISOS_EMAIL_DESDE', { infer: true }),
+        to: [para],
+        subject: asuntoFactura(datos),
+        html: htmlFactura(datos),
+        text: textoFactura(datos),
+        attachments: [{ filename: nombre, content: contenido.toString('base64') }],
+      }),
+      signal: AbortSignal.timeout(20_000),
+    }).catch(() => null);
+    if (!r?.ok) {
+      this.logger.error(`Resend respondió ${r?.status ?? 'sin respuesta'} al mandar el comprobante ${comprobanteId}`);
+      throw new ServiceUnavailableException('No se pudo mandar el email. Probá de nuevo en unos minutos.');
+    }
+    const actualizado = await this.prisma.comprobante.update({ where: { id: comp.id }, data: { emailEnviadoA: para, emailEnviadoEn: new Date() } });
+    return this.resumen(actualizado, comp.venta?.cliente?.email ?? null);
   }
 
   async listar(empresaId: string, desde: string, hasta: string) {
