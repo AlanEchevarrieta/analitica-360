@@ -12,6 +12,7 @@ import { aNumero } from "@/lib/numeros";
 import { useAccionesDevolucion, useAccionesVenta, useDevoluciones, useVenta } from "../hooks/use-venta";
 import { etiquetaPago, FORMAS_PAGO } from "../types/nueva-venta";
 import { DevolucionForm } from "./DevolucionForm";
+import { FacturaVenta } from "@/features/facturacion/FacturaVenta";
 
 const formaPago = etiquetaPago;
 const hoy = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Mendoza" });
@@ -146,6 +147,8 @@ export function VentaFichaVista({ id }: { id: string }) {
       </div>
 
       {devolviendo && <DevolucionForm venta={v} onHecho={() => setDevolviendo(false)} />}
+
+      <FacturaVenta ventaId={v.id} anulada={v.anulada} />
 
       {deEstaVenta.length > 0 && (
         <Card>

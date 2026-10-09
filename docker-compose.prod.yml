@@ -65,6 +65,11 @@ services:
       # Débito automático de los planes (Mercado Pago). Sin token, no se ofrece.
       MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
       MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET:-}
+      # Factura electrónica ARCA (Factura C). Sin certificado, no se ofrece.
+      ARCA_CUIT: ${ARCA_CUIT:-}
+      ARCA_CERTIFICADO: ${ARCA_CERTIFICADO:-}
+      ARCA_CLAVE: ${ARCA_CLAVE:-}
+      ARCA_AMBIENTE: ${ARCA_AMBIENTE:-homologacion}
       # Caddy está en la red interna de Docker: solo a él se le cree la IP del visitante.
       TRUST_PROXY: uniquelocal
       TIENDA_SESIONES_SECRETO: ${TIENDA_SESIONES_SECRETO:-}
