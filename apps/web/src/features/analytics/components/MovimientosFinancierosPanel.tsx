@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import { SinDatos } from "@/components/shared/estado-datos";
 import { useRol } from "@/hooks/use-rol";
 import { formatoPesos } from "@/lib/formato";
@@ -123,9 +124,9 @@ export function MovimientosFinancierosPanel({ desde, hasta, pagoSugerido }: { de
                 value={m.descripcion}
                 onChange={(e) => setM({ ...m, descripcion: e.target.value })}
               />
-              <Input
+              <InputPlata
                 className="w-36"
-                inputMode="decimal"
+               
                 placeholder={m.tipo === "arqueo" ? "Plata contada" : "Monto"}
                 aria-label="Monto"
                 value={m.monto}

@@ -4,10 +4,11 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import { Label } from "@/components/ui/label";
 import { useAccionesObjetivo, type Objetivo } from "../hooks/use-objetivos";
-import { formatoValor, nombrePeriodo, proximosPeriodos } from "../objetivos";
+import { aNumero } from "@/lib/numeros";
+import { EN_DINERO, formatoValor, nombrePeriodo, proximosPeriodos } from "../objetivos";
 
 const hoyAR = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
 
@@ -31,7 +32,7 @@ export function MetasPorPeriodo({ objetivo }: { objetivo: Objetivo }) {
     );
 
   const agregar = () => {
-    const n = Number(meta.replace(/\./g, "").replace(",", "."));
+    const n = aNumero(meta);
     if (!(n > 0)) return toast.error("Poné una meta mayor a cero");
     guardar(desde, n);
   };
@@ -65,7 +66,7 @@ export function MetasPorPeriodo({ objetivo }: { objetivo: Objetivo }) {
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="meta-periodo-valor" className="text-xs">Meta</Label>
-          <Input id="meta-periodo-valor" className="w-36" inputMode="decimal" value={meta} onChange={(e) => setMeta(e.target.value)} />
+          <InputPlata formato={EN_DINERO.includes(objetivo.tipo)} moneda={objetivo.moneda} id="meta-periodo-valor" className="w-36" value={meta} onChange={(e) => setMeta(e.target.value)} />
         </div>
         <Button type="button" variant="outline" onClick={agregar} disabled={fijarMeta.isPending}>
           Guardar meta del período

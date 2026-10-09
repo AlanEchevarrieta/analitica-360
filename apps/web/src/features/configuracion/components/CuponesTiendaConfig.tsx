@@ -7,6 +7,7 @@ import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import { Label } from "@/components/ui/label";
 import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { useApiFetch } from "@/hooks/use-api";
@@ -103,7 +104,7 @@ export function CuponesTiendaConfig() {
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="cupon-valor">Descuento</Label>
             <div className="flex gap-1.5">
-              <Input id="cupon-valor" inputMode="decimal" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value.replace(/[^\d.]/g, "") })} />
+              <InputPlata formato={form.tipo === "monto"} id="cupon-valor" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value.replace(/[^\d.]/g, "") })} />
               <select aria-label="Tipo de descuento" className="h-9 rounded-lg border bg-transparent px-2 text-sm" value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value as Cupon["tipo"] })}>
                 <option value="porcentaje">%</option>
                 <option value="monto">$</option>
@@ -112,7 +113,7 @@ export function CuponesTiendaConfig() {
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="cupon-minimo">Compra mínima (opcional)</Label>
-            <Input id="cupon-minimo" inputMode="numeric" value={form.compraMinima} onChange={(e) => setForm({ ...form, compraMinima: e.target.value.replace(/\D/g, "") })} placeholder="Sin mínimo" />
+            <InputPlata id="cupon-minimo" value={form.compraMinima} onChange={(e) => setForm({ ...form, compraMinima: e.target.value.replace(/\D/g, "") })} placeholder="Sin mínimo" />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="cupon-usos">Usos máximos (opcional)</Label>

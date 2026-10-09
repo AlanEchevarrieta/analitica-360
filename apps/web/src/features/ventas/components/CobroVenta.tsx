@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import { Label } from "@/components/ui/label";
 import { formatoPesos } from "@/lib/formato";
 import type { ClienteVenta, ConfiguracionVenta, UbicacionVenta } from "../hooks/use-nueva-venta";
@@ -108,9 +109,9 @@ export function CobroVenta({
         <div className="grid grid-cols-2 items-end gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="cobro-paga-con">Paga con $</Label>
-            <Input
+            <InputPlata
               id="cobro-paga-con"
-              inputMode="decimal"
+             
               placeholder="Opcional"
               value={cobro.pagaCon}
               onChange={(e) => onCambiar({ pagaCon: e.target.value })}
@@ -162,9 +163,9 @@ export function CobroVenta({
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="cobro-descuento">Descuento $</Label>
-          <Input
+          <InputPlata
             id="cobro-descuento"
-            inputMode="decimal"
+           
             placeholder="0"
             value={cobro.descuento}
             onChange={(e) => onCambiar({ descuento: e.target.value })}
@@ -226,7 +227,7 @@ export function CobroVenta({
       {cobro.esSenia && (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="cobro-senia">Monto de la seña $</Label>
-          <Input id="cobro-senia" inputMode="decimal" value={cobro.montoSenia} onChange={(e) => onCambiar({ montoSenia: e.target.value })} />
+          <InputPlata id="cobro-senia" value={cobro.montoSenia} onChange={(e) => onCambiar({ montoSenia: e.target.value })} />
         </div>
       )}
 

@@ -6,6 +6,8 @@ import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
+import { aNumero } from "@/lib/numeros";
 import { useApiFetch } from "@/hooks/use-api";
 import { formatoPesos } from "@/lib/formato";
 import { hoyAR } from "@/lib/periodos";
@@ -13,7 +15,7 @@ import { Panel } from "./comunes";
 
 const CATEGORIAS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"];
 type Vigencia = { vigencia: string; topes: { categoria: string; topeAnual: number }[] };
-const aNumero = (t: string) => Number(t.replace(/\./g, "").replace(",", "."));
+
 
 /** La consola carga los topes del monotributo una vez por semestre (febrero y agosto) para todos los clientes. */
 export function TopesMonotributo() {
@@ -72,7 +74,7 @@ export function TopesMonotributo() {
             {CATEGORIAS.map((c) => (
               <label key={c} className="flex items-center gap-2 text-sm">
                 <span className="w-5 font-medium">{c}</span>
-                <Input inputMode="decimal" aria-label={`Tope anual categoría ${c}`} value={valores[c] ?? ""} onChange={(e) => setValores({ ...valores, [c]: e.target.value })} />
+                <InputPlata aria-label={`Tope anual categoría ${c}`} value={valores[c] ?? ""} onChange={(e) => setValores({ ...valores, [c]: e.target.value })} />
               </label>
             ))}
           </div>

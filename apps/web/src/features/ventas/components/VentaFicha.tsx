@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { formatoFechaHora, formatoPesos } from "@/lib/formato";
@@ -22,7 +22,7 @@ function CobrarSaldo({ ventaId, saldo }: { ventaId: string; saldo: number }) {
   const [forma, setForma] = useState("efectivo");
   return (
     <div className="flex flex-wrap items-end gap-2">
-      <Input className="w-32" inputMode="decimal" aria-label="Monto a cobrar" value={monto} onChange={(e) => setMonto(e.target.value)} />
+      <InputPlata className="w-32" aria-label="Monto a cobrar" value={monto} onChange={(e) => setMonto(e.target.value)} />
       <select className="h-8 rounded-lg border bg-transparent px-2 text-sm" aria-label="Forma de pago" value={forma} onChange={(e) => setForma(e.target.value)}>
         {FORMAS_PAGO.map((f) => (
           <option key={f.valor} value={f.valor}>

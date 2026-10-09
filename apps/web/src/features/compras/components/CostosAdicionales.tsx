@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import { Label } from "@/components/ui/label";
 
 export interface DatosAdicionales {
@@ -37,7 +38,7 @@ function Campo({
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={id}>{etiqueta}</Label>
-      <Input id={id} inputMode="decimal" placeholder="0" value={valor} onChange={(e) => onCambiar(e.target.value)} />
+      <InputPlata id={id} placeholder="0" value={valor} onChange={(e) => onCambiar(e.target.value)} />
     </div>
   );
 }

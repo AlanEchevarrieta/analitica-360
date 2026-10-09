@@ -3,6 +3,7 @@
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import { SinDatos } from "@/components/shared/estado-datos";
 import { formatoPesos } from "@/lib/formato";
 import type { LineaProducto } from "../types";
@@ -70,11 +71,11 @@ export function LineasProductos({
           </div>
           <div className="flex items-center gap-1">
             <span className="text-sm text-muted-foreground">$</span>
-            <Input
+            <InputPlata
               className="w-28 text-right tabular-nums"
-              inputMode="decimal"
+             
               aria-label={`${etiquetaPrecio} de ${l.nombre}`}
-              value={l.precioUnitario}
+              value={String(l.precioUnitario)}
               onChange={(e) => {
                 const n = Number(e.target.value.replace(",", "."));
                 if (Number.isFinite(n) && n >= 0) onCambiar(l.clave, { precioUnitario: n });

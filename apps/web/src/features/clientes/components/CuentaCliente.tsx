@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FORMAS_PAGO, etiquetaPago } from "@/features/ventas/types/nueva-venta";
@@ -76,7 +77,7 @@ export function CuentaCliente({ clienteId }: { clienteId: string }) {
           <div className="flex flex-wrap items-end gap-2 rounded-lg bg-muted/40 p-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cc-monto">Pagó $</Label>
-              <Input id="cc-monto" className="w-32" inputMode="decimal" placeholder={String(data.saldo)} value={monto} onChange={(e) => setMonto(e.target.value)} />
+              <InputPlata id="cc-monto" className="w-32" placeholder={String(data.saldo)} value={monto} onChange={(e) => setMonto(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cc-forma">Cómo</Label>

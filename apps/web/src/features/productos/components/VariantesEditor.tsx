@@ -3,6 +3,7 @@
 import { Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import type { Atributo } from "../hooks/use-producto-editor";
 import { GeneradorCombinaciones } from "./GeneradorCombinaciones";
 
@@ -106,17 +107,17 @@ export function VariantesEditor({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Input className="w-44" placeholder="SKU automático" aria-label="SKU" value={v.sku} onChange={(e) => actualizar(v.clave, { sku: e.target.value })} />
-            <Input
+            <InputPlata
               className="w-32"
-              inputMode="decimal"
+             
               placeholder="Precio"
               aria-label="Precio de la variante"
               value={v.precio}
               onChange={(e) => actualizar(v.clave, { precio: e.target.value })}
             />
-            <Input
+            <InputPlata
               className="w-32"
-              inputMode="decimal"
+             
               placeholder="Costo"
               aria-label="Costo de la variante"
               value={v.costo}

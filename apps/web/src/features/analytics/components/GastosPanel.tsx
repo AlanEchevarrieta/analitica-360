@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import { SinDatos } from "@/components/shared/estado-datos";
 import { formatoPesos } from "@/lib/formato";
 import { aNumero } from "@/lib/numeros";
@@ -66,7 +67,7 @@ export function GastosPanel({ desde, hasta }: { desde: string; hasta: string }) 
             ))}
           </select>
           <Input className="min-w-48 flex-1" placeholder="Descripción" aria-label="Descripción" value={g.descripcion} onChange={(e) => setG({ ...g, descripcion: e.target.value })} />
-          <Input className="w-32" inputMode="decimal" placeholder="Monto" aria-label="Monto" value={g.monto} onChange={(e) => setG({ ...g, monto: e.target.value })} />
+          <InputPlata className="w-32" placeholder="Monto" aria-label="Monto" value={g.monto} onChange={(e) => setG({ ...g, monto: e.target.value })} />
           <Input className="w-40" type="date" aria-label="Fecha" value={g.fecha} onChange={(e) => setG({ ...g, fecha: e.target.value })} />
           <select className="h-8 rounded-lg border bg-transparent px-2 text-sm" aria-label="Se repite" value={g.frecuencia} onChange={(e) => setG({ ...g, frecuencia: e.target.value as typeof g.frecuencia })}>
             <option value="">Una sola vez</option>

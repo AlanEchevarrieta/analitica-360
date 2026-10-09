@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import { Label } from "@/components/ui/label";
 import { formatoPesos } from "@/lib/formato";
 import { useGuardarConfiguracion, type Configuracion } from "../hooks/use-configuracion";
@@ -19,7 +19,7 @@ export function ProduccionConfig({ config }: { config: Configuracion }) {
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="prod-valor-hora">Valor de la hora de trabajo $</Label>
-          <Input id="prod-valor-hora" className="w-40" inputMode="decimal" placeholder="Ej. 6000" value={valor} onChange={(e) => setValor(e.target.value)} />
+          <InputPlata id="prod-valor-hora" className="w-40" placeholder="Ej. 6000" value={valor} onChange={(e) => setValor(e.target.value)} />
         </div>
         <Button
           disabled={!valido || n === config.valorHora || guardar.isPending}

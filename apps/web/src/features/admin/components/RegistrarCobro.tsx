@@ -4,6 +4,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
+import { aNumero } from "@/lib/numeros";
 import { formatoPesos } from "@/lib/formato";
 import { hoyAR } from "@/lib/periodos";
 import { useEmpresasAdmin } from "../hooks/use-admin";
@@ -11,7 +13,7 @@ import { fechaAR, NOMBRE_CICLO, useAccionesAlianzas, useCuotasEmpresa, type Cicl
 import { Panel } from "./comunes";
 
 const selectClase = "h-8 rounded-lg border bg-transparent px-2 text-sm";
-const aMonto = (t: string) => Number(t.replace(/\./g, "").replace(",", "."));
+const aMonto = (t: string) => aNumero(t);
 const PLANES: { id: PlanPago; nombre: string }[] = [
   { id: "basico", nombre: "Básico" },
   { id: "pro", nombre: "Pro" },
@@ -140,7 +142,7 @@ export function RegistrarCobro() {
               {c.descuento > 0 && <span className="text-xs text-emerald-400">descuento del período: {formatoPesos(c.descuento)}</span>}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Input className="w-36" inputMode="decimal" aria-label="Monto cobrado" value={f.monto} onChange={(e) => setF({ ...f, monto: e.target.value })} />
+              <InputPlata className="w-36" aria-label="Monto cobrado" value={f.monto} onChange={(e) => setF({ ...f, monto: e.target.value })} />
               <select className={selectClase} aria-label="Método" value={f.metodo} onChange={(e) => setF({ ...f, metodo: e.target.value })}>
                 <option value="transferencia">Transferencia</option>
                 <option value="mercadopago">Mercado Pago</option>

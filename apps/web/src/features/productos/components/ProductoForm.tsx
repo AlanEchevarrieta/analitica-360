@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import { Label } from "@/components/ui/label";
 import { aNumeroONull, aTexto } from "@/lib/numeros";
 import {
@@ -171,11 +172,11 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="producto-precio">Precio de venta $</Label>
-                <Input id="producto-precio" inputMode="decimal" value={precio} onChange={(e) => setPrecio(e.target.value)} />
+                <InputPlata id="producto-precio" value={precio} onChange={(e) => setPrecio(e.target.value)} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="producto-costo">Costo $</Label>
-                <Input id="producto-costo" inputMode="decimal" value={costo} onChange={(e) => setCosto(e.target.value)} />
+                <InputPlata id="producto-costo" value={costo} onChange={(e) => setCosto(e.target.value)} />
               </div>
             </div>
             <p className="text-xs text-muted-foreground">

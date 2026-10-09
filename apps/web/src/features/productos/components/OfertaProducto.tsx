@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import { Label } from "@/components/ui/label";
 import { useApiFetch } from "@/hooks/use-api";
 import { formatoPesos } from "@/lib/formato";
@@ -131,7 +132,7 @@ export function OfertaProducto({ productoId, precioVenta, usaVariantes }: { prod
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="oferta-valor">{tipo === "porcentaje" ? "Descuento (%)" : "Precio de oferta ($)"}</Label>
-                <Input id="oferta-valor" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value.replace(/[^\d.]/g, ""))} autoFocus />
+                <InputPlata formato={tipo === "precio"} id="oferta-valor" value={valor} onChange={(e) => setValor(e.target.value.replace(/[^\d.]/g, ""))} autoFocus />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="oferta-desde">Desde (opcional)</Label>

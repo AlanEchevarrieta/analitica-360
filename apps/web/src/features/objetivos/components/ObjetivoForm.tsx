@@ -4,9 +4,10 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { InputPlata } from "@/components/shared/input-plata";
 import { Label } from "@/components/ui/label";
 import { useAccionesObjetivo, type GuardarObjetivo, type Objetivo, type OpcionesObjetivo, type TipoObjetivo } from "../hooks/use-objetivos";
+import { aNumero } from "@/lib/numeros";
 import { CON_PRODUCTO, EN_DINERO, PERIODOS, TIPOS } from "../objetivos";
 import { MetasPorPeriodo } from "./MetasPorPeriodo";
 
@@ -30,7 +31,7 @@ export function ObjetivoForm({ opciones, inicial, onCerrar }: { opciones: Opcion
 
   const enviar = (e: React.FormEvent) => {
     e.preventDefault();
-    const numero = Number(meta.replace(/\./g, "").replace(",", "."));
+    const numero = aNumero(meta);
     if (!(numero > 0)) return toast.error("Poné una meta mayor a cero");
     const datos: GuardarObjetivo = {
       tipo,
@@ -89,7 +90,7 @@ export function ObjetivoForm({ opciones, inicial, onCerrar }: { opciones: Opcion
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="obj-meta">Meta ({unidad})</Label>
-            <Input id="obj-meta" inputMode="decimal" value={meta} onChange={(e) => setMeta(e.target.value)} placeholder={tipo === "a_tiempo" ? "95" : tipo === "dias_despacho" ? "2" : "1000000"} />
+            <InputPlata formato={conMoneda} moneda={moneda} id="obj-meta" value={meta} onChange={(e) => setMeta(e.target.value)} placeholder={tipo === "a_tiempo" ? "95" : tipo === "dias_despacho" ? "2" : "1000000"} />
           </div>
           {conMoneda ? (
             <div className="flex flex-col gap-1.5">
