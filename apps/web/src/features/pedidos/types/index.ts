@@ -40,6 +40,8 @@ export interface PedidoDetalle extends PedidoFila {
   costoEnvio: number;
   /** Envío creado en Zipnova. */
   envio: { id: string; estado: string | null } | null;
+  /** Pago con Mercado Pago desde la tienda (pendiente | approved | rejected | ...). */
+  pago: { estado: string; id: string | null; pagadoEn: string | null } | null;
   clienteEmail: string | null;
   clienteTelefono: string | null;
   direccionEnvio: string | null;

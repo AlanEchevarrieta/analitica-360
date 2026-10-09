@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
+import { pagarConMercadoPago } from "@/app/checkout/actions";
 import { formatoARS } from "@/lib/productos";
 import { useSitio } from "@/lib/sitio-contexto";
 import { urlWhatsApp } from "@/lib/whatsapp";
@@ -17,10 +18,10 @@ function leerUltimoPedido() {
   }
 }
 
-function parsearUltimoPedido(raw: string | null): { n?: string; wa?: string; total?: number } {
+function parsearUltimoPedido(raw: string | null): { n?: string; wa?: string; total?: number; id?: string; mp?: boolean } {
   if (!raw) return {};
   try {
-    return JSON.parse(raw) as { n?: string; wa?: string; total?: number };
+    return JSON.parse(raw) as { n?: string; wa?: string; total?: number; id?: string; mp?: boolean };
   } catch {
     return {};
   }
@@ -36,6 +37,63 @@ export function ConfirmacionPedido() {
   const wa = urlWhatsApp(sitio.whatsapp, ultimo.wa || `Hola! Quiero consultar el pedido ${n}`);
   const hayTransferencia = Boolean(sitio.alias || sitio.cbu);
   const [copiado, setCopiado] = useState<string | null>(null);
+  // Vuelta de Mercado Pago: agrega ?status=approved|pending|rejected|null (o collection_status) e id del pedido.
+  const pedidoId = params.get("id") || params.get("external_reference") || ultimo.id || "";
+  const conMp = Boolean(params.get("id") || params.get("external_reference") || ultimo.mp);
+  const estadoMp = params.get("status") || params.get("collection_status") || (conMp ? "sin_pagar" : "");
+  const [abriendo, setAbriendo] = useState(false);
+  const [errorPago, setErrorPago] = useState<string | null>(null);
+  const reintentar = async () => {
+    setAbriendo(true);
+    setErrorPago(null);
+    const r = await pagarConMercadoPago(pedidoId);
+    if (!r.ok) {
+      setAbriendo(false);
+      setErrorPago(r.error);
+    } else if (r.url) window.location.assign(r.url);
+    else window.location.reload(); // ya estaba pagado
+  };
+  if (conMp) {
+    const aprobado = estadoMp === "approved";
+    const pendiente = estadoMp === "pending" || estadoMp === "in_process";
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-6xl" aria-hidden>
+          {aprobado ? "✅" : pendiente ? "⏳" : "💳"}
+        </p>
+        <h1 className="mt-4 font-serif text-3xl text-[var(--tinta)]">{aprobado ? "¡Pago aprobado!" : pendiente ? "Tu pago está en proceso" : "Falta pagar tu pedido"}</h1>
+        {n ? <p className="mt-3 font-semibold text-[var(--marca-oscuro)]">N° de pedido: {n}</p> : null}
+        <p className="mt-2 text-[var(--tinta)]/75">
+          {aprobado
+            ? `${sitio.nombre} ya recibió tu pago y va a preparar el pedido.`
+            : pendiente
+              ? "Mercado Pago nos avisa apenas se acredite. No hace falta que pagues de nuevo."
+              : "El pedido quedó guardado, pero el pago no se completó. Podés intentarlo de nuevo."}
+        </p>
+        {!aprobado && !pendiente && pedidoId ? (
+          <button
+            type="button"
+            onClick={() => void reintentar()}
+            disabled={abriendo}
+            className="mt-6 rounded-[var(--r-boton)] bg-[var(--marca-hero)] px-6 py-3 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {abriendo ? "Abriendo Mercado Pago…" : "Pagar con Mercado Pago"}
+          </button>
+        ) : null}
+        {errorPago ? <p className="mt-3 text-sm text-red-700">{errorPago}</p> : null}
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <Link href="/productos" className="rounded-[var(--r-boton)] bg-[var(--marca-oscuro)] px-6 py-3 text-sm font-semibold text-white">
+            Seguir comprando
+          </Link>
+          {wa ? (
+            <a href={wa} target="_blank" rel="noreferrer" className="rounded-[var(--r-boton)] border border-[var(--marca-hero)] px-6 py-3 text-sm font-semibold text-[var(--marca-hero)]">
+              Escribir por WhatsApp
+            </a>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
   const copiar = (texto: string) => {
     void navigator.clipboard?.writeText(texto).then(() => setCopiado(texto));
   };

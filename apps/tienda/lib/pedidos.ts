@@ -62,7 +62,7 @@ export function mensajeWhatsAppPedido(input: {
   total: number;
   cupon?: { codigo: string; descuento: number } | null;
   descuentoTransferencia?: number;
-  formaPago?: "transferencia" | "a_coordinar";
+  formaPago?: "transferencia" | "a_coordinar" | "mercadopago";
   /** Forma de envío elegida y su costo (sin esto, el envío se acuerda). */
   envioElegido?: { nombre: string; costo: number } | null;
 }) {
@@ -85,7 +85,7 @@ ${dir}
 ${input.cupon ? `🎟️ Cupón ${input.cupon.codigo}: −${formatoARS(input.cupon.descuento)}
 ` : ""}${input.descuentoTransferencia ? `🏦 Descuento por transferencia: −${formatoARS(input.descuentoTransferencia)}
 ` : ""}${input.envioElegido ? `🚚 Envío ${input.envioElegido.nombre}: ${input.envioElegido.costo > 0 ? formatoARS(input.envioElegido.costo) : "gratis"}
-` : ""}💰 Total: ${formatoARS(input.total)}${input.formaPago === "transferencia" ? " (pago por transferencia)" : ""}
+` : ""}💰 Total: ${formatoARS(input.total)}${input.formaPago === "transferencia" ? " (pago por transferencia)" : input.formaPago === "mercadopago" ? " (pago con Mercado Pago)" : ""}
 
 N° Pedido: ${input.numeroPedido}`;
 }

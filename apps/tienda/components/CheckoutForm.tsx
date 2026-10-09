@@ -38,7 +38,7 @@ type CuentaCheckout = {
   codigoPostal: string | null;
 } | null;
 
-export function CheckoutForm({ cuenta }: { cuenta: CuentaCheckout }) {
+export function CheckoutForm({ cuenta, mercadoPago = false }: { cuenta: CuentaCheckout; mercadoPago?: boolean }) {
   const router = useRouter();
   const { items, total, vaciar } = useCarrito();
   const sitio = useSitio();
@@ -160,9 +160,15 @@ export function CheckoutForm({ cuenta }: { cuenta: CuentaCheckout }) {
     });
     vaciar();
     try {
-      sessionStorage.setItem("tienda-ultimo-pedido", JSON.stringify({ n: res.numeroPedido, wa: msg, total: res.total }));
+      sessionStorage.setItem("tienda-ultimo-pedido", JSON.stringify({ n: res.numeroPedido, wa: msg, total: res.total, id: res.id, mp: formaPago === "mercadopago" }));
     } catch {
       /* ignore */
+    }
+    // Mercado Pago: directo a pagar (al volver, la confirmación muestra cómo salió). Si no se pudo armar el link, la confirmación ofrece reintentar.
+    if (formaPago === "mercadopago") {
+      if (res.pagoUrl) window.location.assign(res.pagoUrl);
+      else router.push(`/pedido-confirmado?n=${encodeURIComponent(res.numeroPedido)}&id=${res.id}`);
+      return;
     }
     const wa = urlWhatsApp(sitio.whatsapp, msg);
     if (wa) window.open(wa, "_blank", "noopener,noreferrer");
@@ -277,6 +283,15 @@ export function CheckoutForm({ cuenta }: { cuenta: CuentaCheckout }) {
               <span className="text-sm text-[var(--tinta)]/60">Te pasamos los datos al confirmar.</span>
             </span>
           </label>
+          {mercadoPago ? (
+            <label className={opcionPago(formaPago === "mercadopago")}>
+              <input type="radio" name="pago" className="mt-1 accent-[var(--marca)]" checked={formaPago === "mercadopago"} onChange={() => setFormaPago("mercadopago")} />
+              <span>
+                <span className="block text-sm font-medium">Mercado Pago</span>
+                <span className="text-sm text-[var(--tinta)]/60">Tarjeta de crédito o débito, o dinero en cuenta. Pagás ahora y listo.</span>
+              </span>
+            </label>
+          ) : null}
           <label className={opcionPago(formaPago === "a_coordinar")}>
             <input type="radio" name="pago" className="mt-1 accent-[var(--marca)]" checked={formaPago === "a_coordinar"} onChange={() => setFormaPago("a_coordinar")} />
             <span>
@@ -293,7 +308,7 @@ export function CheckoutForm({ cuenta }: { cuenta: CuentaCheckout }) {
           disabled={enviando}
           className="w-full rounded-[var(--r-boton)] bg-[var(--marca-hero)] px-6 py-3 text-sm font-semibold text-white hover:bg-[var(--marca-oscuro)] disabled:opacity-60"
         >
-          {enviando ? "Confirmando…" : "Confirmar pedido por WhatsApp"}
+          {enviando ? (formaPago === "mercadopago" ? "Abriendo Mercado Pago…" : "Confirmando…") : formaPago === "mercadopago" ? "Confirmar y pagar con Mercado Pago" : "Confirmar pedido por WhatsApp"}
         </button>
       </form>
 
@@ -382,7 +397,7 @@ export function CheckoutForm({ cuenta }: { cuenta: CuentaCheckout }) {
             <dd className="text-lg tabular-nums">{formatoARS(totalFinal)}</dd>
           </div>
         </dl>
-        <p className="mt-3 text-xs leading-5 text-[var(--tinta)]/55">Al confirmar te abrimos WhatsApp con el detalle para coordinar el pago y el envío.</p>
+        <p className="mt-3 text-xs leading-5 text-[var(--tinta)]/55">{formaPago === "mercadopago" ? "Al confirmar te llevamos a Mercado Pago para pagar de forma segura." : "Al confirmar te abrimos WhatsApp con el detalle para coordinar el pago y el envío."}</p>
       </aside>
     </div>
   );

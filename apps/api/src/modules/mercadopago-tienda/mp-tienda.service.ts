@@ -63,7 +63,7 @@ export class MpTiendaService {
 
   /** Vuelta de Mercado Pago: cambia el código por los tokens y guarda la cuenta. Devuelve adónde mandar al dueño. */
   async vuelta(code: string | undefined, state: string | undefined, error: string | undefined): Promise<string> {
-    const app = `${this.config.get('APP_URL_PUBLICA', { infer: true })}/configuracion?seccion=mercadopago`;
+    const app = `${this.config.get('APP_URL_PUBLICA', { infer: true })}/configuracion?s=mercadopago`;
     if (error || !code || !state || !this.disponible) return `${app}&mp=cancelado`;
     let estado: EstadoOAuth;
     try {

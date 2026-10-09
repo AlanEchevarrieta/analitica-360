@@ -17,13 +17,14 @@ function errorDe(e: unknown) {
   return e instanceof Error ? e.message : "No se pudo completar la acción";
 }
 
-function Despacho({ acciones, onHecho }: { acciones: Acciones; onHecho: () => void }) {
+function Despacho({ acciones, onHecho, pagadoConMp }: { acciones: Acciones; onHecho: () => void; pagadoConMp: boolean }) {
   const ubicaciones = useUbicaciones();
   const config = useConfiguracionVenta();
   const [transportista, setTransportista] = useState("");
   const [seguimiento, setSeguimiento] = useState("");
   const [ubicacion, setUbicacion] = useState("");
-  const [formaPago, setFormaPago] = useState("transferencia");
+  // Pagado con Mercado Pago en la tienda: se propone ese medio (en la caja, "Mercado Pago QR").
+  const [formaPago, setFormaPago] = useState(pagadoConMp ? "qr" : "transferencia");
   const lista = ubicaciones.data ?? [];
   const medios = config.data ? FORMAS_PAGO.filter((f) => config.data.mediosPago.includes(f.valor)) : FORMAS_PAGO;
 
@@ -113,7 +114,7 @@ export function AccionesPedido({ pedido, acciones }: { pedido: PedidoDetalle; ac
       )}
       {pedido.estado === "listo_despacho" &&
         (despachando ? (
-          <Despacho acciones={acciones} onHecho={() => setDespachando(false)} />
+          <Despacho acciones={acciones} onHecho={() => setDespachando(false)} pagadoConMp={pedido.pago?.estado === "approved"} />
         ) : (
           <Button onClick={() => setDespachando(true)}>Despachar</Button>
         ))}

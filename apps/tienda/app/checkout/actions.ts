@@ -6,10 +6,10 @@ import { apiCuenta, tokenSesion } from "@/lib/sesion";
 import { obtenerSitio } from "@/lib/sitio";
 
 export type ResultadoPedido =
-  | { ok: true; id: string; numeroPedido: string; subtotal: number; descuentoCupon: number; descuentoTransferencia: number; costoEnvio: number; total: number }
+  | { ok: true; id: string; numeroPedido: string; subtotal: number; descuentoCupon: number; descuentoTransferencia: number; costoEnvio: number; total: number; pagoUrl: string | null }
   | { ok: false; error: string };
 
-export type FormaPago = "transferencia" | "a_coordinar";
+export type FormaPago = "transferencia" | "a_coordinar" | "mercadopago";
 
 /** Una forma de envío cotizada por la API (Zipnova). El precio lo vuelve a calcular el servidor al confirmar. */
 export interface OpcionEnvio {
@@ -124,7 +124,7 @@ export async function crearPedidoTienda(input: {
         body: JSON.stringify({ nombre: e.nombre, telefono: e.telefono, calle: e.calle, numero: e.numero, piso: e.piso || null, ciudad: e.ciudad, provincia: e.provincia, codigoPostal: e.codigoPostal }),
       }).catch(() => {});
     }
-    const d = (await res.json()) as { id: string; numeroPedido: string; subtotal: number; descuentoCupon: number; descuentoTransferencia: number; costoEnvio?: number; total: number };
+    const d = (await res.json()) as { id: string; numeroPedido: string; subtotal: number; descuentoCupon: number; descuentoTransferencia: number; costoEnvio?: number; total: number; pagoUrl?: string | null };
     return {
       ok: true,
       id: d.id,
@@ -134,9 +134,26 @@ export async function crearPedidoTienda(input: {
       descuentoTransferencia: Number(d.descuentoTransferencia ?? 0),
       costoEnvio: Number(d.costoEnvio ?? 0),
       total: Number(d.total),
+      pagoUrl: d.pagoUrl ?? null,
     };
   } catch (error) {
     console.error("Pedido: no se pudo conectar con la API", error);
+    return { ok: false, error: "No pudimos conectar con la tienda. Probá de nuevo en unos minutos." };
+  }
+}
+
+/** Pagar (o reintentar) un pedido con Mercado Pago: devuelve el link de pago, o que ya está pagado. */
+export async function pagarConMercadoPago(pedidoId: string): Promise<{ ok: true; estado: string; url: string | null } | { ok: false; error: string }> {
+  if (!/^[0-9a-f-]{36}$/i.test(pedidoId)) return { ok: false, error: "Pedido no encontrado" };
+  const sitio = await obtenerSitio();
+  if (!sitio) return { ok: false, error: "Esta tienda no está disponible" };
+  try {
+    const res = await fetch(urlTienda(sitio.empresaId, `/pedidos/${pedidoId}/pago`), { method: "POST", headers: await cabecerasTienda(), cache: "no-store" });
+    if (res.status === 429) return { ok: false, error: "Esperá un minuto y probá de nuevo." };
+    if (!res.ok) return { ok: false, error: await mensajeDeError(res, "No pudimos abrir Mercado Pago. Probá de nuevo.") };
+    const d = (await res.json()) as { estado: string; url: string | null };
+    return { ok: true, ...d };
+  } catch {
     return { ok: false, error: "No pudimos conectar con la tienda. Probá de nuevo en unos minutos." };
   }
 }

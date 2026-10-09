@@ -116,12 +116,12 @@ describe.skipIf(!URL_E2E)('Mercado Pago en las tiendas (e2e)', () => {
     const state = url.searchParams.get('state')!;
 
     const mal = await request(s()).get('/mercadopago/tienda/vuelta').query({ code: 'codigo-bueno', state: state.slice(0, -4) + 'AAAA' }).expect(302);
-    expect(mal.headers.location).toBe('https://app.ejemplo.test/configuracion?seccion=mercadopago&mp=error');
+    expect(mal.headers.location).toBe('https://app.ejemplo.test/configuracion?s=mercadopago&mp=error');
     const cancelado = await request(s()).get('/mercadopago/tienda/vuelta').query({ error: 'access_denied', state }).expect(302);
     expect(cancelado.headers.location).toContain('mp=cancelado');
 
     const ok = await request(s()).get('/mercadopago/tienda/vuelta').query({ code: 'codigo-bueno', state }).expect(302);
-    expect(ok.headers.location).toBe('https://app.ejemplo.test/configuracion?seccion=mercadopago&mp=ok');
+    expect(ok.headers.location).toBe('https://app.ejemplo.test/configuracion?s=mercadopago&mp=ok');
     const e = await request(s()).get('/mercadopago/tienda').set(DUENO).expect(200);
     expect(e.body).toMatchObject({ disponible: true, cuenta: { mpUserId: '424242' } });
     const { rows } = await db.query(`SELECT credenciales, aviso_clave FROM mp_cuentas_tienda WHERE empresa_id = $1`, [empresa]);

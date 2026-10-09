@@ -54,6 +54,7 @@ export function PedidoFichaVista({ id }: { id: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-semibold tabular-nums">Pedido {p.numeroPedido}</h1>
         <EstadoPedidoBadge estado={p.estado} />
+        {p.pago && <PagoBadge pago={p.pago} />}
         <span className="text-sm text-muted-foreground">
           {ORIGENES[p.origen]} · {formatoFechaHora(p.createdAt)}
         </span>
@@ -74,7 +75,7 @@ export function PedidoFichaVista({ id }: { id: string }) {
           {p.descuentos.transferencia > 0 && <span className="text-emerald-700 dark:text-emerald-400">Transferencia −{formatoPesos(p.descuentos.transferencia)}</span>}
           {p.costoEnvio > 0 && <span>Envío +{formatoPesos(p.costoEnvio)}</span>}
           {p.descuentos.formaPagoTienda && (
-            <span className="text-muted-foreground">Eligió pagar: {p.descuentos.formaPagoTienda === "transferencia" ? "transferencia" : "a coordinar"}</span>
+            <span className="text-muted-foreground">Eligió pagar: {p.descuentos.formaPagoTienda === "transferencia" ? "transferencia" : p.descuentos.formaPagoTienda === "mercadopago" ? "Mercado Pago" : "a coordinar"}</span>
           )}
           <span className="ml-auto">
             A cobrar <b className="tabular-nums">{formatoPesos(p.total)}</b>
@@ -169,5 +170,33 @@ export function PedidoFichaVista({ id }: { id: string }) {
         </div>
       </div>
     </div>
+  );
+}
+
+const NOMBRE_PAGO: Record<string, string> = {
+  pendiente: "Esperando el pago",
+  pending: "Pago pendiente",
+  in_process: "Pago en revisión",
+  authorized: "Pago autorizado",
+  approved: "Pagado con Mercado Pago",
+  rejected: "Pago rechazado",
+  cancelled: "Pago cancelado",
+  refunded: "Pago devuelto",
+  charged_back: "Contracargo",
+};
+
+/** Estado del pago con Mercado Pago de un pedido de la tienda. */
+function PagoBadge({ pago }: { pago: NonNullable<PedidoDetalle["pago"]> }) {
+  const color =
+    pago.estado === "approved"
+      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+      : ["rejected", "cancelled", "refunded", "charged_back"].includes(pago.estado)
+        ? "bg-red-500/15 text-red-600"
+        : "bg-amber-500/15 text-amber-700 dark:text-amber-400";
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${color}`} title={pago.id ? `Pago N° ${pago.id} en Mercado Pago` : undefined}>
+      {NOMBRE_PAGO[pago.estado] ?? pago.estado}
+      {pago.estado === "approved" && pago.pagadoEn ? ` · ${formatoFechaHora(pago.pagadoEn)}` : ""}
+    </span>
   );
 }
