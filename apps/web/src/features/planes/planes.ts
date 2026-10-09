@@ -4,7 +4,7 @@ import { PLANES as COMPARTIDO } from "@analitica360/shared-types";
  * Catálogo de planes y precios (puerto de src/lib/planes.ts del sistema
  * anterior). Precios en pesos, sin IVA.
  */
-/** Precio de LISTA por mes, sin IVA (2026-10-02). Sin promociones al público: los descuentos vienen de códigos (cámaras y cupones). */
+/** Precio de LISTA por mes, sin IVA (2026-10-02). El trimestral y el anual tienen su descuento (los calcula la API: GET /suscripcion/precios). */
 export const PRECIO_MENSUAL = {
   basico: 49000,
   pro: 89000,

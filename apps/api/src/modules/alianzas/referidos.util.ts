@@ -1,10 +1,11 @@
 /**
  * Referidos: cada cliente tiene su código para recomendar Analítica 360.
- * - El negocio nuevo que se registra con el código: 30 días de prueba y 10% en su primer pago.
+ * - El negocio nuevo que se registra con el código: 30 días de prueba y 10% en su primer pago,
+ *   además del descuento del ciclo (mensual 10%, trimestral 15 + 10 = 25%, anual 25 + 10 = 35%).
  * - El que recomienda: cuando el nuevo hace su primer pago, gana un 10% para su próximo
  *   período. Se suman (3 amigos que pagan = 30%), con un máximo de 6 premios por año.
  */
-import { MESES_CICLO, type CicloFacturacion } from '../planes/planes.util.js';
+import { DESCUENTO_CICLO, MESES_CICLO, type CicloFacturacion } from '../planes/planes.util.js';
 import { redondear, type Cotizacion, type ReglasCupon } from './alianzas.util.js';
 
 export const DIAS_PRUEBA_REFERIDO = 30;
@@ -12,10 +13,10 @@ export const DESCUENTO_NUEVO_PCT = 10;
 export const PREMIO_PCT = 10;
 export const MAX_PREMIOS_POR_ANIO = 6;
 
-/** Reglas del código de referido: 10% en el primer período, cualquiera sea el ciclo. */
+/** Reglas del código de referido: 10% más que el descuento del ciclo, en el primer período. */
 export function reglasReferido(): ReglasCupon {
   const regla = (ciclo: CicloFacturacion) => ({
-    entrada: [{ meses: MESES_CICLO[ciclo], porcentaje: DESCUENTO_NUEVO_PCT }],
+    entrada: [{ meses: MESES_CICLO[ciclo], porcentaje: DESCUENTO_CICLO[ciclo] + DESCUENTO_NUEVO_PCT }],
     periodosEntrada: 1,
     renovacionPct: 0,
     renovacionPeriodos: 0,

@@ -160,7 +160,7 @@ model Plan {
   activo           Boolean  @default(true)
   /// Cuotas sin interés para quien no tiene código (un cupón puede definir las suyas).
   cuotasTrimestral Int      @default(3) @map("cuotas_trimestral")
-  cuotasAnual      Int      @default(3) @map("cuotas_anual")
+  cuotasAnual      Int      @default(6) @map("cuotas_anual")
   createdAt        DateTime @default(now()) @map("created_at")
 
   suscripciones Suscripcion[]

@@ -7,7 +7,7 @@
  * 2026-11-02 (excluido).
  */
 import { DIAS_PRUEBA } from '../registro/registro.util.js';
-import { MESES_CICLO, PRECIO_MENSUAL, precioLista, type CicloFacturacion, type PlanPagoId } from '../planes/planes.util.js';
+import { DESCUENTO_CICLO, MESES_CICLO, PRECIO_MENSUAL, precioLista, type CicloFacturacion, type PlanPagoId } from '../planes/planes.util.js';
 
 export type TipoCupon = 'camara' | 'descuento' | 'referido';
 
@@ -167,7 +167,9 @@ export const redondear = (n: number) => Math.round(n);
 
 /**
  * Precio de un período. Siempre sobre el precio de LISTA y con un solo
- * descuento por mes (no se acumulan). `indiceRenovacion` empieza en 1.
+ * descuento por mes (no se acumulan): el mayor entre el del código y el del
+ * ciclo (trimestral −15 %, anual −25 %). Así un código nunca deja un mes más
+ * caro que no tenerlo. `indiceRenovacion` empieza en 1.
  */
 export function cotizarPeriodo(
   plan: PlanPagoId,
@@ -182,7 +184,11 @@ export function cotizarPeriodo(
   const lista = precioMensual != null ? precioMensual * MESES_CICLO[ciclo] : precioLista(plan, ciclo);
   const base = { plan, ciclo, tipo, lista };
   const cuotas = cuotasDelPeriodo(ciclo, regla, cuotasGenerales);
-  if (!regla) return { ...base, total: lista, descuento: 0, cuotas, montoCuota: redondear(lista / cuotas), regla: 'sin_cupon' };
+  const delCiclo = DESCUENTO_CICLO[ciclo];
+  if (!regla) {
+    const total = redondear(lista * (1 - delCiclo / 100));
+    return { ...base, total, descuento: lista - total, cuotas, montoCuota: redondear(total / cuotas), regla: 'sin_cupon' };
+  }
 
   let total: number;
   if (tipo === 'entrada') {
@@ -191,14 +197,14 @@ export function cotizarPeriodo(
     total = 0;
     for (const tramo of regla.entrada) {
       const meses = Math.min(tramo.meses, restantes);
-      total += redondear(listaMes * meses * (1 - tramo.porcentaje / 100));
+      total += redondear(listaMes * meses * (1 - Math.max(tramo.porcentaje, delCiclo) / 100));
       restantes -= meses;
       if (restantes <= 0) break;
     }
-    total += listaMes * Math.max(0, restantes);
+    total += redondear(listaMes * Math.max(0, restantes) * (1 - delCiclo / 100));
   } else {
     const conDescuento = regla.renovacionPeriodos == null || indiceRenovacion <= regla.renovacionPeriodos;
-    total = conDescuento ? redondear(lista * (1 - regla.renovacionPct / 100)) : lista;
+    total = redondear(lista * (1 - Math.max(conDescuento ? regla.renovacionPct : 0, delCiclo) / 100));
   }
 
   const descuento = lista - total;
@@ -354,20 +360,15 @@ export function estadoCliente(c: { primerPagoEn: string | null; pruebaHasta: str
   return 'baja';
 }
 
-/** Reglas del cupón UCIM360 (2026-10-02). */
+/**
+ * Reglas del cupón UCIM360 (estrategia del 2026-10-05): 1 mes gratis (días de prueba del cupón) y
+ * −10 % mensual, −25 % trimestral y −35 % anual durante los primeros 24 meses pagos; después, el precio
+ * de cualquier cliente (que en trimestral y anual ya tiene su descuento por ciclo).
+ */
 export const REGLAS_UCIM: ReglasCupon = {
-  mensual: { entrada: [], periodosEntrada: 1, renovacionPct: 0, renovacionPeriodos: null, cuotas: 1 },
-  trimestral: { entrada: [{ meses: 3, porcentaje: 40 }], periodosEntrada: 1, renovacionPct: 0, renovacionPeriodos: null, cuotas: 3 },
-  anual: {
-    entrada: [
-      { meses: 3, porcentaje: 40 },
-      { meses: 9, porcentaje: 20 },
-    ],
-    periodosEntrada: 1,
-    renovacionPct: 20,
-    renovacionPeriodos: null,
-    cuotas: 3,
-  },
+  mensual: { entrada: [{ meses: 1, porcentaje: 10 }], periodosEntrada: 1, renovacionPct: 10, renovacionPeriodos: 23, cuotas: 1 },
+  trimestral: { entrada: [{ meses: 3, porcentaje: 25 }], periodosEntrada: 1, renovacionPct: 25, renovacionPeriodos: 7, cuotas: null },
+  anual: { entrada: [{ meses: 12, porcentaje: 35 }], periodosEntrada: 1, renovacionPct: 35, renovacionPeriodos: 1, cuotas: null },
 };
 
 // ---- Beneficios en palabras (para Planes y el registro) -----------------
@@ -423,17 +424,21 @@ export function beneficiosDelCupon(c: { diasPrueba: number | null; reglas: Regla
     const n = NOMBRE_PERIODO[ciclo];
     const entrada = descuentoDeEntrada(ciclo, r);
     const partes: string[] = [];
+    const unico = Boolean(r && r.entrada.length === 1 && r.entrada[0].meses >= MESES_CICLO[ciclo]);
+    // El mismo % en la entrada y en una cantidad fija de renovaciones (ej. UCIM: 35% por 24 meses): se dice así.
+    const sostenido = Boolean(r && unico && r.periodosEntrada === 1 && r.renovacionPeriodos != null && r.renovacionPeriodos > 0 && r.renovacionPct === r.entrada[0].porcentaje);
     if (r && entrada > 0) {
       const tramos = r.entrada.filter((t) => t.porcentaje > 0 || r.entrada.length > 1);
-      const unico = r.entrada.length === 1 && r.entrada[0].meses >= MESES_CICLO[ciclo];
-      let texto = unico
+      let texto = sostenido
+        ? `${r.entrada[0].porcentaje}% durante tus primeros ${MESES_CICLO[ciclo] * (1 + r.renovacionPeriodos!)} meses`
+        : unico
         ? `${r.entrada[0].porcentaje}% de descuento en ${r.periodosEntrada > 1 ? `tus primeros ${r.periodosEntrada} ${ciclo === 'anual' ? 'años' : ciclo === 'trimestral' ? 'trimestres' : 'meses'}` : n.primero}`
         : tramos.map((t, i) => `${t.porcentaje}% ${i === 0 ? `los primeros ${t.meses} ${t.meses === 1 ? 'mes' : 'meses'}` : `los ${t.meses} ${t.meses === 1 ? 'mes siguiente' : 'meses siguientes'}`}`).join(' + ');
       const cuotas = cuotasDelPeriodo(ciclo, r, generales);
       if (cuotas > 1) texto += ` (en ${cuotas} cuotas sin interés)`;
       partes.push(texto);
     }
-    if (r && r.renovacionPct > 0) {
+    if (r && r.renovacionPct > 0 && !sostenido) {
       const cuantas = r.renovacionPeriodos == null ? `todas ${n.renovacion}` : `${r.renovacionPeriodos === 1 ? 'la primera renovación' : `las primeras ${r.renovacionPeriodos} renovaciones`}`;
       partes.push(`${r.renovacionPct}% en ${cuantas}`);
     }

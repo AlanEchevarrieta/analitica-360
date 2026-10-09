@@ -95,3 +95,9 @@ export function planMinimoPara(funcion: string): PlanPagoId {
   }
   return "ecommerce";
 }
+
+/** Descuento por pagar por adelantado, en % (igual que apps/api planes.util; lo controla planes.sincronia.spec). */
+export const DESCUENTO_CICLO: Record<CicloFacturacion, number> = { mensual: 0, trimestral: 15, anual: 25 };
+
+/** Cuotas sin interés del anual. */
+export const CUOTAS_ANUAL = 6;

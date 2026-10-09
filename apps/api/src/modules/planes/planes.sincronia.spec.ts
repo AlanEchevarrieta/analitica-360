@@ -10,6 +10,12 @@ describe('planes: API y web dicen lo mismo', () => {
     expect(compartido.PLANES).toEqual(PLANES);
   });
 
+  it('mismos descuentos por ciclo y cuotas del anual (lo que promete la landing es lo que se cobra)', async () => {
+    const { DESCUENTO_CICLO, CUOTAS_ANUAL } = await import('./planes.util.js');
+    expect(compartido.DESCUENTO_CICLO).toEqual(DESCUENTO_CICLO);
+    expect(compartido.CUOTAS_ANUAL).toBe(CUOTAS_ANUAL);
+  });
+
   it('la prueba gratis es el mismo plan', async () => {
     const { PLAN_DE_PRUEBA } = await import('./planes.util.js');
     expect(compartido.PLAN_DE_PRUEBA).toBe(PLAN_DE_PRUEBA);

@@ -139,7 +139,7 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
     expect(res.body.cupon.aviso).toMatch(/no corresponde el mes gratis/);
     const precios = await request(app.getHttpServer()).get('/suscripcion/precios').set(bearer(user2, `org_${user2}`)).expect(200);
     const anual = precios.body.planes.find((p: { plan: string }) => p.plan === 'basico').ciclos.find((c: { ciclo: string }) => c.ciclo === 'anual');
-    expect(anual.primerPago.total).toBe(441_000);
+    expect(anual.primerPago.total).toBe(382_200); // 35% menos
   });
 
   it('mismo CUIT con otro email y usuario: tampoco recibe el mes gratis', async () => {
@@ -153,20 +153,20 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
     expect(res.body.cupon).toMatchObject({ codigo: CODIGO, aplicado: true });
     const basico = res.body.planes.find((p: { plan: string }) => p.plan === 'basico');
     const ciclo = (c: string) => basico.ciclos.find((x: { ciclo: string }) => x.ciclo === c);
-    expect(ciclo('anual')).toMatchObject({ lista: 588_000, primerPago: { total: 441_000 }, renovacion: { total: 470_400 } });
-    expect(ciclo('trimestral')).toMatchObject({ lista: 147_000, primerPago: { total: 88_200, cuotas: 3, montoCuota: 29_400 }, renovacion: { total: 147_000 } });
-    expect(ciclo('mensual')).toMatchObject({ lista: 49_000, primerPago: { total: 49_000 } });
+    expect(ciclo('anual')).toMatchObject({ lista: 588_000, primerPago: { total: 382_200, cuotas: 6 }, renovacion: { total: 382_200 } }); // 35% los 2 primeros años
+    expect(ciclo('trimestral')).toMatchObject({ lista: 147_000, primerPago: { total: 110_250, cuotas: 3, montoCuota: 36_750 }, renovacion: { total: 110_250 } }); // 25%
+    expect(ciclo('mensual')).toMatchObject({ lista: 49_000, primerPago: { total: 44_100 } }); // 10%
   });
 
   let pagoAnual: string;
 
-  it('elige el plan anual: el admin cobra 441.000 (75% de 588.000) y se genera la comisión del cliente n.º 1 al 20%', async () => {
+  it('elige el plan anual: el admin cobra 382.200 (65% de 588.000) y se genera la comisión del cliente n.º 1 al 20%', async () => {
     const cot = await request(app.getHttpServer()).post('/admin/pagos/cotizar').set(ADMIN).send({ empresaId: empresa1, plan: 'basico', ciclo: 'anual' }).expect(200);
-    expect(cot.body).toMatchObject({ monto: 441_000, precioLista: 588_000, cotizacion: { tipo: 'entrada' } });
+    expect(cot.body).toMatchObject({ monto: 382_200, precioLista: 588_000, cotizacion: { tipo: 'entrada' } });
     const res = await request(app.getHttpServer()).post('/admin/pagos').set(ADMIN).send({ empresaId: empresa1, plan: 'basico', ciclo: 'anual', metodo: 'transferencia', desde: dias(30) }).expect(201);
     pagoAnual = res.body.pago.id;
-    expect(res.body.pago).toMatchObject({ monto: 441_000, descuento: 147_000, tipo: 'entrada' });
-    expect(res.body.comision).toMatchObject({ monto: 88_200, porcentaje: 20, orden: 1, mes: `${mesActual}-01` });
+    expect(res.body.pago).toMatchObject({ monto: 382_200, descuento: 205_800, tipo: 'entrada' });
+    expect(res.body.comision).toMatchObject({ monto: 76_440, porcentaje: 20, orden: 1, mes: `${mesActual}-01` });
     const e = (await db.query(`SELECT orden_camara, comision_pct::float, comision_hasta::text FROM empresas WHERE id = $1`, [empresa1])).rows[0];
     expect(e.orden_camara).toBe(1);
     expect(e.comision_pct).toBe(20);
@@ -175,7 +175,7 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
   it('la comisión aparece en la liquidación del mes; se aprueba y se marca pagada', async () => {
     const liq = await request(app.getHttpServer()).get('/admin/alianzas/liquidaciones').query({ camaraId, mes: mesActual }).set(ADMIN).expect(200);
     expect(liq.body.estado).toBe('pendiente');
-    expect(liq.body.total).toBe(88_200);
+    expect(liq.body.total).toBe(76_440);
     expect(liq.body.lineas).toHaveLength(1);
     const ok = await request(app.getHttpServer()).post('/admin/alianzas/liquidaciones/aprobar').set(ADMIN).send({ camaraId, mes: mesActual }).expect(200);
     await request(app.getHttpServer()).post(`/admin/alianzas/liquidaciones/${ok.body.id}/pagar`).set(ADMIN).send({ fecha: hoy, referencia: 'TRF-0001' }).expect(200);
@@ -185,11 +185,11 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
 
   it('devolución: ajuste en negativo, que va al próximo mes abierto porque este ya está liquidado', async () => {
     const res = await request(app.getHttpServer()).post(`/admin/pagos/${pagoAnual}/devolver`).set(ADMIN).send({ motivo: 'Se arrepintió' }).expect(200);
-    expect(res.body.ajuste.monto).toBe(-88_200);
+    expect(res.body.ajuste.monto).toBe(-76_440);
     expect(res.body.ajuste.mes > `${mesActual}-01`).toBe(true);
   });
 
-  it('trimestral en 3 cuotas de 29.400: cada cuota genera su comisión (cliente n.º 2)', async () => {
+  it('trimestral en 3 cuotas de 36.750: cada cuota genera su comisión (cliente n.º 2)', async () => {
     const user4 = `user_cuatro_${sufijo}`;
     const r = await registrar(user4, CODIGO).expect(201);
     const empresa4 = r.body.empresaId;
@@ -201,9 +201,9 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
       grupoId = res.body.pago.grupoId;
       cuotas.push(res.body.pago.monto);
       expect(res.body.pago).toMatchObject({ cuota: i + 1, cuotas: 3 });
-      expect(res.body.comision).toMatchObject({ orden: 2, porcentaje: 20, monto: 5_880 });
+      expect(res.body.comision).toMatchObject({ orden: 2, porcentaje: 20, monto: 7_350 });
     }
-    expect(cuotas).toEqual([29_400, 29_400, 29_400]);
+    expect(cuotas).toEqual([36_750, 36_750, 36_750]);
     await request(app.getHttpServer()).post('/admin/pagos').set(ADMIN).send({ empresaId: empresa4, plan: 'basico', ciclo: 'trimestral', metodo: 'efectivo', grupoId }).expect(400);
   });
 
@@ -235,45 +235,44 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
 
   const cobrar = (body: Record<string, unknown>) => request(app.getHttpServer()).post('/admin/pagos').set(ADMIN).send({ metodo: 'transferencia', ...body });
 
-  it('anual SIN código en 3 cuotas: se arma el plan de cuotas con sus vencimientos', async () => {
+  it('anual SIN código en 6 cuotas: se arma el plan de cuotas con sus vencimientos', async () => {
     const user = `user_seis_${sufijo}`;
     const r = await registrar(user, null).expect(201);
     const cot = await request(app.getHttpServer()).post('/admin/pagos/cotizar').set(ADMIN).send({ empresaId: r.body.empresaId, plan: 'pro', ciclo: 'anual', enCuotas: true }).expect(200);
-    expect(cot.body).toMatchObject({ monto: 356_000, cuotas: 3, cuota: 1, cotizacion: { total: 1_068_000, cuotas: 3, regla: 'sin_cupon' } });
+    expect(cot.body).toMatchObject({ monto: 133_500, cuotas: 6, cuota: 1, cotizacion: { total: 801_000, cuotas: 6, regla: 'sin_cupon' } }); // 25% menos que 1.068.000
     const pago = await cobrar({ empresaId: r.body.empresaId, plan: 'pro', ciclo: 'anual', enCuotas: true, desde: hoy }).expect(201);
     expect(pago.body.comision).toBeNull(); // sin cámara, sin comisión
     const planes = await request(app.getHttpServer()).get(`/admin/empresas/${r.body.empresaId}/cuotas`).set(ADMIN).expect(200);
     expect(planes.body).toHaveLength(1);
-    expect(planes.body[0]).toMatchObject({ plan: 'pro', ciclo: 'anual', pagadas: 1, total: 1_068_000 });
+    expect(planes.body[0]).toMatchObject({ plan: 'pro', ciclo: 'anual', pagadas: 1, total: 801_000 });
     expect(planes.body[0].cuotas.map((c: { estado: string; vence: string }) => [c.estado, c.vence])).toEqual([
       ['pagada', hoy],
-      ['pendiente', sumarMesesTexto(hoy, 4)],
-      ['pendiente', sumarMesesTexto(hoy, 8)],
+      ...[2, 4, 6, 8, 10].map((m) => ['pendiente', sumarMesesTexto(hoy, m)]),
     ]);
     // El emprendedor ve en qué cuota va.
     const precios = await request(app.getHttpServer()).get('/suscripcion/precios').set(bearer(user, `org_${user}`)).expect(200);
-    expect(precios.body.cuotasEnCurso).toMatchObject({ cuotas: 3, pagadas: 1, montoCuota: 356_000, proxima: { numero: 2, vence: sumarMesesTexto(hoy, 4) } });
+    expect(precios.body.cuotasEnCurso).toMatchObject({ cuotas: 6, pagadas: 1, montoCuota: 133_500, proxima: { numero: 2, vence: sumarMesesTexto(hoy, 2) } });
     // Ya paga: si prueba un código, se le muestran los descuentos pero no se le promete el mes gratis.
     const conCodigo = await request(app.getHttpServer()).get('/suscripcion/precios').query({ codigo: CODIGO }).set(bearer(user, `org_${user}`)).expect(200);
     expect(conCodigo.body.beneficios.lista.join(' ')).not.toMatch(/gratis/);
-    expect(conCodigo.body.beneficios.etiquetas).toMatchObject({ mensual: null, trimestral: '-40%', anual: 'AHORRÁS 25%' });
+    expect(conCodigo.body.beneficios.etiquetas).toMatchObject({ mensual: '-10%', trimestral: '-25%', anual: '-35%' });
   });
 
-  it('anual con el código: 3 cuotas que suman el 75%, comisión por cada cuota cobrada y renovación en cuotas al 80%', async () => {
+  it('anual con el código: 6 cuotas que suman el 65%, comisión por cada cuota cobrada y la primera renovación también al 65%', async () => {
     const user = `user_siete_${sufijo}`;
     const r = await registrar(user, CODIGO).expect(201);
     const empresa = r.body.empresaId;
     let grupoId: string | undefined;
     const montos: number[] = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 6; i++) {
       const res = await cobrar(grupoId ? { empresaId: empresa, plan: 'basico', ciclo: 'anual', grupoId } : { empresaId: empresa, plan: 'basico', ciclo: 'anual', enCuotas: true, desde: hoy }).expect(201);
       grupoId = res.body.pago.grupoId;
       montos.push(res.body.pago.monto);
       expect(res.body.comision).toMatchObject({ porcentaje: 20, monto: res.body.pago.monto * 0.2 });
     }
-    expect(montos.reduce((a, b) => a + b, 0)).toBe(441_000); // 75% de 588.000
+    expect(montos.reduce((a, b) => a + b, 0)).toBe(382_200); // 65% de 588.000
     const renov = await request(app.getHttpServer()).post('/admin/pagos/cotizar').set(ADMIN).send({ empresaId: empresa, plan: 'basico', ciclo: 'anual', enCuotas: true }).expect(200);
-    expect(renov.body.cotizacion).toMatchObject({ tipo: 'renovacion', total: 470_400, cuotas: 3 }); // 80% de 588.000
+    expect(renov.body.cotizacion).toMatchObject({ tipo: 'renovacion', total: 382_200, cuotas: 6 }); // el beneficio dura 24 meses
     expect(renov.body.periodoDesde).toBe(sumarMesesTexto(hoy, 12));
   });
 
@@ -281,9 +280,9 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
     const user = `user_ocho_${sufijo}`;
     const r = await registrar(user, null).expect(201);
     const empresa = r.body.empresaId;
-    // Se registró hace 5 meses (su prueba terminó hace mucho) y pagó la primera de 3 cuotas de un anual.
+    // Su prueba terminó hace mucho y hace 75 días pagó la primera de 6 cuotas de un anual (cada una cubre 2 meses).
     await db.query(`UPDATE suscripciones SET fecha_vencimiento = $2 WHERE empresa_id = $1`, [empresa, dias(-150)]);
-    const desde = dias(-140);
+    const desde = dias(-75);
     await cobrar({ empresaId: empresa, plan: 'basico', ciclo: 'anual', enCuotas: true, desde }).expect(201);
     const yo = bearer(user, `org_${user}`);
     const sub = await request(app.getHttpServer()).get('/suscripcion').set(yo).expect(200);
@@ -292,7 +291,7 @@ describe.skipIf(!URL_E2E)('Alianzas: UCIM360 de punta a punta (e2e)', () => {
     expect(bloqueo.body.code).toBe('cuenta_solo_lectura');
     const vencidas = await request(app.getHttpServer()).get('/admin/pagos/cuotas-vencidas').set(ADMIN).expect(200);
     const mia = vencidas.body.find((c: { empresaId: string }) => c.empresaId === empresa);
-    expect(mia).toMatchObject({ numero: 2, cuotas: 3, estado: 'vencida', vence: sumarMesesTexto(desde, 4), monto: 196_000 });
+    expect(mia).toMatchObject({ numero: 2, cuotas: 6, estado: 'vencida', vence: sumarMesesTexto(desde, 2), monto: 73_500 }); // 441.000 / 6
     expect(mia.diasAtraso).toBeGreaterThan(7);
     // Al cobrar la cuota atrasada vuelve a operar.
     await cobrar({ empresaId: empresa, plan: 'basico', ciclo: 'anual', grupoId: mia.grupoId }).expect(201);

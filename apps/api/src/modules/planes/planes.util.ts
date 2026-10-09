@@ -131,7 +131,17 @@ export const PRECIO_MENSUAL: Record<PlanPagoId, number> = {
 export const MESES_CICLO: Record<CicloFacturacion, number> = { mensual: 1, trimestral: 3, anual: 12 };
 export const CICLOS: CicloFacturacion[] = ['mensual', 'trimestral', 'anual'];
 
-/** Precio de lista de un período completo del ciclo: trimestral = 3 × mensual, anual = 12 × mensual. */
+/**
+ * Descuento por pagar por adelantado (estrategia aprobada el 2026-10-05): trimestral −15 %, anual −25 %.
+ * Se aplica sobre la lista; un código (cámara, referido) nunca deja un mes peor que esto (ver cotizarPeriodo).
+ * La landing usa el mismo valor de packages/shared-types (lo controla planes.sincronia.spec).
+ */
+export const DESCUENTO_CICLO: Record<CicloFacturacion, number> = { mensual: 0, trimestral: 15, anual: 25 };
+
+/** Cuotas sin interés del anual para todos (la landing promete hasta 6). Se pueden cambiar por plan en la consola. */
+export const CUOTAS_ANUAL = 6;
+
+/** Precio de lista de un período completo del ciclo, SIN el descuento del ciclo: trimestral = 3 × mensual, anual = 12 × mensual. */
 export function precioLista(plan: PlanPagoId, ciclo: CicloFacturacion): number {
   return PRECIO_MENSUAL[plan] * MESES_CICLO[ciclo];
 }

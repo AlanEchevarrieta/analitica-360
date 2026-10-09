@@ -13,10 +13,12 @@ describe('referidos', () => {
     for (let n = 0; n < 50; n++) expect(codigoReferido('x'.repeat(30)).split('-')[1]).toMatch(/^[A-HJKMNP-Z2-9]{3}$/);
   });
 
-  it('el nuevo paga 10% menos su primer período, cualquiera sea el ciclo; después, precio normal', () => {
+  it('el nuevo paga 10% menos que cualquier cliente en su primer período; después, precio normal', () => {
     const r = reglasReferido();
     expect(cotizarPeriodo('pro', 'mensual', r.mensual, 'entrada').total).toBe(80_100);
-    expect(cotizarPeriodo('basico', 'anual', r.anual, 'entrada').total).toBe(529_200); // 588.000 − 10%
+    expect(cotizarPeriodo('basico', 'trimestral', r.trimestral, 'entrada').total).toBe(110_250); // 147.000 − 25% (15 + 10)
+    expect(cotizarPeriodo('basico', 'anual', r.anual, 'entrada').total).toBe(382_200); // 588.000 − 35% (25 + 10)
+    expect(cotizarPeriodo('basico', 'anual', r.anual, 'renovacion', 1).total).toBe(441_000); // el 25% de cualquiera
     expect(tipoDelProximoPeriodo([{ ciclo: 'mensual' }], 'mensual', r.mensual).tipo).toBe('renovacion');
     expect(cotizarPeriodo('pro', 'mensual', r.mensual, 'renovacion', 1).total).toBe(89_000);
   });

@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
 import { AccesoCuentaService } from '../planes/acceso-cuenta.service.js';
-import { MESES_CICLO, PLANES, PLANES_PAGOS, type CicloFacturacion, type PlanPagoId } from '../planes/planes.util.js';
+import { CUOTAS_ANUAL, MESES_CICLO, PLANES, PLANES_PAGOS, type CicloFacturacion, type PlanPagoId } from '../planes/planes.util.js';
 import {
   ajustePorDevolucion,
   comisionDePago,
@@ -185,7 +185,7 @@ export class CobrosService {
   /** Cuotas sin interés para quien no tiene código, según el plan (configurables en la consola). */
   async cuotasGenerales(db: Tx | PrismaService, plan: string): Promise<CuotasGenerales> {
     const fila = await db.plan.findFirst({ where: { nombre: plan, activo: true }, select: { cuotasTrimestral: true, cuotasAnual: true }, orderBy: { createdAt: 'asc' } });
-    return { trimestral: fila?.cuotasTrimestral ?? 3, anual: fila?.cuotasAnual ?? 3 };
+    return { trimestral: fila?.cuotasTrimestral ?? 3, anual: fila?.cuotasAnual ?? CUOTAS_ANUAL };
   }
 
   /** Mes de liquidación: el del cobro, salvo que ese mes ya esté aprobado o pagado (pasa al siguiente abierto). */

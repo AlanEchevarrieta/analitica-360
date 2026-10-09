@@ -1,3 +1,4 @@
+import { CUOTAS_ANUAL as CUOTAS_ANUAL_COBRO, DESCUENTO_CICLO as DESCUENTO_CICLO_COBRO } from "@analitica360/shared-types";
 import { PRECIO_MENSUAL, type Ciclo, type PlanPagoId } from "@/features/planes/planes";
 
 /**
@@ -5,12 +6,16 @@ import { PRECIO_MENSUAL, type Ciclo, type PlanPagoId } from "@/features/planes/p
  *
  * Precios: estrategia aprobada el 2026-10-05 (trimestral −15 %, anual −25 % con hasta
  * 6 cuotas sin interés; socios UCIM 1 mes gratis y −10/−25/−35 % por 24 meses).
- * PENDIENTE antes de publicar: aplicarla también al cobro (apps/api, módulos planes
- * y alianzas), para que lo que dice la landing sea lo que se cobra.
+ * Aplicada al cobro el 2026-10-09: el descuento por ciclo y las cuotas salen del mismo
+ * lugar que usa la API (packages/shared-types, controlado por planes.sincronia.spec).
  */
-export const DESCUENTO_CICLO: Record<Ciclo, number> = { mensual: 0, trimestral: 0.15, anual: 0.25 };
+export const DESCUENTO_CICLO: Record<Ciclo, number> = {
+  mensual: DESCUENTO_CICLO_COBRO.mensual / 100,
+  trimestral: DESCUENTO_CICLO_COBRO.trimestral / 100,
+  anual: DESCUENTO_CICLO_COBRO.anual / 100,
+};
 export const MESES: Record<Ciclo, number> = { mensual: 1, trimestral: 3, anual: 12 };
-export const CUOTAS_ANUAL = 6;
+export const CUOTAS_ANUAL = CUOTAS_ANUAL_COBRO;
 export const DIAS_PRUEBA = 14;
 export const UCIM = { mesesBeneficio: 24, descuento: { mensual: 0.1, trimestral: 0.25, anual: 0.35 } as Record<Ciclo, number> };
 
