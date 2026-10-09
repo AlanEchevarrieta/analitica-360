@@ -61,6 +61,10 @@ services:
       AVISOS_EMAIL_DESDE: ${AVISOS_EMAIL_DESDE:-}
       # Links de los emails (baja de los informes) y certificados de las tiendas.
       API_URL_PUBLICA: https://api.${DOMINIO:?Falta DOMINIO}
+      APP_URL_PUBLICA: https://${DOMINIO:?Falta DOMINIO}
+      # Débito automático de los planes (Mercado Pago). Sin token, no se ofrece.
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
+      MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET:-}
       # Caddy está en la red interna de Docker: solo a él se le cree la IP del visitante.
       TRUST_PROXY: uniquelocal
       TIENDA_SESIONES_SECRETO: ${TIENDA_SESIONES_SECRETO:-}

@@ -41,6 +41,12 @@ const envSchema = z.object({
   TRUST_PROXY: z.string().optional(),
   /** Pedidos por minuto por cliente (600 por defecto; 0 = sin límite, ej. para la prueba de carga local). */
   LIMITE_PEDIDOS_POR_MINUTO: z.coerce.number().int().min(0).default(600),
+  /** Mercado Pago (suscripciones de Analítica 360): Access Token de la aplicación. Sin esto, el débito automático no se ofrece. */
+  MP_ACCESS_TOKEN: z.string().min(10).optional(),
+  /** Clave secreta de los webhooks de Mercado Pago (Tus integraciones → Webhooks). Sin esto, los avisos se rechazan. */
+  MP_WEBHOOK_SECRET: z.string().min(8).optional(),
+  /** URL pública de la app (adonde vuelve el cliente después de autorizar el pago). */
+  APP_URL_PUBLICA: z.string().url().default('http://localhost:4001'),
   /** Informes semanales y mensuales por email: '0' apaga el programador (ej. en una segunda instancia o en pruebas). */
   INFORMES_AUTOMATICOS: z.enum(['0', '1']).default('1'),
 });
