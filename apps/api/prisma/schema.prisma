@@ -126,6 +126,7 @@ model Empresa {
   objetivos     Objetivo[]
   mercadoPago   MercadoPagoSuscripcion?
   arcaConfig    ArcaConfig?
+  envioConfig   EnvioConfig?
   comprobantes  Comprobante[]
   cuponesTienda CuponTienda[]
   cuentasTienda CuentaTienda[]
@@ -548,7 +549,7 @@ model Venta {
   devoluciones    Devolucion[]
   cobrosAplicados CobroAplicacion[]
 
-  pedido Pedido?
+  pedido       Pedido?
   comprobantes Comprobante[]
 
   @@index([empresaId, fecha])
@@ -820,6 +821,13 @@ model Pedido {
   ventaId                String?   @unique @map("venta_id") @db.Uuid
   /// Día en que se le prometió el despacho al cliente (objetivo "despachos a tiempo").
   fechaComprometida      DateTime? @map("fecha_comprometida") @db.Date
+  /// Envío cotizado en la tienda (Zipnova): lo que paga el cliente, aparte de los productos.
+  costoEnvio             Decimal   @default(0) @map("costo_envio") @db.Decimal(12, 2)
+  /// Opción elegida al cotizar: { codigo, transportista, servicio, precio, aSucursal }.
+  envioOpcion            Json?     @map("envio_opcion")
+  /// Envío creado en el proveedor (id de Zipnova) y su último estado.
+  envioId                String?   @map("envio_id")
+  envioEstado            String?   @map("envio_estado")
   createdAt              DateTime  @default(now()) @map("created_at")
 
   empresa   Empresa        @relation(fields: [empresaId], references: [id])
@@ -871,8 +879,8 @@ model Objetivo {
   usuario  Usuario?  @relation("ObjetivoUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
   producto Producto? @relation(fields: [productoId], references: [id], onDelete: Cascade)
 
-  metas   ObjetivoMeta[]
-  avisos  ObjetivoAviso[]
+  metas  ObjetivoMeta[]
+  avisos ObjetivoAviso[]
 
   @@index([empresaId])
   @@map("objetivos")
@@ -880,17 +888,17 @@ model Objetivo {
 
 /// Débito automático con Mercado Pago (una suscripción "preapproval" por empresa).
 model MercadoPagoSuscripcion {
-  id             String   @id @default(uuid()) @db.Uuid
-  empresaId      String   @unique @map("empresa_id") @db.Uuid
-  preapprovalId  String   @unique @map("preapproval_id")
+  id            String   @id @default(uuid()) @db.Uuid
+  empresaId     String   @unique @map("empresa_id") @db.Uuid
+  preapprovalId String   @unique @map("preapproval_id")
   /// pending | authorized | paused | cancelled (los de Mercado Pago)
-  estado         String
-  plan           String
-  ciclo          String
-  monto          Decimal  @db.Decimal(12, 2)
-  urlAutorizar   String?  @map("url_autorizar")
-  creadoEn       DateTime @default(now()) @map("creado_en")
-  actualizadoEn  DateTime @updatedAt @map("actualizado_en")
+  estado        String
+  plan          String
+  ciclo         String
+  monto         Decimal  @db.Decimal(12, 2)
+  urlAutorizar  String?  @map("url_autorizar")
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
 
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
@@ -1922,4 +1930,29 @@ model ArcaTicket {
   vence    DateTime
 
   @@map("arca_tickets")
+}
+
+/// Envíos con un agregador (Zipnova): cada empresa conecta su propia cuenta (el envío lo paga el comercio).
+model EnvioConfig {
+  empresaId     String    @id @map("empresa_id") @db.Uuid
+  proveedor     String    @default("zipnova")
+  /// ID de la cuenta en Zipnova y dirección de origen (null = la de por defecto de la cuenta).
+  cuentaId      Int       @map("cuenta_id")
+  origenId      Int?      @map("origen_id")
+  /// Credenciales de la API, cifradas (AES-256-GCM con CLAVE_CIFRADO).
+  credenciales  String
+  /// Parte secreta de la URL del aviso de estados (Zipnova no firma sus avisos).
+  avisoClave    String    @unique @map("aviso_clave")
+  /// Cotizar en el checkout de la tienda.
+  enTienda      Boolean   @default(true) @map("en_tienda")
+  /// Envío gratis desde este subtotal (null = nunca).
+  gratisDesde   Decimal?  @map("gratis_desde") @db.Decimal(12, 2)
+  /// Paquete por defecto para productos sin peso o medidas.
+  pesoDefectoGr Int       @default(1000) @map("peso_defecto_gr")
+  verificadoEn  DateTime? @map("verificado_en")
+  actualizadoEn DateTime  @updatedAt @map("actualizado_en")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("envios_config")
 }

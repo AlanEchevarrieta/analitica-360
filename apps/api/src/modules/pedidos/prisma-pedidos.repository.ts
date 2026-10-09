@@ -51,8 +51,8 @@ export class PrismaPedidosRepository implements PedidosRepository {
     const subtotal = p.items.reduce((acc, i) => acc + i.cantidad.toNumber() * i.precioUnitario.toNumber(), 0);
     const descuentoCupon = p.descuentoCupon.toNumber();
     const descuentoTransferencia = p.descuentoTransferencia.toNumber();
-    // Total = lo que hay que cobrar: los ítems (ya con la oferta) menos cupón y transferencia.
-    const total = subtotal - descuentoCupon - descuentoTransferencia;
+    // Total = lo que hay que cobrar: los ítems (ya con la oferta) menos cupón y transferencia, más el envío.
+    const total = subtotal - descuentoCupon - descuentoTransferencia + p.costoEnvio.toNumber();
     return {
       id: p.id,
       empresaId: p.empresaId,
@@ -83,6 +83,8 @@ export class PrismaPedidosRepository implements PedidosRepository {
         transferencia: descuentoTransferencia,
         formaPagoTienda: p.formaPagoTienda,
       },
+      costoEnvio: p.costoEnvio.toNumber(),
+      envio: p.envioId ? { id: p.envioId, estado: p.envioEstado } : null,
       items: p.items.map((i) => ({
         id: i.id,
         productoId: i.productoId,
@@ -168,7 +170,7 @@ export class PrismaPedidosRepository implements PedidosRepository {
         origen: p.origen as OrigenPedido,
         estado: p.estado as EstadoPedido,
         asignadoAId: p.asignadoAId,
-        total: p.items.reduce((acc, i) => acc + i.cantidad.toNumber() * i.precioUnitario.toNumber(), 0) - p.descuentoCupon.toNumber() - p.descuentoTransferencia.toNumber(),
+        total: p.items.reduce((acc, i) => acc + i.cantidad.toNumber() * i.precioUnitario.toNumber(), 0) - p.descuentoCupon.toNumber() - p.descuentoTransferencia.toNumber() + p.costoEnvio.toNumber(),
         createdAt: p.createdAt,
       })),
       total,
@@ -252,6 +254,7 @@ export class PrismaPedidosRepository implements PedidosRepository {
                 descuentoCupon: input.descuentos.cupon,
                 descuentoTransferencia: input.descuentos.transferencia,
                 formaPagoTienda: input.descuentos.formaPago,
+                ...(input.envio ? { costoEnvio: input.envio.costo, envioOpcion: input.envio.opcion } : {}),
               }
             : {}),
           items: {
@@ -387,13 +390,13 @@ export class PrismaPedidosRepository implements PedidosRepository {
         ubicacionOrigen,
         esSenia: false,
         montoSenia: 0,
-        notas: `Pedido ${pedido.numeroPedido}${pedido.origen === 'tienda_online' ? ' (tienda online)' : ''}${pedido.cuponCodigo ? ` · cupón ${pedido.cuponCodigo}` : ''}${pedido.descuentoTransferencia.toNumber() > 0 ? ' · descuento por transferencia' : ''}`,
+        notas: `Pedido ${pedido.numeroPedido}${pedido.origen === 'tienda_online' ? ' (tienda online)' : ''}${pedido.cuponCodigo ? ` · cupón ${pedido.cuponCodigo}` : ''}${pedido.descuentoTransferencia.toNumber() > 0 ? ' · descuento por transferencia' : ''}${pedido.costoEnvio.toNumber() > 0 ? ` · envío $${pedido.costoEnvio.toNumber().toLocaleString('es-AR')} cobrado aparte` : ''}`,
       });
       if (!venta.ok) return { ok: false, motivo: 'venta_invalida' };
 
       const actualizado = await tx.pedido.update({
         where: { id },
-        data: { estado: 'despachado', transportista, numeroSeguimiento, ventaId: venta.venta.id },
+        data: { estado: 'despachado', transportista: transportista ?? pedido.transportista, numeroSeguimiento: numeroSeguimiento ?? pedido.numeroSeguimiento, ventaId: venta.venta.id },
         include: includeFicha,
       });
       return { ok: true, pedido: this.toFicha(actualizado) };

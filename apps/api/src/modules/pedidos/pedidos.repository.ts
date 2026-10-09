@@ -63,6 +63,10 @@ export interface PedidoFicha extends PedidoRecord {
     transferencia: number;
     formaPagoTienda: string | null;
   };
+  /** Envío cotizado en la tienda (lo paga el cliente, aparte de los productos; ya está sumado en total). */
+  costoEnvio: number;
+  /** Envío creado en Zipnova: id y último estado. */
+  envio: { id: string; estado: string | null } | null;
   items: PedidoItemRecord[];
   /** Día en que se le prometió el despacho (AAAA-MM-DD) o null. */
   fechaComprometida: string | null;
@@ -102,6 +106,8 @@ export interface CrearPedidoInput {
   /** AAAA-MM-DD o null. */
   fechaComprometida?: string | null;
   items: ItemPedidoInput[];
+  /** Solo la tienda online: el envío cotizado y elegido (ver envios.service). */
+  envio?: { costo: number; opcion: { codigo: string; transportista: string; servicio: string; precio: number } } | null;
   /** Solo la tienda online: descuentos ya calculados por el servidor (ver tienda/precios-tienda.util). */
   descuentos?: {
     cuponCodigo: string | null;

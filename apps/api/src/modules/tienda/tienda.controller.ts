@@ -5,7 +5,7 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { TiendaService } from './tienda.service.js';
 import { CuentasTiendaService } from './cuentas-tienda.js';
 import { TiendaThrottlerGuard } from './tienda-throttler.guard.js';
-import { crearPedidoTiendaSchema, validarCuponSchema, type CrearPedidoTiendaInput, type ValidarCuponInput } from './tienda.dto.js';
+import { cotizarEnvioTiendaSchema, crearPedidoTiendaSchema, validarCuponSchema, type CotizarEnvioTiendaInput, type CrearPedidoTiendaInput, type ValidarCuponInput } from './tienda.dto.js';
 
 /**
  * API pública de la tienda online (sin Clerk): la consume el servidor de
@@ -40,6 +40,16 @@ export class TiendaController {
     @Body(new ZodValidationPipe(validarCuponSchema)) body: ValidarCuponInput,
   ) {
     return this.tiendaService.validarCupon(empresaId, body);
+  }
+
+  // Cada cotización consulta a Zipnova: límite moderado.
+  @Post('envios/cotizar')
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  cotizarEnvio(
+    @Param('empresaId', new ParseUUIDPipe()) empresaId: string,
+    @Body(new ZodValidationPipe(cotizarEnvioTiendaSchema)) body: CotizarEnvioTiendaInput,
+  ) {
+    return this.tiendaService.cotizarEnvio(empresaId, body);
   }
 
   // Un cliente real no confirma más de un par de pedidos por minuto.

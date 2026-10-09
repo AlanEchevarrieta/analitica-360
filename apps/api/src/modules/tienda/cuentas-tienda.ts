@@ -246,7 +246,7 @@ export class CuentasTiendaService {
         transportista: p.transportista,
         subtotal,
         descuentos: p.descuentoCupon.toNumber() + p.descuentoTransferencia.toNumber(),
-        total: subtotal - p.descuentoCupon.toNumber() - p.descuentoTransferencia.toNumber(),
+        total: subtotal - p.descuentoCupon.toNumber() - p.descuentoTransferencia.toNumber() + p.costoEnvio.toNumber(),
         items: p.items.map((i) => ({
           productoId: i.productoId,
           nombre: i.producto.nombre,

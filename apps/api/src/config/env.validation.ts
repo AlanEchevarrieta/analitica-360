@@ -47,6 +47,10 @@ const envSchema = z.object({
   MP_WEBHOOK_SECRET: z.string().min(8).optional(),
   /** URL pública de la app (adonde vuelve el cliente después de autorizar el pago). */
   APP_URL_PUBLICA: z.string().url().default('http://localhost:4001'),
+  /** Clave para cifrar secretos de terceros en la base (32 bytes en base64: openssl rand -base64 32). Sin esto, no se pueden conectar envíos. */
+  CLAVE_CIFRADO: z.string().min(40).optional(),
+  /** API de Zipnova (envíos). Se cambia solo para pruebas. */
+  ZIPNOVA_URL: z.string().url().default('https://api.zipnova.com.ar/v2'),
   /** ARCA (factura electrónica): CUIT de Analítica 360 como proveedor, al que cada empresa delega el servicio "wsfe". */
   ARCA_CUIT: z.string().regex(/^\d{11}$/, 'ARCA_CUIT: 11 dígitos sin guiones').optional(),
   /** Certificado (PEM, o el PEM en base64) que emite ARCA para ese CUIT. */

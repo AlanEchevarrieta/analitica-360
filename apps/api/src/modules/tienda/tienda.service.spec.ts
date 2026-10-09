@@ -91,7 +91,7 @@ describe('TiendaService', () => {
         ],
       }),
     );
-    expect(resultado).toEqual({ id: 'ped-1', numeroPedido: 'PED-7', subtotal: 55000, descuentoCupon: 0, descuentoTransferencia: 0, total: 55000 });
+    expect(resultado).toEqual({ id: 'ped-1', numeroPedido: 'PED-7', subtotal: 55000, descuentoCupon: 0, descuentoTransferencia: 0, costoEnvio: 0, total: 55000 });
   });
 
   it('crearPedido() aplica la oferta vigente en el precio del ítem (también a las variantes)', async () => {

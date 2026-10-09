@@ -1,7 +1,8 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { EnviosService, type OpcionGuardada } from '../envios/envios.service.js';
 import { PEDIDOS_REPOSITORY, type PedidosRepository } from '../pedidos/pedidos.repository.js';
 import { TIENDA_REPOSITORY, type CondicionesTienda, type ProductoCatalogo, type TiendaRepository } from './tienda.repository.js';
-import type { CrearPedidoTiendaInput, ValidarCuponInput } from './tienda.dto.js';
+import type { CotizarEnvioTiendaInput, CrearPedidoTiendaInput, ValidarCuponInput } from './tienda.dto.js';
 import { evaluarCupon, hoyAR, MENSAJE_CUPON, normalizarCodigo, precioConOferta, totalesPedido } from './precios-tienda.util.js';
 
 export interface PedidoTiendaCreado {
@@ -10,6 +11,8 @@ export interface PedidoTiendaCreado {
   subtotal: number;
   descuentoCupon: number;
   descuentoTransferencia: number;
+  /** Lo que cobra el envío (0 si es a coordinar o gratis). */
+  costoEnvio: number;
   total: number;
 }
 
@@ -20,6 +23,7 @@ export class TiendaService {
   constructor(
     @Inject(TIENDA_REPOSITORY) private readonly tiendaRepository: TiendaRepository,
     @Inject(PEDIDOS_REPOSITORY) private readonly pedidosRepository: PedidosRepository,
+    @Optional() private readonly envios?: EnviosService,
   ) {}
 
   /** Catálogo con las ofertas vigentes hoy aplicadas (precio final y el de lista para tacharlo). */
@@ -61,14 +65,85 @@ export class TiendaService {
    */
   async crearPedido(empresaId: string, input: CrearPedidoTiendaInput, clienteId: string | null = null): Promise<PedidoTiendaCreado> {
     await this.exigirEmpresaActiva(empresaId);
-    const hoy = hoyAR();
+    const { items, subtotal, descuentoOfertas } = await this.armarItems(empresaId, input.items);
+    const condiciones = await this.tiendaRepository.condiciones(empresaId);
+    if (condiciones.pedidoMinimo && subtotal < condiciones.pedidoMinimo) {
+      throw new BadRequestException(`La compra mínima es de ${ARS(condiciones.pedidoMinimo)}`);
+    }
 
-    const productoIds = [...new Set(input.items.map((i) => i.productoId))];
+    // Envío: se vuelve a cotizar acá; el precio que muestra el navegador no vale.
+    let envio: OpcionGuardada | null = null;
+    if (input.envio) {
+      if (!this.envios) throw new BadRequestException('El envío no está disponible');
+      envio = await this.envios.opcionElegida(empresaId, input.envio, input, input.items, subtotal);
+    }
+
+    // Cupón: se valida y se reserva el uso antes de crear el pedido (si el pedido falla, se devuelve).
+    const codigo = input.cuponCodigo ? normalizarCodigo(input.cuponCodigo) : null;
+    let descuentoCupon = 0;
+    if (codigo) {
+      const r = evaluarCupon(await this.tiendaRepository.cupon(empresaId, codigo), subtotal, hoyAR());
+      if (!r.ok) throw new BadRequestException(r.motivo === 'compra_minima' ? `Ese código es para compras desde ${ARS(r.minimo ?? 0)}` : MENSAJE_CUPON[r.motivo]);
+      if (!(await this.tiendaRepository.usarCupon(empresaId, codigo))) throw new BadRequestException(MENSAJE_CUPON.agotado);
+      descuentoCupon = r.descuento;
+    }
+    const pagaPorTransferencia = input.formaPago === 'transferencia';
+    const totales = totalesPedido(subtotal, descuentoCupon, condiciones.descuentoTransferencia, pagaPorTransferencia);
+    const costoEnvio = envio?.precio ?? 0;
+
+    let resultado;
+    try {
+      resultado = await this.pedidosRepository.crear(empresaId, {
+        origen: 'tienda_online',
+        clienteId,
+        clienteNombre: input.clienteNombre,
+        clienteEmail: input.clienteEmail,
+        clienteTelefono: input.clienteTelefono,
+        direccionEnvio: input.direccionEnvio,
+        codigoPostal: input.codigoPostal,
+        localidad: input.localidad,
+        provincia: input.provincia,
+        metodoEnvio: envio ? `${envio.transportista} · ${envio.servicio}` : 'A coordinar',
+        notas: input.notas || null,
+        items,
+        envio: envio && { costo: costoEnvio, opcion: envio },
+        descuentos: {
+          cuponCodigo: codigo,
+          ofertas: descuentoOfertas,
+          cupon: totales.descuentoCupon,
+          transferencia: totales.descuentoTransferencia,
+          formaPago: pagaPorTransferencia ? 'transferencia' : 'a_coordinar',
+        },
+      });
+    } catch (e) {
+      if (codigo) await this.tiendaRepository.devolverCupon(empresaId, codigo);
+      throw e;
+    }
+    if (!resultado.ok) {
+      if (codigo) await this.tiendaRepository.devolverCupon(empresaId, codigo);
+      throw new BadRequestException('No se pudo crear el pedido');
+    }
+
+    return { id: resultado.pedido.id, numeroPedido: resultado.pedido.numeroPedido, ...totales, costoEnvio, total: totales.total + costoEnvio };
+  }
+
+  /** Para el checkout: las formas de envío a ese código postal (vacío si la tienda no tiene envíos conectados). */
+  async cotizarEnvio(empresaId: string, input: CotizarEnvioTiendaInput) {
+    await this.exigirEmpresaActiva(empresaId);
+    if (!this.envios) return { opciones: [] };
+    const { subtotal } = await this.armarItems(empresaId, input.items);
+    return this.envios.cotizar(empresaId, input, input.items, subtotal);
+  }
+
+  /** Precios desde la base, con la oferta de hoy en el precio de cada ítem. */
+  private async armarItems(empresaId: string, pedidos: CrearPedidoTiendaInput['items']) {
+    const hoy = hoyAR();
+    const productoIds = [...new Set(pedidos.map((i) => i.productoId))];
     const vendibles = await this.tiendaRepository.productosVendibles(empresaId, productoIds);
     const porId = new Map(vendibles.map((p) => [p.id, p]));
 
     let descuentoOfertas = 0;
-    const items = input.items.map((item) => {
+    const items = pedidos.map((item) => {
       const producto = porId.get(item.productoId);
       if (!producto) throw new BadRequestException('Hay un producto que ya no está disponible');
       let varianteId: string | null = null;
@@ -88,56 +163,7 @@ export class TiendaService {
     });
 
     const subtotal = items.reduce((acc, i) => acc + i.cantidad * i.precioUnitario, 0);
-    const condiciones = await this.tiendaRepository.condiciones(empresaId);
-    if (condiciones.pedidoMinimo && subtotal < condiciones.pedidoMinimo) {
-      throw new BadRequestException(`La compra mínima es de ${ARS(condiciones.pedidoMinimo)}`);
-    }
-
-    // Cupón: se valida y se reserva el uso antes de crear el pedido (si el pedido falla, se devuelve).
-    const codigo = input.cuponCodigo ? normalizarCodigo(input.cuponCodigo) : null;
-    let descuentoCupon = 0;
-    if (codigo) {
-      const r = evaluarCupon(await this.tiendaRepository.cupon(empresaId, codigo), subtotal, hoy);
-      if (!r.ok) throw new BadRequestException(r.motivo === 'compra_minima' ? `Ese código es para compras desde ${ARS(r.minimo ?? 0)}` : MENSAJE_CUPON[r.motivo]);
-      if (!(await this.tiendaRepository.usarCupon(empresaId, codigo))) throw new BadRequestException(MENSAJE_CUPON.agotado);
-      descuentoCupon = r.descuento;
-    }
-    const pagaPorTransferencia = input.formaPago === 'transferencia';
-    const totales = totalesPedido(subtotal, descuentoCupon, condiciones.descuentoTransferencia, pagaPorTransferencia);
-
-    let resultado;
-    try {
-      resultado = await this.pedidosRepository.crear(empresaId, {
-        origen: 'tienda_online',
-        clienteId,
-        clienteNombre: input.clienteNombre,
-        clienteEmail: input.clienteEmail,
-        clienteTelefono: input.clienteTelefono,
-        direccionEnvio: input.direccionEnvio,
-        codigoPostal: input.codigoPostal,
-        localidad: input.localidad,
-        provincia: input.provincia,
-        metodoEnvio: 'A coordinar',
-        notas: input.notas || null,
-        items,
-        descuentos: {
-          cuponCodigo: codigo,
-          ofertas: descuentoOfertas,
-          cupon: totales.descuentoCupon,
-          transferencia: totales.descuentoTransferencia,
-          formaPago: pagaPorTransferencia ? 'transferencia' : 'a_coordinar',
-        },
-      });
-    } catch (e) {
-      if (codigo) await this.tiendaRepository.devolverCupon(empresaId, codigo);
-      throw e;
-    }
-    if (!resultado.ok) {
-      if (codigo) await this.tiendaRepository.devolverCupon(empresaId, codigo);
-      throw new BadRequestException('No se pudo crear el pedido');
-    }
-
-    return { id: resultado.pedido.id, numeroPedido: resultado.pedido.numeroPedido, ...totales };
+    return { items, subtotal, descuentoOfertas };
   }
 
   private async exigirEmpresaActiva(empresaId: string): Promise<void> {

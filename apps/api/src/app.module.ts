@@ -23,6 +23,7 @@ import { VencimientosModule } from './modules/vencimientos/vencimientos.module.j
 import { ObjetivosModule } from './modules/objetivos/objetivos.module.js';
 import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module.js';
 import { ArcaModule } from './modules/arca/arca.module.js';
+import { EnviosModule } from './modules/envios/envios.module.js';
 import { APP_GUARD } from '@nestjs/core';
 import { LimitePedidosGuard } from './common/limites/limite-pedidos.guard.js';
 import { ArchivosModule } from './common/archivos/archivos.module.js';
@@ -85,6 +86,7 @@ import { ConfiguracionModule } from './modules/configuracion/configuracion.modul
     ObjetivosModule,
     MercadoPagoModule,
     ArcaModule,
+    EnviosModule,
   ],
   controllers: [AppController],
   // Límite general de pedidos por cliente (ver LimitePedidosGuard).

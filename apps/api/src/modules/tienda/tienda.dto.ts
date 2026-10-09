@@ -23,8 +23,18 @@ export const crearPedidoTiendaSchema = z.object({
   items: z.array(itemPedidoTiendaSchema).min(1, 'El carrito está vacío').max(50),
   cuponCodigo: texto(40).nullable().optional(),
   formaPago: z.enum(['transferencia', 'a_coordinar']).default('a_coordinar'),
+  /** Código de la forma de envío elegida (de /envios/cotizar); null = a coordinar. */
+  envio: texto(140).nullable().optional(),
 });
 export type CrearPedidoTiendaInput = z.infer<typeof crearPedidoTiendaSchema>;
+
+export const cotizarEnvioTiendaSchema = z.object({
+  codigoPostal: requerido(12, 'Ingresá el código postal'),
+  localidad: requerido(80, 'Ingresá la ciudad'),
+  provincia: requerido(60, 'Ingresá la provincia'),
+  items: z.array(itemPedidoTiendaSchema).min(1, 'El carrito está vacío').max(50),
+});
+export type CotizarEnvioTiendaInput = z.infer<typeof cotizarEnvioTiendaSchema>;
 
 export const validarCuponSchema = z.object({
   codigo: requerido(40, 'Ingresá el código'),
