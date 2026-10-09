@@ -122,14 +122,15 @@ model Empresa {
   tienda                    TiendaConfig?
   imagenesProductos         ProductoImagen[]
 
-  eventosUso    EventoUso[]
-  objetivos     Objetivo[]
-  mercadoPago   MercadoPagoSuscripcion?
-  arcaConfig    ArcaConfig?
-  envioConfig   EnvioConfig?
-  comprobantes  Comprobante[]
-  cuponesTienda CuponTienda[]
-  cuentasTienda CuentaTienda[]
+  eventosUso     EventoUso[]
+  objetivos      Objetivo[]
+  mercadoPago    MercadoPagoSuscripcion?
+  arcaConfig     ArcaConfig?
+  envioConfig    EnvioConfig?
+  mpCuentaTienda MpCuentaTienda?
+  comprobantes   Comprobante[]
+  cuponesTienda  CuponTienda[]
+  cuentasTienda  CuentaTienda[]
 
   @@unique([camaraId, ordenCamara])
   @@map("empresas")
@@ -828,6 +829,10 @@ model Pedido {
   /// Envío creado en el proveedor (id de Zipnova) y su último estado.
   envioId                String?   @map("envio_id")
   envioEstado            String?   @map("envio_estado")
+  /// Cobro con Mercado Pago en la tienda: estado del pago (pendiente | approved | rejected | ...), id del pago y cuándo se aprobó.
+  pagoEstado             String?   @map("pago_estado") @db.VarChar(30)
+  pagoId                 String?   @map("pago_id")
+  pagadoEn               DateTime? @map("pagado_en")
   createdAt              DateTime  @default(now()) @map("created_at")
 
   empresa   Empresa        @relation(fields: [empresaId], references: [id])
@@ -1955,4 +1960,24 @@ model EnvioConfig {
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@map("envios_config")
+}
+
+/// Cuenta de Mercado Pago del comercio, conectada por OAuth: los cobros de la tienda van a esa cuenta.
+model MpCuentaTienda {
+  empresaId     String   @id @map("empresa_id") @db.Uuid
+  /// Usuario de Mercado Pago (vendedor).
+  mpUserId      String   @map("mp_user_id")
+  /// Access token y refresh token, cifrados (AES-256-GCM con CLAVE_CIFRADO).
+  credenciales  String
+  publicKey     String?  @map("public_key")
+  /// Vencimiento del access token (180 días); se renueva solo antes.
+  venceEn       DateTime @map("vence_en")
+  /// Parte secreta de la URL de avisos de pagos de esta cuenta.
+  avisoClave    String   @unique @map("aviso_clave")
+  conectadoEn   DateTime @default(now()) @map("conectado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("mp_cuentas_tienda")
 }

@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { EnviosService, type OpcionGuardada } from '../envios/envios.service.js';
+import { MpTiendaService } from '../mercadopago-tienda/mp-tienda.service.js';
 import { PEDIDOS_REPOSITORY, type PedidosRepository } from '../pedidos/pedidos.repository.js';
 import { TIENDA_REPOSITORY, type CondicionesTienda, type ProductoCatalogo, type TiendaRepository } from './tienda.repository.js';
 import type { CotizarEnvioTiendaInput, CrearPedidoTiendaInput, ValidarCuponInput } from './tienda.dto.js';
@@ -14,6 +15,8 @@ export interface PedidoTiendaCreado {
   /** Lo que cobra el envío (0 si es a coordinar o gratis). */
   costoEnvio: number;
   total: number;
+  /** Pago con Mercado Pago: adónde mandar al cliente (null si no se pudo armar; puede reintentar). */
+  pagoUrl: string | null;
 }
 
 const ARS = (n: number) => n.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
@@ -24,6 +27,7 @@ export class TiendaService {
     @Inject(TIENDA_REPOSITORY) private readonly tiendaRepository: TiendaRepository,
     @Inject(PEDIDOS_REPOSITORY) private readonly pedidosRepository: PedidosRepository,
     @Optional() private readonly envios?: EnviosService,
+    @Optional() private readonly mpTienda?: MpTiendaService,
   ) {}
 
   /** Catálogo con las ofertas vigentes hoy aplicadas (precio final y el de lista para tacharlo). */
@@ -44,9 +48,17 @@ export class TiendaService {
     });
   }
 
-  async condiciones(empresaId: string): Promise<CondicionesTienda> {
+  async condiciones(empresaId: string): Promise<CondicionesTienda & { mercadoPago: boolean }> {
     await this.exigirEmpresaActiva(empresaId);
-    return this.tiendaRepository.condiciones(empresaId);
+    const [c, mercadoPago] = await Promise.all([this.tiendaRepository.condiciones(empresaId), this.mpTienda?.habilitado(empresaId) ?? false]);
+    return { ...c, mercadoPago };
+  }
+
+  /** Link para pagar (o reintentar) un pedido con Mercado Pago. */
+  async pagarPedido(empresaId: string, pedidoId: string) {
+    await this.exigirEmpresaActiva(empresaId);
+    if (!this.mpTienda) throw new NotFoundException('Pedido no encontrado');
+    return this.mpTienda.linkDePago(empresaId, pedidoId);
   }
 
   /** Para el checkout: ¿vale el código con este subtotal? (el pedido lo vuelve a verificar). */
@@ -70,6 +82,9 @@ export class TiendaService {
     if (condiciones.pedidoMinimo && subtotal < condiciones.pedidoMinimo) {
       throw new BadRequestException(`La compra mínima es de ${ARS(condiciones.pedidoMinimo)}`);
     }
+
+    const pagaConMp = input.formaPago === 'mercadopago';
+    if (pagaConMp && !(await this.mpTienda?.habilitado(empresaId))) throw new BadRequestException('Esta tienda no cobra con Mercado Pago: elegí otra forma de pago');
 
     // Envío: se vuelve a cotizar acá; el precio que muestra el navegador no vale.
     let envio: OpcionGuardada | null = null;
@@ -112,7 +127,7 @@ export class TiendaService {
           ofertas: descuentoOfertas,
           cupon: totales.descuentoCupon,
           transferencia: totales.descuentoTransferencia,
-          formaPago: pagaPorTransferencia ? 'transferencia' : 'a_coordinar',
+          formaPago: pagaPorTransferencia ? 'transferencia' : pagaConMp ? 'mercadopago' : 'a_coordinar',
         },
       });
     } catch (e) {
@@ -124,7 +139,10 @@ export class TiendaService {
       throw new BadRequestException('No se pudo crear el pedido');
     }
 
-    return { id: resultado.pedido.id, numeroPedido: resultado.pedido.numeroPedido, ...totales, costoEnvio, total: totales.total + costoEnvio };
+    // El pedido ya está creado: si Mercado Pago falla, el cliente puede reintentar el pago desde la confirmación.
+    let pagoUrl: string | null = null;
+    if (pagaConMp) pagoUrl = (await this.mpTienda!.linkDePago(empresaId, resultado.pedido.id).catch(() => null))?.url ?? null;
+    return { id: resultado.pedido.id, numeroPedido: resultado.pedido.numeroPedido, ...totales, costoEnvio, total: totales.total + costoEnvio, pagoUrl };
   }
 
   /** Para el checkout: las formas de envío a ese código postal (vacío si la tienda no tiene envíos conectados). */

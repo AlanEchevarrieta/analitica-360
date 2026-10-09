@@ -101,7 +101,7 @@ describe.skipIf(!URL_E2E)('Descuentos de la tienda online (e2e)', () => {
     const actual = (await request(s()).get('/tienda-config').set(DUENO).expect(200)).body;
     await request(s()).put('/tienda-config').set(DUENO).send({ ...actual, descuentoTransferencia: 10 }).expect(200);
     const c = await request(s()).get(`/tienda/${empresa}/condiciones`).set(publico()).expect(200);
-    expect(c.body).toEqual({ pedidoMinimo: null, descuentoTransferencia: 10 });
+    expect(c.body).toEqual({ pedidoMinimo: null, descuentoTransferencia: 10, mercadoPago: false });
   });
 
   it('validar cupón: explica por qué no vale y cuánto descuenta', async () => {

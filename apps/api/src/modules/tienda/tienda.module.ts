@@ -3,6 +3,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { PedidosModule } from '../pedidos/pedidos.module.js';
 import { PlanesModule } from '../planes/planes.module.js';
 import { EnviosModule } from '../envios/envios.module.js';
+import { MpTiendaModule } from '../mercadopago-tienda/mp-tienda.module.js';
 import { TiendaController } from './tienda.controller.js';
 import { ProductoFotosController, TiendaConfigController, TiendaSitioController } from './tienda-admin.controller.js';
 import { TiendaAdminService } from './tienda-admin.service.js';
@@ -14,7 +15,7 @@ import { PrismaTiendaRepository } from './prisma-tienda.repository.js';
 
 @Module({
   // Catálogo: 120 requests/min por cliente; pedidos: más estricto en el controller.
-  imports: [PedidosModule, PlanesModule, EnviosModule, ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }])],
+  imports: [PedidosModule, PlanesModule, EnviosModule, MpTiendaModule, ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }])],
   controllers: [TiendaController, TiendaConfigController, ProductoFotosController, TiendaSitioController, OfertasController, CuponesTiendaController, CuentasTiendaController],
   providers: [TiendaService, TiendaAdminService, DescuentosTiendaService, CuentasTiendaService, { provide: TIENDA_REPOSITORY, useClass: PrismaTiendaRepository }],
 })

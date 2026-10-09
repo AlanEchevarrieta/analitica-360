@@ -85,6 +85,7 @@ export class PrismaPedidosRepository implements PedidosRepository {
       },
       costoEnvio: p.costoEnvio.toNumber(),
       envio: p.envioId ? { id: p.envioId, estado: p.envioEstado } : null,
+      pago: p.pagoEstado ? { estado: p.pagoEstado, id: p.pagoId, pagadoEn: p.pagadoEn } : null,
       items: p.items.map((i) => ({
         id: i.id,
         productoId: i.productoId,
@@ -254,6 +255,7 @@ export class PrismaPedidosRepository implements PedidosRepository {
                 descuentoCupon: input.descuentos.cupon,
                 descuentoTransferencia: input.descuentos.transferencia,
                 formaPagoTienda: input.descuentos.formaPago,
+                ...(input.descuentos.formaPago === 'mercadopago' ? { pagoEstado: 'pendiente' } : {}),
                 ...(input.envio ? { costoEnvio: input.envio.costo, envioOpcion: input.envio.opcion } : {}),
               }
             : {}),

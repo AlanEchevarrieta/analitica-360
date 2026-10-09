@@ -10,6 +10,7 @@ const fichaBase: PedidoFicha = {
   descuentos: { subtotal: 0, ofertas: 0, cuponCodigo: null, cupon: 0, transferencia: 0, formaPagoTienda: null },
   costoEnvio: 0,
   envio: null,
+  pago: null,
   fechaComprometida: null,
   estados: [],
   clienteId: null,

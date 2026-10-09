@@ -67,6 +67,8 @@ export interface PedidoFicha extends PedidoRecord {
   costoEnvio: number;
   /** Envío creado en Zipnova: id y último estado. */
   envio: { id: string; estado: string | null } | null;
+  /** Cobro con Mercado Pago en la tienda: estado del pago (pendiente | approved | rejected | ...). */
+  pago: { estado: string; id: string | null; pagadoEn: Date | null } | null;
   items: PedidoItemRecord[];
   /** Día en que se le prometió el despacho (AAAA-MM-DD) o null. */
   fechaComprometida: string | null;
@@ -114,7 +116,7 @@ export interface CrearPedidoInput {
     ofertas: number;
     cupon: number;
     transferencia: number;
-    formaPago: 'transferencia' | 'a_coordinar';
+    formaPago: 'transferencia' | 'a_coordinar' | 'mercadopago';
   };
 }
 

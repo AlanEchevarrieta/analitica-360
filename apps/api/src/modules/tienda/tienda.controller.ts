@@ -52,6 +52,13 @@ export class TiendaController {
     return this.tiendaService.cotizarEnvio(empresaId, body);
   }
 
+  /** Pagar (o reintentar el pago de) un pedido con Mercado Pago. El id del pedido no se puede adivinar. */
+  @Post('pedidos/:pedidoId/pago')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  pagarPedido(@Param('empresaId', new ParseUUIDPipe()) empresaId: string, @Param('pedidoId', new ParseUUIDPipe()) pedidoId: string) {
+    return this.tiendaService.pagarPedido(empresaId, pedidoId);
+  }
+
   // Un cliente real no confirma más de un par de pedidos por minuto.
   @Post('pedidos')
   @Throttle({ default: { ttl: 60_000, limit: 5 } })

@@ -45,6 +45,9 @@ const envSchema = z.object({
   MP_ACCESS_TOKEN: z.string().min(10).optional(),
   /** Clave secreta de los webhooks de Mercado Pago (Tus integraciones → Webhooks). Sin esto, los avisos se rechazan. */
   MP_WEBHOOK_SECRET: z.string().min(8).optional(),
+  /** Mercado Pago en las tiendas (OAuth): Client ID y Client Secret de la misma aplicación. Sin esto, las tiendas no ofrecen Mercado Pago. */
+  MP_CLIENT_ID: z.string().min(4).optional(),
+  MP_CLIENT_SECRET: z.string().min(8).optional(),
   /** URL pública de la app (adonde vuelve el cliente después de autorizar el pago). */
   APP_URL_PUBLICA: z.string().url().default('http://localhost:4001'),
   /** Clave para cifrar secretos de terceros en la base (32 bytes en base64: openssl rand -base64 32). Sin esto, no se pueden conectar envíos. */

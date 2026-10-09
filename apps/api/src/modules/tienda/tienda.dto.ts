@@ -22,7 +22,7 @@ export const crearPedidoTiendaSchema = z.object({
   notas: texto(500).nullable().optional(),
   items: z.array(itemPedidoTiendaSchema).min(1, 'El carrito está vacío').max(50),
   cuponCodigo: texto(40).nullable().optional(),
-  formaPago: z.enum(['transferencia', 'a_coordinar']).default('a_coordinar'),
+  formaPago: z.enum(['transferencia', 'a_coordinar', 'mercadopago']).default('a_coordinar'),
   /** Código de la forma de envío elegida (de /envios/cotizar); null = a coordinar. */
   envio: texto(140).nullable().optional(),
 });

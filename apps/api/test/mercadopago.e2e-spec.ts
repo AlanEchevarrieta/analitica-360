@@ -115,19 +115,23 @@ describe.skipIf(!URL_E2E)('Mercado Pago: débito automático (e2e)', () => {
     await request(app.getHttpServer()).post('/suscripcion/mercadopago').set(DUENO).send({ plan: 'basico', ciclo: 'mensual' }).expect(409);
   });
 
+  // Ids de pago únicos por corrida: la base de pruebas conserva los de corridas anteriores (y en Mercado Pago son únicos).
+  const AP1 = String(Date.now());
+  const AP2 = String(Date.now() + 1);
+
   it('cada cobro aprobado se registra una sola vez y pone la cuenta al día', async () => {
-    mp.pagos.set('7001', { id: '7001', preapproval_id: preapproval, status: 'processed', transaction_amount: 89_000, payment: { status: 'approved' } });
-    await avisar('subscription_authorized_payment', '7001').expect(200);
-    await avisar('subscription_authorized_payment', '7001').expect(200); // Mercado Pago a veces avisa dos veces
+    mp.pagos.set(AP1, { id: AP1, preapproval_id: preapproval, status: 'processed', transaction_amount: 89_000, payment: { status: 'approved' } });
+    await avisar('subscription_authorized_payment', AP1).expect(200);
+    await avisar('subscription_authorized_payment', AP1).expect(200); // Mercado Pago a veces avisa dos veces
     const { rows } = await db.query(`SELECT monto_ars::float AS monto, metodo, origen, referencia_externa FROM pagos WHERE empresa_id = $1`, [empresa]);
-    expect(rows).toEqual([{ monto: 89_000, metodo: 'mercadopago', origen: 'mercadopago', referencia_externa: 'mp-ap:7001' }]);
+    expect(rows).toEqual([{ monto: 89_000, metodo: 'mercadopago', origen: 'mercadopago', referencia_externa: `mp-ap:${AP1}` }]);
     const sus = await db.query(`SELECT estado, fecha_vencimiento >= current_date AS al_dia FROM suscripciones WHERE empresa_id = $1`, [empresa]);
     expect(sus.rows.every((s) => s.estado === 'activa' && s.al_dia)).toBe(true);
   });
 
   it('un cobro rechazado no se registra', async () => {
-    mp.pagos.set('7002', { id: '7002', preapproval_id: preapproval, status: 'recycling', transaction_amount: 89_000, payment: { status: 'rejected' } });
-    await avisar('subscription_authorized_payment', '7002').expect(200);
+    mp.pagos.set(AP2, { id: AP2, preapproval_id: preapproval, status: 'recycling', transaction_amount: 89_000, payment: { status: 'rejected' } });
+    await avisar('subscription_authorized_payment', AP2).expect(200);
     const { rows } = await db.query(`SELECT count(*)::int AS n FROM pagos WHERE empresa_id = $1`, [empresa]);
     expect(rows[0].n).toBe(1);
   });
