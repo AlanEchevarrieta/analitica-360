@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { CalendarClock, Gift } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { hoyAR } from "@/lib/periodos";
 import { CartelBeneficios } from "./CartelBeneficios";
 import { SelectorCiclo } from "./SelectorCiclo";
 import { TarjetaPlan } from "./TarjetaPlan";
+import { EstadoDebitoAutomatico } from "./DebitoAutomatico";
 
 const fecha = (iso: string) => iso.split("-").reverse().join("/");
 
@@ -90,6 +91,9 @@ export function PlanesVista() {
   return (
     <div className="flex flex-col gap-6">
       <PlanActual />
+      <Suspense fallback={null}>
+        <EstadoDebitoAutomatico />
+      </Suspense>
       {precios.data?.cuotasEnCurso && <AvisoCuotas c={precios.data.cuotasEnCurso} />}
       <AvisoReferidos pct={precios.data?.planes[0]?.ciclos[0]?.primerPago.referidosPct ?? 0} />
 

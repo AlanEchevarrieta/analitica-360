@@ -8,6 +8,7 @@ import { formatoPesos } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { MODULOS, PLANES, linkContratar, type PlanPagoId } from "../planes";
 import type { PrecioCiclo } from "../use-precios";
+import { BotonDebitoAutomatico } from "./DebitoAutomatico";
 
 const POR_CICLO = { mensual: "/ mes", trimestral: "/ trimestre", anual: "/ año" } as const;
 
@@ -87,6 +88,7 @@ export function TarjetaPlan({ id, precio, codigo, etiqueta, esActual }: { id: Pl
             Elegir {plan.nombre}
           </Link>
         )}
+        <BotonDebitoAutomatico plan={id} ciclo={precio.ciclo} />
       </CardContent>
     </Card>
   );
