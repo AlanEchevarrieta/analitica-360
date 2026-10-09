@@ -13,8 +13,11 @@ export default async function Page(props: PageProps<"/inicio">) {
         <SelectorMoneda />
       </div>
       <PrimerosPasos bienvenida={bienvenida === "1"} />
-      <EquilibrioInicio />
-      <ObjetivosInicio />
+      {/* Una sola fila: cuánto falta para no perder plata y cómo vienen los objetivos (sin empujar las ventas hacia abajo). */}
+      <div className="grid items-stretch gap-4 lg:grid-cols-2 empty:hidden">
+        <EquilibrioInicio />
+        <ObjetivosInicio />
+      </div>
       <InicioDashboard />
     </div>
   );
