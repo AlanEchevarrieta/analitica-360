@@ -29,7 +29,8 @@ function Kpi({ titulo, valor, detalle }: { titulo: string; valor: string; detall
   );
 }
 
-export function InicioDashboard() {
+/** `debajoDeCifras`: lo que va justo debajo de las ventas de hoy, semana y mes (punto de equilibrio y objetivos). */
+export function InicioDashboard({ debajoDeCifras }: { debajoDeCifras?: React.ReactNode } = {}) {
   const { data, isPending, isError, error, refetch } = useDashboard();
 
   if (isPending) {
@@ -59,6 +60,8 @@ export function InicioDashboard() {
         <Kpi titulo="Este mes" valor={formatoMoneda(data.mes)} />
         <Kpi titulo="Compras del mes" valor={formatoMoneda(data.comprasMes)} />
       </div>
+
+      {debajoDeCifras}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
