@@ -5,7 +5,7 @@ import { Target, TriangleAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useAvisosObjetivos, useObjetivos } from "../hooks/use-objetivos";
-import { alcance, formatoValor, nombreTipo, SEMAFORO } from "../objetivos";
+import { adjetivoPeriodo, alcance, formatoValor, nombreTipo, SEMAFORO } from "../objetivos";
 
 /** Inicio: lista compacta de los objetivos que peor van (hasta 4) y los avisos en una sola línea. */
 export function ObjetivosInicio() {
@@ -52,7 +52,7 @@ export function ObjetivosInicio() {
                 <Link prefetch={false} href="/objetivos" className="flex flex-col gap-1 rounded-md hover:bg-muted/50">
                   <div className="flex items-baseline justify-between gap-2 text-sm">
                     <span className="truncate">
-                      {nombreTipo(o.tipo)} <span className="text-xs text-muted-foreground">· {alcance(o)}</span>
+                      {nombreTipo(o.tipo)} {adjetivoPeriodo(o.periodo)} <span className="text-xs text-muted-foreground">· {alcance(o)}</span>
                     </span>
                     <span className="shrink-0 text-xs tabular-nums">
                       {formatoValor(o, o.actual.valor)} <span className="text-muted-foreground">/ {formatoValor(o, o.actual.meta)}</span>
