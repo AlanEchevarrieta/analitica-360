@@ -125,6 +125,8 @@ model Empresa {
   eventosUso    EventoUso[]
   objetivos     Objetivo[]
   mercadoPago   MercadoPagoSuscripcion?
+  arcaConfig    ArcaConfig?
+  comprobantes  Comprobante[]
   cuponesTienda CuponTienda[]
   cuentasTienda CuentaTienda[]
 
@@ -547,6 +549,7 @@ model Venta {
   cobrosAplicados CobroAplicacion[]
 
   pedido Pedido?
+  comprobantes Comprobante[]
 
   @@index([empresaId, fecha])
   @@index([clienteId]) // historial de compras de un cliente
@@ -1858,4 +1861,65 @@ model RegistroAuditoriaTachado {
   tachadoEn     DateTime @default(now()) @map("tachado_en") @db.Timestamptz(3)
 
   @@map("registro_auditoria_tachados")
+}
+
+/// Facturación electrónica (ARCA) de cada empresa: con qué CUIT y punto de venta factura.
+/// La empresa delega el servicio "wsfe" al CUIT de Analítica 360 (ver modules/arca).
+model ArcaConfig {
+  empresaId         String    @id @map("empresa_id") @db.Uuid
+  cuit              String
+  razonSocial       String    @map("razon_social")
+  domicilio         String
+  inicioActividades DateTime? @map("inicio_actividades") @db.Date
+  iibb              String?
+  puntoVenta        Int       @map("punto_venta")
+  /// Última vez que se comprobó que ARCA acepta facturar con esta configuración.
+  verificadoEn      DateTime? @map("verificado_en")
+  actualizadoEn     DateTime  @updatedAt @map("actualizado_en")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("arca_config")
+}
+
+/// Comprobante electrónico autorizado por ARCA (con CAE). Solo se guardan los aprobados.
+model Comprobante {
+  id                   String   @id @default(uuid()) @db.Uuid
+  empresaId            String   @map("empresa_id") @db.Uuid
+  ventaId              String?  @map("venta_id") @db.Uuid
+  /// 11 Factura C · 13 Nota de crédito C
+  tipo                 Int
+  puntoVenta           Int      @map("punto_venta")
+  numero               Int
+  fecha                DateTime @db.Date
+  total                Decimal  @db.Decimal(14, 2)
+  docTipo              Int      @map("doc_tipo")
+  docNro               String   @map("doc_nro")
+  receptorNombre       String?  @map("receptor_nombre")
+  condicionIvaReceptor Int      @map("condicion_iva_receptor")
+  cae                  String
+  caeVence             DateTime @map("cae_vence") @db.Date
+  ambiente             String
+  /// Nota de crédito: la factura que anula.
+  asociadoId           String?  @map("asociado_id") @db.Uuid
+  usuarioId            String?  @map("usuario_id") @db.Uuid
+  creadoEn             DateTime @default(now()) @map("creado_en")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id])
+  venta   Venta?  @relation(fields: [ventaId], references: [id])
+
+  @@unique([empresaId, ambiente, tipo, puntoVenta, numero])
+  @@index([empresaId, fecha])
+  @@index([ventaId])
+  @@map("comprobantes")
+}
+
+/// Permiso de acceso del WSAA (dura ~12 h; pedir otro mientras está vigente da error).
+model ArcaTicket {
+  ambiente String   @id
+  token    String
+  firma    String
+  vence    DateTime
+
+  @@map("arca_tickets")
 }

@@ -47,6 +47,17 @@ const envSchema = z.object({
   MP_WEBHOOK_SECRET: z.string().min(8).optional(),
   /** URL pública de la app (adonde vuelve el cliente después de autorizar el pago). */
   APP_URL_PUBLICA: z.string().url().default('http://localhost:4001'),
+  /** ARCA (factura electrónica): CUIT de Analítica 360 como proveedor, al que cada empresa delega el servicio "wsfe". */
+  ARCA_CUIT: z.string().regex(/^\d{11}$/, 'ARCA_CUIT: 11 dígitos sin guiones').optional(),
+  /** Certificado (PEM, o el PEM en base64) que emite ARCA para ese CUIT. */
+  ARCA_CERTIFICADO: z.string().min(50).optional(),
+  /** Clave privada (PEM, o en base64) con la que se generó el pedido del certificado. Secreta. */
+  ARCA_CLAVE: z.string().min(50).optional(),
+  /** homologacion (pruebas de ARCA) o produccion. */
+  ARCA_AMBIENTE: z.enum(['homologacion', 'produccion']).default('homologacion'),
+  /** Para cambiar las direcciones de ARCA sin tocar el código (si ARCA las muda). */
+  ARCA_URL_WSAA: z.string().url().optional(),
+  ARCA_URL_WSFE: z.string().url().optional(),
   /** Informes semanales y mensuales por email: '0' apaga el programador (ej. en una segunda instancia o en pruebas). */
   INFORMES_AUTOMATICOS: z.enum(['0', '1']).default('1'),
 });
