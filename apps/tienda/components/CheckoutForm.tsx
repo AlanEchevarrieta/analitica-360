@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCarrito } from "@/lib/carrito";
 import { formatoARS } from "@/lib/productos";
 import { mensajeWhatsAppPedido, PROVINCIAS_AR, type DatosEnvio } from "@/lib/pedidos";
 import { useSitio } from "@/lib/sitio-contexto";
 import { urlWhatsApp } from "@/lib/whatsapp";
-import { crearPedidoTienda, validarCupon, type FormaPago } from "@/app/checkout/actions";
+import { cotizarEnvio, crearPedidoTienda, validarCupon, type FormaPago, type OpcionEnvio } from "@/app/checkout/actions";
 import { AvisoMinimo } from "@/components/AvisoMinimo";
 
 const vacio: DatosEnvio = {
@@ -69,11 +69,46 @@ export function CheckoutForm({ cuenta }: { cuenta: CuentaCheckout }) {
   const [errorCupon, setErrorCupon] = useState<string | null>(null);
   const [validando, setValidando] = useState(false);
 
+  // Envío: se cotiza solo cuando están el código postal, la ciudad y la provincia (null = todavía no se cotizó).
+  const [opciones, setOpciones] = useState<OpcionEnvio[] | null>(null);
+  const [envioCodigo, setEnvioCodigo] = useState<string | null>(null);
+  const [cotizando, setCotizando] = useState(false);
+  const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
+  const claveCarrito = items.map((i) => `${i.productoId}:${i.varianteId ?? ""}:${i.cantidad}`).join("|");
+  const destinoListo = form.codigoPostal.trim().length >= 4 && form.ciudad.trim().length >= 2 && Boolean(form.provincia);
+  useEffect(() => {
+    if (!destinoListo || items.length === 0) return;
+    let vigente = true;
+    const t = setTimeout(async () => {
+      setCotizando(true);
+      setErrorEnvio(null);
+      const r = await cotizarEnvio({ codigoPostal: form.codigoPostal, ciudad: form.ciudad, provincia: form.provincia }, items);
+      if (!vigente) return;
+      setCotizando(false);
+      if (!r.ok) {
+        setOpciones([]);
+        setEnvioCodigo(null);
+        setErrorEnvio(r.error);
+        return;
+      }
+      setOpciones(r.opciones);
+      // Se mantiene la elegida si sigue disponible; si no, la más barata.
+      setEnvioCodigo((actual) => (r.opciones.some((o) => o.codigo === actual) ? actual : (r.opciones[0]?.codigo ?? null)));
+    }, 700);
+    return () => {
+      vigente = false;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- se recotiza cuando cambia el destino o el carrito
+  }, [destinoListo, form.codigoPostal, form.ciudad, form.provincia, claveCarrito]);
+  const envioElegido = destinoListo ? (opciones?.find((o) => o.codigo === envioCodigo) ?? null) : null;
+  const costoEnvio = envioElegido?.precio ?? 0;
+
   // Mismo cálculo que el servidor (el pedido lo recalcula): cupón sobre el subtotal y transferencia sobre lo que queda.
   const descuentoCupon = cupon ? Math.min(cupon.descuento, total) : 0;
   const trasCupon = total - descuentoCupon;
   const descTransf = formaPago === "transferencia" && descuentoTransferencia > 0 ? Math.round((trasCupon * descuentoTransferencia) / 100) : 0;
-  const totalFinal = trasCupon - descTransf;
+  const totalFinal = trasCupon - descTransf + costoEnvio;
 
   async function aplicarCupon() {
     setValidando(true);
@@ -104,6 +139,7 @@ export function CheckoutForm({ cuenta }: { cuenta: CuentaCheckout }) {
       items: items.map((i) => ({ productoId: i.productoId, varianteId: i.varianteId, cantidad: i.cantidad })),
       cuponCodigo: cupon?.codigo ?? null,
       formaPago,
+      envioCodigo: envioElegido?.codigo ?? null,
       guardarDatos: Boolean(cuenta) && guardar,
     });
     if (!res.ok) {
@@ -120,6 +156,7 @@ export function CheckoutForm({ cuenta }: { cuenta: CuentaCheckout }) {
       cupon: res.descuentoCupon > 0 && cupon ? { codigo: cupon.codigo, descuento: res.descuentoCupon } : null,
       descuentoTransferencia: res.descuentoTransferencia,
       formaPago,
+      envioElegido: envioElegido ? { nombre: `${envioElegido.transportista} (${envioElegido.servicio})`, costo: res.costoEnvio } : null,
     });
     vaciar();
     try {
@@ -195,6 +232,37 @@ export function CheckoutForm({ cuenta }: { cuenta: CuentaCheckout }) {
             <input type="checkbox" checked={guardar} onChange={(e) => setGuardar(e.target.checked)} className="size-4 accent-[var(--marca)]" />
             Guardar estos datos para la próxima compra
           </label>
+        ) : null}
+
+        {destinoListo && (cotizando || errorEnvio || (opciones && opciones.length > 0)) ? (
+          <fieldset className="space-y-2 border-t border-[var(--marca-oscuro)]/10 pt-4">
+            <legend className="mb-2 text-sm font-medium">Envío</legend>
+            {cotizando && !opciones?.length ? <p className="text-sm text-[var(--tinta)]/60">Cotizando el envío a {form.codigoPostal}…</p> : null}
+            {errorEnvio ? <p className="text-sm text-red-700">{errorEnvio}</p> : null}
+            {(opciones ?? []).map((o) => (
+              <label key={o.codigo} className={opcionPago(envioCodigo === o.codigo)}>
+                <input type="radio" name="envio" className="mt-1 accent-[var(--marca)]" checked={envioCodigo === o.codigo} onChange={() => setEnvioCodigo(o.codigo)} />
+                <span className="flex-1">
+                  <span className="flex justify-between gap-3 text-sm font-medium">
+                    <span>
+                      {o.transportista} · {o.servicio}
+                    </span>
+                    <span className="tabular-nums">{o.precio > 0 ? formatoARS(o.precio) : "Gratis"}</span>
+                  </span>
+                  <span className="text-sm text-[var(--tinta)]/60">A domicilio{o.llegada ? ` · llega aprox. el ${fechaCorta(o.llegada)}` : ""}</span>
+                </span>
+              </label>
+            ))}
+            {opciones && opciones.length > 0 ? (
+              <label className={opcionPago(envioCodigo === null)}>
+                <input type="radio" name="envio" className="mt-1 accent-[var(--marca)]" checked={envioCodigo === null} onChange={() => setEnvioCodigo(null)} />
+                <span>
+                  <span className="block text-sm font-medium">Acordar el envío o retiro por WhatsApp</span>
+                  <span className="text-sm text-[var(--tinta)]/60">Lo coordinamos con vos al confirmar.</span>
+                </span>
+              </label>
+            ) : null}
+          </fieldset>
         ) : null}
 
         <fieldset className="space-y-2 border-t border-[var(--marca-oscuro)]/10 pt-4">
@@ -285,7 +353,7 @@ export function CheckoutForm({ cuenta }: { cuenta: CuentaCheckout }) {
         </div>
 
         <dl className="mt-3 space-y-1 border-t border-[var(--marca-oscuro)]/10 pt-3 text-sm">
-          {cupon || descTransf ? (
+          {cupon || descTransf || envioElegido ? (
             <div className="flex justify-between text-[var(--tinta)]/65">
               <dt>Subtotal</dt>
               <dd className="tabular-nums">{formatoARS(total)}</dd>
@@ -303,6 +371,12 @@ export function CheckoutForm({ cuenta }: { cuenta: CuentaCheckout }) {
               <dd className="tabular-nums">−{formatoARS(descTransf)}</dd>
             </div>
           ) : null}
+          {envioElegido ? (
+            <div className="flex justify-between">
+              <dt>Envío</dt>
+              <dd className="tabular-nums">{costoEnvio > 0 ? formatoARS(costoEnvio) : "Gratis"}</dd>
+            </div>
+          ) : null}
           <div className="flex items-baseline justify-between pt-1 font-semibold">
             <dt>Total</dt>
             <dd className="text-lg tabular-nums">{formatoARS(totalFinal)}</dd>
@@ -312,6 +386,12 @@ export function CheckoutForm({ cuenta }: { cuenta: CuentaCheckout }) {
       </aside>
     </div>
   );
+}
+
+/** "2026-10-15" → "15/10". */
+function fechaCorta(iso: string) {
+  const [, m, d] = iso.split("-");
+  return `${d}/${m}`;
 }
 
 function Campo({ label, value, onChange, required, type = "text" }: { label: string; value: string; onChange: (v: string) => void; required?: boolean; type?: string }) {

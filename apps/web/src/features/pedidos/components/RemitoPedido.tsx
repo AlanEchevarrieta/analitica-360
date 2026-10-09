@@ -70,6 +70,12 @@ export function RemitoPedido({ id }: { id: string }) {
             ))}
           </tbody>
           <tfoot>
+            {p.costoEnvio > 0 && (
+              <tr>
+                <td colSpan={3} className="pt-2 text-right">Envío{p.metodoEnvio ? ` (${p.metodoEnvio})` : ""}</td>
+                <td className="pt-2 text-right">{formatoPesos(p.costoEnvio)}</td>
+              </tr>
+            )}
             <tr>
               <td colSpan={3} className="py-2 text-right font-semibold">Total</td>
               <td className="py-2 text-right font-semibold">{formatoPesos(p.total)}</td>

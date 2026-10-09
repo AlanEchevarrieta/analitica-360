@@ -6,10 +6,46 @@ import { apiCuenta, tokenSesion } from "@/lib/sesion";
 import { obtenerSitio } from "@/lib/sitio";
 
 export type ResultadoPedido =
-  | { ok: true; id: string; numeroPedido: string; subtotal: number; descuentoCupon: number; descuentoTransferencia: number; total: number }
+  | { ok: true; id: string; numeroPedido: string; subtotal: number; descuentoCupon: number; descuentoTransferencia: number; costoEnvio: number; total: number }
   | { ok: false; error: string };
 
 export type FormaPago = "transferencia" | "a_coordinar";
+
+/** Una forma de envío cotizada por la API (Zipnova). El precio lo vuelve a calcular el servidor al confirmar. */
+export interface OpcionEnvio {
+  codigo: string;
+  transportista: string;
+  servicio: string;
+  precio: number;
+  llegada: string | null;
+}
+
+/** Formas de envío a ese destino. Lista vacía = la tienda no cotiza envíos (se acuerdan por WhatsApp). */
+export async function cotizarEnvio(
+  destino: { codigoPostal: string; ciudad: string; provincia: string },
+  items: Pick<ItemPedidoInput, "productoId" | "varianteId" | "cantidad">[],
+): Promise<{ ok: true; opciones: OpcionEnvio[] } | { ok: false; error: string }> {
+  const sitio = await obtenerSitio();
+  if (!sitio || items.length === 0) return { ok: true, opciones: [] };
+  try {
+    const res = await fetch(urlTienda(sitio.empresaId, "/envios/cotizar"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await cabecerasTienda()) },
+      body: JSON.stringify({
+        codigoPostal: destino.codigoPostal.trim().slice(0, 12),
+        localidad: destino.ciudad.trim().slice(0, 80),
+        provincia: destino.provincia.trim().slice(0, 60),
+        items: items.map((i) => ({ productoId: i.productoId, varianteId: i.varianteId, cantidad: i.cantidad })),
+      }),
+      cache: "no-store",
+    });
+    if (res.status === 429) return { ok: false, error: "Esperá un momento y volvé a cotizar el envío." };
+    if (!res.ok) return { ok: false, error: await mensajeDeError(res, "No pudimos cotizar el envío a ese código postal") };
+    return { ok: true, opciones: ((await res.json()) as { opciones: OpcionEnvio[] }).opciones };
+  } catch {
+    return { ok: false, error: "No pudimos cotizar el envío. Probá de nuevo." };
+  }
+}
 
 /** ¿Vale el cupón con este subtotal? (el pedido lo vuelve a verificar en el servidor). */
 export async function validarCupon(codigo: string, subtotal: number): Promise<{ valido: true; codigo: string; descuento: number } | { valido: false; mensaje: string }> {
@@ -37,6 +73,8 @@ export async function crearPedidoTienda(input: {
   items: Pick<ItemPedidoInput, "productoId" | "varianteId" | "cantidad">[];
   cuponCodigo: string | null;
   formaPago: FormaPago;
+  /** Código de la forma de envío elegida (null = se acuerda por WhatsApp). */
+  envioCodigo?: string | null;
   /** Con sesión: guardar estos datos en la cuenta para la próxima compra. */
   guardarDatos?: boolean;
 }): Promise<ResultadoPedido> {
@@ -62,6 +100,7 @@ export async function crearPedidoTienda(input: {
     })),
     cuponCodigo: input.cuponCodigo,
     formaPago: input.formaPago,
+    envio: input.envioCodigo ?? null,
   };
 
   try {
@@ -85,7 +124,7 @@ export async function crearPedidoTienda(input: {
         body: JSON.stringify({ nombre: e.nombre, telefono: e.telefono, calle: e.calle, numero: e.numero, piso: e.piso || null, ciudad: e.ciudad, provincia: e.provincia, codigoPostal: e.codigoPostal }),
       }).catch(() => {});
     }
-    const d = (await res.json()) as { id: string; numeroPedido: string; subtotal: number; descuentoCupon: number; descuentoTransferencia: number; total: number };
+    const d = (await res.json()) as { id: string; numeroPedido: string; subtotal: number; descuentoCupon: number; descuentoTransferencia: number; costoEnvio?: number; total: number };
     return {
       ok: true,
       id: d.id,
@@ -93,6 +132,7 @@ export async function crearPedidoTienda(input: {
       subtotal: Number(d.subtotal ?? d.total),
       descuentoCupon: Number(d.descuentoCupon ?? 0),
       descuentoTransferencia: Number(d.descuentoTransferencia ?? 0),
+      costoEnvio: Number(d.costoEnvio ?? 0),
       total: Number(d.total),
     };
   } catch (error) {

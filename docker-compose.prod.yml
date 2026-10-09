@@ -65,6 +65,8 @@ services:
       # Débito automático de los planes (Mercado Pago). Sin token, no se ofrece.
       MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
       MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET:-}
+      # Cifra los secretos de terceros guardados en la base (credenciales de Zipnova). Sin esto, no hay envíos.
+      CLAVE_CIFRADO: ${CLAVE_CIFRADO:-}
       # Factura electrónica ARCA (Factura C). Sin certificado, no se ofrece.
       ARCA_CUIT: ${ARCA_CUIT:-}
       ARCA_CERTIFICADO: ${ARCA_CERTIFICADO:-}

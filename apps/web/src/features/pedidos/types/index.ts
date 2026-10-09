@@ -36,6 +36,10 @@ export interface PedidoItem {
 export interface PedidoDetalle extends PedidoFila {
   /** Descuentos de la tienda online: el total del pedido ya los tiene restados. */
   descuentos: { subtotal: number; ofertas: number; cuponCodigo: string | null; cupon: number; transferencia: number; formaPagoTienda: string | null };
+  /** Envío cotizado en la tienda (ya sumado en el total). */
+  costoEnvio: number;
+  /** Envío creado en Zipnova. */
+  envio: { id: string; estado: string | null } | null;
   clienteEmail: string | null;
   clienteTelefono: string | null;
   direccionEnvio: string | null;

@@ -13,6 +13,7 @@ import { SeguimientoPedido } from "./SeguimientoPedido";
 import { AccionesPedido } from "./AccionesPedido";
 import { EstadoPedidoBadge } from "./EstadoPedidoBadge";
 import { PickingPedido } from "./PickingPedido";
+import { EnvioPedido } from "@/features/envios/EnvioPedido";
 
 /** wa.me necesita el número en formato internacional: un celular argentino de 10 dígitos pasa a 549 + número. */
 function whatsapp(p: PedidoDetalle) {
@@ -59,7 +60,7 @@ export function PedidoFichaVista({ id }: { id: string }) {
         <span className="ml-auto text-lg font-semibold tabular-nums">{formatoPesos(p.total)}</span>
       </div>
 
-      {(p.descuentos.cupon > 0 || p.descuentos.transferencia > 0 || p.descuentos.ofertas > 0 || p.descuentos.formaPagoTienda) && (
+      {(p.descuentos.cupon > 0 || p.descuentos.transferencia > 0 || p.descuentos.ofertas > 0 || p.descuentos.formaPagoTienda || p.costoEnvio > 0) && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border bg-muted/30 px-4 py-3 text-sm">
           <span>
             Productos <b className="tabular-nums">{formatoPesos(p.descuentos.subtotal)}</b>
@@ -71,6 +72,7 @@ export function PedidoFichaVista({ id }: { id: string }) {
             </span>
           )}
           {p.descuentos.transferencia > 0 && <span className="text-emerald-700 dark:text-emerald-400">Transferencia −{formatoPesos(p.descuentos.transferencia)}</span>}
+          {p.costoEnvio > 0 && <span>Envío +{formatoPesos(p.costoEnvio)}</span>}
           {p.descuentos.formaPagoTienda && (
             <span className="text-muted-foreground">Eligió pagar: {p.descuentos.formaPagoTienda === "transferencia" ? "transferencia" : "a coordinar"}</span>
           )}
@@ -133,6 +135,8 @@ export function PedidoFichaVista({ id }: { id: string }) {
           </Card>
 
           <SeguimientoPedido p={p} />
+
+          <EnvioPedido pedidoId={p.id} estado={p.estado} envio={p.envio} />
 
           <Card>
             <CardHeader>
