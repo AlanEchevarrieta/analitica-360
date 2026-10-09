@@ -16,6 +16,7 @@ const ventaBase: VentaRecord = {
   coeficienteInteres: 0,
   totalSinInteres: 1000,
   totalConInteres: 1000,
+  costoEnvio: 0,
   notas: null,
   anulada: false,
   esSenia: false,

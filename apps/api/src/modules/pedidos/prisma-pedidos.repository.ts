@@ -385,6 +385,8 @@ export class PrismaPedidosRepository implements PedidosRepository {
         formaPago,
         // Las ofertas ya van en el precio de cada ítem; cupón y transferencia son descuento sobre el total.
         descuento: pedido.descuentoCupon.toNumber() + pedido.descuentoTransferencia.toNumber(),
+        // El envío que pagó el cliente entra en la venta (y en la caja). El gasto real se registró al crear el envío.
+        costoEnvio: pedido.costoEnvio.toNumber(),
         clienteNombre: pedido.clienteNombre,
         clienteId: pedido.clienteId,
         cuotas: 1,
@@ -392,7 +394,7 @@ export class PrismaPedidosRepository implements PedidosRepository {
         ubicacionOrigen,
         esSenia: false,
         montoSenia: 0,
-        notas: `Pedido ${pedido.numeroPedido}${pedido.origen === 'tienda_online' ? ' (tienda online)' : ''}${pedido.cuponCodigo ? ` · cupón ${pedido.cuponCodigo}` : ''}${pedido.descuentoTransferencia.toNumber() > 0 ? ' · descuento por transferencia' : ''}${pedido.costoEnvio.toNumber() > 0 ? ` · envío $${pedido.costoEnvio.toNumber().toLocaleString('es-AR')} cobrado aparte` : ''}`,
+        notas: `Pedido ${pedido.numeroPedido}${pedido.origen === 'tienda_online' ? ' (tienda online)' : ''}${pedido.cuponCodigo ? ` · cupón ${pedido.cuponCodigo}` : ''}${pedido.descuentoTransferencia.toNumber() > 0 ? ' · descuento por transferencia' : ''}${pedido.costoEnvio.toNumber() > 0 ? ` · incluye envío $${pedido.costoEnvio.toNumber().toLocaleString('es-AR')}` : ''}`,
       });
       if (!venta.ok) return { ok: false, motivo: 'venta_invalida' };
 

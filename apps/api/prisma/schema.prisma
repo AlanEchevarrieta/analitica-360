@@ -539,6 +539,8 @@ model Venta {
   fechaCobroSaldo    DateTime? @map("fecha_cobro_saldo")
   /// Lista de precios con la que se vendió (null = precio normal).
   listaPrecioId      String?   @map("lista_precio_id") @db.Uuid
+  /// Envío que pagó el cliente (pedidos de la tienda): ya está sumado en los totales.
+  costoEnvio         Decimal   @default(0) @map("costo_envio") @db.Decimal(12, 2)
   deletedAt          DateTime? @map("deleted_at")
 
   empresa         Empresa           @relation(fields: [empresaId], references: [id])

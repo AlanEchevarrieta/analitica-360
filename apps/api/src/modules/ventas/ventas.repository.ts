@@ -13,6 +13,8 @@ export interface VentaRecord {
   coeficienteInteres: number;
   totalSinInteres: number | null;
   totalConInteres: number | null;
+  /** Envío que pagó el cliente (pedidos de la tienda), ya incluido en los totales. */
+  costoEnvio: number;
   notas: string | null;
   anulada: boolean;
   esSenia: boolean;

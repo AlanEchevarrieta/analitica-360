@@ -50,8 +50,8 @@ export class PedidoEnvioController {
 
   @Post()
   @RequirePermiso('hacer_picking')
-  crear(@CurrentEmpresa() empresa: EmpresaContext, @Param('id', new ParseUUIDPipe()) id: string) {
-    return this.envios.crearEnvio(empresa.id, id);
+  crear(@CurrentEmpresa() empresa: EmpresaContext, @CurrentUser() usuario: UsuarioContext, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.envios.crearEnvio(empresa.id, id, usuario.id);
   }
 
   @Get('etiqueta')

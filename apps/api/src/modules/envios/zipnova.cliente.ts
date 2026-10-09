@@ -26,6 +26,8 @@ export interface EnvioZipnova {
   carrier: string | null;
   /** Número del correo (si ya lo asignó) o el de Zipnova. */
   seguimiento: string | null;
+  /** Lo que cobra Zipnova por este envío, con IVA (null si no lo informa). */
+  precio: number | null;
 }
 
 /** Habla con la API v2 de Zipnova con las credenciales de cada empresa. Se reemplaza en las pruebas. */
@@ -114,6 +116,8 @@ export class ZipnovaCliente {
   }
 }
 
+const precioDe = (v: unknown) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Math.round(Number(v)) : null);
+
 function leerEnvio(r: Record<string, unknown>): EnvioZipnova {
   const carrier = r.carrier as { name?: string } | undefined;
   const texto = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
@@ -122,5 +126,6 @@ function leerEnvio(r: Record<string, unknown>): EnvioZipnova {
     status: texto(r.status),
     carrier: texto(carrier?.name),
     seguimiento: texto(r.carrier_tracking_id) ?? texto(r.delivery_id),
+    precio: precioDe(r.price_incl_tax ?? r.price),
   };
 }

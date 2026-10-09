@@ -110,6 +110,7 @@ export function VentaFichaVista({ id }: { id: string }) {
             <dl className="mt-3 flex flex-col items-end gap-1 text-sm">
               <div className="flex gap-6"><dt className="text-muted-foreground">Subtotal</dt><dd className="tabular-nums">{formatoPesos(subtotal)}</dd></div>
               {v.descuento > 0 && <div className="flex gap-6"><dt className="text-muted-foreground">Descuento</dt><dd className="tabular-nums">−{formatoPesos(v.descuento)}</dd></div>}
+              {(v.costoEnvio ?? 0) > 0 && <div className="flex gap-6"><dt className="text-muted-foreground">Envío</dt><dd className="tabular-nums">{formatoPesos(v.costoEnvio)}</dd></div>}
               {v.coeficienteInteres > 0 && <div className="flex gap-6"><dt className="text-muted-foreground">Interés {v.coeficienteInteres}% · {v.cuotas} cuotas</dt><dd className="tabular-nums">{formatoPesos(v.total - (v.totalSinInteres ?? 0))}</dd></div>}
               <div className="flex gap-6 font-semibold"><dt>Total</dt><dd className="tabular-nums">{formatoPesos(v.total)}</dd></div>
             </dl>

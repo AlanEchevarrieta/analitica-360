@@ -2,6 +2,8 @@
 // cifradas), la tienda cotiza por código postal, el pedido cobra el envío recotizado en el servidor
 // (el precio del navegador no vale), envío gratis desde un monto, crear el envío una sola vez aunque
 // lleguen dos clics, etiqueta en PDF y el aviso de Zipnova que marca el pedido como entregado.
+// Envío en la caja (opción A): el costo real de Zipnova queda como gasto y la venta del despacho suma
+// lo que pagó el cliente por el envío.
 //
 // Misma base descartable que alianzas.e2e-spec.ts:
 //   E2E_DATABASE_URL=postgresql://postgres:e2e@localhost:5499/postgres pnpm exec vitest run --config vitest.config.e2e.ts envios
@@ -44,11 +46,12 @@ class ZipnovaFalso {
     await new Promise((r) => setTimeout(r, 40)); // como la red: deja lugar a que se crucen dos clics
     const id = ++this.ultimo;
     this.envios.set(String(id), { status: 'documentation_ready', datos: d });
-    return { id, status: 'documentation_ready', carrier: d.carrierId === 3 ? 'Andreani' : 'Correo Argentino', seguimiento: `ZN${id}` };
+    // Zipnova cobra al comercio un poco menos que lo que se cotizó al público (ejemplo).
+    return { id, status: 'documentation_ready', carrier: d.carrierId === 3 ? 'Andreani' : 'Correo Argentino', seguimiento: `ZN${id}`, precio: 6_500 };
   }
   async envio(_cred: unknown, id: string) {
     const e = this.envios.get(id)!;
-    return { id: Number(id), status: e.status, carrier: 'Correo Argentino', seguimiento: e.status === 'in_transit' ? 'CA123456789AR' : `ZN${id}` };
+    return { id: Number(id), status: e.status, carrier: 'Correo Argentino', seguimiento: e.status === 'in_transit' ? 'CA123456789AR' : `ZN${id}`, precio: 6_500 };
   }
   async etiqueta() {
     return Buffer.from('%PDF-1.4 etiqueta');
@@ -89,6 +92,9 @@ describe.skipIf(!URL_E2E)('Envíos con Zipnova (e2e)', () => {
     await db.query(`INSERT INTO colaborador_permisos (id, empresa_id, usuario_id, modulos, acciones) VALUES ($1, $2, $3, '{"pedidos": true}', '{"hacer_picking": true}')`, [randomUUID(), empresa, empleado]);
     await db.query(`INSERT INTO tiendas_config (id, empresa_id, subdominio, nombre, activa) VALUES ($1, $2, $3, 'Tienda', true)`, [randomUUID(), empresa, `env-${sufijo}`]);
     await db.query(`INSERT INTO productos (id, empresa_id, nombre, precio_venta, en_tienda, peso_gr, alto_cm, ancho_cm, largo_cm) VALUES ($1, $2, 'Mate Imperial', 20000, true, 400, 15, 10, 10)`, [mate, empresa]);
+    // Stock para poder despachar.
+    const duena = (await db.query(`SELECT id FROM usuarios WHERE clerk_user_id = $1`, [`user_end_${sufijo}`])).rows[0].id;
+    await db.query(`INSERT INTO movimientos_inventario (id, empresa_id, producto_id, usuario_id, tipo, cantidad, signo, fecha) VALUES ($1, $2, $3, $4, 'ajuste_positivo', 50, 1, now())`, [randomUUID(), empresa, mate, duena]);
     const { AppModule } = await import('../src/app.module.js');
     const { ZipnovaCliente } = await import('../src/modules/envios/zipnova.cliente.js');
     app = (await Test.createTestingModule({ imports: [AppModule] }).overrideProvider(ZipnovaCliente).useValue(zipnova).compile()).createNestApplication();
@@ -153,6 +159,19 @@ describe.skipIf(!URL_E2E)('Envíos con Zipnova (e2e)', () => {
     expect(creado.datos).toMatchObject({ carrierId: 3, servicio: 'standard_delivery', destino: expect.objectContaining({ street: 'San Martín', street_number: '1234', street_extras: 'piso 2', zipcode: '5500' }) });
     const f = await request(s()).get(`/pedidos/${pedido}`).set(DUENO).expect(200);
     expect(f.body).toMatchObject({ transportista: 'Andreani', numeroSeguimiento: expect.stringMatching(/^ZN/), envio: { estado: 'documentation_ready' } });
+    // Lo que cobra Zipnova queda como gasto de logística, una sola vez.
+    const gastos = (await db.query(`SELECT categoria, monto::float AS monto, tipo_costo, descripcion FROM gastos WHERE empresa_id = $1`, [empresa])).rows;
+    expect(gastos).toEqual([{ categoria: 'logistica', monto: 6_500, tipo_costo: 'variable', descripcion: expect.stringMatching(/^Envío del pedido .+ \(Andreani\)$/) }]);
+  });
+
+  it('al despachar, la venta suma el envío que pagó el cliente (y la caja da lo que entró)', async () => {
+    const r = await request(s()).post(`/tienda/${empresa}/pedidos`).set(publico()).send({ ...cliente, items: [{ productoId: mate, cantidad: 1 }], envio: '1:standard_delivery:carrier_dropoff', formaPago: 'transferencia' }).expect(201);
+    expect(r.body).toMatchObject({ subtotal: 20_000, costoEnvio: 4_400, total: 24_400 });
+    await db.query(`UPDATE pedidos SET estado = 'listo_despacho' WHERE id = $1`, [r.body.id]);
+    const d = await request(s()).post(`/pedidos/${r.body.id}/despacho`).set(DUENO).send({ formaPago: 'transferencia' }).expect(201);
+    const venta = (await db.query(`SELECT total_sin_interes::float AS sin, total_con_interes::float AS con, costo_envio::float AS envio, notas FROM ventas WHERE id = $1`, [d.body.ventaId])).rows[0];
+    expect(venta).toMatchObject({ sin: 24_400, con: 24_400, envio: 4_400 });
+    expect(venta.notas).toContain('incluye envío');
   });
 
   it('la etiqueta sale en PDF', async () => {

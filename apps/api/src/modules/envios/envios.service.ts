@@ -5,6 +5,7 @@ import type { UsuarioContext } from '../../common/auth/request-context.types.js'
 import { cifrar, descifrar } from '../../common/cifrado.js';
 import type { Env } from '../../config/env.validation.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { fechaHoyAR } from '../analytics/analytics.util.js';
 import { estadoPedidoDesde, itemsZipnova, leerCodigo, leerCotizacion, NOMBRE_ESTADO, partirDireccion, type OpcionEnvio } from './envios.util.js';
 import { ZipnovaCliente, type Credenciales, type Destino } from './zipnova.cliente.js';
 
@@ -129,8 +130,12 @@ export class EnviosService {
     return { codigo: o.codigo, transportista: o.transportista, servicio: o.servicio, precio: o.precio };
   }
 
-  /** Crea el envío en Zipnova para el pedido (una sola vez) y deja transportista y seguimiento en el pedido. */
-  async crearEnvio(empresaId: string, pedidoId: string) {
+  /**
+   * Crea el envío en Zipnova para el pedido (una sola vez) y deja transportista y seguimiento en el pedido.
+   * Lo que cobra Zipnova queda como gasto de logística (variable): con la venta, que suma lo que pagó el
+   * cliente, la caja y la ganancia dan bien (y con envío gratis, se ve lo que cuesta).
+   */
+  async crearEnvio(empresaId: string, pedidoId: string, usuarioId: string | null = null) {
     const c = await this.configConectada(empresaId);
     return this.prisma.$transaction(
       async (tx) => {
@@ -175,7 +180,20 @@ export class EnviosService {
           where: { id: p.id },
           data: { envioId: String(envio.id), envioEstado: envio.status, transportista: envio.carrier ?? p.transportista, numeroSeguimiento: envio.seguimiento ?? p.numeroSeguimiento },
         });
-        return this.resumen(String(envio.id), envio.status);
+        if (envio.precio && envio.precio > 0) {
+          await tx.gasto.create({
+            data: {
+              empresaId,
+              usuarioId,
+              categoria: 'logistica',
+              descripcion: `Envío del pedido ${p.numeroPedido}${envio.carrier ? ` (${envio.carrier})` : ''}`,
+              monto: envio.precio,
+              fecha: new Date(`${fechaHoyAR()}T00:00:00Z`),
+              tipoCosto: 'variable',
+            },
+          });
+        }
+        return { ...this.resumen(String(envio.id), envio.status), costo: envio.precio };
       },
       { timeout: 45_000 },
     );

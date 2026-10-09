@@ -22,6 +22,8 @@ export interface VentaDetalle extends VentaFila {
   cuotas: number;
   coeficienteInteres: number;
   totalSinInteres: number | null;
+  /** Envío que pagó el cliente (pedidos de la tienda), ya incluido en el total. */
+  costoEnvio?: number;
   montoSenia: number;
   notas: string | null;
   items: VentaItemDetalle[];

@@ -58,6 +58,7 @@ export class PrismaVentasRepository implements VentasRepository {
       coeficienteInteres: v.coeficienteInteres.toNumber(),
       totalSinInteres: v.totalSinInteres?.toNumber() ?? null,
       totalConInteres: v.totalConInteres?.toNumber() ?? null,
+      costoEnvio: v.costoEnvio.toNumber(),
       notas: v.notas,
       anulada: v.deletedAt != null,
       esSenia: v.esSenia,
@@ -300,7 +301,8 @@ export class PrismaVentasRepository implements VentasRepository {
 export async function confirmarVentaEnTx(
   tx: Prisma.TransactionClient,
   empresaId: string,
-  input: ConfirmarVentaInput,
+  /** costoEnvio: solo el despacho de pedidos (lo que pagó el cliente por el envío; se suma al total, sin interés). */
+  input: ConfirmarVentaInput & { costoEnvio?: number },
 ): Promise<{ ok: true; venta: VentaConItemsNombre } | { ok: false; motivo: MotivoRechazoVenta }> {
   if (input.items.length === 0) return { ok: false, motivo: 'sin_productos' };
     const productoIds = [...new Set(input.items.map((i) => i.productoId))];
@@ -340,8 +342,11 @@ export async function confirmarVentaEnTx(
     // que mande el cliente para algo que involucra dinero.
     const itemsTotal = input.items.reduce((acc, i) => acc + i.cantidad * i.precioUnitario, 0);
     if (input.descuento > itemsTotal) return { ok: false, motivo: 'descuento_invalido' };
-    const totalSinInteres = itemsTotal - input.descuento;
-    const { totalConInteres } = calcularTotalesCredito(totalSinInteres, input.coeficienteInteres, input.cuotas);
+    // El envío (pedidos de la tienda) entra en la caja: se suma al total, sin interés.
+    const costoEnvio = Math.max(0, input.costoEnvio ?? 0);
+    const productosConInteres = calcularTotalesCredito(itemsTotal - input.descuento, input.coeficienteInteres, input.cuotas).totalConInteres;
+    const totalSinInteres = itemsTotal - input.descuento + costoEnvio;
+    const totalConInteres = productosConInteres + costoEnvio;
 
     if (input.esSenia && !aCuenta && !(input.montoSenia > 0 && input.montoSenia < totalConInteres)) {
       return { ok: false, motivo: 'senia_invalida' };
@@ -376,6 +381,7 @@ export async function confirmarVentaEnTx(
         coeficienteInteres: input.coeficienteInteres,
         totalSinInteres,
         totalConInteres,
+        costoEnvio,
         esSenia,
         montoSenia,
         notas: input.notas ?? null,
