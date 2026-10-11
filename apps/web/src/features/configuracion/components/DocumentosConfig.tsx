@@ -25,7 +25,7 @@ function Formulario({ c }: { c: ConfigDocumentos }) {
         <div className="flex flex-wrap items-center gap-3">
           {logoActual ? (
             // eslint-disable-next-line @next/next/no-img-element -- archivo de la API, no pasa por el optimizador de Next
-            <img src={logoActual} alt="Logo de los documentos" className="size-16 rounded-md border object-contain" />
+            <img src={logoActual} alt="Logo" className="size-16 rounded-md border object-contain" />
           ) : (
             <div className="flex size-16 items-center justify-center rounded-md border text-xs text-muted-foreground">Sin logo</div>
           )}

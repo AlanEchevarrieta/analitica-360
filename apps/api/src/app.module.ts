@@ -14,6 +14,7 @@ import { ProveedoresModule } from './modules/proveedores/proveedores.module.js';
 import { ComprasModule } from './modules/compras/compras.module.js';
 import { VentasModule } from './modules/ventas/ventas.module.js';
 import { DocumentosModule } from './modules/documentos/documentos.module.js';
+import { PresupuestosModule } from './modules/presupuestos/presupuestos.module.js';
 import { DevolucionesModule } from './modules/devoluciones/devoluciones.module.js';
 import { PedidosModule } from './modules/pedidos/pedidos.module.js';
 import { InformesModule } from './modules/informes/informes.module.js';
@@ -61,6 +62,7 @@ import { ConfiguracionModule } from './modules/configuracion/configuracion.modul
     ComprasModule,
     VentasModule,
     DocumentosModule,
+    PresupuestosModule,
     DevolucionesModule,
     PedidosModule,
     ClientesModule,

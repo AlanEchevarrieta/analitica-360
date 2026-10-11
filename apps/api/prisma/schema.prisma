@@ -1375,6 +1375,51 @@ model CobroCliente {
   @@map("cobros_clientes")
 }
 
+/// Presupuesto (cotización) a un cliente. No aparta stock: se descuenta recién al pasar a venta.
+model Presupuesto {
+  id            String    @id @default(uuid()) @db.Uuid
+  empresaId     String    @map("empresa_id") @db.Uuid
+  /// P-000001
+  numero        Int
+  clienteId     String?   @map("cliente_id") @db.Uuid
+  clienteNombre String?   @map("cliente_nombre")
+  fecha         DateTime  @default(now())
+  validoHasta   DateTime  @map("valido_hasta") @db.Date
+  /// pendiente | aceptado | rechazado ("vencido" se calcula con validoHasta)
+  estado        String    @default("pendiente") @db.VarChar(20)
+  descuento     Decimal   @default(0) @db.Decimal(12, 2)
+  notas         String?
+  /// La venta que salió del presupuesto (al aceptarlo).
+  ventaId       String?   @unique @map("venta_id") @db.Uuid
+  usuarioId     String    @map("usuario_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  items PresupuestoItem[]
+
+  @@unique([empresaId, numero])
+  @@index([empresaId, fecha])
+  @@map("presupuestos")
+}
+
+model PresupuestoItem {
+  id             String  @id @default(uuid()) @db.Uuid
+  presupuestoId  String  @map("presupuesto_id") @db.Uuid
+  productoId     String  @map("producto_id") @db.Uuid
+  varianteId     String? @map("variante_id") @db.Uuid
+  /// Nombre al momento de presupuestar (si después cambia el producto, el presupuesto no cambia).
+  descripcion    String
+  cantidad       Int
+  precioUnitario Decimal @map("precio_unitario") @db.Decimal(12, 2)
+  orden          Int     @default(0)
+
+  presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  @@index([presupuestoId])
+  @@map("presupuestos_items")
+}
+
 /// Cómo salen los documentos (comprobante de venta, recibo, presupuesto): logo y textos.
 /// Los datos del negocio (nombre, dirección, teléfono, email) son los del remitente de Configuración.
 model DocumentosConfig {

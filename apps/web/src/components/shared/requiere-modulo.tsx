@@ -45,6 +45,7 @@ const MODULO_DE_RUTA: [string, ModuloClave][] = [
 /** Secciones que dependen de una función del plan que no es un módulo entero (el más específico primero). */
 const FUNCION_DE_RUTA: [string, string][] = [
   ["/objetivos", "objetivos"],
+  ["/ventas/presupuestos", "presupuestos"],
   ["/clientes/segmentos", "difusiones"],
   ["/clientes/cuenta-corriente", "cuenta_corriente"],
   ["/productos/importar", "importar"],

@@ -19,6 +19,7 @@ export const NOMBRE_FUNCION: Record<string, string> = {
   tienda: "Tienda online",
   objetivos: "Objetivos",
   objetivos_avanzados: "Objetivos avanzados: todos los tipos y por sucursal o usuario",
+  presupuestos: "Presupuestos para clientes",
 };
 
 /**

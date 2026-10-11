@@ -19,6 +19,7 @@ import { BuscadorProductos } from "@/features/productos/components/BuscadorProdu
 import { LineasProductos } from "@/features/productos/components/LineasProductos";
 import { etiquetaAjuste, precioConLista, useListasPrecios } from "@/features/listas-precios/listas-precios";
 import { aNumero, calcularTotales, COBRO_INICIAL, CobroVenta, esClienteNuevo, type DatosCobro } from "./CobroVenta";
+import { useAccionesPresupuesto, usePresupuesto } from "@/features/presupuestos/use-presupuestos";
 
 // Medio de pago y ubicación se recuerdan por dispositivo (localStorage): en
 // un stand casi siempre se repiten, así no hay que elegirlos en cada venta.
@@ -58,9 +59,13 @@ function recordar(cobro: DatosCobro) {
   }
 }
 
-export function NuevaVentaForm() {
+/** `presupuestoId`: "Pasar a venta" desde un presupuesto (carga sus productos, precios, cliente y descuento). */
+export function NuevaVentaForm({ presupuestoId = null }: { presupuestoId?: string | null }) {
   const router = useRouter();
   const [carrito, setCarrito] = useState<LineaCarrito[]>([]);
+  const presupuesto = usePresupuesto(presupuestoId);
+  const { aceptar } = useAccionesPresupuesto();
+  const [cargado, setCargado] = useState<string | null>(null);
   // undefined = la lista la define el cliente elegido; null = precio normal a mano.
   const [listaElegida, setListaElegida] = useState<string | null | undefined>(undefined);
   const config = useConfiguracionVenta();
@@ -73,6 +78,27 @@ export function NuevaVentaForm() {
     ubicacion: eleccion.ubicacion || preferencias.ubicacion || config.data?.ubicacionDefault || "",
   };
   const [error, setError] = useState<string | null>(null);
+  // Se carga una sola vez, cuando llega el presupuesto: los precios quedan fijos (como se le pasaron al cliente).
+  const p = presupuesto.data;
+  if (p && cargado !== p.id && p.estado !== "aceptado") {
+    setCargado(p.id);
+    setCarrito(
+      p.items.map((i) => ({
+        clave: `${i.productoId}:${i.varianteId ?? ""}`,
+        productoId: i.productoId,
+        varianteId: i.varianteId,
+        nombre: i.descripcion,
+        variante: null,
+        precioUnitario: i.precioUnitario,
+        precioBase: i.precioUnitario,
+        precioEditado: true,
+        cantidad: i.cantidad,
+        stock: i.stock ?? Number.POSITIVE_INFINITY,
+      })),
+    );
+    setCobro((c) => ({ ...c, cliente: p.cliente?.nombre ?? p.clienteNombre ?? "", descuento: p.descuento > 0 ? String(p.descuento) : "" }));
+  }
+  const desdePresupuesto = p && cargado === p.id ? p : null;
   const clientes = useClientes();
   const listas = useListasPrecios();
   const clienteElegido = clientes.data?.find((c) => c.nombre.toLowerCase() === cobro.cliente.trim().toLowerCase());
@@ -142,6 +168,14 @@ export function NuevaVentaForm() {
         montoSenia: cobro.esSenia ? aNumero(cobro.montoSenia) : 0,
       });
 
+      if (desdePresupuesto) {
+        // La venta queda asociada al presupuesto (aceptado) y se abre su ficha para mandar el comprobante.
+        await aceptar.mutateAsync({ id: desdePresupuesto.id, ventaId: venta.id }).catch(() => toast.error(`La venta se registró, pero no se pudo marcar el presupuesto ${desdePresupuesto.numero} como aceptado`));
+        recordar(cobro);
+        toast.success(`Venta ${venta.numeroVenta ?? ""} registrada desde el presupuesto ${desdePresupuesto.numero}`);
+        router.push(`/ventas/${venta.id}`);
+        return;
+      }
       // Queda lista para la próxima venta, con el mismo medio de pago y ubicación.
       recordar(cobro);
       setCarrito([]);
@@ -194,6 +228,13 @@ export function NuevaVentaForm() {
               {lista && listaElegida === undefined && clienteElegido && <span className="text-xs text-muted-foreground">Lista de {clienteElegido.nombre}</span>}
             </div>
           )}
+          {desdePresupuesto && (
+            <p className="rounded-md bg-sky-500/10 p-2 text-sm">
+              Venta desde el presupuesto <span className="font-medium">{desdePresupuesto.numero}</span>, con sus precios.
+              {lineas.some((l) => l.cantidad > l.stock) && <span className="block text-amber-600 dark:text-amber-400">Falta stock de algún producto: revisalo antes de registrar.</span>}
+            </p>
+          )}
+          {presupuestoId && presupuesto.data?.estado === "aceptado" && <p className="rounded-md bg-amber-500/10 p-2 text-sm">El presupuesto {presupuesto.data.numero} ya pasó a venta.</p>}
           <BuscadorProductos onAgregar={agregar} />
           <LineasProductos
             lineas={lineas}

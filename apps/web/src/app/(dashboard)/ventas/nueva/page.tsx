@@ -3,7 +3,8 @@ import { ArrowLeft } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { NuevaVentaForm } from "@/features/ventas/components/NuevaVentaForm";
 
-export default function Page() {
+export default async function Page(props: PageProps<"/ventas/nueva">) {
+  const { presupuesto } = await props.searchParams;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
@@ -12,7 +13,7 @@ export default function Page() {
         </Link>
         <h1 className="text-xl font-semibold">Nueva venta</h1>
       </div>
-      <NuevaVentaForm />
+      <NuevaVentaForm presupuestoId={typeof presupuesto === "string" ? presupuesto : null} />
     </div>
   );
 }
