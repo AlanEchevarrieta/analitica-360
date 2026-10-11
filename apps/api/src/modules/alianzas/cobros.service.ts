@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
 import { AccesoCuentaService } from '../planes/acceso-cuenta.service.js';
+import { PreciosPlanService } from '../planes/precios-plan.service.js';
 import { CUOTAS_ANUAL, MESES_CICLO, PLANES, PLANES_PAGOS, type CicloFacturacion, type PlanPagoId } from '../planes/planes.util.js';
 import {
   ajustePorDevolucion,
@@ -78,7 +79,13 @@ export class CobrosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly accesoCuenta: AccesoCuentaService,
+    private readonly precios: PreciosPlanService,
   ) {}
+
+  /** Precio por mes del plan para un período que empieza en `desde`: el especial de la empresa o el de lista vigente ese día (aumentos por IPC). */
+  private async precioMensual(db: Tx | PrismaService, empresa: Parameters<typeof precioEspecial>[0], plan: PlanPagoId, desde: string): Promise<number> {
+    return precioEspecial(empresa, plan) ?? (await this.precios.mensual(plan, desde, db));
+  }
 
   /** Períodos ya pagados (un grupo de cuotas cuenta como un período). */
   private async periodosPagados(tx: Tx | PrismaService, empresaId: string) {
@@ -120,7 +127,7 @@ export class CobrosService {
       const plan = proxima.plan as PlanPagoId;
       const ciclo = proxima.ciclo as CicloFacturacion;
       const generales = await this.cuotasGenerales(db, plan);
-      const cotizacion = cotizarPeriodo(plan, ciclo, empresa.cupon ? reglas[ciclo] : null, proxima.tipoPeriodo as 'entrada' | 'renovacion', 1, generales, precioEspecial(empresa, plan));
+      const cotizacion = cotizarPeriodo(plan, ciclo, empresa.cupon ? reglas[ciclo] : null, proxima.tipoPeriodo as 'entrada' | 'renovacion', 1, generales, await this.precioMensual(db, empresa, plan, fecha(proxima.periodoDesde)!));
       return {
         empresaId: input.empresaId, plan, ciclo, cotizacion, cupon: cuponInfo, cuota: proxima.numero, cuotas: proxima.cuotas, grupoId: input.grupoId,
         periodoDesde: fecha(proxima.periodoDesde)!,
@@ -134,12 +141,13 @@ export class CobrosService {
     const { periodos, coberturaHasta } = await this.periodosPagados(db, input.empresaId);
     const regla = empresa.cupon ? reglas[input.ciclo] : null;
     const { tipo, indiceRenovacion } = tipoDelProximoPeriodo(periodos, input.ciclo, regla);
-    const sinPremios = cotizarPeriodo(input.plan, input.ciclo, regla, tipo, indiceRenovacion, await this.cuotasGenerales(db, input.plan), precioEspecial(empresa, input.plan));
+    const hoy = fechaHoyAR();
+    const desde = input.desde ?? (coberturaHasta && coberturaHasta > hoy ? coberturaHasta : hoy);
+    // El precio es el de lista vigente cuando empieza el período: un aumento avisado rige desde el próximo período.
+    const sinPremios = cotizarPeriodo(input.plan, input.ciclo, regla, tipo, indiceRenovacion, await this.cuotasGenerales(db, input.plan), await this.precioMensual(db, empresa, input.plan, desde));
     // Premios por haber recomendado a otros negocios: se descuentan en este período (todos juntos).
     const premios = await this.premiosDisponibles(db, input.empresaId);
     const cotizacion = aplicarPremios(sinPremios, porcentajePremios(premios.map((x) => x.porcentaje)));
-    const hoy = fechaHoyAR();
-    const desde = input.desde ?? (coberturaHasta && coberturaHasta > hoy ? coberturaHasta : hoy);
     const cuotas = input.enCuotas && cotizacion.cuotas > 1 ? cotizacion.cuotas : 1;
     const meses = MESES_CICLO[input.ciclo] / cuotas;
     return {
@@ -366,6 +374,7 @@ export class CobrosService {
     const { periodos } = empresaId ? await this.periodosPagados(this.prisma, empresaId) : { periodos: [] };
     const especial = empresaId ? await this.prisma.empresa.findUnique({ where: { id: empresaId }, select: { precioEspecialPlan: true, precioEspecialMensual: true } }) : null;
     const pctPremios = empresaId ? porcentajePremios((await this.premiosDisponibles(this.prisma, empresaId)).map((x) => x.porcentaje)) : 0;
+    const lista = await this.precios.mensuales();
     return Promise.all(
       PLANES_PAGOS.map(async (plan) => {
         const generales = await this.cuotasGenerales(this.prisma, plan);
@@ -375,8 +384,8 @@ export class CobrosService {
           ciclos: (['mensual', 'trimestral', 'anual'] as const).map((ciclo) => {
             const regla = reglas?.[ciclo] ?? null;
             const { tipo, indiceRenovacion } = tipoDelProximoPeriodo(periodos, ciclo, regla);
-            const proximo = aplicarPremios(cotizarPeriodo(plan, ciclo, regla, tipo, indiceRenovacion, generales, especial ? precioEspecial(especial, plan) : null), pctPremios);
-            const renovacion = cotizarPeriodo(plan, ciclo, regla, 'renovacion', tipo === 'entrada' ? 1 : indiceRenovacion + 1, generales, especial ? precioEspecial(especial, plan) : null);
+            const proximo = aplicarPremios(cotizarPeriodo(plan, ciclo, regla, tipo, indiceRenovacion, generales, (especial ? precioEspecial(especial, plan) : null) ?? lista[plan]), pctPremios);
+            const renovacion = cotizarPeriodo(plan, ciclo, regla, 'renovacion', tipo === 'entrada' ? 1 : indiceRenovacion + 1, generales, (especial ? precioEspecial(especial, plan) : null) ?? lista[plan]);
             return {
               ciclo,
               meses: MESES_CICLO[ciclo],

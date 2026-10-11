@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Building2, Check, ClipboardList, DatabaseBackup, Factory, FileSpreadsheet, History, KeyRound, Lock, Megaphone, MessageCircle, ShieldCheck, Smartphone, Tags, UserCog, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DESTACADAS, DIAS_PRUEBA, EXTRAS, linkWhatsApp, PASOS, PREGUNTAS, SEGURIDAD, UCIM, WHATSAPP } from "../contenido";
+import { PRECIO_MENSUAL } from "@/features/planes/planes";
+import { DESTACADAS, DIAS_PRUEBA, EXTRAS, linkWhatsApp, PASOS, PREGUNTAS, SEGURIDAD, UCIM, WHATSAPP, type PreciosLista } from "../contenido";
 import { Encabezado } from "./Encabezado";
 import { Logo } from "./Logo";
 import { MaquetaDestacada, MaquetaInicio, MaquetaVentaCelular } from "./Maquetas";
@@ -31,7 +32,7 @@ function Titulo({ etiqueta, titulo, bajada, className }: { etiqueta: string; tit
 }
 
 /** Landing pública de Analítica 360 (analitica360.app). Clara siempre, sin depender del tema de la app. */
-export function Sitio() {
+export function Sitio({ precios }: { precios?: PreciosLista }) {
   const datosEstructurados = {
     "@context": "https://schema.org",
     "@graph": [
@@ -41,7 +42,7 @@ export function Sitio() {
         applicationCategory: "BusinessApplication",
         operatingSystem: "Web, Android, iOS",
         description: "Sistema de gestión para comercios: ventas, stock, compras, clientes, analytics, contabilidad y tienda online.",
-        offers: { "@type": "Offer", price: "49000", priceCurrency: "ARS" },
+        offers: { "@type": "Offer", price: String(precios?.basico ?? PRECIO_MENSUAL.basico), priceCurrency: "ARS" },
       },
       { "@type": "FAQPage", mainEntity: PREGUNTAS.map((q) => ({ "@type": "Question", name: q.p, acceptedAnswer: { "@type": "Answer", text: q.r } })) },
     ],
@@ -204,7 +205,7 @@ export function Sitio() {
         <section id="planes" className="scroll-mt-20 bg-gradient-to-b from-violet-50/80 via-white to-white pt-20 pb-10 sm:pt-28 sm:pb-14">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <Titulo etiqueta="Planes" titulo="Precios simples, sin sorpresas" bajada={`Probá ${DIAS_PRUEBA} días gratis con todo el plan Pro. Después elegís el que te sirve y lo cambiás cuando quieras.`} className="mb-10" />
-            <Planes />
+            <Planes precios={precios} />
           </div>
         </section>
 

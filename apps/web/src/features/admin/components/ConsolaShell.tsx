@@ -15,6 +15,7 @@ const SECCIONES = [
   { href: "/admin/clientes", etiqueta: "Clientes" },
   { href: "/admin/pagos", etiqueta: "Pagos" },
   { href: "/admin/alianzas", etiqueta: "Alianzas" },
+  { href: "/admin/precios", etiqueta: "Precios" },
   { href: "/admin/uso", etiqueta: "Uso" },
   { href: "/admin/auditoria", etiqueta: "Auditoría" },
   { href: "/admin/soporte", etiqueta: "Soporte" },

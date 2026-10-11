@@ -6,7 +6,7 @@ import { Check, Minus, Sparkles } from "lucide-react";
 import { PLANES as CATALOGO } from "@analitica360/shared-types";
 import { cn } from "@/lib/utils";
 import { CICLOS, PLANES, PLANES_PAGOS, PRECIO_MENSUAL, type Ciclo, type PlanPagoId } from "@/features/planes/planes";
-import { ahorroAnual, COMPARACION, CUOTAS_ANUAL, DESCUENTO_CICLO, DIAS_PRUEBA, linkWhatsApp, MESES, precioPeriodo, precioPorMes, type FilaComparacion } from "../contenido";
+import { ahorroAnual, COMPARACION, CUOTAS_ANUAL, DESCUENTO_CICLO, DIAS_PRUEBA, linkWhatsApp, MESES, precioPeriodo, precioPorMes, type FilaComparacion, type PreciosLista } from "../contenido";
 
 const pesos = (n: number) => `$ ${n.toLocaleString("es-AR")}`;
 
@@ -40,7 +40,7 @@ function celda(fila: FilaComparacion, id: PlanPagoId) {
   );
 }
 
-export function Planes() {
+export function Planes({ precios = PRECIO_MENSUAL }: { precios?: PreciosLista }) {
   const [ciclo, setCiclo] = useState<Ciclo>("anual");
   return (
     <div className="flex flex-col gap-12">
@@ -94,22 +94,22 @@ export function Planes() {
 
               <div className="mt-6 min-h-[7.5rem]">
                 {conDescuento && (
-                  <p className={cn("text-sm line-through", destacado ? "text-slate-400" : "text-slate-400")}>{pesos(PRECIO_MENSUAL[id])} / mes</p>
+                  <p className={cn("text-sm line-through", destacado ? "text-slate-400" : "text-slate-400")}>{pesos(precios[id])} / mes</p>
                 )}
                 <p className="flex items-baseline gap-1.5">
-                  <span className="text-[2.6rem] leading-none font-bold tracking-tight tabular-nums">{pesos(precioPorMes(id, ciclo))}</span>
+                  <span className="text-[2.6rem] leading-none font-bold tracking-tight tabular-nums">{pesos(precioPorMes(id, ciclo, precios))}</span>
                   <span className={cn("text-sm", destacado ? "text-slate-300" : "text-slate-500")}>/ mes + IVA</span>
                 </p>
                 {conDescuento ? (
                   <p className="mt-3 inline-flex rounded-lg bg-emerald-400/15 px-2.5 py-1 text-sm font-semibold text-emerald-600">
-                    <span className={destacado ? "text-emerald-300" : ""}>Ahorrás {pesos(ahorroAnual(id, ciclo))} por año</span>
+                    <span className={destacado ? "text-emerald-300" : ""}>Ahorrás {pesos(ahorroAnual(id, ciclo, precios))} por año</span>
                   </p>
                 ) : (
                   <p className={cn("mt-3 text-sm", destacado ? "text-slate-300" : "text-slate-500")}>Sin permanencia</p>
                 )}
                 {ciclo !== "mensual" && (
                   <p className={cn("mt-2 text-xs", destacado ? "text-slate-400" : "text-slate-500")}>
-                    {pesos(precioPeriodo(id, ciclo))} cada {MESES[ciclo]} meses
+                    {pesos(precioPeriodo(id, ciclo, precios))} cada {MESES[ciclo]} meses
                     {ciclo === "anual" ? ` · hasta ${CUOTAS_ANUAL} cuotas sin interés` : ""}
                   </p>
                 )}
@@ -151,7 +151,7 @@ export function Planes() {
                 {PLANES_PAGOS.map((id) => (
                   <th key={id} className={cn("px-4 py-5 text-center align-bottom", PLANES[id].popular && "bg-indigo-50/70")}>
                     <span className="block text-base font-semibold text-slate-900">{PLANES[id].nombre}</span>
-                    <span className="mt-0.5 block text-sm font-normal text-slate-500 tabular-nums">{pesos(precioPorMes(id, ciclo))} / mes</span>
+                    <span className="mt-0.5 block text-sm font-normal text-slate-500 tabular-nums">{pesos(precioPorMes(id, ciclo, precios))} / mes</span>
                   </th>
                 ))}
               </tr>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { Sitio } from "@/features/sitio/components/Sitio";
+import { preciosVigentes } from "@/features/sitio/precios-vigentes";
 
 const DESCRIPCION = "Sistema de gestión para comercios: ventas, stock, compras, clientes, analytics, contabilidad y tienda online. Probalo 14 días gratis, sin tarjeta.";
 
@@ -16,6 +17,6 @@ export const metadata: Metadata = {
 // Visitantes: la landing. Con sesión: al login, a elegir empresa o al inicio, como siempre.
 export default async function Home() {
   const { userId, orgId } = await auth({ treatPendingAsSignedOut: false });
-  if (!userId) return <Sitio />;
+  if (!userId) return <Sitio precios={await preciosVigentes()} />;
   redirect(orgId ? "/inicio" : "/elegir-empresa");
 }

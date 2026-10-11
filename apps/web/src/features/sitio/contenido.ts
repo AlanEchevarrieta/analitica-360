@@ -19,18 +19,21 @@ export const CUOTAS_ANUAL = CUOTAS_ANUAL_COBRO;
 export const DIAS_PRUEBA = 14;
 export const UCIM = { mesesBeneficio: 24, descuento: { mensual: 0.1, trimestral: 0.25, anual: 0.35 } as Record<Ciclo, number> };
 
+/** Precios de lista por mes. Los vigentes los trae la API (GET /planes/precios, cambian con los aumentos por IPC); estos son el respaldo. */
+export type PreciosLista = Record<PlanPagoId, number>;
+
 /** Precio por mes en ese ciclo, en pesos enteros. */
-export function precioPorMes(plan: PlanPagoId, ciclo: Ciclo): number {
-  return Math.round(PRECIO_MENSUAL[plan] * (1 - DESCUENTO_CICLO[ciclo]));
+export function precioPorMes(plan: PlanPagoId, ciclo: Ciclo, lista: PreciosLista = PRECIO_MENSUAL): number {
+  return Math.round(lista[plan] * (1 - DESCUENTO_CICLO[ciclo]));
 }
 
-export function precioPeriodo(plan: PlanPagoId, ciclo: Ciclo): number {
-  return precioPorMes(plan, ciclo) * MESES[ciclo];
+export function precioPeriodo(plan: PlanPagoId, ciclo: Ciclo, lista: PreciosLista = PRECIO_MENSUAL): number {
+  return precioPorMes(plan, ciclo, lista) * MESES[ciclo];
 }
 
 /** Cuánto se ahorra en un año frente a pagar mes a mes. */
-export function ahorroAnual(plan: PlanPagoId, ciclo: Ciclo): number {
-  return (PRECIO_MENSUAL[plan] - precioPorMes(plan, ciclo)) * 12;
+export function ahorroAnual(plan: PlanPagoId, ciclo: Ciclo, lista: PreciosLista = PRECIO_MENSUAL): number {
+  return (lista[plan] - precioPorMes(plan, ciclo, lista)) * 12;
 }
 
 export const WHATSAPP = (process.env.NEXT_PUBLIC_WHATSAPP_CONTACT ?? "").replace(/\D/g, "");

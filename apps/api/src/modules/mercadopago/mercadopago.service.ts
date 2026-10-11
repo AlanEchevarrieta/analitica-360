@@ -112,4 +112,27 @@ export class MercadoPagoService {
     await this.prisma.mercadoPagoSuscripcion.update({ where: { id: s.id }, data: { estado: 'authorized' } });
     return `pago ${ap.id} registrado`;
   }
+
+  /**
+   * Deja cada débito automático con el monto de su próximo período. Hace falta
+   * cuando cambia el precio de lista (aumento por IPC): Mercado Pago debita
+   * siempre el último monto que le dijimos.
+   */
+  async actualizarMontos(): Promise<number> {
+    if (!this.mp.configurado) return 0;
+    const activas = await this.prisma.mercadoPagoSuscripcion.findMany({ where: { estado: 'authorized' } });
+    let cambiadas = 0;
+    for (const s of activas) {
+      try {
+        const proxima = await this.cobros.proponer({ empresaId: s.empresaId, plan: s.plan as PlanPagoId, ciclo: s.ciclo as CicloFacturacion });
+        if (Math.abs(proxima.monto - Number(s.monto)) < 0.01) continue;
+        await this.mp.cambiarMonto(s.preapprovalId, proxima.monto);
+        await this.prisma.mercadoPagoSuscripcion.update({ where: { id: s.id }, data: { monto: new Prisma.Decimal(proxima.monto) } });
+        cambiadas++;
+      } catch (e) {
+        this.logger.warn(`No se pudo actualizar el monto del débito de ${s.empresaId}: ${String(e)}`);
+      }
+    }
+    return cambiadas;
+  }
 }

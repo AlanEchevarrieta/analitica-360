@@ -168,6 +168,24 @@ model Plan {
   @@map("planes")
 }
 
+/// Precio de lista por mes de cada plan, con fecha de vigencia (aumentos por IPC).
+/// Un precio rige recién 30 días después de avisado (ver planes/precios.util.ts).
+model PrecioPlan {
+  id             String    @id @default(uuid()) @db.Uuid
+  plan           String    @db.VarChar(20)
+  precioMensual  Decimal   @map("precio_mensual") @db.Decimal(12, 2)
+  vigenteDesde   DateTime  @map("vigente_desde") @db.Date
+  motivo         String?   @db.VarChar(200)
+  avisoEnviadoEn DateTime? @map("aviso_enviado_en")
+  /// Cuántos emails salieron en el aviso.
+  avisados       Int       @default(0)
+  creadoPor      String?   @map("creado_por")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@unique([plan, vigenteDesde])
+  @@map("precios_plan")
+}
+
 // Tampoco tiene CREATE TABLE explícito — forma inferida de registrar_empresa(),
 // mi_suscripcion_activa() y admin_asignar_suscripcion().
 model Suscripcion {
