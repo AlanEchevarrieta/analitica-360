@@ -6,6 +6,23 @@ import { useApiFetch } from "@/hooks/use-api";
 
 // Espejo de apps/api modules/presupuestos (presupuestos.service.ts).
 export type EstadoPresupuesto = "pendiente" | "aceptado" | "rechazado" | "vencido";
+export type MonedaPresupuesto = "ARS" | "USD" | "BRL" | "CLP";
+
+export const MONEDAS: { id: MonedaPresupuesto; nombre: string; simbolo: string; decimales: number }[] = [
+  { id: "ARS", nombre: "Pesos", simbolo: "$", decimales: 2 },
+  { id: "USD", nombre: "Dólares", simbolo: "US$", decimales: 2 },
+  { id: "BRL", nombre: "Reales", simbolo: "R$", decimales: 2 },
+  { id: "CLP", nombre: "Pesos chilenos", simbolo: "CLP$", decimales: 0 },
+];
+export const monedaDe = (id: MonedaPresupuesto) => MONEDAS.find((m) => m.id === id)!;
+/** "US$ 1.234,50" */
+export function formatoEnMoneda(n: number, id: MonedaPresupuesto) {
+  const m = monedaDe(id);
+  return `${m.simbolo} ${n.toLocaleString("es-AR", { minimumFractionDigits: m.decimales, maximumFractionDigits: m.decimales })}`;
+}
+
+/** Cuántos pesos vale hoy cada moneda (GET /cotizaciones/monedas). */
+export type CotizacionesHoy = Record<Exclude<MonedaPresupuesto, "ARS">, { valor: number; fecha: string; de: string } | null>;
 
 export interface ItemPresupuesto {
   id: string;
@@ -30,6 +47,11 @@ interface Base {
   notas: string | null;
   ventaId: string | null;
   numeroVenta: string | null;
+  moneda: MonedaPresupuesto;
+  cotizacion: number | null;
+  cotizacionDe: string | null;
+  /** Montos en la moneda del presupuesto (null en pesos). */
+  enMoneda: { subtotal: number; descuento: number; total: number } | null;
 }
 
 export type PresupuestoFila = Base & { productos: number };
@@ -44,6 +66,9 @@ export interface PresupuestoInput {
   descuento: number;
   notas: string | null;
   validoHasta: string | null;
+  moneda: MonedaPresupuesto;
+  /** Pesos por unidad; null = la de hoy. */
+  cotizacion: number | null;
 }
 
 export const NOMBRE_ESTADO: Record<EstadoPresupuesto, string> = { pendiente: "Pendiente", aceptado: "Aceptado", rechazado: "Rechazado", vencido: "Vencido" };
@@ -64,6 +89,12 @@ export function usePresupuesto(id: string | null) {
   const api = useApiFetch();
   const { orgId } = useAuth();
   return useQuery({ queryKey: ["presupuestos", id, orgId], queryFn: () => api<PresupuestoFicha>(`/presupuestos/${id}`), enabled: Boolean(orgId && id) });
+}
+
+export function useCotizacionesHoy() {
+  const api = useApiFetch();
+  const { orgId } = useAuth();
+  return useQuery({ queryKey: ["cotizaciones-monedas", orgId], queryFn: () => api<CotizacionesHoy>("/cotizaciones/monedas"), enabled: Boolean(orgId), staleTime: 10 * 60_000 });
 }
 
 export function useAccionesPresupuesto() {

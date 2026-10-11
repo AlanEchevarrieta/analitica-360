@@ -19,6 +19,8 @@ const presupuestoSchema = z.object({
   descuento: z.number().min(0).max(1_000_000_000).default(0),
   notas: z.string().trim().max(2000).nullable().optional(),
   validoHasta: fecha.nullable().optional(),
+  moneda: z.enum(['ARS', 'USD', 'BRL', 'CLP']).default('ARS'),
+  cotizacion: z.number().positive().max(1_000_000).nullable().optional(),
 });
 const estadoSchema = z.object({ estado: z.enum(['pendiente', 'rechazado']) });
 const aceptarSchema = z.object({ ventaId: z.uuid() });

@@ -16,7 +16,7 @@ import { useClientes } from "@/features/ventas/hooks/use-nueva-venta";
 import { formatoPesos } from "@/lib/formato";
 import { aNumero } from "@/lib/numeros";
 import { hoyAR } from "@/lib/periodos";
-import { useAccionesPresupuesto, type PresupuestoFicha } from "./use-presupuestos";
+import { formatoEnMoneda, MONEDAS, useAccionesPresupuesto, useCotizacionesHoy, type MonedaPresupuesto, type PresupuestoFicha } from "./use-presupuestos";
 
 const sumarDias = (f: string, n: number) => new Date(Date.parse(`${f}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
@@ -35,12 +35,25 @@ export function PresupuestoForm({ inicial, onListo, onCancelar }: { inicial?: Pr
   const [notas, setNotas] = useState(inicial?.notas ?? "");
   const [validez, setValidez] = useState<string | null>(inicial && inicial.validoHasta >= hoyAR() ? inicial.validoHasta : null);
   const [error, setError] = useState<string | null>(null);
+  const [moneda, setMoneda] = useState<MonedaPresupuesto>(inicial?.moneda ?? "ARS");
+  // Cotización escrita a mano ("" = la de hoy).
+  const [cotizacion, setCotizacion] = useState(inicial?.cotizacion ? String(inicial.cotizacion) : "");
+  const hoy = useCotizacionesHoy();
   const validezPorDefecto = sumarDias(hoyAR(), config.data?.validezPresupuestoDias ?? 15);
   const guardando = crear.isPending || editar.isPending;
 
   const subtotal = lineas.reduce((s, l) => s + l.cantidad * l.precioUnitario, 0);
   const desc = Math.min(aNumero(descuento), subtotal);
   const elegido = clientes.data?.find((c) => c.nombre.toLowerCase() === cliente.trim().toLowerCase());
+  const deHoy = moneda === "ARS" ? null : (hoy.data?.[moneda] ?? null);
+  const valorCotizacion = moneda === "ARS" ? null : aNumero(cotizacion) || deHoy?.valor || null;
+  const sinCotizacion = moneda !== "ARS" && !valorCotizacion;
+
+  function cambiarMoneda(nueva: MonedaPresupuesto) {
+    setMoneda(nueva);
+    // Volver a la moneda que tenía guardada recupera su cotización; otra moneda arranca con la de hoy.
+    setCotizacion(inicial && nueva === inicial.moneda && inicial.cotizacion ? String(inicial.cotizacion) : "");
+  }
 
   function agregar(nueva: Omit<LineaProducto, "cantidad">) {
     setLineas((prev) => (prev.some((l) => l.clave === nueva.clave) ? prev.map((l) => (l.clave === nueva.clave ? { ...l, cantidad: l.cantidad + 1 } : l)) : [...prev, { ...nueva, cantidad: 1 }]));
@@ -49,6 +62,7 @@ export function PresupuestoForm({ inicial, onListo, onCancelar }: { inicial?: Pr
   function guardar() {
     if (lineas.length === 0) return setError("Agregá al menos un producto.");
     if (aNumero(descuento) > subtotal) return setError("El descuento no puede ser mayor que el subtotal.");
+    if (sinCotizacion) return setError("Escribí la cotización: todavía no tenemos la de hoy.");
     setError(null);
     const datos = {
       clienteId: elegido?.id ?? null,
@@ -57,6 +71,8 @@ export function PresupuestoForm({ inicial, onListo, onCancelar }: { inicial?: Pr
       descuento: desc,
       notas: notas.trim() || null,
       validoHasta: validez,
+      moneda,
+      cotizacion: moneda !== "ARS" && aNumero(cotizacion) ? aNumero(cotizacion) : null,
     };
     const listo = { onSuccess: (p: PresupuestoFicha) => (toast.success(`Presupuesto ${p.numero} guardado`), onListo(p.id)), onError: (e: unknown) => setError(e instanceof Error ? e.message : "No se pudo guardar") };
     if (inicial) editar.mutate({ id: inicial.id, ...datos }, listo);
@@ -101,6 +117,28 @@ export function PresupuestoForm({ inicial, onListo, onCancelar }: { inicial?: Pr
             <InputPlata id="pres-descuento" value={descuento} onChange={(e) => setDescuento(e.target.value)} />
           </div>
           <div className="flex flex-col gap-1.5">
+            <Label htmlFor="pres-moneda">Moneda para el cliente</Label>
+            <select id="pres-moneda" className="h-8 rounded-lg border bg-transparent px-2 text-sm" value={moneda} onChange={(e) => cambiarMoneda(e.target.value as MonedaPresupuesto)}>
+              {MONEDAS.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nombre} ({m.simbolo})
+                </option>
+              ))}
+            </select>
+            {moneda !== "ARS" && (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="whitespace-nowrap text-muted-foreground">1 {MONEDAS.find((m) => m.id === moneda)!.simbolo} =</span>
+                  <InputPlata aria-label="Cotización en pesos" value={cotizacion || (deHoy ? String(deHoy.valor) : "")} onChange={(e) => setCotizacion(e.target.value)} />
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {aNumero(cotizacion) && aNumero(cotizacion) !== deHoy?.valor ? "Cotización escrita a mano." : deHoy ? `${deHoy.de}. Podés cambiarla.` : "Todavía no tenemos la de hoy: escribila."}
+                </span>
+                <span className="text-xs text-muted-foreground">Los precios se cargan en pesos; el PDF los muestra convertidos.</span>
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="pres-validez">Válido hasta</Label>
             <Input id="pres-validez" type="date" min={hoyAR()} value={validez ?? validezPorDefecto} onChange={(e) => setValidez(e.target.value || null)} />
           </div>
@@ -123,6 +161,12 @@ export function PresupuestoForm({ inicial, onListo, onCancelar }: { inicial?: Pr
               <span>Total</span>
               <span className="tabular-nums">{formatoPesos(subtotal - desc)}</span>
             </div>
+            {valorCotizacion && (
+              <div className="flex justify-between font-medium text-primary">
+                <span>Para el cliente</span>
+                <span className="tabular-nums">≈ {formatoEnMoneda((subtotal - desc) / valorCotizacion, moneda)}</span>
+              </div>
+            )}
           </div>
           {error && (
             <p role="alert" className="text-sm text-destructive">

@@ -144,6 +144,23 @@ describe.skipIf(!URL_E2E)('Presupuestos (e2e)', () => {
     expect(lista.body.find((p: { id: string }) => p.id === id)).toMatchObject({ estado: 'aceptado', numeroVenta: 'V-000901', productos: 1 });
   });
 
+  it('en dólares con la cotización escrita a mano, y en reales con la de hoy', async () => {
+    const usd = await api().post('/presupuestos').set(PRO).send(cuerpo({ moneda: 'USD', cotizacion: 1000, descuento: 10_000 })).expect(201);
+    expect(usd.body).toMatchObject({ moneda: 'USD', cotizacion: 1000, cotizacionDe: 'Escrita a mano', total: 180_000, enMoneda: { subtotal: 190, descuento: 10, total: 180 } });
+    const link = await api().post(`/documentos/presupuesto/${usd.body.id}/link`).set(PRO).expect(201);
+    expect(link.body.mensaje).toContain('por US$ 180');
+    // Al editar sin tocar la cotización, se mantiene de dónde salió.
+    const e = await api().put(`/presupuestos/${usd.body.id}`).set(PRO).send(cuerpo({ moneda: 'USD', cotizacion: 1000, notas: 'otra nota' })).expect(200);
+    expect(e.body.cotizacionDe).toBe('Escrita a mano');
+
+    await db.query(`INSERT INTO cotizaciones_monedas (moneda, fecha, compra, venta) VALUES ('BRL', '2099-01-01', 250, 250) ON CONFLICT (moneda, fecha) DO NOTHING`);
+    const brl = await api().post('/presupuestos').set(PRO).send(cuerpo({ moneda: 'BRL', descuento: 0 })).expect(201);
+    expect(brl.body).toMatchObject({ moneda: 'BRL', cotizacion: 250, cotizacionDe: 'Banco Nación del 01/01/2099', enMoneda: { total: 760 } });
+    const pdf = await api().get(`/documentos/presupuesto/${brl.body.id}/pdf`).set(PRO).expect(200);
+    expect(pdf.headers['content-type']).toContain('application/pdf');
+    await db.query(`DELETE FROM cotizaciones_monedas WHERE fecha = '2099-01-01'`);
+  });
+
   it('un pendiente vencido se ve como vencido y se puede borrar', async () => {
     const r = await api().post('/presupuestos').set(PRO).send(cuerpo()).expect(201);
     await db.query(`UPDATE presupuestos SET valido_hasta = $1 WHERE id = $2`, [dias(-2), r.body.id]);

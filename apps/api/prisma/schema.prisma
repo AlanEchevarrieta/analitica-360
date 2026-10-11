@@ -1389,6 +1389,12 @@ model Presupuesto {
   estado        String    @default("pendiente") @db.VarChar(20)
   descuento     Decimal   @default(0) @db.Decimal(12, 2)
   notas         String?
+  /// Moneda en que se le muestra al cliente (los precios se guardan en pesos): ARS | USD | BRL | CLP.
+  moneda        String    @default("ARS") @db.VarChar(3)
+  /// Pesos por unidad de la moneda, fijada al guardar (null en pesos).
+  cotizacion    Decimal?  @db.Decimal(14, 4)
+  /// De dónde salió la cotización (ej. "Dólar blue del 09/10/2026" o "A mano").
+  cotizacionDe  String?   @map("cotizacion_de") @db.VarChar(80)
   /// La venta que salió del presupuesto (al aceptarlo).
   ventaId       String?   @unique @map("venta_id") @db.Uuid
   usuarioId     String    @map("usuario_id") @db.Uuid
@@ -1920,6 +1926,18 @@ model CotizacionDolar {
 
   @@id([casa, fecha])
   @@map("cotizaciones_dolar")
+}
+
+/// Otras monedas para los presupuestos (real, peso chileno): pesos por unidad, Banco Nación.
+model CotizacionMoneda {
+  /// BRL | CLP
+  moneda String   @db.VarChar(3)
+  fecha  DateTime @db.Date
+  compra Decimal  @db.Decimal(14, 4)
+  venta  Decimal  @db.Decimal(14, 4)
+
+  @@id([moneda, fecha])
+  @@map("cotizaciones_monedas")
 }
 
 /// Premio por recomendar: cuando la empresa recomendada hace su primer pago, la que la recomendó

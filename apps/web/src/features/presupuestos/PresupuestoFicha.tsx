@@ -13,7 +13,7 @@ import { DocumentoAcciones } from "@/features/documentos/DocumentoAcciones";
 import { formatoPesos } from "@/lib/formato";
 import { EstadoPresupuestoChip } from "./PresupuestosListado";
 import { PresupuestoForm } from "./PresupuestoForm";
-import { useAccionesPresupuesto, usePresupuesto, type PresupuestoFicha as Ficha } from "./use-presupuestos";
+import { formatoEnMoneda, useAccionesPresupuesto, usePresupuesto, type PresupuestoFicha as Ficha } from "./use-presupuestos";
 
 const dia = (f: string) => new Date(f.length === 10 ? `${f}T12:00:00` : f).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
 const error = (e: unknown) => toast.error(e instanceof Error ? e.message : "No se pudo hacer");
@@ -112,6 +112,14 @@ export function PresupuestoFicha({ id }: { id: string }) {
                 </>
               )}
               <span className="text-lg font-semibold tabular-nums">Total {formatoPesos(p.total)}</span>
+              {p.enMoneda && p.cotizacion && (
+                <span className="text-right">
+                  <span className="font-medium text-primary tabular-nums">Para el cliente: {formatoEnMoneda(p.enMoneda.total, p.moneda)}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    1 {p.moneda} = {formatoPesos(p.cotizacion)} · {p.cotizacionDe}
+                  </span>
+                </span>
+              )}
             </div>
             {p.notas && <p className="mt-3 whitespace-pre-line rounded-md bg-muted/50 p-2 text-sm">{p.notas}</p>}
           </CardContent>

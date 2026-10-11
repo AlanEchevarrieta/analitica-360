@@ -1,9 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, type OnModuleInit } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, ServiceUnavailableException, type OnModuleInit } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
+import { CotizacionesService, type MonedaPresupuesto } from '../cotizaciones/cotizaciones.service.js';
 import { DocumentosService } from '../documentos/documentos.service.js';
 import { TITULO, numeroDocumento } from '../documentos/documentos.util.js';
+import { DECIMALES_MONEDA, montosEnMoneda, NOMBRE_MONEDA, SIMBOLO_MONEDA } from './presupuestos.util.js';
 
 export interface ItemPresupuestoInput {
   productoId: string;
@@ -20,6 +22,10 @@ export interface PresupuestoInput {
   notas?: string | null;
   /** AAAA-MM-DD; si no viene, hoy + la validez de la configuración. */
   validoHasta?: string | null;
+  /** Moneda en que se le muestra al cliente (los precios van en pesos). */
+  moneda?: MonedaPresupuesto;
+  /** Pesos por unidad escritos a mano; si no viene, la cotización de hoy. */
+  cotizacion?: number | null;
 }
 
 export type EstadoPresupuesto = 'pendiente' | 'aceptado' | 'rechazado' | 'vencido';
@@ -43,6 +49,7 @@ export class PresupuestosService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly documentos: DocumentosService,
+    private readonly cotizaciones: CotizacionesService,
   ) {}
 
   onModuleInit() {
@@ -54,6 +61,9 @@ export class PresupuestosService implements OnModuleInit {
     const subtotal = items.reduce((s, i) => s + i.cantidad * i.precioUnitario, 0);
     const descuento = p.descuento.toNumber();
     const validoHasta = fecha(p.validoHasta);
+    const moneda = p.moneda as MonedaPresupuesto;
+    const cotizacion = p.cotizacion?.toNumber() ?? null;
+    const enMoneda = moneda !== 'ARS' && cotizacion ? montosEnMoneda(items, descuento, moneda, cotizacion) : null;
     return {
       id: p.id,
       numero: numeroDocumento('P', p.numero),
@@ -68,7 +78,26 @@ export class PresupuestosService implements OnModuleInit {
       total: Math.max(0, subtotal - descuento),
       notas: p.notas,
       ventaId: p.ventaId,
+      moneda,
+      cotizacion,
+      cotizacionDe: p.cotizacionDe,
+      /** Montos en la moneda del presupuesto (null en pesos). */
+      enMoneda: enMoneda && { subtotal: enMoneda.subtotal, descuento: enMoneda.descuento, total: enMoneda.total },
     };
+  }
+
+  /** La cotización que queda fija en el presupuesto: la escrita a mano o la de hoy. */
+  private async cotizacion(empresaId: string, input: PresupuestoInput, actual?: { moneda: string; cotizacion: Prisma.Decimal | null; cotizacionDe: string | null }) {
+    const moneda = input.moneda ?? 'ARS';
+    if (moneda === 'ARS') return { moneda, cotizacion: null, cotizacionDe: null };
+    if (input.cotizacion != null) {
+      // Si es la misma que ya tenía, se mantiene de dónde salió.
+      const igual = actual?.moneda === moneda && actual.cotizacion?.toNumber() === input.cotizacion;
+      return { moneda, cotizacion: new Prisma.Decimal(input.cotizacion), cotizacionDe: igual ? actual.cotizacionDe : 'Escrita a mano' };
+    }
+    const hoy = (await this.cotizaciones.monedas(empresaId))[moneda];
+    if (!hoy) throw new ServiceUnavailableException(`Todavía no tenemos la cotización en ${NOMBRE_MONEDA[moneda]}. Escribila a mano o probá en un rato.`);
+    return { moneda, cotizacion: new Prisma.Decimal(hoy.valor), cotizacionDe: hoy.de };
   }
 
   async listar(empresaId: string) {
@@ -153,6 +182,7 @@ export class PresupuestosService implements OnModuleInit {
   async crear(empresaId: string, usuarioId: string, input: PresupuestoInput) {
     const { renglones, clienteNombre } = await this.renglones(empresaId, input);
     const validoHasta = await this.validoHasta(empresaId, input.validoHasta);
+    const enMoneda = await this.cotizacion(empresaId, input);
     for (let intento = 0; intento < 3; intento++) {
       try {
         const p = await this.prisma.$transaction(async (tx) => {
@@ -161,6 +191,7 @@ export class PresupuestosService implements OnModuleInit {
             data: {
               empresaId, usuarioId, numero: (ultimo._max.numero ?? 0) + 1, clienteId: input.clienteId ?? null, clienteNombre,
               validoHasta: new Date(`${validoHasta}T00:00:00Z`), descuento: new Prisma.Decimal(input.descuento), notas: input.notas?.trim() || null,
+              ...enMoneda,
               items: { create: renglones },
             },
             include: { items: true },
@@ -183,11 +214,12 @@ export class PresupuestosService implements OnModuleInit {
     // Sin fecha nueva: se mantiene la que tenía si sigue vigente; si venció, se renueva con la validez de la configuración.
     const vigente = fecha(actual.validoHasta);
     const validoHasta = await this.validoHasta(empresaId, input.validoHasta ?? (vigente >= fechaHoyAR() ? vigente : null));
+    const enMoneda = await this.cotizacion(empresaId, input, actual);
     const p = await this.prisma.$transaction(async (tx) => {
       await tx.presupuestoItem.deleteMany({ where: { presupuestoId: id } });
       return tx.presupuesto.update({
         where: { id },
-        data: { clienteId: input.clienteId ?? null, clienteNombre, validoHasta: new Date(`${validoHasta}T00:00:00Z`), descuento: new Prisma.Decimal(input.descuento), notas: input.notas?.trim() || null, estado: 'pendiente', items: { create: renglones } },
+        data: { clienteId: input.clienteId ?? null, clienteNombre, validoHasta: new Date(`${validoHasta}T00:00:00Z`), descuento: new Prisma.Decimal(input.descuento), notas: input.notas?.trim() || null, estado: 'pendiente', ...enMoneda, items: { create: renglones } },
         include: { items: true },
       });
     });
@@ -226,20 +258,27 @@ export class PresupuestosService implements OnModuleInit {
 
   private async datosPdf(empresaId: string, id: string) {
     const p = await this.ficha(empresaId, id);
-    const resumen = p.descuento > 0 ? [{ etiqueta: 'Subtotal', monto: p.subtotal }, { etiqueta: 'Descuento', monto: -p.descuento }] : [];
     const dmy = (f: string) => f.split('-').reverse().join('/');
+    const m = montosEnMoneda(p.items, p.descuento, p.moneda, p.cotizacion);
+    const resumen = m.descuento > 0 ? [{ etiqueta: 'Subtotal', monto: m.subtotal }, { etiqueta: 'Descuento', monto: -m.descuento }] : [];
+    const otra = p.moneda !== 'ARS' && p.cotizacion != null;
+    const pesos = (n: number) => `$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     return {
       tipo: 'presupuesto' as const,
       titulo: TITULO.presupuesto,
       numero: p.numero,
       fecha: p.fecha,
-      extras: [`Válido hasta: ${dmy(p.validoHasta)}`],
+      extras: [`Válido hasta: ${dmy(p.validoHasta)}`, ...(otra ? [`Cotización: 1 ${SIMBOLO_MONEDA[p.moneda]} = ${pesos(p.cotizacion!)}`] : [])],
       cliente: { nombre: p.cliente?.nombre ?? p.clienteNombre, telefono: p.cliente?.telefono ?? null, email: p.cliente?.email ?? null },
-      items: p.items.map((i) => ({ descripcion: i.descripcion, cantidad: i.cantidad, precio: i.precioUnitario })),
+      items: p.items.map((i, n) => ({ descripcion: i.descripcion, cantidad: i.cantidad, precio: m.precios[n] })),
       resumen,
-      total: { etiqueta: 'Total', monto: p.total },
-      totalNumero: p.total,
-      detalles: ['Precios sujetos a disponibilidad de stock.'],
+      total: { etiqueta: 'Total', monto: m.total },
+      totalNumero: m.total,
+      ...(otra ? { simbolo: SIMBOLO_MONEDA[p.moneda], decimales: DECIMALES_MONEDA[p.moneda] } : {}),
+      detalles: [
+        ...(otra ? [`Equivale a ${pesos(p.total)} (pesos argentinos, ${p.cotizacionDe ?? 'cotización del presupuesto'}).`] : []),
+        'Precios sujetos a disponibilidad de stock.',
+      ],
       notas: p.notas,
     };
   }

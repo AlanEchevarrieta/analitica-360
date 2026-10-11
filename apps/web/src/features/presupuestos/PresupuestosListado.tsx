@@ -7,7 +7,7 @@ import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatoPesos } from "@/lib/formato";
 import { cn } from "@/lib/utils";
-import { COLOR_ESTADO, NOMBRE_ESTADO, usePresupuestos, type EstadoPresupuesto } from "./use-presupuestos";
+import { COLOR_ESTADO, formatoEnMoneda, NOMBRE_ESTADO, usePresupuestos, type EstadoPresupuesto } from "./use-presupuestos";
 
 const FILTROS: { valor: EstadoPresupuesto | "todos"; etiqueta: string }[] = [
   { valor: "todos", etiqueta: "Todos" },
@@ -93,7 +93,10 @@ export function PresupuestosListado() {
                   <EstadoPresupuestoChip estado={p.estado} />
                   {p.numeroVenta && <span className="ml-1 hidden text-xs text-muted-foreground sm:inline">→ {p.numeroVenta}</span>}
                 </TableCell>
-                <TableCell className="text-right font-medium tabular-nums">{formatoPesos(p.total)}</TableCell>
+                <TableCell className="text-right font-medium tabular-nums">
+                  {formatoPesos(p.total)}
+                  {p.enMoneda && <span className="block text-xs font-normal text-muted-foreground">{formatoEnMoneda(p.enMoneda.total, p.moneda)}</span>}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -230,7 +230,8 @@ export function NuevaVentaForm({ presupuestoId = null }: { presupuestoId?: strin
           )}
           {desdePresupuesto && (
             <p className="rounded-md bg-sky-500/10 p-2 text-sm">
-              Venta desde el presupuesto <span className="font-medium">{desdePresupuesto.numero}</span>, con sus precios.
+              Venta desde el presupuesto <span className="font-medium">{desdePresupuesto.numero}</span>, con sus precios
+              {desdePresupuesto.moneda !== "ARS" ? " en pesos (el presupuesto se mostró en otra moneda)." : "."}
               {lineas.some((l) => l.cantidad > l.stock) && <span className="block text-amber-600 dark:text-amber-400">Falta stock de algún producto: revisalo antes de registrar.</span>}
             </p>
           )}

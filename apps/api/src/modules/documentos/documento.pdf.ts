@@ -31,6 +31,8 @@ export interface DatosDocumentoPdf {
   pie: string | null;
   leyenda: string;
   simbolo: string;
+  /** Decimales de los montos (el peso chileno no usa). Por defecto 2. */
+  decimales?: number;
 }
 
 const dmy = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
@@ -44,7 +46,7 @@ export async function pdfDocumento(d: DatosDocumentoPdf): Promise<Buffer> {
   const listo = new Promise<Buffer>((ok) => doc.on('end', () => ok(Buffer.concat(partes))));
   const ancho = 595.28 - 72;
   const fin = 841.89 - 60;
-  const plata = (n: number) => `${n < 0 ? '-' : ''}${d.simbolo} ${Math.abs(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const plata = (n: number) => `${n < 0 ? '-' : ''}${d.simbolo} ${Math.abs(n).toLocaleString('es-AR', { minimumFractionDigits: d.decimales ?? 2, maximumFractionDigits: d.decimales ?? 2 })}`;
   const gris = '#6b7280';
   const tinta = '#111827';
 

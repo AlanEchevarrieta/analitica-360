@@ -8,6 +8,15 @@ import { CASAS_DOLAR, conversorDesde, EN_PESOS, type CasaDolar, type Conversor }
 /** Fuente pública y gratuita, con historia diaria (blue y oficial desde 2011, MEP desde 2018). */
 const FUENTE = 'https://api.argentinadatos.com/v1/cotizaciones/dolares';
 const CADA_MS = 3 * 3600_000;
+/** Real y peso chileno del Banco Nación (misma comunidad que la fuente del dólar; solo el valor del día). */
+const FUENTE_MONEDAS = 'https://dolarapi.com/v1/cotizaciones';
+export const OTRAS_MONEDAS = ['BRL', 'CLP'] as const;
+export type OtraMoneda = (typeof OTRAS_MONEDAS)[number];
+/** Monedas en que se puede mostrar un presupuesto. */
+export const MONEDAS_PRESUPUESTO = ['ARS', 'USD', 'BRL', 'CLP'] as const;
+export type MonedaPresupuesto = (typeof MONEDAS_PRESUPUESTO)[number];
+const NOMBRE_CASA: Record<CasaDolar, string> = { blue: 'Dólar blue', oficial: 'Dólar oficial', bolsa: 'Dólar MEP' };
+const dmy = (f: string) => f.split('-').reverse().join('/');
 
 export type Moneda = 'ARS' | 'USD';
 
@@ -61,7 +70,48 @@ export class CotizacionesService implements OnApplicationBootstrap, OnApplicatio
     }
     // Los reportes en dólares guardados pueden haber cambiado.
     if (total) this.cache.invalidar(null);
+    await this.sincronizarMonedas();
     return total;
+  }
+
+  /** Real y peso chileno de hoy (la fuente solo da el último valor: la historia se arma día a día). */
+  async sincronizarMonedas(): Promise<number> {
+    try {
+      const r = await fetch(FUENTE_MONEDAS, { headers: { 'User-Agent': 'Analitica360/1.0 (+https://analitica360.app)' }, signal: AbortSignal.timeout(30_000) });
+      if (!r.ok) throw new Error(`respondió ${r.status}`);
+      const filas = ((await r.json()) as { moneda?: string; compra?: number; venta?: number; fechaActualizacion?: string }[]).filter(
+        (f) => OTRAS_MONEDAS.includes(f.moneda as OtraMoneda) && Number(f.venta) > 0 && typeof f.fechaActualizacion === 'string',
+      );
+      for (const f of filas) {
+        // Fecha de Argentina (UTC−3) del último dato.
+        const fecha = new Date(Date.parse(f.fechaActualizacion!) - 3 * 3600_000).toISOString().slice(0, 10);
+        const datos = { compra: new Prisma.Decimal(Number(f.compra) || Number(f.venta)), venta: new Prisma.Decimal(Number(f.venta)) };
+        await this.prisma.cotizacionMoneda.upsert({ where: { moneda_fecha: { moneda: f.moneda!, fecha: new Date(`${fecha}T00:00:00Z`) } }, create: { moneda: f.moneda!, fecha: new Date(`${fecha}T00:00:00Z`), ...datos }, update: datos });
+      }
+      return filas.length;
+    } catch (e) {
+      this.logger.warn(`No se pudo actualizar el real y el peso chileno: ${(e as Error).message}`);
+      return 0;
+    }
+  }
+
+  /** Cuántos pesos vale hoy una unidad de cada moneda del presupuesto (el dólar es el que eligió la empresa). */
+  async monedas(empresaId: string): Promise<Record<Exclude<MonedaPresupuesto, 'ARS'>, { valor: number; fecha: string; de: string } | null>> {
+    const [dolar, otras] = await Promise.all([
+      this.hoy(empresaId),
+      Promise.all(OTRAS_MONEDAS.map((m) => this.prisma.cotizacionMoneda.findFirst({ where: { moneda: m }, orderBy: { fecha: 'desc' } }))),
+    ]);
+    const otra = (i: number) => {
+      const f = otras[i];
+      if (!f) return null;
+      const fecha = f.fecha.toISOString().slice(0, 10);
+      return { valor: f.venta.toNumber(), fecha, de: `Banco Nación del ${dmy(fecha)}` };
+    };
+    return {
+      USD: dolar.venta && dolar.fecha ? { valor: dolar.venta, fecha: dolar.fecha, de: `${NOMBRE_CASA[dolar.casa]} del ${dmy(dolar.fecha)}` } : null,
+      BRL: otra(0),
+      CLP: otra(1),
+    };
   }
 
   /** El dólar que eligió la empresa (Configuración fiscal). */

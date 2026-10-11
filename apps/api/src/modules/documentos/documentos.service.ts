@@ -41,7 +41,10 @@ export interface DocumentoArmado {
 }
 
 /** Arma las piezas de un documento (lo que el PDF necesita y a quién mandarlo). */
-export type ArmadorDocumento = (empresaId: string, id: string) => Promise<Omit<DatosDocumentoPdf, 'negocio' | 'pie' | 'leyenda' | 'simbolo'> & { tipo: TipoDocumento; totalNumero: number }>;
+export type ArmadorDocumento = (
+  empresaId: string,
+  id: string,
+) => Promise<Omit<DatosDocumentoPdf, 'negocio' | 'pie' | 'leyenda' | 'simbolo'> & { tipo: TipoDocumento; totalNumero: number; /** Otra moneda (presupuesto en dólares, reales…). */ simbolo?: string }>;
 
 /**
  * Documentos que no son factura: comprobante de venta y recibo de cobro (el
@@ -152,9 +155,10 @@ export class DocumentosService {
     const armador = this.armadores.get(tipo);
     if (!armador) throw new NotFoundException('Tipo de documento desconocido');
     const [datos, cabecera] = await Promise.all([armador(empresaId, id), this.negocio(empresaId)]);
-    const { tipo: _t, totalNumero, ...resto } = datos;
-    const pdf = await pdfDocumento({ ...resto, negocio: cabecera.negocio, pie: cabecera.pie, leyenda: LEYENDA_NO_FACTURA, simbolo: cabecera.simbolo });
-    return { tipo, numero: datos.numero, archivo: nombreArchivo(tipo, datos.numero), pdf, total: totalNumero, simbolo: cabecera.simbolo, negocio: cabecera.negocio.nombre, emailNegocio: cabecera.negocio.email, cliente: datos.cliente };
+    const { tipo: _t, totalNumero, simbolo: otraMoneda, ...resto } = datos;
+    const simbolo = otraMoneda ?? cabecera.simbolo;
+    const pdf = await pdfDocumento({ ...resto, negocio: cabecera.negocio, pie: cabecera.pie, leyenda: LEYENDA_NO_FACTURA, simbolo });
+    return { tipo, numero: datos.numero, archivo: nombreArchivo(tipo, datos.numero), pdf, total: totalNumero, simbolo, negocio: cabecera.negocio.nombre, emailNegocio: cabecera.negocio.email, cliente: datos.cliente };
   }
 
   private async simbolo(empresaId: string) {

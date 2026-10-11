@@ -16,6 +16,12 @@ export class CotizacionesController {
   hoy(@CurrentEmpresa() empresa: EmpresaContext) {
     return this.cotizaciones.hoy(empresa.id);
   }
+
+  /** Dólar (el de la empresa), real y peso chileno de hoy, para los presupuestos en otra moneda. */
+  @Get('monedas')
+  monedas(@CurrentEmpresa() empresa: EmpresaContext) {
+    return this.cotizaciones.monedas(empresa.id);
+  }
 }
 
 @Global()
