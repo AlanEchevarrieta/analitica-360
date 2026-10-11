@@ -48,7 +48,7 @@ export interface RegistrarDevolucionInput {
   items: { productoId: string; varianteId: string | null; cantidad: number; precioUnitario: number; tipo: "devuelto" | "entregado" }[];
 }
 
-const CLAVES_VENTA = ["venta", "ventas", "productos", "dashboard", "ganancia-productos", "devoluciones"];
+const CLAVES_VENTA = ["venta", "ventas", "productos", "dashboard", "ganancia-productos", "devoluciones", "documentos"];
 
 export function useVenta(id: string) {
   const api = useApiFetch();

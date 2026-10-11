@@ -10,5 +10,7 @@ import { PrismaVentasRepository } from './prisma-ventas.repository.js';
     VentasService,
     { provide: VENTAS_REPOSITORY, useClass: PrismaVentasRepository },
   ],
+  // Documentos arma el comprobante de venta con la misma ficha.
+  exports: [VentasService],
 })
 export class VentasModule {}

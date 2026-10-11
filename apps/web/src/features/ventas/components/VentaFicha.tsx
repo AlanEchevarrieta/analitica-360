@@ -12,6 +12,7 @@ import { aNumero } from "@/lib/numeros";
 import { useAccionesDevolucion, useAccionesVenta, useDevoluciones, useVenta } from "../hooks/use-venta";
 import { etiquetaPago, FORMAS_PAGO } from "../types/nueva-venta";
 import { DevolucionForm } from "./DevolucionForm";
+import { ComprobanteVenta } from "@/features/documentos/ComprobanteVenta";
 import { FacturaVenta } from "@/features/facturacion/FacturaVenta";
 
 const formaPago = etiquetaPago;
@@ -148,6 +149,8 @@ export function VentaFichaVista({ id }: { id: string }) {
       </div>
 
       {devolviendo && <DevolucionForm venta={v} onHecho={() => setDevolviendo(false)} />}
+
+      <ComprobanteVenta ventaId={v.id} numero={v.numeroVenta} anulada={v.anulada} />
 
       <FacturaVenta ventaId={v.id} anulada={v.anulada} />
 

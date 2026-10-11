@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, rm, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -29,6 +29,14 @@ export class AlmacenArchivosService {
     await mkdir(join(carpeta, empresaId), { recursive: true });
     await writeFile(join(carpeta, clave), contenido);
     return { url: `${this.urlPublica()}/${clave}`, clave };
+  }
+
+  /** Lee un archivo de esta empresa a partir de su URL pública (null si no es nuestro o no existe). */
+  async leerDeUrl(empresaId: string, url: string | null): Promise<Buffer | null> {
+    const clave = url?.split('/').slice(-2).join('/');
+    if (!clave?.startsWith(`${empresaId}/`) || !/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|webp)$/.test(clave)) return null;
+    const carpeta = AlmacenArchivosService.carpetaLocal(this.config.get('ARCHIVOS_DIR', { infer: true }));
+    return readFile(join(carpeta, clave)).catch(() => null);
   }
 
   async borrar(clave: string): Promise<void> {

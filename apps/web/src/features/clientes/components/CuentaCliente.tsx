@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { InputPlata } from "@/components/shared/input-plata";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DocumentoAcciones } from "@/features/documentos/DocumentoAcciones";
 import { FORMAS_PAGO, etiquetaPago } from "@/features/ventas/types/nueva-venta";
 import { useAcceso } from "@/hooks/use-acceso";
 import { formatoPesos } from "@/lib/formato";
@@ -31,6 +32,7 @@ export function CuentaCliente({ clienteId }: { clienteId: string }) {
   const [monto, setMonto] = useState("");
   const [forma, setForma] = useState("efectivo");
   const [dia, setDia] = useState(hoyAR());
+  const [recibo, setRecibo] = useState<string | null>(null);
   // Sin cuenta corriente (nunca le vendió a cuenta ni con seña): no se muestra nada.
   if (!data || (data.movimientos.length === 0 && data.cobros.length === 0)) return null;
   const n = Number(monto.replace(",", "."));
@@ -146,6 +148,11 @@ export function CuentaCliente({ clienteId }: { clienteId: string }) {
                   {etiquetaPago(c.formaPago)}
                   {c.ventas.length > 0 && ` · ${c.ventas.join(", ")}`}
                 </span>
+                {!c.anulado && (
+                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" aria-expanded={recibo === c.id} onClick={() => setRecibo(recibo === c.id ? null : c.id)}>
+                    {recibo === c.id ? "Cerrar" : "Recibo"}
+                  </Button>
+                )}
                 {c.anulado ? (
                   <span className="text-xs text-destructive">anulado</span>
                 ) : (
@@ -162,6 +169,11 @@ export function CuentaCliente({ clienteId }: { clienteId: string }) {
                       Anular
                     </Button>
                   )
+                )}
+                {recibo === c.id && (
+                  <div className="basis-full pb-2">
+                    <DocumentoAcciones tipo="recibo" id={c.id} nombre="Recibo" />
+                  </div>
                 )}
               </div>
             ))}

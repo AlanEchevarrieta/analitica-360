@@ -18,6 +18,7 @@ import { FlujoVentasConfig, InventarioPedidosConfig } from "./OperacionConfig";
 import { FiscalConfig, RemitenteConfig } from "./RemitenteFiscalConfig";
 import { AuditoriaConfig } from "./AuditoriaConfig";
 import { CuponesTiendaConfig } from "./CuponesTiendaConfig";
+import { DocumentosConfig } from "./DocumentosConfig";
 import { InformesConfig } from "./InformesConfig";
 import { FacturaElectronicaConfig } from "@/features/facturacion/FacturaElectronicaConfig";
 import { EnviosConfig } from "@/features/envios/EnviosConfig";
@@ -69,7 +70,8 @@ const GRUPOS: { titulo: string; opciones: Opcion[] }[] = [
   {
     titulo: "Mi negocio",
     opciones: [
-      { clave: "remitente", icono: "📬", titulo: "Datos del remitente", subtitulo: "Quién figura en el remito", panel: (c) => <RemitenteConfig config={c} /> },
+      { clave: "remitente", icono: "📬", titulo: "Datos del remitente", subtitulo: "Quién figura en el remito y en los documentos", panel: (c) => <RemitenteConfig config={c} /> },
+      { clave: "documentos", icono: "📄", titulo: "Documentos", subtitulo: "Logo y textos del comprobante, el recibo y el presupuesto", panel: () => <DocumentosConfig /> },
       { clave: "fiscal", icono: "🌎", titulo: "Configuración fiscal", subtitulo: "País, moneda e IVA", panel: (c) => <FiscalConfig config={c} /> },
       { clave: "factura", icono: "🧾", titulo: "Factura electrónica", subtitulo: "Factura C de ARCA desde cada venta", panel: () => <FacturaElectronicaConfig /> },
       { clave: "informes", icono: "📧", titulo: "Informes por email", subtitulo: "El resumen de la semana y del mes, en PDF, a tu email", panel: () => <InformesConfig /> },
