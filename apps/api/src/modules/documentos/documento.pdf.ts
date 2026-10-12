@@ -19,7 +19,9 @@ export interface DatosDocumentoPdf {
   fecha: string;
   /** Líneas extra debajo de la fecha (ej. "Válido hasta: 26/10/2026"). */
   extras: string[];
-  cliente: { nombre: string | null; telefono: string | null; email: string | null } | null;
+  cliente: { nombre: string | null; telefono: string | null; email: string | null; /** Renglones extra (dirección de entrega, CUIT…). */ extra?: string[] } | null;
+  /** Título del bloque del destinatario: "Cliente" (por defecto), "Proveedor", "Entregar a". */
+  etiquetaCliente?: string;
   /** Sin ítems (recibo): se muestra solo el resumen. */
   items: { descripcion: string; cantidad: number; precio: number }[] | null;
   /** Renglones antes del total (subtotal, descuento, envío, seña…). */
@@ -77,10 +79,12 @@ export async function pdfDocumento(d: DatosDocumentoPdf): Promise<Buffer> {
 
   // Cliente
   if (d.cliente) {
-    doc.fillColor(gris).font('Helvetica').fontSize(8).text('CLIENTE', 36, y);
+    doc.fillColor(gris).font('Helvetica').fontSize(8).text((d.etiquetaCliente ?? 'Cliente').toUpperCase(), 36, y);
     doc.fillColor(tinta).font('Helvetica-Bold').fontSize(10).text(d.cliente.nombre || 'Consumidor final', 36, y + 11);
     const contacto = [d.cliente.telefono, d.cliente.email].filter(Boolean).join(' · ');
-    if (contacto) doc.font('Helvetica').fontSize(8.5).fillColor(gris).text(contacto);
+    doc.font('Helvetica').fontSize(8.5).fillColor(gris);
+    for (const l of d.cliente.extra ?? []) doc.text(l, { width: ancho });
+    if (contacto) doc.text(contacto);
     y = doc.y + 14;
   }
 

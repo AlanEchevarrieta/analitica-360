@@ -16,5 +16,7 @@ import { PrismaOrdenesCompraRepository } from './prisma-ordenes-compra.repositor
     OrdenesCompraService,
     { provide: ORDENES_COMPRA_REPOSITORY, useClass: PrismaOrdenesCompraRepository },
   ],
+  // Documentos arma el PDF de la orden de compra con la misma ficha.
+  exports: [OrdenesCompraService],
 })
 export class ComprasModule {}

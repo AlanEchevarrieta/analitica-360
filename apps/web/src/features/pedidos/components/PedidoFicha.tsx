@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { DocumentoAcciones } from "@/features/documentos/DocumentoAcciones";
 import { MessageCircle, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { buttonVariants } from "@/components/ui/button";
@@ -162,8 +163,12 @@ export function PedidoFichaVista({ id }: { id: string }) {
                   </a>
                 )}
                 <Link href={`/pedidos/${p.id}/remito`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-                  <Printer aria-hidden /> Remito
+                  <Printer aria-hidden /> Imprimir remito
                 </Link>
+              </div>
+              <div className="flex flex-col gap-2 border-t pt-3">
+                <span className="text-xs font-medium text-muted-foreground">Remito en PDF para el cliente</span>
+                <DocumentoAcciones tipo="remito" id={p.id} nombre={`Remito ${p.numeroPedido}`} emailCliente={p.clienteEmail} />
               </div>
             </CardContent>
           </Card>

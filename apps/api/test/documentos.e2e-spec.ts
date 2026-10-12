@@ -31,6 +31,9 @@ describe.skipIf(!URL_E2E)('Documentos: comprobante y recibo (e2e)', () => {
   const venta = randomUUID();
   const ventaOtra = randomUUID();
   const cobros = [randomUUID(), randomUUID(), randomUUID()];
+  const producto = randomUUID();
+  const proveedor = randomUUID();
+  const pedido = randomUUID();
   const DUENO = { Authorization: `Bearer user_dcd_${sufijo}|org_dc_${sufijo}` };
   const VENDEDOR = { Authorization: `Bearer user_dcv_${sufijo}|org_dc_${sufijo}` };
   const AJENO = { Authorization: `Bearer user_dco_${sufijo}|org_dco_${sufijo}` };
@@ -63,8 +66,10 @@ describe.skipIf(!URL_E2E)('Documentos: comprobante y recibo (e2e)', () => {
     await usuario(otroDueno, otra, `user_dco_${sufijo}`, 'dueno');
     await suscripcionActiva(db, otra, 'basico');
 
-    const producto = randomUUID();
     await db.query(`INSERT INTO productos (id, empresa_id, nombre) VALUES ($1, $2, 'Mate imperial')`, [producto, empresa]);
+    await db.query(`INSERT INTO proveedores (id, empresa_id, nombre, cuit, telefono) VALUES ($1, $2, 'Calabazas del Norte', '30712345678', '3874001122')`, [proveedor, empresa]);
+    await db.query(`INSERT INTO pedidos (id, empresa_id, numero_pedido, cliente_nombre, cliente_telefono, direccion_envio) VALUES ($1, $2, 'P-000045', 'Lucía Gómez', '2615551234', 'San Martín 1200, Godoy Cruz')`, [pedido, empresa]);
+    await db.query(`INSERT INTO pedidos_items (id, pedido_id, producto_id, cantidad, precio_unitario) VALUES ($1, $2, $3, 2, 27000)`, [randomUUID(), pedido, producto]);
     await db.query(`INSERT INTO clientes (id, empresa_id, nombre, email, telefono) VALUES ($1, $2, 'Lucía Gómez', $3, '261 555-1234')`, [cliente, empresa, `lucia_${sufijo}@e2e.test`]);
     // Venta de $50.000 con descuento de $4.000, señada: debe $20.000.
     await db.query(
@@ -165,6 +170,21 @@ describe.skipIf(!URL_E2E)('Documentos: comprobante y recibo (e2e)', () => {
     expect(e.reply_to).toBe(`ventas_${sufijo}@e2e.test`);
     expect(e.attachments[0].filename).toBe('comprobante-V-000077.pdf');
     await api().post(`/documentos/recibo/${cobros[0]}/email`).set(DUENO).send({ email: 'no-es-un-email' }).expect(400);
+  });
+
+  it('orden de compra al proveedor y remito del pedido', async () => {
+    const oc = await api().post('/ordenes-compra').set(DUENO).send({ proveedorId: proveedor, items: [{ productoId: producto, cantidadPedida: 10, precioUnitario: 9000 }] }).expect(201);
+    const pdf = await binario(api().get(`/documentos/orden_compra/${oc.body.id}/pdf`).set(DUENO)).expect(200);
+    esPdf(pdf);
+    expect(pdf.headers['content-disposition']).toContain(`orden-de-compra-${oc.body.numeroOc}.pdf`);
+    const l = await api().post(`/documentos/orden_compra/${oc.body.id}/link`).set(DUENO).expect(201);
+    expect(l.body.telefono).toBe('5493874001122');
+    expect(l.body.mensaje).toContain(`la orden de compra ${oc.body.numeroOc}`);
+
+    esPdf(await binario(api().get(`/documentos/remito/${pedido}/pdf`).set(DUENO)).expect(200));
+    const r = await api().post(`/documentos/remito/${pedido}/link`).set(DUENO).expect(201);
+    expect(r.body.mensaje).toContain('el remito de tu pedido P-000045');
+    await api().get(`/documentos/remito/${pedido}/pdf`).set(AJENO).expect(404);
   });
 
   it('solo el dueño cambia la configuración', async () => {
