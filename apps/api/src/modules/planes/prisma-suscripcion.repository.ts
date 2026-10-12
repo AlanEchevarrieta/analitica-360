@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
+import { fechaHoyAR } from '../analytics/analytics.util.js';
 import type {
   EstadoSuscripcion,
   FilaAdminSuscripcion,
@@ -13,9 +14,14 @@ import { ordenarPlanesAdmin } from './planes.util.js';
 
 const PLANES_QUE_ACTUALIZAN_EMPRESA = ['starter', 'basico', 'pro', 'premium', 'business'];
 
+/** Día de Argentina (columnas DATE): con new Date() después de las 21 quedaba el día siguiente. */
+function hoyAR(): Date {
+  return new Date(`${fechaHoyAR()}T00:00:00Z`);
+}
+
 function masDias(dias: number): Date {
-  const d = new Date();
-  d.setDate(d.getDate() + dias);
+  const d = hoyAR();
+  d.setUTCDate(d.getUTCDate() + dias);
   return d;
 }
 
@@ -70,7 +76,7 @@ export class PrismaSuscripcionRepository implements SuscripcionRepository {
         const plan = await tx.plan.findFirst({ where: { nombre: { equals: 'starter', mode: 'insensitive' } }, orderBy: { createdAt: 'asc' } });
         if (plan) {
           await tx.suscripcion.create({
-            data: { empresaId, planId: plan.id, estado: 'periodo_prueba', fechaInicio: new Date(), fechaVencimiento: masDias(14) },
+            data: { empresaId, planId: plan.id, estado: 'periodo_prueba', fechaInicio: hoyAR(), fechaVencimiento: masDias(14) },
           });
         }
       }
@@ -98,7 +104,7 @@ export class PrismaSuscripcionRepository implements SuscripcionRepository {
     if (!plan) throw new Error('No se encontró el plan starter');
 
     await this.prisma.suscripcion.create({
-      data: { empresaId, planId: plan.id, estado: 'periodo_prueba', fechaInicio: new Date(), fechaVencimiento: masDias(14) },
+      data: { empresaId, planId: plan.id, estado: 'periodo_prueba', fechaInicio: hoyAR(), fechaVencimiento: masDias(14) },
     });
 
     const aceptacionExistente = await this.prisma.aceptacionTerminos.findFirst({
@@ -163,7 +169,7 @@ export class PrismaSuscripcionRepository implements SuscripcionRepository {
     await this.prisma.$transaction(async (tx) => {
       const ultima = await tx.suscripcion.findFirst({ where: { empresaId }, orderBy: { createdAt: 'desc' } });
       if (!ultima) {
-        await tx.suscripcion.create({ data: { empresaId, planId, estado, fechaInicio: new Date(), fechaVencimiento: vencimiento } });
+        await tx.suscripcion.create({ data: { empresaId, planId, estado, fechaInicio: hoyAR(), fechaVencimiento: vencimiento } });
       } else {
         await tx.suscripcion.update({ where: { id: ultima.id }, data: { planId, fechaVencimiento: vencimiento, estado } });
       }

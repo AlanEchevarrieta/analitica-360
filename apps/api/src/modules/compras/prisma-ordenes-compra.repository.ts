@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
+import { fechaHoyAR } from '../analytics/analytics.util.js';
 import { aplicarCostoPromedio } from '../inventario/costo-promedio.js';
 import type {
   EstadoOc,
@@ -14,6 +15,7 @@ import type {
   ResultadoGuardarOc,
   ResultadoRecepcionOc,
 } from './ordenes-compra.repository.js';
+import { ESTADOS_EDITABLES } from './ordenes-compra.repository.js';
 
 const includeCabecera = {
   proveedor: { select: { nombre: true, nombreComercial: true, telefono: true, email: true, cuit: true, nombreVendedor: true } },
@@ -141,10 +143,11 @@ export class PrismaOrdenesCompraRepository implements OrdenesCompraRepository {
           // Mismo formato que el legacy (OC-000001).
           numeroOc: `OC-${String(numeracion.ultimo).padStart(6, '0')}`,
           proveedorId: input.proveedorId,
-          fechaEmision: new Date(),
+          // Día de Argentina (con new Date() después de las 21 quedaba el día siguiente).
+          fechaEmision: new Date(`${fechaHoyAR()}T00:00:00Z`),
           fechaEntregaEstimada: input.fechaEntregaEstimada,
           notas: input.notas,
-          estado: input.estado,
+          estado: input.estado ?? 'borrador',
           total,
           items: {
             create: input.items.map((i) => ({
@@ -163,8 +166,10 @@ export class PrismaOrdenesCompraRepository implements OrdenesCompraRepository {
 
   async actualizar(empresaId: string, id: string, input: GuardarOrdenCompraInput): Promise<ResultadoGuardarOc> {
     return this.prisma.$transaction(async (tx) => {
-      const existente = await tx.ordenCompra.findFirst({ where: { id, empresaId } });
+      const existente = await tx.ordenCompra.findFirst({ where: { id, empresaId, deletedAt: null } });
       if (!existente) return { ok: false, motivo: 'no_encontrada' };
+      // Recibida (aunque sea en parte) o cancelada: rehacer los ítems borraría lo recibido.
+      if (!ESTADOS_EDITABLES.includes(existente.estado as EstadoOc)) return { ok: false, motivo: 'no_editable' };
 
       const motivo = await this.validarReferencias(tx, empresaId, input.proveedorId, input.items);
       if (motivo) return { ok: false, motivo };
@@ -206,10 +211,13 @@ export class PrismaOrdenesCompraRepository implements OrdenesCompraRepository {
     usuarioId: string,
     id: string,
     cantidades: Record<string, number>,
+    ubicacionDestino: string | null = null,
   ): Promise<ResultadoRecepcionOc> {
     return this.prisma.$transaction(async (tx) => {
       const orden = await tx.ordenCompra.findFirst({ where: { id, empresaId, deletedAt: null }, include: includeFicha });
       if (!orden) return { ok: false, motivo: 'no_encontrada' };
+      if (orden.estado === 'cancelada') return { ok: false, motivo: 'cancelada' };
+      if (ubicacionDestino && !(await tx.ubicacion.findFirst({ where: { empresaId, nombre: ubicacionDestino } }))) return { ok: false, motivo: 'ubicacion_invalida' };
       const ficha = this.toFicha(orden);
 
       const lote = ficha.items
@@ -229,7 +237,7 @@ export class PrismaOrdenesCompraRepository implements OrdenesCompraRepository {
           proveedorNombre: ficha.proveedorNombre,
           proveedorId: ficha.proveedorId,
           ordenCompraId: ficha.id,
-          fecha: new Date(),
+          fecha: new Date(`${fechaHoyAR()}T00:00:00Z`),
           total,
           totalReal: total,
           notas: `Generada desde ${ficha.numeroOc}`,
@@ -270,6 +278,7 @@ export class PrismaOrdenesCompraRepository implements OrdenesCompraRepository {
             cantidad: qty,
             signo: 1,
             costoUnitario: item.precioUnitario,
+            ubicacionDestino,
             referenciaId: compra.id,
           },
         });

@@ -26,6 +26,7 @@ const usePuedeCompartirArchivos = () => useSyncExternalStore(sinSuscripcion, pue
  * mandar por email. Sirve para el comprobante de venta, el recibo y el presupuesto.
  */
 export function DocumentoAcciones({ tipo, id, nombre, emailCliente, conEmail = true }: { tipo: TipoDocumento; id: string; nombre: string; emailCliente?: string | null; conEmail?: boolean }) {
+  const aQuien = tipo === "orden_compra" ? "del proveedor" : "del cliente";
   const { getToken } = useAuth();
   const { link, email } = useAccionesDocumentos();
   const [para, setPara] = useState<string | null>(null);
@@ -63,7 +64,7 @@ export function DocumentoAcciones({ tipo, id, nombre, emailCliente, conEmail = t
         onSuccess: (l) => {
           if (ventana) ventana.location.href = l.whatsapp;
           else window.location.href = l.whatsapp;
-          if (!l.telefono) toast.info("El cliente no tiene teléfono cargado: elegí el contacto en WhatsApp");
+          if (!l.telefono) toast.info(`No hay teléfono ${aQuien} cargado: elegí el contacto en WhatsApp`);
         },
         onError: (e) => {
           ventana?.close();
@@ -105,7 +106,8 @@ export function DocumentoAcciones({ tipo, id, nombre, emailCliente, conEmail = t
       </div>
       {conEmail && (
         <div className="flex flex-wrap items-center gap-2">
-          <Input type="email" aria-label={`Email para mandar ${nombre}`} placeholder="email del cliente" className="h-8 max-w-64" value={para ?? emailCliente ?? ""} onChange={(e) => setPara(e.target.value)} />
+          <Input type="email" aria-label={`Email para mandar ${nombre}`} placeholder={`email ${aQuien}`}
+            title="Si lo dejás vacío, se usa el email que tiene cargado" className="h-8 max-w-64" value={para ?? emailCliente ?? ""} onChange={(e) => setPara(e.target.value)} />
           <Button size="sm" variant="outline" disabled={email.isPending} onClick={mandar}>
             <Mail className="size-4" /> {email.isPending ? "Mandando…" : "Mandar por email"}
           </Button>

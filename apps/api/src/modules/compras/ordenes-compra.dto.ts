@@ -12,7 +12,8 @@ export const guardarOrdenCompraSchema = z.object({
   proveedorId: z.uuid().nullable().optional(),
   fechaEntregaEstimada: z.string().trim().nullable().optional(),
   notas: z.string().trim().nullable().optional(),
-  estado: z.enum(['borrador', 'enviada']).default('borrador'),
+  /** Al crear, borrador si no viene; al editar, sin estado se mantiene el que tenía. */
+  estado: z.enum(['borrador', 'enviada']).optional(),
   items: z.array(itemOcSchema).min(1, 'Agregá al menos un producto'),
 });
 export type GuardarOrdenCompraInput = z.infer<typeof guardarOrdenCompraSchema>;
@@ -24,6 +25,7 @@ export type ActualizarEstadoOcInput = z.infer<typeof actualizarEstadoOcSchema>;
 
 export const registrarRecepcionOcSchema = z.object({
   cantidades: z.record(z.uuid(), z.number().nonnegative()),
+  ubicacionDestino: z.string().trim().max(120).nullable().optional(),
 });
 export type RegistrarRecepcionOcInput = z.infer<typeof registrarRecepcionOcSchema>;
 

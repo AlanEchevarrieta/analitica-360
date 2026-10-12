@@ -43,11 +43,15 @@ export interface GuardarOrdenCompraInput {
   proveedorId: string | null;
   fechaEntregaEstimada: string | null;
   notas: string | null;
-  estado: 'borrador' | 'enviada';
+  /** Al editar, sin estado se mantiene el que tenía. */
+  estado?: 'borrador' | 'enviada';
   items: ItemOcInput[];
 }
 
-export type MotivoRechazoOc = 'proveedor_invalido' | 'producto_invalido' | 'variante_invalida';
+export type MotivoRechazoOc = 'proveedor_invalido' | 'producto_invalido' | 'variante_invalida' | 'no_editable';
+
+/** Se puede editar (proveedor, productos, cantidades) solo mientras no llegó nada. */
+export const ESTADOS_EDITABLES: readonly EstadoOc[] = ['borrador', 'enviada', 'confirmada'];
 
 export type ResultadoGuardarOc =
   | { ok: true; orden: OrdenCompraFicha }
@@ -55,7 +59,7 @@ export type ResultadoGuardarOc =
 
 export type ResultadoRecepcionOc =
   | { ok: true; orden: OrdenCompraFicha }
-  | { ok: false; motivo: 'no_encontrada' | 'sin_cantidades' };
+  | { ok: false; motivo: 'no_encontrada' | 'sin_cantidades' | 'ubicacion_invalida' | 'cancelada' };
 
 export const ORDENES_COMPRA_REPOSITORY = Symbol('ORDENES_COMPRA_REPOSITORY');
 
@@ -79,5 +83,7 @@ export interface OrdenesCompraRepository {
     usuarioId: string,
     id: string,
     cantidades: Record<string, number>,
+    /** A qué ubicación entra la mercadería (nombre, como en las compras). */
+    ubicacionDestino?: string | null,
   ): Promise<ResultadoRecepcionOc>;
 }

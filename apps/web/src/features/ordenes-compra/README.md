@@ -1,6 +1,6 @@
 # features/ordenes-compra
 
-Placeholder. Se puebla en Fase 5 del plan de reescritura: componentes UI en
-`components/`, custom hooks de TanStack Query en `hooks/`, cliente HTTP
-contra apps/api en `api/`, tipos (reusando `@analitica360/shared-types`
-cuando aplique) en `types/`.
+Órdenes de compra a proveedores (Compras → Órdenes de compra): alta y edición,
+estados (borrador → enviada → confirmada), recepción en partes (suma stock,
+costo promedio y crea la compra) y el PDF para mandarla por WhatsApp o email
+(features/documentos). La API está en apps/api/src/modules/compras.
