@@ -12,6 +12,7 @@ import {
   Target,
   ClipboardList,
   Factory,
+  FolderOpen,
   Gift,
   Hammer,
   Home,
@@ -41,6 +42,7 @@ import {
 } from "@/components/ui/sidebar";
 import { SelectorTema } from "@/components/shared/selector-tema";
 import type { ModuloClave } from "@/lib/rol";
+import { useRol } from "@/hooks/use-rol";
 import { useSuscripcion } from "@/hooks/use-suscripcion";
 import { useTicketsNoLeidos } from "@/hooks/use-tickets-no-leidos";
 import { useEsAdmin } from "@/features/admin/hooks/use-admin";
@@ -92,6 +94,7 @@ export function AppSidebar() {
   const verSoporte = enTrial || true;
 
   const plan = usePlan();
+  const rol = useRol();
   const activo = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
@@ -174,6 +177,16 @@ export function AppSidebar() {
                 {!plan.incluye("objetivos") && <CandadoPlan funcion="objetivos" />}
               </SidebarMenuButton>
             </SidebarMenuItem>
+            {/* Contratos y facturas pueden ser sensibles: solo el dueño y el contador (igual que la API). */}
+            {(rol === "dueno" || rol === "contador") && (
+              <SidebarMenuItem>
+                <SidebarMenuButton render={<Link href="/documentos" />} isActive={activo("/documentos")} tooltip="Documentos" className={plan.incluye("archivo") ? undefined : "text-muted-foreground"}>
+                  <FolderOpen />
+                  <span>Documentos</span>
+                  {!plan.incluye("archivo") && <CandadoPlan funcion="archivo" />}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
           </SidebarMenu>
         </SidebarGroup>
 

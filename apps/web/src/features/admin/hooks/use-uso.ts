@@ -63,6 +63,7 @@ const PANTALLAS: Record<string, string> = {
   "/ventas/:id": "Detalle de venta",
   "/ventas/devoluciones": "Devoluciones",
   "/ventas/presupuestos": "Presupuestos",
+  "/documentos": "Documentos (archivo)",
   "/ventas/presupuestos/nuevo": "Nuevo presupuesto",
   "/ventas/presupuestos/:id": "Ficha de presupuesto",
   "/productos": "Productos",

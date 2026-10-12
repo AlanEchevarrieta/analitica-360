@@ -14,6 +14,7 @@ import { TIPOS_INTERACCION, linkWhatsApp, useAccionesClientes, useCliente } from
 import { ClienteForm } from "./ClienteForm";
 import { CuentaCliente } from "./CuentaCliente";
 import { usePlan } from "@/hooks/use-plan";
+import { DocumentosAdjuntos } from "@/features/archivo/DocumentosAdjuntos";
 
 export function ClienteFichaVista({ id }: { id: string }) {
   const { data: c, isPending, isError, error, refetch } = useCliente(id);
@@ -70,6 +71,8 @@ export function ClienteFichaVista({ id }: { id: string }) {
       )}
 
       {plan.disponible("cuenta_corriente") && <CuentaCliente clienteId={c.id} />}
+
+      <DocumentosAdjuntos entidadTipo="cliente" entidadId={c.id} categoriaInicial="contrato" />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

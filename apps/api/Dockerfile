@@ -47,13 +47,13 @@ FROM node:24-bookworm-slim AS runtime
 RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
 # Sin npm, npx, yarn ni corepack: la app arranca con node y así no arrastran vulnerabilidades (Trivy).
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
-ENV NODE_ENV=production PORT=3001 ARCHIVOS_DIR=/data/archivos
+ENV NODE_ENV=production PORT=3001 ARCHIVOS_DIR=/data/archivos ARCHIVOS_PRIVADOS_DIR=/data/documentos
 WORKDIR /app
 COPY --from=prod-deps --chown=node:node /out ./
-RUN mkdir -p /data/archivos && chown -R node:node /data
+RUN mkdir -p /data/archivos /data/documentos && chown -R node:node /data
 USER node
 EXPOSE 3001
-VOLUME ["/data/archivos"]
+VOLUME ["/data/archivos", "/data/documentos"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3001)).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "dist/main.js"]

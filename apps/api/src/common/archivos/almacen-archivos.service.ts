@@ -46,10 +46,40 @@ export class AlmacenArchivosService {
     await unlink(join(carpeta, clave)).catch(() => {});
   }
 
-  /** Borra todas las fotos y logos de una empresa (baja de la cuenta). */
+  /** Borra todas las fotos, logos y documentos privados de una empresa (baja de la cuenta). */
   async borrarEmpresa(empresaId: string): Promise<void> {
     if (!/^[0-9a-f-]{36}$/.test(empresaId)) return;
     const carpeta = AlmacenArchivosService.carpetaLocal(this.config.get('ARCHIVOS_DIR', { infer: true }));
     await rm(join(carpeta, empresaId), { recursive: true, force: true });
+    await rm(join(this.carpetaPrivada(), empresaId), { recursive: true, force: true });
+  }
+
+  // ---- Documentos privados (contratos, facturas de proveedores…) ----
+  // Van a otra carpeta que NO se publica en /archivos: solo se leen con sesión, desde la API.
+
+  private carpetaPrivada() {
+    return resolve(this.config.get('ARCHIVOS_PRIVADOS_DIR', { infer: true }) || join(process.cwd(), 'uploads-privados'));
+  }
+
+  private static clavePrivadaValida(clave: string) {
+    return /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.[a-z0-9]{2,5}$/.test(clave);
+  }
+
+  async guardarPrivado(empresaId: string, contenido: Buffer, extension: string): Promise<string> {
+    const clave = `${empresaId}/${randomUUID()}.${extension}`;
+    await mkdir(join(this.carpetaPrivada(), empresaId), { recursive: true });
+    await writeFile(join(this.carpetaPrivada(), clave), contenido);
+    return clave;
+  }
+
+  /** Solo claves de esta empresa (empresa/uuid.ext): nunca rutas con "..". */
+  async leerPrivado(empresaId: string, clave: string): Promise<Buffer | null> {
+    if (!clave.startsWith(`${empresaId}/`) || !AlmacenArchivosService.clavePrivadaValida(clave)) return null;
+    return readFile(join(this.carpetaPrivada(), clave)).catch(() => null);
+  }
+
+  async borrarPrivado(empresaId: string, clave: string): Promise<void> {
+    if (!clave.startsWith(`${empresaId}/`) || !AlmacenArchivosService.clavePrivadaValida(clave)) return;
+    await unlink(join(this.carpetaPrivada(), clave)).catch(() => {});
   }
 }

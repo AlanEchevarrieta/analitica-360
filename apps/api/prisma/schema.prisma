@@ -1426,6 +1426,37 @@ model PresupuestoItem {
   @@map("presupuestos_items")
 }
 
+/// Archivo de documentos del negocio (plan Pro): facturas de proveedores, contratos,
+/// habilitaciones, seguros… Pegados a la empresa, un proveedor, un cliente o una compra,
+/// con vencimiento opcional (aviso 30 y 7 días antes). El archivo va a la carpeta privada.
+model ArchivoDocumento {
+  id          String    @id @default(uuid()) @db.Uuid
+  empresaId   String    @map("empresa_id") @db.Uuid
+  titulo      String    @db.VarChar(160)
+  /// factura_proveedor | contrato | habilitacion | seguro | constancia | otro
+  categoria   String    @default("otro") @db.VarChar(30)
+  /// empresa | proveedor | cliente | compra
+  entidadTipo String    @default("empresa") @map("entidad_tipo") @db.VarChar(20)
+  entidadId   String?   @map("entidad_id") @db.Uuid
+  /// Nombre del archivo como se subió.
+  nombre      String    @db.VarChar(200)
+  mime        String    @db.VarChar(120)
+  tamano      Int
+  /// empresa/uuid.ext en la carpeta privada.
+  clave       String    @db.VarChar(120)
+  vence       DateTime? @db.Date
+  avisado30   DateTime? @map("avisado_30")
+  avisado7    DateTime? @map("avisado_7")
+  notas       String?   @db.VarChar(1000)
+  usuarioId   String?   @map("usuario_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  @@index([empresaId, entidadTipo, entidadId])
+  @@index([empresaId, vence])
+  @@map("archivo_documentos")
+}
+
 /// Cómo salen los documentos (comprobante de venta, recibo, presupuesto): logo y textos.
 /// Los datos del negocio (nombre, dirección, teléfono, email) son los del remitente de Configuración.
 model DocumentosConfig {

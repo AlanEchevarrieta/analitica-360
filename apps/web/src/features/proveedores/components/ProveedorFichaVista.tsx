@@ -9,6 +9,7 @@ import { formatoPesos } from "@/lib/formato";
 import { linkWhatsApp } from "@/features/clientes/hooks/use-clientes";
 import { useProveedor } from "../hooks/use-proveedores";
 import { ProveedorForm } from "./ProveedorForm";
+import { DocumentosAdjuntos } from "@/features/archivo/DocumentosAdjuntos";
 
 const fecha = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
 
@@ -80,6 +81,8 @@ export function ProveedorFichaVista({ id }: { id: string }) {
           )}
         </CardContent>
       </Card>
+
+      <DocumentosAdjuntos entidadTipo="proveedor" entidadId={id} categoriaInicial="factura_proveedor" />
     </div>
   );
 }

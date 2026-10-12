@@ -83,6 +83,7 @@ services:
     volumes:
       # La misma carpeta de fotos que usa la API en desarrollo.
       - ./apps/api/uploads:/data/archivos
+      - ./apps/api/uploads-privados:/data/documentos
     ports:
       - "3001:3001"
     depends_on:

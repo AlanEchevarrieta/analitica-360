@@ -3,6 +3,7 @@ import { PrimerosPasos } from "@/features/dashboard/components/PrimerosPasos";
 import { SelectorMoneda } from "@/components/shared/selector-moneda";
 import { ObjetivosInicio } from "@/features/objetivos/components/ObjetivosInicio";
 import { EquilibrioInicio } from "@/features/dashboard/components/EquilibrioInicio";
+import { PorVencerCard } from "@/features/archivo/PorVencerCard";
 
 export default async function Page(props: PageProps<"/inicio">) {
   const { bienvenida } = await props.searchParams;
@@ -13,6 +14,7 @@ export default async function Page(props: PageProps<"/inicio">) {
         <SelectorMoneda />
       </div>
       <PrimerosPasos bienvenida={bienvenida === "1"} />
+      <PorVencerCard />
       <InicioDashboard
         debajoDeCifras={
           // Primero las ventas (lo que más se mira); después, en una sola fila, cuánto falta para no perder plata y cómo vienen los objetivos.

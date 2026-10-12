@@ -81,6 +81,8 @@ services:
       GOOGLE_CLIENT_ID_TIENDAS: ${GOOGLE_CLIENT_ID_TIENDAS:-}
     volumes:
       - archivos:/data/archivos
+      # Documentos privados del archivo (contratos, facturas): no se publican.
+      - documentos:/data/documentos
     # Sin puerto publicado: se entra por Caddy (https://api.DOMINIO).
     depends_on:
       migrate:
@@ -176,11 +178,13 @@ services:
       - ./deploy:/deploy:ro
       - backups:/backups:ro
       - archivos:/archivos:ro
+      - documentos:/documentos:ro
     entrypoint: ["sh", "/deploy/backup-nube.sh"]
 
 volumes:
   postgres_data:
   archivos:
+  documentos:
   backups:
   caddy_data:
   caddy_config:

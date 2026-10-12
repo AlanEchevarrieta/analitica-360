@@ -30,6 +30,8 @@ const envSchema = z.object({
   /** Remitente verificado en Resend (ej. avisos@analitica360.app). */
   /** Carpeta de fotos y logos (desarrollo). */
   ARCHIVOS_DIR: z.string().optional(),
+  /** Documentos privados del archivo (no se publican en /archivos). Por defecto ./uploads-privados. */
+  ARCHIVOS_PRIVADOS_DIR: z.string().optional(),
   /** URL pública de esa carpeta (por defecto http://localhost:PORT/archivos). */
   ARCHIVOS_URL_PUBLICA: z.string().optional(),
   /** Dominio de las tiendas: <subdominio>.<este dominio>. */

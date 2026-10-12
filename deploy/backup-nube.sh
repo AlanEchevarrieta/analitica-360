@@ -1,7 +1,8 @@
 #!/bin/sh
 # Copia fuera del servidor (la corre el servicio "backup-nube" de docker-compose.prod.yml, imagen rclone).
 #   - Una vez por día, una hora después de la copia de la base (BACKUP_HORA + 1, UTC).
-#   - Sube /backups (las copias de la base) y /archivos (las fotos) al bucket R2_BUCKET de Cloudflare R2.
+#   - Sube /backups (las copias de la base), /archivos (las fotos) y /documentos (el archivo privado)
+#     al bucket R2_BUCKET de Cloudflare R2.
 #   - Solo agrega: borrar algo en el servidor no lo borra en la nube. En la nube se borran las
 #     copias de la base con más de BACKUP_NUBE_DIAS días (por defecto 30); las fotos se guardan siempre.
 #   - BACKUP_UNA_VEZ=1: sube una vez y termina (para probar).
@@ -32,6 +33,8 @@ subir() {
   # Solo copias terminadas (las que están escribiéndose terminan en .tmp).
   rclone copy /backups "r2:$BUCKET/base" --include '*.dump' --immutable
   rclone copy /archivos "r2:$BUCKET/archivos"
+  # Documentos privados del archivo (contratos, facturas): misma regla que las fotos.
+  if [ -d /documentos ]; then rclone copy /documentos "r2:$BUCKET/documentos"; fi
   rclone delete "r2:$BUCKET/base" --min-age "${DIAS}d"
   echo "$(date -u '+%F %T') listo: $(rclone lsf "r2:$BUCKET/base" | wc -l) copias de la base en la nube"
 }

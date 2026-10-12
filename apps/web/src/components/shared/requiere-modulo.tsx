@@ -46,6 +46,7 @@ const MODULO_DE_RUTA: [string, ModuloClave][] = [
 const FUNCION_DE_RUTA: [string, string][] = [
   ["/objetivos", "objetivos"],
   ["/ventas/presupuestos", "presupuestos"],
+  ["/documentos", "archivo"],
   ["/clientes/segmentos", "difusiones"],
   ["/clientes/cuenta-corriente", "cuenta_corriente"],
   ["/productos/importar", "importar"],
