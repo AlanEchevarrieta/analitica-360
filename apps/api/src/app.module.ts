@@ -17,6 +17,7 @@ import { DocumentosModule } from './modules/documentos/documentos.module.js';
 import { PresupuestosModule } from './modules/presupuestos/presupuestos.module.js';
 import { ArchivoModule } from './modules/archivo/archivo.module.js';
 import { OrdenesTrabajoModule } from './modules/ordenes-trabajo/ordenes-trabajo.module.js';
+import { AgendaModule } from './modules/agenda/agenda.module.js';
 import { DevolucionesModule } from './modules/devoluciones/devoluciones.module.js';
 import { PedidosModule } from './modules/pedidos/pedidos.module.js';
 import { InformesModule } from './modules/informes/informes.module.js';
@@ -67,6 +68,7 @@ import { ConfiguracionModule } from './modules/configuracion/configuracion.modul
     PresupuestosModule,
     ArchivoModule,
     OrdenesTrabajoModule,
+    AgendaModule,
     DevolucionesModule,
     PedidosModule,
     ClientesModule,

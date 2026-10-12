@@ -9,6 +9,7 @@ import { SoloCliente } from "@/components/shared/solo-cliente";
 import { useAcceso } from "@/hooks/use-acceso";
 import {
   BarChart3,
+  CalendarDays,
   Target,
   ClipboardList,
   Factory,
@@ -91,6 +92,7 @@ export function AppSidebar() {
         { href: "/ventas", label: "Ventas", icon: Wallet, modulo: "ventas" },
         { href: "/clientes", label: "Clientes", icon: Users, modulo: "clientes" },
         { href: "/pedidos", label: "Pedidos", icon: Truck, modulo: "pedidos" },
+        { href: "/agenda", label: "Agenda", icon: CalendarDays, modulo: "ventas", funcion: "agenda" },
         { href: "/ordenes-trabajo", label: "Órdenes de trabajo", icon: Wrench, modulo: "ventas", funcion: "ordenes_trabajo" },
       ],
     },

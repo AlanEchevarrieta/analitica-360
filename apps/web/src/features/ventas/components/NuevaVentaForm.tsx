@@ -20,6 +20,7 @@ import { LineasProductos } from "@/features/productos/components/LineasProductos
 import { etiquetaAjuste, precioConLista, useListasPrecios } from "@/features/listas-precios/listas-precios";
 import { aNumero, calcularTotales, COBRO_INICIAL, CobroVenta, esClienteNuevo, type DatosCobro } from "./CobroVenta";
 import { useAccionesPresupuesto, usePresupuesto } from "@/features/presupuestos/use-presupuestos";
+import { useAccionesAgenda, useTurno } from "@/features/agenda/use-agenda";
 
 // Medio de pago y ubicación se recuerdan por dispositivo (localStorage): en
 // un stand casi siempre se repiten, así no hay que elegirlos en cada venta.
@@ -59,8 +60,11 @@ function recordar(cobro: DatosCobro) {
   }
 }
 
-/** `presupuestoId`: "Pasar a venta" desde un presupuesto (carga sus productos, precios, cliente y descuento). */
-export function NuevaVentaForm({ presupuestoId = null }: { presupuestoId?: string | null }) {
+/**
+ * `presupuestoId`: "Pasar a venta" desde un presupuesto (carga sus productos, precios, cliente y descuento).
+ * `turno`: "Cobrar" un turno de la agenda (carga el servicio y el cliente; al registrar, el turno queda atendido).
+ */
+export function NuevaVentaForm({ presupuestoId = null, turno: turnoRef = null }: { presupuestoId?: string | null; turno?: { id: string; fecha: string } | null }) {
   const router = useRouter();
   const [carrito, setCarrito] = useState<LineaCarrito[]>([]);
   const presupuesto = usePresupuesto(presupuestoId);
@@ -99,6 +103,16 @@ export function NuevaVentaForm({ presupuestoId = null }: { presupuestoId?: strin
     setCobro((c) => ({ ...c, cliente: p.cliente?.nombre ?? p.clienteNombre ?? "", descuento: p.descuento > 0 ? String(p.descuento) : "" }));
   }
   const desdePresupuesto = p && cargado === p.id ? p : null;
+  const turno = useTurno(turnoRef?.id ?? null, turnoRef?.fecha ?? null);
+  const { cobrado } = useAccionesAgenda();
+  const t = turno.data;
+  if (t && cargado !== t.id && !t.ventaId) {
+    setCargado(t.id);
+    if (t.servicioId)
+      setCarrito([{ clave: `${t.servicioId}:`, productoId: t.servicioId, varianteId: null, nombre: t.servicio ?? "Servicio", variante: null, precioUnitario: t.precio ?? 0, precioBase: t.precio ?? 0, precioEditado: false, cantidad: 1, stock: Number.POSITIVE_INFINITY }]);
+    setCobro((c) => ({ ...c, cliente: t.clienteNombre ?? "", telefono: t.clienteTelefono ?? "" }));
+  }
+  const desdeTurno = t && cargado === t.id ? t : null;
   const clientes = useClientes();
   const listas = useListasPrecios();
   const clienteElegido = clientes.data?.find((c) => c.nombre.toLowerCase() === cobro.cliente.trim().toLowerCase());
@@ -176,6 +190,13 @@ export function NuevaVentaForm({ presupuestoId = null }: { presupuestoId?: strin
         router.push(`/ventas/${venta.id}`);
         return;
       }
+      if (desdeTurno) {
+        await cobrado.mutateAsync({ id: desdeTurno.id, ventaId: venta.id }).catch(() => toast.error("La venta se registró, pero no se pudo marcar el turno como cobrado"));
+        recordar(cobro);
+        toast.success(`Turno de ${desdeTurno.clienteNombre ?? "el cliente"} cobrado (venta ${venta.numeroVenta ?? ""})`, { action: { label: "Ver venta", onClick: () => router.push(`/ventas/${venta.id}`) } });
+        router.push(`/agenda?fecha=${desdeTurno.inicio.slice(0, 10)}`);
+        return;
+      }
       // Queda lista para la próxima venta, con el mismo medio de pago y ubicación.
       recordar(cobro);
       setCarrito([]);
@@ -235,6 +256,12 @@ export function NuevaVentaForm({ presupuestoId = null }: { presupuestoId?: strin
               {lineas.some((l) => l.cantidad > l.stock) && <span className="block text-amber-600 dark:text-amber-400">Falta stock de algún producto: revisalo antes de registrar.</span>}
             </p>
           )}
+          {desdeTurno && (
+            <p className="rounded-md bg-muted p-2 text-sm">
+              Cobro del turno de <span className="font-medium">{desdeTurno.clienteNombre}</span> ({desdeTurno.inicio.slice(11, 16)} con {desdeTurno.recurso}). Podés sumar productos o cambiar el precio.
+            </p>
+          )}
+          {turnoRef && t?.ventaId && <p className="rounded-md bg-amber-500/10 p-2 text-sm">Ese turno ya se cobró.</p>}
           {presupuestoId && presupuesto.data?.estado === "aceptado" && <p className="rounded-md bg-amber-500/10 p-2 text-sm">El presupuesto {presupuesto.data.numero} ya pasó a venta.</p>}
           <BuscadorProductos onAgregar={agregar} />
           <LineasProductos

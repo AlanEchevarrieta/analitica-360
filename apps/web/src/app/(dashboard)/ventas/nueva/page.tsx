@@ -4,7 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { NuevaVentaForm } from "@/features/ventas/components/NuevaVentaForm";
 
 export default async function Page(props: PageProps<"/ventas/nueva">) {
-  const { presupuesto } = await props.searchParams;
+  const { presupuesto, turno, fecha } = await props.searchParams;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
@@ -13,7 +13,7 @@ export default async function Page(props: PageProps<"/ventas/nueva">) {
         </Link>
         <h1 className="text-xl font-semibold">Nueva venta</h1>
       </div>
-      <NuevaVentaForm presupuestoId={typeof presupuesto === "string" ? presupuesto : null} />
+      <NuevaVentaForm presupuestoId={typeof presupuesto === "string" ? presupuesto : null} turno={typeof turno === "string" && typeof fecha === "string" ? { id: turno, fecha } : null} />
     </div>
   );
 }

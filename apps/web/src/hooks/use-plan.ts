@@ -22,6 +22,7 @@ export const NOMBRE_FUNCION: Record<string, string> = {
   presupuestos: "Presupuestos para clientes",
   archivo: "Archivo de documentos con vencimientos",
   ordenes_trabajo: "Órdenes de trabajo (talleres y service)",
+  agenda: "Agenda y turnos",
 };
 
 /**

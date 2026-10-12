@@ -1533,6 +1533,82 @@ model OrdenTrabajoEstado {
   @@map("ordenes_trabajo_estados")
 }
 
+/// Agenda (módulo de servicios, pieza 3): quién atiende los turnos. Un profesional (puede ser
+/// un usuario) o un recurso (sillón, cancha, consultorio).
+model AgendaRecurso {
+  id        String    @id @default(uuid()) @db.Uuid
+  empresaId String    @map("empresa_id") @db.Uuid
+  nombre    String    @db.VarChar(80)
+  usuarioId String?   @map("usuario_id") @db.Uuid
+  /// #RRGGBB para distinguirlo en la agenda.
+  color     String    @default("#6366f1") @db.VarChar(7)
+  /// Se ofrece para reservar online (parte 2).
+  online    Boolean   @default(true)
+  activo    Boolean   @default(true)
+  orden     Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  horarios AgendaHorario[]
+
+  @@index([empresaId])
+  @@map("agenda_recursos")
+}
+
+/// Horario de atención: un tramo por día de la semana (0 = domingo). Puede haber varios por día.
+model AgendaHorario {
+  id        String @id @default(uuid()) @db.Uuid
+  recursoId String @map("recurso_id") @db.Uuid
+  diaSemana Int    @map("dia_semana")
+  /// "09:00"
+  desde     String @db.VarChar(5)
+  hasta     String @db.VarChar(5)
+
+  recurso AgendaRecurso @relation(fields: [recursoId], references: [id], onDelete: Cascade)
+
+  @@index([recursoId])
+  @@map("agenda_horarios")
+}
+
+/// Día cerrado (feriado, vacaciones): para todos (recurso null) o para uno.
+model AgendaBloqueo {
+  id        String   @id @default(uuid()) @db.Uuid
+  empresaId String   @map("empresa_id") @db.Uuid
+  recursoId String?  @map("recurso_id") @db.Uuid
+  fecha     DateTime @db.Date
+  motivo    String?  @db.VarChar(120)
+
+  @@index([empresaId, fecha])
+  @@map("agenda_bloqueos")
+}
+
+/// Turno: un recurso ocupado de inicio a fin (no se superponen, salvo cancelados y "no vino").
+model Turno {
+  id              String    @id @default(uuid()) @db.Uuid
+  empresaId       String    @map("empresa_id") @db.Uuid
+  recursoId       String    @map("recurso_id") @db.Uuid
+  servicioId      String?   @map("servicio_id") @db.Uuid
+  clienteId       String?   @map("cliente_id") @db.Uuid
+  clienteNombre   String?   @map("cliente_nombre")
+  clienteTelefono String?   @map("cliente_telefono") @db.VarChar(40)
+  inicio          DateTime  @db.Timestamptz(3)
+  fin             DateTime  @db.Timestamptz(3)
+  /// reservado | confirmado | atendido | no_vino | cancelado
+  estado          String    @default("reservado") @db.VarChar(15)
+  notas           String?   @db.VarChar(1000)
+  /// interno | online
+  origen          String    @default("interno") @db.VarChar(10)
+  ventaId         String?   @unique @map("venta_id") @db.Uuid
+  recordadoEn     DateTime? @map("recordado_en")
+  usuarioId       String?   @map("usuario_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([empresaId, inicio])
+  @@index([recursoId, inicio])
+  @@map("turnos")
+}
+
 /// Cómo salen los documentos (comprobante de venta, recibo, presupuesto): logo y textos.
 /// Los datos del negocio (nombre, dirección, teléfono, email) son los del remitente de Configuración.
 model DocumentosConfig {
