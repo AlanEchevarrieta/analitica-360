@@ -1,9 +1,9 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-export type TipoDocumento = 'venta' | 'recibo' | 'presupuesto' | 'orden_compra' | 'remito';
-export const TIPOS_DOCUMENTO: TipoDocumento[] = ['venta', 'recibo', 'presupuesto', 'orden_compra', 'remito'];
+export type TipoDocumento = 'venta' | 'recibo' | 'presupuesto' | 'orden_compra' | 'remito' | 'orden_trabajo';
+export const TIPOS_DOCUMENTO: TipoDocumento[] = ['venta', 'recibo', 'presupuesto', 'orden_compra', 'remito', 'orden_trabajo'];
 
-export const TITULO: Record<TipoDocumento, string> = { venta: 'Comprobante de venta', recibo: 'Recibo', presupuesto: 'Presupuesto', orden_compra: 'Orden de compra', remito: 'Remito' };
+export const TITULO: Record<TipoDocumento, string> = { venta: 'Comprobante de venta', recibo: 'Recibo', presupuesto: 'Presupuesto', orden_compra: 'Orden de compra', remito: 'Remito', orden_trabajo: 'Orden de trabajo' };
 export const LEYENDA_NO_FACTURA = 'Documento no válido como factura.';
 
 /** Días que dura el link que se manda por WhatsApp. */
@@ -25,7 +25,7 @@ export const nombrePago = (forma: string) => NOMBRE_PAGO[forma] ?? forma.charAt(
 
 /** "comprobante-V-000654.pdf" */
 export function nombreArchivo(tipo: TipoDocumento, numero: string): string {
-  const base = { venta: 'comprobante', recibo: 'recibo', presupuesto: 'presupuesto', orden_compra: 'orden-de-compra', remito: 'remito' }[tipo];
+  const base = { venta: 'comprobante', recibo: 'recibo', presupuesto: 'presupuesto', orden_compra: 'orden-de-compra', remito: 'remito', orden_trabajo: 'orden-de-trabajo' }[tipo];
   return `${base}-${numero.replace(/[^\w-]/g, '')}.pdf`;
 }
 
@@ -69,6 +69,7 @@ export function telefonoWhatsApp(telefono: string | null | undefined): string | 
 /** Mensaje de WhatsApp que acompaña el link. */
 export function mensajeWhatsApp(d: { tipo: TipoDocumento; numero: string; cliente: string | null; negocio: string; total: string; url: string }): string {
   const saludo = `Hola${d.cliente ? ` ${d.cliente.split(' ')[0]}` : ''}!`;
+  if (d.tipo === 'orden_trabajo') return `${saludo} Te mandamos el comprobante de la orden ${d.numero}. Lo podés ver y descargar acá: ${d.url}\n${d.negocio}`;
   if (d.tipo === 'remito') return `${saludo} Te mandamos el remito de tu pedido ${d.numero}. Lo podés ver y descargar acá: ${d.url}\n${d.negocio}`;
   const que = {
     venta: `el comprobante de tu compra ${d.numero}`,

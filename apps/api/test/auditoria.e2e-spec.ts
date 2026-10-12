@@ -153,9 +153,11 @@ describe.skipIf(!URL_E2E)('Bitácora de auditoría (e2e)', () => {
     expect(ok.body).toMatchObject({ integra: true, errores: 0 });
     expect(ok.body.ultimoHash).toMatch(/^[0-9a-f]{64}$/);
 
-    // Alguien con superusuario apaga el trigger y "corrige" un precio a mano…
+    // Alguien con superusuario saltea los triggers y "corrige" un precio a mano…
+    // Solo en esta conexión (session_replication_role): con ALTER TABLE ... DISABLE TRIGGER
+    // la protección se apagaba para todas, y otra prueba en paralelo llegó a escribir la bitácora.
     const fila = (await db.query(`SELECT id, resumen FROM registro_auditoria WHERE empresa_id = $1 AND entidad = 'Producto' ORDER BY id LIMIT 1`, [empresaA])).rows[0];
-    await db.query(`ALTER TABLE registro_auditoria DISABLE TRIGGER registro_auditoria_sin_cambios`);
+    await db.query(`SET session_replication_role = replica`);
     try {
       await db.query(`UPDATE registro_auditoria SET resumen = 'editó producto «Mochila»: precio de venta $12.200 → $12.500' WHERE id = $1`, [fila.id]);
       const mal = await request(app.getHttpServer()).get('/admin/auditoria/verificar').set(ADMIN).expect(200);
@@ -163,7 +165,7 @@ describe.skipIf(!URL_E2E)('Bitácora de auditoría (e2e)', () => {
     } finally {
       // …se deja como estaba para que la base de prueba siga íntegra.
       await db.query(`UPDATE registro_auditoria SET resumen = $2 WHERE id = $1`, [fila.id, fila.resumen]);
-      await db.query(`ALTER TABLE registro_auditoria ENABLE TRIGGER registro_auditoria_sin_cambios`);
+      await db.query(`RESET session_replication_role`);
     }
     const otraVez = await request(app.getHttpServer()).get('/admin/auditoria/verificar').set(ADMIN).expect(200);
     expect(otraVez.body.integra).toBe(true);

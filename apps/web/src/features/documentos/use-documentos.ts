@@ -6,7 +6,7 @@ import { useApiFetch } from "@/hooks/use-api";
 import { apiArchivo } from "@/lib/api-client";
 
 // Espejo de apps/api modules/documentos.
-export type TipoDocumento = "venta" | "recibo" | "presupuesto" | "orden_compra" | "remito";
+export type TipoDocumento = "venta" | "recibo" | "presupuesto" | "orden_compra" | "remito" | "orden_trabajo";
 
 export interface ConfigDocumentos {
   logoUrl: string | null;

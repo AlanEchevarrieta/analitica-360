@@ -1463,6 +1463,76 @@ model ArchivoDocumento {
   @@map("archivo_documentos")
 }
 
+/// Orden de trabajo (módulo de servicios, pieza 2): un equipo o trabajo que el cliente deja
+/// (recibido → en proceso → listo → entregado). La seña es un cobro del cliente; al entregar
+/// se arma la venta y la seña se le aplica con su fecha.
+model OrdenTrabajo {
+  id              String    @id @default(uuid()) @db.Uuid
+  empresaId       String    @map("empresa_id") @db.Uuid
+  /// OT-000001
+  numero          Int
+  clienteId       String?   @map("cliente_id") @db.Uuid
+  clienteNombre   String?   @map("cliente_nombre")
+  clienteTelefono String?   @map("cliente_telefono") @db.VarChar(40)
+  /// Qué deja el cliente (ej. "Notebook Lenovo ThinkPad, con cargador").
+  equipo          String    @db.VarChar(300)
+  /// La falla o el pedido, como lo cuenta el cliente.
+  problema        String?   @db.VarChar(2000)
+  /// Notas del técnico (no salen en el comprobante).
+  notasInternas   String?   @map("notas_internas") @db.VarChar(2000)
+  /// recibido | en_proceso | listo | entregado | cancelada
+  estado          String    @default("recibido") @db.VarChar(20)
+  responsableId   String?   @map("responsable_id") @db.Uuid
+  fechaPrometida  DateTime? @map("fecha_prometida") @db.Date
+  descuento       Decimal   @default(0) @db.Decimal(12, 2)
+  presupuestoId   String?   @unique @map("presupuesto_id") @db.Uuid
+  /// Cobro de la seña (cobros_clientes): se aplica a la venta al entregar.
+  seniaCobroId    String?   @unique @map("senia_cobro_id") @db.Uuid
+  ventaId         String?   @unique @map("venta_id") @db.Uuid
+  entregadaEn     DateTime? @map("entregada_en")
+  usuarioId       String    @map("usuario_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  items     OrdenTrabajoItem[]
+  historial OrdenTrabajoEstado[]
+
+  @@unique([empresaId, numero])
+  @@index([empresaId, estado])
+  @@map("ordenes_trabajo")
+}
+
+model OrdenTrabajoItem {
+  id             String  @id @default(uuid()) @db.Uuid
+  ordenId        String  @map("orden_id") @db.Uuid
+  productoId     String  @map("producto_id") @db.Uuid
+  varianteId     String? @map("variante_id") @db.Uuid
+  descripcion    String
+  cantidad       Int
+  precioUnitario Decimal @map("precio_unitario") @db.Decimal(12, 2)
+  orden          Int     @default(0)
+
+  ordenTrabajo OrdenTrabajo @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+
+  @@index([ordenId])
+  @@map("ordenes_trabajo_items")
+}
+
+/// Cada cambio de etapa, con quién y cuándo.
+model OrdenTrabajoEstado {
+  id        String   @id @default(uuid()) @db.Uuid
+  ordenId   String   @map("orden_id") @db.Uuid
+  estado    String   @db.VarChar(20)
+  usuarioId String?  @map("usuario_id") @db.Uuid
+  nota      String?  @db.VarChar(300)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ordenTrabajo OrdenTrabajo @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+
+  @@index([ordenId])
+  @@map("ordenes_trabajo_estados")
+}
+
 /// Cómo salen los documentos (comprobante de venta, recibo, presupuesto): logo y textos.
 /// Los datos del negocio (nombre, dirección, teléfono, email) son los del remitente de Configuración.
 model DocumentosConfig {

@@ -23,6 +23,7 @@ import {
   Star,
   Ticket,
   Truck,
+  Wrench,
   Users,
   Wallet,
   type LucideIcon,
@@ -90,6 +91,7 @@ export function AppSidebar() {
         { href: "/ventas", label: "Ventas", icon: Wallet, modulo: "ventas" },
         { href: "/clientes", label: "Clientes", icon: Users, modulo: "clientes" },
         { href: "/pedidos", label: "Pedidos", icon: Truck, modulo: "pedidos" },
+        { href: "/ordenes-trabajo", label: "Órdenes de trabajo", icon: Wrench, modulo: "ventas", funcion: "ordenes_trabajo" },
       ],
     },
     {

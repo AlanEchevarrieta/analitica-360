@@ -47,6 +47,7 @@ const FUNCION_DE_RUTA: [string, string][] = [
   ["/objetivos", "objetivos"],
   ["/ventas/presupuestos", "presupuestos"],
   ["/documentos", "archivo"],
+  ["/ordenes-trabajo", "ordenes_trabajo"],
   ["/clientes/segmentos", "difusiones"],
   ["/clientes/cuenta-corriente", "cuenta_corriente"],
   ["/productos/importar", "importar"],

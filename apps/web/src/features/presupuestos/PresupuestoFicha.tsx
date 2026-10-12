@@ -3,13 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ShoppingCart } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DocumentoAcciones } from "@/features/documentos/DocumentoAcciones";
+import { useAccionesOt } from "@/features/ordenes-trabajo/use-ordenes-trabajo";
+import { usePlan } from "@/hooks/use-plan";
 import { formatoPesos } from "@/lib/formato";
 import { EstadoPresupuestoChip } from "./PresupuestosListado";
 import { PresupuestoForm } from "./PresupuestoForm";
@@ -20,6 +22,8 @@ const error = (e: unknown) => toast.error(e instanceof Error ? e.message : "No s
 
 function Acciones({ p, onEditar }: { p: Ficha; onEditar: () => void }) {
   const { estado, borrar } = useAccionesPresupuesto();
+  const { desdePresupuesto } = useAccionesOt();
+  const plan = usePlan();
   const router = useRouter();
   if (p.estado === "aceptado") {
     return p.ventaId ? (
@@ -33,6 +37,22 @@ function Acciones({ p, onEditar }: { p: Ficha; onEditar: () => void }) {
       <Link href={`/ventas/nueva?presupuesto=${p.id}`} className={buttonVariants()}>
         <ShoppingCart aria-hidden /> Pasar a venta
       </Link>
+      {plan.incluye("ordenes_trabajo") && (
+        <Button
+          variant="outline"
+          disabled={desdePresupuesto.isPending}
+          onClick={() => {
+            const equipo = window.prompt("¿Qué deja el cliente? (equipo o trabajo)");
+            if (equipo?.trim())
+              desdePresupuesto.mutate(
+                { presupuestoId: p.id, equipo: equipo.trim(), problema: null, responsableId: null, fechaPrometida: null },
+                { onSuccess: (o) => (toast.success(`Orden ${o.numero} creada`), router.push(`/ordenes-trabajo/${o.id}`)), onError: error },
+              );
+          }}
+        >
+          <Wrench aria-hidden /> Crear orden de trabajo
+        </Button>
+      )}
       <Button variant="outline" onClick={onEditar}>
         {p.estado === "vencido" ? "Renovar o editar" : "Editar"}
       </Button>
