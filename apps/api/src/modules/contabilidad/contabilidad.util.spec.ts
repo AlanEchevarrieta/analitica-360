@@ -93,10 +93,30 @@ describe('proyectarFlujo', () => {
       { clave: '2026-08', ingresos: 200, cogs: 80, gastos: 20, resultado: 100 },
       { clave: '2026-09', ingresos: 200, cogs: 80, gastos: 20, resultado: 100 },
     ];
-    const res = proyectarFlujo(serie6, 3);
+    const res = proyectarFlujo(serie6, 3, { hoy: '2026-10-11' });
     expect(res).toHaveLength(3);
     expect(res[0].ingresos).toBe(200);
     expect(res[0].resultado).toBe(100);
+  });
+
+  it('no promedia el mes en curso (va a medias) y proyecta los recurrentes según su frecuencia', () => {
+    // Caso Acacia: alquiler semanal de $50.000 desde el 1/9; octubre va por el día 11.
+    const serie6: PuntoMes[] = [
+      { clave: '2026-05', ingresos: 0, cogs: 0, gastos: 0, resultado: 0 },
+      { clave: '2026-06', ingresos: 2_539_000, cogs: 1_262_100, gastos: 0, resultado: 0 },
+      { clave: '2026-07', ingresos: 4_200_000, cogs: 2_100_000, gastos: 0, resultado: 0 },
+      { clave: '2026-08', ingresos: 4_200_000, cogs: 2_100_000, gastos: 30_000, resultado: 0 },
+      { clave: '2026-09', ingresos: 5_400_000, cogs: 2_700_000, gastos: 250_000, resultado: 0 },
+      { clave: '2026-10', ingresos: 730_000, cogs: 365_000, gastos: 50_000, resultado: 0 },
+    ];
+    const recurrentesPorMes = { '2026-09': 250_000, '2026-10': 200_000, '2026-11': 200_000, '2026-12': 250_000, '2027-01': 200_000 };
+    const res = proyectarFlujo(serie6, 3, { hoy: '2026-10-11', recurrentesPorMes });
+    expect(res.map((p) => p.clave)).toEqual(['2026-11', '2026-12', '2027-01']);
+    expect(res[0].ingresos).toBe(4_600_000);
+    expect(res[0].cogs).toBe(2_300_000);
+    // Sueltos: (0 + 30.000 + 0) / 3 = 10.000, más los recurrentes de cada mes.
+    expect(res.map((p) => p.gastos)).toEqual([210_000, 260_000, 210_000]);
+    expect(res[1].resultado).toBe(4_600_000 - 2_300_000 - 260_000);
   });
 });
 

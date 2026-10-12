@@ -201,20 +201,29 @@ export function semaforoMargenNeto(pct: number): Semaforo {
   return 'rojo';
 }
 
-/** Puerto de proyectarFlujo: proyecta `meses` a futuro usando el promedio de los últimos 3 puntos de `serie6`. */
-export function proyectarFlujo(serie6: PuntoMes[], meses = 3): PuntoMes[] {
-  const ult3 = serie6.slice(-3);
-  const avgIng = ult3.length ? ult3.reduce((a, p) => a + p.ingresos, 0) / ult3.length : 0;
-  const avgCogs = ult3.length ? ult3.reduce((a, p) => a + p.cogs, 0) / ult3.length : 0;
-  const avgGas = ult3.length ? ult3.reduce((a, p) => a + p.gastos, 0) / ult3.length : 0;
-  const avgRes = avgIng - avgCogs - avgGas;
-  const hoy = fechaHoyAR();
+/**
+ * Proyecta `meses` a futuro. Ventas, costo y gastos sueltos: el promedio de los
+ * últimos 3 meses COMPLETOS (el mes en curso, a medias, bajaba la proyección).
+ * Gastos recurrentes: los de cada mes según su frecuencia (`recurrentesPorMes`,
+ * por clave AAAA-MM, pasados y futuros); sin ese dato, todo va por promedio.
+ */
+export function proyectarFlujo(serie6: PuntoMes[], meses = 3, opciones: { hoy?: string; recurrentesPorMes?: Record<string, number> } = {}): PuntoMes[] {
+  const hoy = opciones.hoy ?? fechaHoyAR();
+  const mesActual = hoy.slice(0, 7);
+  const completos = serie6.filter((p) => p.clave < mesActual).slice(-3);
+  const base = completos.length ? completos : serie6.slice(-3);
+  const rec = opciones.recurrentesPorMes ?? {};
+  const prom = (f: (p: PuntoMes) => number) => (base.length ? base.reduce((a, p) => a + f(p), 0) / base.length : 0);
+  const avgIng = prom((p) => p.ingresos);
+  const avgCogs = prom((p) => p.cogs);
+  const avgSueltos = prom((p) => Math.max(0, p.gastos - (rec[p.clave] ?? 0)));
   const [y, m] = hoy.split('-').map(Number);
   const extra: PuntoMes[] = [];
   for (let k = 1; k <= meses; k++) {
     const dt = new Date(Date.UTC(y, m - 1 + k, 1));
     const clave = `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}`;
-    extra.push({ clave, ingresos: avgIng, cogs: avgCogs, gastos: avgGas, resultado: avgRes });
+    const gastos = avgSueltos + (rec[clave] ?? 0);
+    extra.push({ clave, ingresos: avgIng, cogs: avgCogs, gastos, resultado: avgIng - avgCogs - gastos });
   }
   return extra;
 }

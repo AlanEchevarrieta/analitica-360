@@ -92,7 +92,16 @@ export class ContabilidadService {
       diasPeriodo: Math.round((Date.parse(hasta < hoy ? hasta : hoy) - Date.parse(desde)) / 86_400_000) + 1,
     });
 
-    const proyeccion = proyectarFlujo(serie6, 3);
+    // Los recurrentes se proyectan exactos según su frecuencia (hasta el último mes proyectado).
+    const [y, m] = hoy.split('-').map(Number);
+    const finProyeccion = new Date(Date.UTC(y, m + 3, 0)).toISOString().slice(0, 10);
+    const recurrentesPorMes: Record<string, number> = {};
+    for (const g of expandirRecurrentes(gastosCargados.filter((x) => x.recurrente && x.frecuencia), finProyeccion)) {
+      if (g.fecha < desdeHist) continue;
+      const clave = g.fecha.slice(0, 7);
+      recurrentesPorMes[clave] = (recurrentesPorMes[clave] ?? 0) + conv.a(g.monto, g.fecha > hoy ? hoy : g.fecha);
+    }
+    const proyeccion = proyectarFlujo(serie6, 3, { hoy, recurrentesPorMes });
     const flujoHistorico = acumuladoSerie(serie6);
     const flujoProyectado = acumuladoSerie([...serie6, ...proyeccion]);
 

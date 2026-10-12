@@ -11,6 +11,7 @@ import { SinDatos } from "@/components/shared/estado-datos";
 import { formatoPesos } from "@/lib/formato";
 import { aNumero } from "@/lib/numeros";
 import { hoyAR } from "@/lib/periodos";
+import { vecesEnPeriodo } from "../gastos-recurrentes";
 import { useAccionesGastos, useGastos } from "../hooks/use-analytics";
 
 export const CATEGORIAS_GASTO: Record<string, string> = {
@@ -108,7 +109,18 @@ export function GastosPanel({ desde, hasta }: { desde: string; hasta: string }) 
                 >
                   {x.tipoCosto === "fijo" ? "Fijo" : "Variable"}
                 </button>
-                <span className="font-medium tabular-nums">{formatoPesos(x.monto)}</span>
+                <span className="text-right font-medium tabular-nums">
+                  {formatoPesos(x.monto)}
+                  {x.frecuencia && (
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      {(() => {
+                        // Igual que la API: los recurrentes cuentan hasta hoy.
+                        const veces = vecesEnPeriodo(x, desde, hasta < hoyAR() ? hasta : hoyAR());
+                        return veces === 1 ? "1 vez en el período" : `${veces} veces: ${formatoPesos(veces * x.monto)}`;
+                      })()}
+                    </span>
+                  )}
+                </span>
                 <Button
                   size="icon-sm"
                   variant="ghost"
