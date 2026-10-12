@@ -69,9 +69,11 @@ describe.skipIf(!URL_E2E)('Objetivos (e2e)', () => {
     await db.query(`INSERT INTO ordenes_produccion (id, empresa_id, numero, receta_id, producto_id, cantidad, costo_materiales, usuario_id, ubicacion) VALUES ($1, $2, 1, $3, $4, 30, 0, $5, 'Taller')`, [randomUUID(), empresa, receta, producto, dueno]);
 
     // Dos pedidos despachados hoy por el vendedor: uno a tiempo (2 días) y otro tarde (4 días).
+    // Fechas de Argentina: la base está en hora universal y entre las 21 y las 24 ya es "mañana".
+    const hoyAR = `(now() AT TIME ZONE 'America/Argentina/Buenos_Aires')::date`;
     for (const [n, hace, comprometida] of [
-      [1, '2 days', 'current_date'],
-      [2, '4 days', 'current_date - 1'],
+      [1, '2 days', hoyAR],
+      [2, '4 days', `${hoyAR} - 1`],
     ] as const) {
       const pedido = randomUUID();
       await db.query(`INSERT INTO pedidos (id, empresa_id, numero_pedido, created_at, fecha_comprometida) VALUES ($1, $2, $3, now() - $4::interval, ${comprometida})`, [pedido, empresa, `P-${sufijo}-${n}`, hace]);
