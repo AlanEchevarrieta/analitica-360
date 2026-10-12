@@ -59,9 +59,10 @@ jobs:
       - name: Web · lint
         run: pnpm --filter web lint
 
+      # Los tipos de cada página (PageProps, LayoutProps) los genera Next en .next/types,
+      # que no está en git: sin "next typegen" la revisión de tipos falla en CI.
       - name: Web · tipos
-        working-directory: apps/web
-        run: pnpm exec tsc --noEmit
+        run: pnpm --filter web typecheck
 
       - name: Tienda · lint
         run: pnpm --filter tienda lint

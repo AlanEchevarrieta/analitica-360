@@ -6,7 +6,8 @@
     "dev": "next dev -p 4001",
     "build": "next build",
     "start": "next start -p 4001",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@analitica360/shared-types": "workspace:*",
