@@ -19,7 +19,10 @@ export function cifrar(texto: string, claveBase64: string): string {
 export function descifrar(cifrado: string, claveBase64: string): string {
   const [version, iv, tag, datos] = cifrado.split('.');
   if (version !== 'v1' || !iv || !tag || datos === undefined) throw new Error('Dato cifrado inválido');
-  const d = createDecipheriv('aes-256-gcm', clave(claveBase64), Buffer.from(iv, 'base64url'));
-  d.setAuthTag(Buffer.from(tag, 'base64url'));
+  // El sello (auth tag) tiene que medir 16 bytes: uno más corto haría más fácil falsificar el dato.
+  const sello = Buffer.from(tag, 'base64url');
+  if (sello.length !== 16) throw new Error('Dato cifrado inválido');
+  const d = createDecipheriv('aes-256-gcm', clave(claveBase64), Buffer.from(iv, 'base64url'), { authTagLength: 16 });
+  d.setAuthTag(sello);
   return Buffer.concat([d.update(Buffer.from(datos, 'base64url')), d.final()]).toString('utf8');
 }

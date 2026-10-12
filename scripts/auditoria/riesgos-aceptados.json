@@ -171,5 +171,45 @@
     "motivo": "es la redirección de / al inicio de sesión de Next; el cuerpo no tiene datos sensibles",
     "evaluadoPor": "auditoría 2026-10-03",
     "revisar": "2027-01-03"
+  },
+  {
+    "herramienta": "semgrep",
+    "regla": "regex_dos",
+    "ruta": "modules/envios/envios.controller.ts",
+    "motivo": "falso positivo: /^[\\w-]{20,64}$/ es anclada, acotada y sin repeticiones anidadas (no hay retroceso catastrófico)",
+    "evaluadoPor": "auditoría 2026-10-12",
+    "revisar": "2027-01-12"
+  },
+  {
+    "herramienta": "semgrep",
+    "regla": "regex_dos",
+    "ruta": "modules/mercadopago-tienda/",
+    "motivo": "falso positivo: expresiones ancladas y acotadas ([\\w-]{20,64}, \\d{1,20}) sin repeticiones anidadas",
+    "evaluadoPor": "auditoría 2026-10-12",
+    "revisar": "2027-01-12"
+  },
+  {
+    "herramienta": "semgrep",
+    "regla": "node_secret",
+    "ruta": "mercadopago.util.spec.ts",
+    "motivo": "falso positivo: texto inventado dentro de una prueba, no es una clave real",
+    "evaluadoPor": "auditoría 2026-10-12",
+    "revisar": "2027-01-12"
+  },
+  {
+    "herramienta": "semgrep",
+    "regla": "node_insecure_random_generator",
+    "ruta": "modules/tienda/cuentas-tienda.ts",
+    "motivo": "Math.random solo decide cuándo limpiar códigos vencidos (1 de cada 20); el código de ingreso usa crypto.randomInt",
+    "evaluadoPor": "auditoría 2026-10-12",
+    "revisar": "2027-01-12"
+  },
+  {
+    "herramienta": "pnpm-audit",
+    "regla": "GHSA-86w9-cpqp-85rv",
+    "ruta": "node-forge",
+    "motivo": "la falla está en la verificación de firmas RSA PKCS#1 v1.5; node-forge solo se usa para firmar (CMS para ARCA) y generar el pedido del certificado, nunca para verificar. Todavía no hay versión corregida",
+    "evaluadoPor": "auditoría 2026-10-12",
+    "revisar": "2026-11-12"
   }
 ]

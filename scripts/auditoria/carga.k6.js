@@ -16,7 +16,8 @@ const inicioMes = `${hoy.slice(0, 7)}-01`;
 // Lo que abre una persona al usar la app, con su peso aproximado (las más vistas pesan más).
 const PANTALLAS = [
   ['inicio', `/analytics/dashboard`, 4],
-  ['inicio-serie', `/analytics/dashboard/serie-home`, 4],
+  // serie-home se borró el 2026-10-05 (la web no la usaba) y seguía acá: daba 18 % de errores. Inicio hoy pide el punto de equilibrio.
+  ['inicio-equilibrio', `/contabilidad/equilibrio`, 4],
   ['ventas', `/ventas?pagina=1&pageSize=50`, 3],
   ['productos', `/productos?pagina=1&pageSize=50`, 3],
   ['movimientos', `/inventario/movimientos?desde=${hace30}&hasta=${hoy}&pagina=1&pageSize=50`, 2],

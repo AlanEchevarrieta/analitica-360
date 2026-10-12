@@ -20,6 +20,12 @@ describe('cifrado', () => {
     expect(() => descifrar(partes.join('.'), CLAVE)).toThrow();
   });
 
+  it('rechaza un sello recortado (más fácil de falsificar)', () => {
+    const partes = cifrar('secreto', CLAVE).split('.');
+    partes[2] = Buffer.from(partes[2], 'base64url').subarray(0, 4).toString('base64url');
+    expect(() => descifrar(partes.join('.'), CLAVE)).toThrow('Dato cifrado inválido');
+  });
+
   it('la clave tiene que ser de 32 bytes', () => {
     expect(() => cifrar('x', Buffer.from('corta').toString('base64'))).toThrow('32 bytes');
   });
