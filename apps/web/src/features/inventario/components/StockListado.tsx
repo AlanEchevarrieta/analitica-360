@@ -22,7 +22,7 @@ const MAXIMO = 200;
  */
 export function StockListado() {
   const [busqueda, setBusqueda] = useState("");
-  const productos = useProductos({ pagina: 1, pageSize: MAXIMO, busqueda: "", estado: "activos", orden: "nombre" });
+  const productos = useProductos({ pagina: 1, pageSize: MAXIMO, busqueda: "", estado: "activos", orden: "nombre", tipo: "stock" });
   const dashboard = useDashboard();
   const mes = fechasDe("mes");
   const { puedeHacer } = useAcceso();

@@ -26,6 +26,9 @@ export interface RepartoStock {
 }
 
 /** El producto tiene stock sin variante y hay que decir a qué variantes va (o el reparto no cierra). */
+/** Un servicio no tiene variantes (las variantes reparten stock). */
+export class ServicioSinVariantesError extends Error {}
+
 export class RepartoStockError extends Error {
   constructor(
     public readonly motivo: 'reparto_requerido' | 'reparto_no_suma' | 'reparto_variante_invalida' | 'stock_negativo',

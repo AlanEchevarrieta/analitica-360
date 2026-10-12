@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
 import { useApiFetch } from "@/hooks/use-api";
+import type { ModoPrecio } from "../types";
 
 /** GET /productos/:id (ProductoRecord). */
 export interface ProductoDetalle {
@@ -13,6 +14,9 @@ export interface ProductoDetalle {
   sku: string | null;
   usaVariantes: boolean;
   esInsumo: boolean;
+  esServicio: boolean;
+  modoPrecio: ModoPrecio;
+  duracionMin: number | null;
   unidad: string;
   enTienda: boolean;
   precioVenta: number | null;
@@ -49,7 +53,7 @@ export interface Atributo {
 
 export interface GuardarProducto {
   id: string | null;
-  datos: { nombre: string; categoriaId: string | null; precioVenta: number | null; costo: number | null; activo: boolean; esInsumo: boolean; unidad: string; enTienda: boolean };
+  datos: { nombre: string; categoriaId: string | null; precioVenta: number | null; costo: number | null; activo: boolean; esInsumo: boolean; esServicio: boolean; modoPrecio: ModoPrecio; duracionMin: number | null; unidad: string; enTienda: boolean };
   /** undefined = no cambió (no se manda). */
   codigoBarra?: string | null;
   /** undefined = no cambió; null = que lo genere el sistema. */

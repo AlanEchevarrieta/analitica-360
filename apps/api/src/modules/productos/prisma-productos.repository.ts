@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, type Producto } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
-import type {
+import type { ModoPrecio,
   DimensionesProducto,
   GuardarProductoInput,
   ListaProductos,
@@ -33,6 +33,9 @@ export class PrismaProductosRepository implements ProductosRepository {
       sku: producto.sku,
       usaVariantes: producto.usaVariantes,
       esInsumo: producto.esInsumo,
+      esServicio: producto.esServicio,
+      modoPrecio: producto.modoPrecio as ModoPrecio,
+      duracionMin: producto.duracionMin,
       unidad: producto.unidad,
       enTienda: producto.enTienda,
       oferta:
@@ -74,6 +77,9 @@ export class PrismaProductosRepository implements ProductosRepository {
           costo: input.costo,
           activo: input.activo ?? true,
           esInsumo: input.esInsumo ?? false,
+          esServicio: input.esServicio ?? false,
+          modoPrecio: input.modoPrecio ?? 'fijo',
+          duracionMin: input.duracionMin ?? null,
           unidad: input.unidad ?? 'unidad',
           enTienda: input.enTienda ?? true,
         },
@@ -102,6 +108,15 @@ export class PrismaProductosRepository implements ProductosRepository {
     if (!(await this.categoriaValida(empresaId, input.categoriaId))) {
       return { ok: false, motivo: 'categoria_invalida' };
     }
+    const seraServicio = input.esServicio ?? existente.esServicio;
+    if (seraServicio && (input.esInsumo ?? existente.esInsumo)) return { ok: false, motivo: 'servicio_insumo' };
+    if (seraServicio && !existente.esServicio) {
+      // Un servicio no tiene stock: si el producto tenía, quedaría colgado sin forma de verlo.
+      if (existente.usaVariantes) return { ok: false, motivo: 'servicio_con_variantes' };
+      const stock = await this.prisma.movimientoInventario.groupBy({ by: ['signo'], where: { empresaId, productoId: id, deletedAt: null }, _sum: { cantidad: true } });
+      const saldo = stock.reduce((a, f) => a + (f._sum.cantidad?.toNumber() ?? 0) * f.signo, 0);
+      if (Math.abs(saldo) > 0.0001) return { ok: false, motivo: 'servicio_con_stock' };
+    }
 
     const producto = await this.prisma.$transaction(async (tx) => {
       const actualizado = await tx.producto.update({
@@ -113,6 +128,9 @@ export class PrismaProductosRepository implements ProductosRepository {
           costo: input.costo,
           activo: input.activo,
           ...(input.esInsumo !== undefined ? { esInsumo: input.esInsumo } : {}),
+          ...(input.esServicio !== undefined ? { esServicio: input.esServicio } : {}),
+          ...(input.modoPrecio ? { modoPrecio: input.modoPrecio } : {}),
+          ...(input.duracionMin !== undefined ? { duracionMin: input.duracionMin } : {}),
           ...(input.unidad ? { unidad: input.unidad } : {}),
           ...(input.enTienda !== undefined ? { enTienda: input.enTienda } : {}),
         },
@@ -153,7 +171,17 @@ export class PrismaProductosRepository implements ProductosRepository {
       ...(filtro.categoriaId ? { categoriaId: filtro.categoriaId } : {}),
       ...(filtro.estado === 'activos' ? { activo: true } : {}),
       ...(filtro.estado === 'inactivos' ? { activo: false } : {}),
-      ...(filtro.tipo === 'venta' ? { esInsumo: false } : filtro.tipo === 'insumos' ? { esInsumo: true } : {}),
+      ...(filtro.tipo === 'venta'
+        ? { esInsumo: false }
+        : filtro.tipo === 'insumos'
+          ? { esInsumo: true }
+          : filtro.tipo === 'stock'
+            ? { esServicio: false }
+            : filtro.tipo === 'servicios'
+              ? { esServicio: true }
+              : filtro.tipo === 'mercaderia'
+                ? { esInsumo: false, esServicio: false }
+                : {}),
       ...(busqueda
         ? {
             OR: [

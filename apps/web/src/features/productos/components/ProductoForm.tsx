@@ -25,6 +25,8 @@ import { OfertaProducto } from "./OfertaProducto";
 import { usePlan } from "@/hooks/use-plan";
 import { RepartoStock, repartoParaApi } from "./RepartoStock";
 import { VariantesEditor, type VarianteEditable } from "./VariantesEditor";
+import type { ModoPrecio } from "../types";
+import { ServicioCampos } from "./ServicioCampos";
 
 function aEditable(v: VarianteDetalle): VarianteEditable {
   return {
@@ -64,6 +66,9 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
   const [costo, setCosto] = useState(aTexto(inicial?.costo));
   const [activo, setActivo] = useState(inicial?.activo ?? true);
   const [esInsumo, setEsInsumo] = useState(inicial?.esInsumo ?? false);
+  const [esServicio, setEsServicio] = useState(inicial?.esServicio ?? false);
+  const [modoPrecio, setModoPrecio] = useState<ModoPrecio>(inicial?.modoPrecio ?? "fijo");
+  const [duracion, setDuracion] = useState(inicial?.duracionMin ? String(inicial.duracionMin) : "");
   const [unidad, setUnidad] = useState(inicial?.unidad ?? "unidad");
   const [enTienda, setEnTienda] = useState(inicial?.enTienda ?? true);
   const [codigo, setCodigo] = useState(inicial?.codigoBarra ?? "");
@@ -97,6 +102,9 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
 
   function validar(): string | null {
     if (!nombre.trim()) return "El nombre es obligatorio.";
+    if (esServicio && variantes.length > 0) return "Un servicio no lleva variantes: creá un servicio para cada opción.";
+    const minutos = Number(duracion);
+    if (esServicio && duracion.trim() && (!Number.isInteger(minutos) || minutos < 5 || minutos > 1440)) return "La duración va en minutos enteros, entre 5 y 1440.";
     const combos = new Set<string>();
     for (const v of variantes) {
       const a = aApi(v).atributos;
@@ -132,7 +140,19 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
     guardar.mutate(
       {
         id: inicial?.id ?? null,
-        datos: { nombre: nombre.trim(), categoriaId, precioVenta: precioN, costo: costoN, activo, esInsumo, unidad, enTienda },
+        datos: {
+          nombre: nombre.trim(),
+          categoriaId,
+          precioVenta: precioN,
+          costo: costoN,
+          activo,
+          esInsumo: esServicio ? false : esInsumo,
+          esServicio,
+          modoPrecio: esServicio ? modoPrecio : "fijo",
+          duracionMin: esServicio && duracion.trim() ? Number(duracion) : null,
+          unidad,
+          enTienda,
+        },
         codigoBarra: codigoNuevo !== (inicial?.codigoBarra ?? null) ? codigoNuevo : undefined,
         sku: !tieneVariantes && skuNuevo && skuNuevo !== (inicial?.sku ?? null) ? skuNuevo : undefined,
         variantes: variantesCambiaron || pideReparto ? variantesApi : undefined,
@@ -169,9 +189,10 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
               <Input id="producto-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus={!inicial} />
             </div>
             <CategoriaSelector valor={categoriaId} onCambiar={setCategoriaId} />
+            <ServicioCampos esServicio={esServicio} onEsServicio={setEsServicio} modoPrecio={modoPrecio} onModoPrecio={setModoPrecio} duracion={duracion} onDuracion={setDuracion} />
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="producto-precio">Precio de venta $</Label>
+                <Label htmlFor="producto-precio">{esServicio && modoPrecio === "por_hora" ? "Precio por hora $" : esServicio && modoPrecio === "a_presupuestar" ? "Precio de referencia $ (opcional)" : "Precio de venta $"}</Label>
                 <InputPlata id="producto-precio" value={precio} onChange={(e) => setPrecio(e.target.value)} />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -193,6 +214,7 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
                 Mostrar en la tienda online
               </label>
             )}
+            {!esServicio && (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-muted/40 p-3 text-sm">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={esInsumo} onChange={(e) => setEsInsumo(e.target.checked)} />
@@ -209,12 +231,14 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
                 </select>
               </label>
             </div>
+            )}
           </CardContent>
         </Card>
 
         {inicial && !esInsumo && <FotosProducto productoId={inicial.id} />}
         {inicial && !esInsumo && enTienda && plan.incluye("tienda") && <OfertaProducto productoId={inicial.id} precioVenta={inicial.precioVenta} usaVariantes={inicial.usaVariantes} />}
 
+        {!esServicio && (
         <Card>
           <CardHeader>
             <CardTitle>Variantes</CardTitle>
@@ -232,6 +256,7 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
             )}
           </CardContent>
         </Card>
+        )}
       </div>
 
       <Card className="h-fit lg:sticky lg:top-4">
@@ -254,6 +279,8 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
               </>
             )}
           </div>
+          {!esServicio && (
+          <>
           <div className="grid grid-cols-2 gap-3">
             {medida("alto", "Alto cm")}
             {medida("largo", "Largo cm")}
@@ -261,6 +288,8 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
             {medida("peso", "Peso g")}
           </div>
           <p className="text-xs text-muted-foreground">Las medidas se usan para calcular envíos. Son opcionales.</p>
+          </>
+          )}
           {error && (
             <p role="alert" className="text-sm text-destructive">
               {error}
@@ -268,7 +297,7 @@ export function ProductoForm({ inicial, variantesIniciales }: { inicial: Product
           )}
           <Button size="lg" onClick={onGuardar} disabled={guardar.isPending}>
             {guardar.isPending && <Loader2 className="animate-spin" aria-hidden />}
-            {inicial ? "Guardar cambios" : "Crear producto"}
+            {inicial ? "Guardar cambios" : esServicio ? "Crear servicio" : "Crear producto"}
           </Button>
         </CardContent>
       </Card>

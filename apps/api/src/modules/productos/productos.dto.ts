@@ -12,6 +12,11 @@ export const guardarProductoSchema = z.object({
   activo: z.boolean().optional(),
   /** Insumo / materia prima (no se vende tal cual). Sin mandar = no cambia (alta: false). */
   esInsumo: z.boolean().optional(),
+  /** Servicio (sin stock). Sin mandar = no cambia (alta: false). */
+  esServicio: z.boolean().optional(),
+  modoPrecio: z.enum(['fijo', 'por_hora', 'a_presupuestar']).optional(),
+  /** Duración del servicio en minutos (hasta 24 horas). null = sin duración. */
+  duracionMin: z.number().int().min(5).max(1440).nullable().optional(),
   unidad: z.enum(['unidad', 'kg', 'g', 'l', 'ml', 'm', 'cm']).optional(),
   /** Se muestra en la tienda online. Sin mandar = no cambia (alta: sí). */
   enTienda: z.boolean().optional(),
@@ -31,8 +36,8 @@ export const listarProductosQuerySchema = z.object({
   margen: margenProductoSchema.default('todos'),
   /** 'demanda': más vendidos primero (unidades de los últimos 90 días). */
   orden: z.enum(['nombre', 'demanda']).default('nombre'),
-  /** venta: lo que se vende (sin insumos). insumos: solo materias primas. */
-  tipo: z.enum(['todos', 'venta', 'insumos']).default('todos'),
+  /** venta: lo que se vende (sin insumos). insumos: solo materias primas. stock: lo que tiene stock (sin servicios). servicios: solo servicios. */
+  tipo: z.enum(['todos', 'venta', 'insumos', 'stock', 'servicios', 'mercaderia']).default('todos'),
 });
 export type ListarProductosQuery = z.infer<typeof listarProductosQuerySchema>;
 

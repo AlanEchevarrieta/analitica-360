@@ -16,6 +16,9 @@ import type {
 function desempacar(resultado: ResultadoGuardarProducto): ProductoRecord {
   if (resultado.ok) return resultado.producto;
   if (resultado.motivo === 'producto_no_encontrado') throw new NotFoundException('Producto no encontrado');
+  if (resultado.motivo === 'servicio_insumo') throw new BadRequestException('Un servicio no puede ser también un insumo');
+  if (resultado.motivo === 'servicio_con_stock') throw new BadRequestException('Este producto tiene stock: para pasarlo a servicio, primero dejá el stock en 0 con un ajuste');
+  if (resultado.motivo === 'servicio_con_variantes') throw new BadRequestException('Un producto con variantes no puede pasar a servicio: creá el servicio aparte');
   throw new BadRequestException('La categoría no existe o no pertenece a esta empresa');
 }
 
@@ -51,6 +54,7 @@ export class ProductosService {
   }
 
   async crear(empresaId: string, input: GuardarProductoInput): Promise<ProductoRecord> {
+    if (input.esServicio && input.esInsumo) throw new BadRequestException('Un servicio no puede ser también un insumo');
     const resultado = await this.productosRepository.crear(empresaId, {
       nombre: input.nombre,
       categoriaId: input.categoriaId ?? null,
@@ -58,6 +62,9 @@ export class ProductosService {
       costo: input.costo ?? null,
       activo: input.activo,
       esInsumo: input.esInsumo,
+      esServicio: input.esServicio,
+      modoPrecio: input.modoPrecio,
+      duracionMin: input.duracionMin,
       unidad: input.unidad,
       enTienda: input.enTienda,
     });
@@ -74,6 +81,9 @@ export class ProductosService {
       costo: input.costo,
       activo: input.activo,
       esInsumo: input.esInsumo,
+      esServicio: input.esServicio,
+      modoPrecio: input.modoPrecio,
+      duracionMin: input.duracionMin,
       unidad: input.unidad,
       enTienda: input.enTienda,
     });

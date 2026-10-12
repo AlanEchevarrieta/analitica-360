@@ -127,15 +127,18 @@ export class PresupuestosService implements OnModuleInit {
     return { ...vista, items: vista.items.map((i, n) => ({ ...i, stock: stock[n] })), cliente, numeroVenta: venta?.numeroVenta ?? null };
   }
 
-  /** Stock de hoy de cada renglón, para avisar al pasar a venta si falta algo (null = kit que se arma al vender). */
+  /** Stock de hoy de cada renglón, para avisar al pasar a venta si falta algo (null = kit que se arma al vender o servicio). */
   private async stockDe(empresaId: string, items: { productoId: string; varianteId: string | null }[]): Promise<(number | null)[]> {
     if (items.length === 0) return [];
     const ids = [...new Set(items.map((i) => i.productoId))];
-    const [filas, kits] = await Promise.all([
+    const [filas, kits, servicios] = await Promise.all([
       this.prisma.movimientoInventario.groupBy({ by: ['productoId', 'varianteId', 'signo'], where: { empresaId, deletedAt: null, productoId: { in: ids } }, _sum: { cantidad: true } }),
       this.prisma.receta.findMany({ where: { empresaId, deletedAt: null, armarAlVender: true, productoId: { in: ids } }, select: { productoId: true, varianteId: true } }),
+      this.prisma.producto.findMany({ where: { empresaId, id: { in: ids }, esServicio: true }, select: { id: true } }),
     ]);
     return items.map((i) => {
+      // Servicio: no tiene stock (si tiene receta, sus insumos se controlan al vender).
+      if (servicios.some((s) => s.id === i.productoId)) return null;
       if (kits.some((k) => k.productoId === i.productoId && (k.varianteId === null || k.varianteId === i.varianteId))) return null;
       return filas
         .filter((f) => f.productoId === i.productoId && (i.varianteId ? f.varianteId === i.varianteId : true))

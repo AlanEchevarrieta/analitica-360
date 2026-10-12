@@ -27,6 +27,7 @@ const ORDENES: { valor: OrdenProductos; etiqueta: string }[] = [
 const TIPOS = [
   { valor: "todos", etiqueta: "Todo tipo" },
   { valor: "venta", etiqueta: "Para vender" },
+  { valor: "servicios", etiqueta: "Servicios" },
   { valor: "insumos", etiqueta: "Insumos" },
 ] as const;
 
@@ -127,6 +128,7 @@ export function ProductosListado() {
                         </Link>
                         {!p.activo && <span className="ml-2 text-xs text-muted-foreground">(inactivo)</span>}
                         {p.esInsumo && <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">Insumo</span>}
+                        {p.esServicio && <span className="ml-2 rounded bg-sky-500/15 px-1.5 py-0.5 text-[11px] font-normal text-sky-700 dark:text-sky-300">Servicio</span>}
                         {p.esKit && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-[11px] font-normal text-primary">Kit</span>}
                         <span className="block text-xs font-normal text-muted-foreground">{p.usaVariantes ? "SKU por variante" : (p.sku ?? "")}</span>
                         {/* En el celular la categoría va debajo del nombre. */}
@@ -134,19 +136,27 @@ export function ProductosListado() {
                       </TableCell>
                       <TableCell className="hidden text-muted-foreground md:table-cell">{p.categoriaNombre ?? "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {p.precioVenta == null ? "—" : formatoPesos(p.precioVenta)}
+                        {p.esServicio && p.modoPrecio === "a_presupuestar" ? (
+                          <span className="text-muted-foreground">A presupuestar</span>
+                        ) : p.precioVenta == null ? (
+                          "—"
+                        ) : (
+                          `${formatoPesos(p.precioVenta)}${p.esServicio && p.modoPrecio === "por_hora" ? " / h" : ""}`
+                        )}
                       </TableCell>
                       <TableCell className="hidden text-right tabular-nums text-muted-foreground md:table-cell">
                         {p.costo == null ? "—" : formatoPesos(p.costo)}
                       </TableCell>
                       <TableCell className="hidden text-right tabular-nums md:table-cell">{m == null ? "—" : `${m}%`}</TableCell>
                       <TableCell className="hidden text-right tabular-nums md:table-cell">{formatoNumero(p.vendidos)}</TableCell>
-                      <TableCell
-                        className={`text-right font-medium tabular-nums ${p.stock <= 0 ? "text-destructive" : ""}`}
-                      >
-                        {formatoNumero(p.stock)}
-                        {p.unidad !== "unidad" && <span className="ml-1 text-xs font-normal text-muted-foreground">{abreviaturaUnidad(p.unidad)}</span>}
-                      </TableCell>
+                      {p.esServicio ? (
+                        <TableCell className="text-right text-xs text-muted-foreground">{p.duracionMin ? `${p.duracionMin} min` : "—"}</TableCell>
+                      ) : (
+                        <TableCell className={`text-right font-medium tabular-nums ${p.stock <= 0 ? "text-destructive" : ""}`}>
+                          {formatoNumero(p.stock)}
+                          {p.unidad !== "unidad" && <span className="ml-1 text-xs font-normal text-muted-foreground">{abreviaturaUnidad(p.unidad)}</span>}
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}

@@ -108,7 +108,7 @@ export class PrismaDashboardRepository implements DashboardRepository {
           WHERE m.producto_id = p.id AND m.empresa_id = ${empresaId}::uuid AND m.deleted_at IS NULL
         ), 0) AS stock
       FROM productos p
-      WHERE p.empresa_id = ${empresaId}::uuid AND p.deleted_at IS NULL AND p.activo = true
+      WHERE p.empresa_id = ${empresaId}::uuid AND p.deleted_at IS NULL AND p.activo = true AND NOT p.es_servicio
     `);
     return filas.map((f) => ({ nombre: f.nombre, stock: Number(f.stock) }));
   }

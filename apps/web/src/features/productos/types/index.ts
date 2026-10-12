@@ -1,3 +1,7 @@
+/** Servicios: precio fijo, por hora o a presupuestar (se escribe en cada venta). */
+export type ModoPrecio = "fijo" | "por_hora" | "a_presupuestar";
+export const NOMBRE_MODO_PRECIO: Record<ModoPrecio, string> = { fijo: "Precio fijo", por_hora: "Por hora", a_presupuestar: "A presupuestar" };
+
 // Espejo de ProductoListado / ListaProductos (apps/api modules/productos/productos.repository.ts).
 export interface ProductoFila {
   id: string;
@@ -9,6 +13,10 @@ export interface ProductoFila {
   usaVariantes: boolean;
   /** Insumo / materia prima (no se vende tal cual). */
   esInsumo: boolean;
+  /** Servicio: sin stock, con duración y modo de precio. */
+  esServicio: boolean;
+  modoPrecio: ModoPrecio;
+  duracionMin: number | null;
   unidad: string;
   /** Kit que se arma al vender: su stock es cuántos se pueden armar. */
   esKit: boolean;
@@ -36,8 +44,8 @@ export interface FiltrosProductos {
   busqueda: string;
   estado: EstadoProducto;
   orden: OrdenProductos;
-  /** venta = sin insumos (Nueva venta, pedidos); insumos = solo materias primas. */
-  tipo?: "todos" | "venta" | "insumos";
+  /** venta = sin insumos (Nueva venta, pedidos); insumos = solo materias primas; stock = sin servicios (compras, inventario); servicios = solo servicios. */
+  tipo?: "todos" | "venta" | "insumos" | "stock" | "servicios" | "mercaderia";
 }
 
 /** GET /productos/:id/variantes (VarianteRecord). */

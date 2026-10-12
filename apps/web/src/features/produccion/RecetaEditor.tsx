@@ -153,7 +153,7 @@ function Formulario({ detalle, varianteId, onVariante }: { detalle: RecetaDetall
               ))}
             </div>
             <BuscadorProductos
-              tipo="todos"
+              tipo="stock"
               mostrar="costo"
               precioDe={(p, v) => v?.costo ?? p.costo ?? 0}
               onAgregar={(l) => {

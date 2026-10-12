@@ -97,6 +97,7 @@ export function NuevoPedidoForm() {
                   : [...prev, { ...nueva, cantidad: 1 }],
               )
             }
+            tipo="mercaderia"
           />
           <LineasProductos
             lineas={lineas}

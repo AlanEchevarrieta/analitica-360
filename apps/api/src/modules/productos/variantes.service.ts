@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   RepartoStockError,
+  ServicioSinVariantesError,
   SkuDuplicadoError,
   VARIANTES_REPOSITORY,
   VarianteConStockError,
@@ -52,6 +53,7 @@ export class VariantesService {
         { usuarioId, reparto: input.repartoSinVariante },
       )
       .catch((error: unknown) => {
+        if (error instanceof ServicioSinVariantesError) throw new BadRequestException('Un servicio no lleva variantes: creá un servicio para cada opción');
         if (error instanceof RepartoStockError) {
           throw new ConflictException({
             message: MENSAJE_REPARTO[error.motivo](error.stockSinVariante),

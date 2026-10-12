@@ -60,7 +60,7 @@ export function OrdenCompraForm({ inicial, onListo, onCancelar }: { inicial?: Or
           <CardTitle>Productos a pedir</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <BuscadorProductos onAgregar={agregar} precioDe={(producto, variante) => variante?.costo ?? producto.costo ?? 0} mostrar="costo" tipo="todos" />
+          <BuscadorProductos onAgregar={agregar} precioDe={(producto, variante) => variante?.costo ?? producto.costo ?? 0} mostrar="costo" tipo="stock" />
           <LineasProductos
             lineas={lineas}
             etiquetaPrecio="Costo unitario"

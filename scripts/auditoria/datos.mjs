@@ -83,7 +83,8 @@ const CHEQUEOS = [
     titulo: 'Productos activos sin precio de venta',
     grave: false,
     sql: `SELECT e.nombre AS empresa, p.nombre AS detalle FROM productos p JOIN empresas e ON e.id = p.empresa_id
-      WHERE p.deleted_at IS NULL AND p.activo AND NOT p.es_insumo AND coalesce(p.precio_venta,0) = 0`,
+      WHERE p.deleted_at IS NULL AND p.activo AND NOT p.es_insumo AND coalesce(p.precio_venta,0) = 0
+        AND NOT (p.es_servicio AND p.modo_precio = 'a_presupuestar')`,
   },
   {
     id: 'clientes-duplicados',

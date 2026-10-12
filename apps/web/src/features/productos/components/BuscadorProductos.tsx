@@ -36,8 +36,8 @@ export function BuscadorProductos({
   mostrar?: "precio" | "costo";
   /** Compras: permite crear una variante que todavía no existe (ej. un color nuevo). */
   permitirNuevaVariante?: boolean;
-  /** Qué productos ofrecer: para vender (sin insumos) o todos (compras). */
-  tipo?: "venta" | "todos";
+  /** Qué ofrecer: para vender (productos y servicios, sin insumos), stock (compras: sin servicios) o todos. */
+  tipo?: "venta" | "todos" | "stock" | "mercaderia";
 }) {
   const [busqueda, setBusqueda] = useState("");
   // convertir = producto sin variantes al que se le van a crear (desde una compra).
@@ -70,8 +70,10 @@ export function BuscadorProductos({
       varianteId: variante?.id ?? null,
       nombre: producto.nombre,
       variante: variante ? etiquetaVariante(variante.atributos) : null,
-      precioUnitario: precioDe(producto, variante),
-      stock: producto.stock,
+      // "A presupuestar": el precio se escribe en cada venta.
+      precioUnitario: producto.esServicio && producto.modoPrecio === "a_presupuestar" ? 0 : precioDe(producto, variante),
+      // Un servicio no tiene stock: nunca avisa que falta.
+      stock: producto.esServicio ? Number.POSITIVE_INFINITY : producto.stock,
       unidad: producto.unidad,
     });
     setBusqueda("");
@@ -189,12 +191,18 @@ export function BuscadorProductos({
                     >
                       <span className="truncate">{p.nombre}</span>
                       <span className="flex shrink-0 items-center gap-3 tabular-nums">
-                        <span className={p.stock <= 0 ? "text-destructive" : "text-muted-foreground"}>
-                          stock {formatoNumero(p.stock)}
-                        </span>
+                        {p.esServicio ? (
+                          <span className="text-muted-foreground">servicio{p.duracionMin ? ` · ${p.duracionMin} min` : ""}</span>
+                        ) : (
+                          <span className={p.stock <= 0 ? "text-destructive" : "text-muted-foreground"}>stock {formatoNumero(p.stock)}</span>
+                        )}
                         <span className="font-medium">
-                        {mostrar === "costo" ? `costo ${formatoPesos(p.costo)}` : formatoPesos(p.precioVenta)}
-                      </span>
+                          {mostrar === "costo"
+                            ? `costo ${formatoPesos(p.costo)}`
+                            : p.esServicio && p.modoPrecio === "a_presupuestar"
+                              ? "a presupuestar"
+                              : `${formatoPesos(p.precioVenta)}${p.esServicio && p.modoPrecio === "por_hora" ? " / hora" : ""}`}
+                        </span>
                         {cargandoId === p.id && <Loader2 className="size-4 animate-spin" aria-label="Cargando" />}
                       </span>
                     </button>

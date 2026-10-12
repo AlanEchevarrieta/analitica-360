@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, type ProductoVariante } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import {
+  ServicioSinVariantesError,
   RepartoStockError,
   SkuDuplicadoError,
   VarianteConStockError,
@@ -81,6 +82,7 @@ export class PrismaVariantesRepository implements VariantesRepository {
     return this.prisma.$transaction(async (tx) => {
       const producto = await tx.producto.findFirst({ where: { id: productoId, empresaId } });
       if (!producto) return null;
+      if (producto.esServicio && variantes.length > 0) throw new ServicioSinVariantesError();
 
       const actuales = await tx.productoVariante.findMany({ where: { empresaId, productoId, deletedAt: null } });
 

@@ -71,6 +71,7 @@ export class PrismaTiendaRepository implements TiendaRepository {
     await this.prisma.$executeRaw`UPDATE cupones_tienda SET usos = GREATEST(usos - 1, 0), updated_at = now() WHERE empresa_id = ${empresaId}::uuid AND codigo = ${codigo}`;
   }
 
+  // Los servicios no se muestran en la tienda (sin stock que vender; la reserva de turnos va aparte).
   async catalogo(empresaId: string): Promise<ProductoCatalogoBase[]> {
     // Mismo criterio de stock que el legacy catalogo_tienda: SUM(signo*cantidad)
     // sin contar transferencias (mueven stock entre ubicaciones, no lo cambian).
@@ -95,7 +96,7 @@ export class PrismaTiendaRepository implements TiendaRepository {
         FROM productos p
         LEFT JOIN categorias cat ON cat.id = p.categoria_id
         WHERE p.empresa_id = ${empresaId}::uuid AND p.activo = TRUE AND p.deleted_at IS NULL
-          AND p.es_insumo = FALSE AND p.en_tienda = TRUE
+          AND p.es_insumo = FALSE AND NOT p.es_servicio AND p.en_tienda = TRUE
         ORDER BY p.nombre
       `),
       this.prisma.$queryRaw<
@@ -112,7 +113,7 @@ export class PrismaTiendaRepository implements TiendaRepository {
         FROM producto_variantes pv
         JOIN productos p ON p.id = pv.producto_id
         WHERE pv.empresa_id = ${empresaId}::uuid AND pv.activo = TRUE AND pv.deleted_at IS NULL
-          AND p.activo = TRUE AND p.deleted_at IS NULL AND p.es_insumo = FALSE AND p.en_tienda = TRUE
+          AND p.activo = TRUE AND p.deleted_at IS NULL AND p.es_insumo = FALSE AND NOT p.es_servicio AND p.en_tienda = TRUE
         ORDER BY pv.id
       `),
     ]);
@@ -179,7 +180,7 @@ export class PrismaTiendaRepository implements TiendaRepository {
   async productosVendibles(empresaId: string, productoIds: string[]): Promise<ProductoVendible[]> {
     if (productoIds.length === 0) return [];
     const productos = await this.prisma.producto.findMany({
-      where: { id: { in: productoIds }, empresaId, activo: true, deletedAt: null, esInsumo: false, enTienda: true },
+      where: { id: { in: productoIds }, empresaId, activo: true, deletedAt: null, esInsumo: false, esServicio: false, enTienda: true },
       select: {
         id: true,
         precioVenta: true,

@@ -328,6 +328,12 @@ model Producto {
   usaVariantes Boolean   @default(false) @map("usa_variantes")
   /// Insumo / materia prima: se compra y se usa para fabricar, no se vende tal cual.
   esInsumo     Boolean   @default(false) @map("es_insumo")
+  /// Servicio (un corte, un service, una clase): no tiene stock. Si tiene una receta "se arma al vender", descuenta sus insumos.
+  esServicio   Boolean   @default(false) @map("es_servicio")
+  /// Servicios: fijo | por_hora | a_presupuestar (el precio se escribe en cada venta).
+  modoPrecio   String    @default("fijo") @map("modo_precio") @db.VarChar(15)
+  /// Servicios: cuánto dura, en minutos (para la agenda).
+  duracionMin  Int?      @map("duracion_min")
   /// unidad | kg | g | l | ml | m | cm
   unidad       String    @default("unidad")
   /// Se muestra en la tienda online (los insumos nunca se muestran).

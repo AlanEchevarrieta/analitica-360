@@ -1,3 +1,6 @@
+/** Servicios: precio fijo, por hora o a presupuestar (se escribe en cada venta). */
+export type ModoPrecio = 'fijo' | 'por_hora' | 'a_presupuestar';
+
 export interface ProductoRecord {
   id: string;
   empresaId: string;
@@ -9,6 +12,10 @@ export interface ProductoRecord {
   sku: string | null;
   usaVariantes: boolean;
   esInsumo: boolean;
+  /** Servicio: sin stock, con duración y modo de precio. */
+  esServicio: boolean;
+  modoPrecio: ModoPrecio;
+  duracionMin: number | null;
   unidad: string;
   enTienda: boolean;
   /** Oferta de la tienda online (null = sin oferta). */
@@ -30,6 +37,10 @@ export interface GuardarProductoInput {
   costo?: number | null;
   activo?: boolean;
   esInsumo?: boolean;
+  esServicio?: boolean;
+  modoPrecio?: ModoPrecio;
+  /** null = sin duración. */
+  duracionMin?: number | null;
   unidad?: string;
   enTienda?: boolean;
 }
@@ -40,7 +51,8 @@ export interface ProductosFiltro {
   estado: 'todos' | 'activos' | 'inactivos';
   margen: 'todos' | 'alto' | 'medio' | 'bajo';
   orden: 'nombre' | 'demanda';
-  tipo?: 'todos' | 'venta' | 'insumos';
+  /** venta: lo que se vende (productos y servicios). stock: lo que tiene stock (sin servicios). servicios: solo servicios. mercaderia: lo que se vende y tiene stock (pedidos). */
+  tipo?: 'todos' | 'venta' | 'insumos' | 'stock' | 'servicios' | 'mercaderia';
   pagina: number;
   pageSize: number;
 }
@@ -71,7 +83,7 @@ export const PRODUCTOS_REPOSITORY = Symbol('PRODUCTOS_REPOSITORY');
 
 export type ResultadoGuardarProducto =
   | { ok: true; producto: ProductoRecord }
-  | { ok: false; motivo: 'producto_no_encontrado' | 'categoria_invalida' };
+  | { ok: false; motivo: 'producto_no_encontrado' | 'categoria_invalida' | 'servicio_insumo' | 'servicio_con_stock' | 'servicio_con_variantes' };
 
 /**
  * Puerto de persistencia de Producto. Implementación real:
