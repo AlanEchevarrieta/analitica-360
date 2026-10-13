@@ -68,6 +68,8 @@ const PANTALLAS: Record<string, string> = {
   "/ordenes-trabajo/nueva": "Recibir un trabajo",
   "/ordenes-trabajo/:id": "Ficha de orden de trabajo",
   "/agenda": "Agenda",
+  "/abonos": "Abonos",
+  "/abonos/:id": "Ficha de abono",
   "/agenda/configuracion": "Profesionales y horarios",
   "/ventas/presupuestos/nuevo": "Nuevo presupuesto",
   "/ventas/presupuestos/:id": "Ficha de presupuesto",

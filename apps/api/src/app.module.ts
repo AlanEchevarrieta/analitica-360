@@ -18,6 +18,7 @@ import { PresupuestosModule } from './modules/presupuestos/presupuestos.module.j
 import { ArchivoModule } from './modules/archivo/archivo.module.js';
 import { OrdenesTrabajoModule } from './modules/ordenes-trabajo/ordenes-trabajo.module.js';
 import { AgendaModule } from './modules/agenda/agenda.module.js';
+import { AbonosModule } from './modules/abonos/abonos.module.js';
 import { DevolucionesModule } from './modules/devoluciones/devoluciones.module.js';
 import { PedidosModule } from './modules/pedidos/pedidos.module.js';
 import { InformesModule } from './modules/informes/informes.module.js';
@@ -69,6 +70,7 @@ import { ConfiguracionModule } from './modules/configuracion/configuracion.modul
     ArchivoModule,
     OrdenesTrabajoModule,
     AgendaModule,
+    AbonosModule,
     DevolucionesModule,
     PedidosModule,
     ClientesModule,

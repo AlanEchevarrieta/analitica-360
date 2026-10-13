@@ -6,6 +6,8 @@ import { CalendarClock, Check, MessageCircle, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { formatoPesos } from "@/lib/formato";
+import { usePlan } from "@/hooks/use-plan";
+import { useAbonosDelCliente, useAccionesAbonos } from "@/features/abonos/use-abonos";
 import { TurnoForm } from "./TurnoForm";
 import { fechaLarga, NOMBRE_ESTADO_TURNO, OCUPAN, useAccionesAgenda, type EstadoTurno, type Turno } from "./use-agenda";
 
@@ -22,6 +24,11 @@ export function TurnoPanel({ turno, onCerrar }: { turno: Turno; onCerrar: () => 
   const { estado, recordatorio } = useAccionesAgenda();
   const [reprogramando, setReprogramando] = useState(false);
   const cobrado = Boolean(turno.ventaId);
+  // Si el cliente tiene un abono con sesiones, el turno se puede "pagar" con una sesión.
+  const conAbonos = usePlan().disponible("abonos");
+  const abonos = useAbonosDelCliente(conAbonos && turno.clienteId && !cobrado && !turno.abonoId ? turno.clienteId : null);
+  const { usar } = useAccionesAbonos();
+  const usables = (abonos.data ?? []).filter((a) => (a.estado === "al_dia" || a.estado === "por_vencer") && a.sesionesRestantes !== 0);
 
   if (reprogramando) return <TurnoForm inicial={turno} onListo={() => setReprogramando(false)} />;
 
@@ -60,7 +67,11 @@ export function TurnoPanel({ turno, onCerrar }: { turno: Turno; onCerrar: () => 
         {turno.recordadoEn && <p className="text-xs text-muted-foreground">Recordatorio enviado el {new Date(turno.recordadoEn).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}.</p>}
       </div>
 
-      {cobrado ? (
+      {turno.abonoId ? (
+        <Link href={`/abonos/${turno.abonoId}`} className={buttonVariants({ variant: "outline" })}>
+          <Wallet aria-hidden /> Pagado con el abono · ver
+        </Link>
+      ) : cobrado ? (
         <Link href={`/ventas/${turno.ventaId}`} className={buttonVariants({ variant: "outline" })}>
           <Wallet aria-hidden /> Ver la venta
         </Link>
@@ -68,9 +79,18 @@ export function TurnoPanel({ turno, onCerrar }: { turno: Turno; onCerrar: () => 
         <div className="flex flex-col gap-2">
           {OCUPAN.includes(turno.estado) && (
             <>
-              <Link href={`/ventas/nueva?turno=${turno.id}&fecha=${turno.inicio.slice(0, 10)}`} className={buttonVariants()}>
+              <Link href={`/ventas/nueva?turno=${turno.id}&fecha=${turno.inicio.slice(0, 10)}`} className={buttonVariants({ variant: usables.length ? "outline" : "default" })}>
                 <Wallet aria-hidden /> Cobrar
               </Link>
+              {usables.map((a) => (
+                <Button
+                  key={a.id}
+                  onClick={() => usar.mutate({ id: a.id, turnoId: turno.id }, { onSuccess: () => toast.success(`Sesión descontada de ${a.plan}`), onError: (e) => toast.error(e instanceof Error ? e.message : "No se pudo") })}
+                  disabled={usar.isPending}
+                >
+                  <Check aria-hidden /> Usar sesión de «{a.plan}»{a.sesionesRestantes != null ? ` (le quedan ${a.sesionesRestantes})` : ""}
+                </Button>
+              ))}
               <Button variant="outline" onClick={recordar} disabled={recordatorio.isPending}>
                 <MessageCircle aria-hidden /> Recordarle por WhatsApp
               </Button>

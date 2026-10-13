@@ -1585,6 +1585,89 @@ model AgendaBloqueo {
   @@map("agenda_bloqueos")
 }
 
+/// Abonos (módulo de servicios, pieza 4): el plan que se vende ("Pase libre mensual",
+/// "8 clases por mes", "Paquete de 10 sesiones"). Cada cuota se cobra como una venta de su producto (servicio).
+model AbonoPlan {
+  id           String    @id @default(uuid()) @db.Uuid
+  empresaId    String    @map("empresa_id") @db.Uuid
+  nombre       String    @db.VarChar(80)
+  /// mensual (se renueva cada mes) | paquete (N sesiones con vigencia en días)
+  tipo         String    @default("mensual") @db.VarChar(10)
+  precio       Decimal   @db.Decimal(12, 2)
+  /// Sesiones por período (null = libre / sin límite).
+  sesiones     Int?
+  /// Paquete: cuántos días dura desde que se cobra.
+  vigenciaDias Int?      @map("vigencia_dias")
+  /// El servicio con el que sale en la venta.
+  productoId   String    @map("producto_id") @db.Uuid
+  activo       Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  abonos Abono[]
+
+  @@index([empresaId])
+  @@map("abono_planes")
+}
+
+/// El abono de un cliente. El precio queda guardado (los aumentos del plan se aplican a mano o al editar el plan).
+model Abono {
+  id        String    @id @default(uuid()) @db.Uuid
+  empresaId String    @map("empresa_id") @db.Uuid
+  clienteId String    @map("cliente_id") @db.Uuid
+  planId    String    @map("plan_id") @db.Uuid
+  precio    Decimal   @db.Decimal(12, 2)
+  /// activo | baja
+  estado    String    @default("activo") @db.VarChar(10)
+  notas     String?   @db.VarChar(500)
+  bajaEn    DateTime? @map("baja_en")
+  usuarioId String?   @map("usuario_id") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  plan     AbonoPlan     @relation(fields: [planId], references: [id])
+  periodos AbonoPeriodo[]
+
+  @@index([empresaId, estado])
+  @@index([clienteId])
+  @@map("abonos")
+}
+
+/// Un período cobrado (una cuota): de qué día a qué día, cuántas sesiones y con qué venta.
+model AbonoPeriodo {
+  id        String   @id @default(uuid()) @db.Uuid
+  empresaId String   @map("empresa_id") @db.Uuid
+  abonoId   String   @map("abono_id") @db.Uuid
+  desde     DateTime @db.Date
+  hasta     DateTime @db.Date
+  sesiones  Int?
+  usadas    Int      @default(0)
+  monto     Decimal  @db.Decimal(12, 2)
+  ventaId   String   @unique @map("venta_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  abono Abono      @relation(fields: [abonoId], references: [id], onDelete: Cascade)
+  usos  AbonoUso[]
+
+  @@index([abonoId, hasta])
+  @@map("abono_periodos")
+}
+
+/// Una sesión usada (o una asistencia, en los abonos libres). Puede venir de un turno de la agenda.
+model AbonoUso {
+  id        String   @id @default(uuid()) @db.Uuid
+  empresaId String   @map("empresa_id") @db.Uuid
+  periodoId String   @map("periodo_id") @db.Uuid
+  turnoId   String?  @unique @map("turno_id") @db.Uuid
+  fecha     DateTime @default(now()) @db.Timestamptz(3)
+  usuarioId String?  @map("usuario_id") @db.Uuid
+  nota      String?  @db.VarChar(200)
+
+  periodo AbonoPeriodo @relation(fields: [periodoId], references: [id], onDelete: Cascade)
+
+  @@index([periodoId])
+  @@map("abono_usos")
+}
+
 /// Reserva online de turnos desde la tienda (pieza 3, parte 2). Una por empresa.
 model AgendaConfig {
   id              String   @id @default(uuid()) @db.Uuid

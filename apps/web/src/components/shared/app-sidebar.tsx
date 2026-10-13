@@ -10,6 +10,7 @@ import { useAcceso } from "@/hooks/use-acceso";
 import {
   BarChart3,
   CalendarDays,
+  Repeat,
   Target,
   ClipboardList,
   Factory,
@@ -100,6 +101,7 @@ export function AppSidebar() {
         { href: "/clientes", label: "Clientes", icon: Users, modulo: "clientes" },
         { href: "/pedidos", label: "Pedidos", icon: Truck, modulo: "pedidos", para: ["productos", "produccion"] },
         { href: "/agenda", label: "Agenda", icon: CalendarDays, modulo: "ventas", funcion: "agenda", para: ["servicios"] },
+        { href: "/abonos", label: "Abonos", icon: Repeat, modulo: "ventas", funcion: "abonos", para: ["servicios"] },
         { href: "/ordenes-trabajo", label: "Órdenes de trabajo", icon: Wrench, modulo: "ventas", funcion: "ordenes_trabajo", para: ["servicios"] },
       ],
     },

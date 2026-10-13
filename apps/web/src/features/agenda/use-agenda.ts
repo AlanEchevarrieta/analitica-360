@@ -47,6 +47,8 @@ export interface Turno {
   notas: string | null;
   origen: "interno" | "online";
   ventaId: string | null;
+  /** Usó una sesión de este abono (no se cobra aparte). */
+  abonoId: string | null;
   recordadoEn: string | null;
 }
 

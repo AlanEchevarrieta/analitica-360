@@ -119,9 +119,11 @@ export class AgendaService {
   // ---- Turnos ----------------------------------------------------------------
 
   private async vistas(empresaId: string, turnos: Turno[]) {
-    const [recursos, servicios] = await Promise.all([
+    const [recursos, servicios, usos] = await Promise.all([
       this.prisma.agendaRecurso.findMany({ where: { empresaId, id: { in: [...new Set(turnos.map((t) => t.recursoId))] } }, select: { id: true, nombre: true, color: true } }),
       this.prisma.producto.findMany({ where: { empresaId, id: { in: [...new Set(turnos.map((t) => t.servicioId).filter((x): x is string => Boolean(x)))] } }, select: { id: true, nombre: true, precioVenta: true } }),
+      // Turnos que usaron una sesión de un abono (pieza 4): no se cobran aparte.
+      this.prisma.abonoUso.findMany({ where: { empresaId, turnoId: { in: turnos.map((t) => t.id) } }, select: { turnoId: true, periodo: { select: { abonoId: true } } } }),
     ]);
     return turnos.map((t) => {
       const r = recursos.find((x) => x.id === t.recursoId);
@@ -144,6 +146,7 @@ export class AgendaService {
         notas: t.notas,
         origen: t.origen,
         ventaId: t.ventaId,
+        abonoId: usos.find((u) => u.turnoId === t.id)?.periodo.abonoId ?? null,
         recordadoEn: t.recordadoEn?.toISOString() ?? null,
       };
     });
@@ -232,6 +235,7 @@ export class AgendaService {
   async cambiarEstado(empresaId: string, id: string, estado: EstadoTurno) {
     const actual = await this.turno(empresaId, id);
     if (actual.ventaId) throw new BadRequestException('El turno ya se cobró');
+    if (await this.prisma.abonoUso.count({ where: { turnoId: id } })) throw new BadRequestException('El turno usó una sesión del abono: deshacelo desde el abono para cambiarlo');
     // Volver a ocuparlo (ej. de "cancelado" a "reservado") pide que el horario siga libre.
     if (OCUPAN.includes(estado) && !OCUPAN.includes(actual.estado as EstadoTurno)) {
       return this.prisma.$transaction(async (tx) => {
