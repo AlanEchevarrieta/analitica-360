@@ -30,6 +30,9 @@ export function ReservaTurno({ opciones, nombreTienda, whatsapp, cuenta }: { opc
   const [buscando, buscar] = useTransition();
   const [reservando, reservar] = useTransition();
   const servicio = opciones.servicios.find((s) => s.id === servicioId) ?? null;
+  const dia = dias.find((d) => d.fecha === fecha);
+  // "hoy 12 oct", "mañana 13 oct", "el mié 14 oct"
+  const diaElegido = dia ? `${dia.dia === "Hoy" || dia.dia === "Mañana" ? "" : "el "}${dia.dia.toLowerCase()} ${dia.numero}` : "";
 
   function traerHorarios(f: string | null, s = servicioId, r = recursoId) {
     setHora(null);
@@ -177,7 +180,7 @@ export function ReservaTurno({ opciones, nombreTienda, whatsapp, cuenta }: { opc
             </label>
             {error ? <p className={ERROR}>{error}</p> : null}
             <button type="submit" disabled={reservando} className={`${BOTON} w-full`}>
-              {reservando ? "Reservando…" : `Reservar ${servicio?.nombre ?? ""} el ${dias.find((d) => d.fecha === fecha)?.dia.toLowerCase() ?? ""} ${dias.find((d) => d.fecha === fecha)?.numero ?? ""} a las ${hora}`}
+              {reservando ? "Reservando…" : `Reservar ${servicio?.nombre ?? ""} ${diaElegido} a las ${hora}`}
             </button>
           </form>
         </section>
