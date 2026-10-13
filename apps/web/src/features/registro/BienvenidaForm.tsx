@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useApiFetch } from "@/hooks/use-api";
-import { ORIGENES, RUBROS } from "@/lib/rubros";
+import { ORIGENES, RUBROS, type Actividad } from "@/lib/rubros";
+import { SelectorActividades } from "@/components/shared/selector-actividades";
 import { CampoCodigo, useVerificarCodigo } from "./CampoCodigo";
 import { codigoGuardado, olvidarCodigo } from "./codigo-guardado";
 
@@ -26,6 +27,10 @@ export function BienvenidaForm() {
   const { setActive } = useClerk();
   const router = useRouter();
   const [d, setD] = useState({ nombre: "", rubro: "", telefono: "", origen: "", codigo: "", cuit: "", acepta: false });
+  // Qué hace el negocio: se tilda solo según el rubro, hasta que la persona lo toque.
+  const [actividades, setActividades] = useState<Actividad[] | null>(null);
+  const sugeridas = RUBROS.find((r) => r.valor === d.rubro)?.sugiere ?? [];
+  const elegidas = actividades ?? sugeridas;
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   // Vino con un link de recomendación: el código ya aparece puesto (hasta que lo cambie).
@@ -41,6 +46,7 @@ export function BienvenidaForm() {
   function validar() {
     if (d.nombre.trim().length < 2) return "Poné el nombre de tu negocio.";
     if (!d.rubro) return "Elegí a qué se dedica tu negocio.";
+    if (elegidas.length === 0) return "Tildá qué hace tu negocio (puede ser más de una).";
     if (d.telefono.replace(/\D/g, "").length < 8) return "Dejanos un WhatsApp con código de área (ej. 261 5469432).";
     if (d.cuit.trim() && d.cuit.replace(/\D/g, "").length !== 11) return "El CUIT tiene que tener 11 números (o dejalo vacío).";
     if (textoCodigo.trim() && buscando) return "Esperá un segundo: estamos verificando el código.";
@@ -61,6 +67,7 @@ export function BienvenidaForm() {
         body: JSON.stringify({
           nombreNegocio: d.nombre,
           rubro: d.rubro,
+          actividades: elegidas,
           telefono: d.telefono,
           origen: d.origen || null,
           codigo: textoCodigo.trim() || null,
@@ -103,6 +110,19 @@ export function BienvenidaForm() {
               ))}
             </select>
           </div>
+          {d.rubro && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium">¿Qué hace tu negocio? Podés tildar más de una</span>
+              <SelectorActividades
+                valor={elegidas}
+                onChange={(v) => {
+                  setActividades(v);
+                  setError(null);
+                }}
+              />
+              <span className="text-xs text-muted-foreground">Con esto armamos tu menú. Lo podés cambiar cuando quieras en Configuración.</span>
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="reg-telefono">Tu WhatsApp</Label>

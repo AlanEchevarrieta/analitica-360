@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
 import { useApiFetch } from "@/hooks/use-api";
+import type { Actividad } from "@/lib/rubros";
 
 export interface TasaCuota {
   cuotas: number;
@@ -35,6 +36,8 @@ export interface Configuracion {
   categoriaMonotributo: string | null;
   /** Dólar para ver los reportes en US$: blue | oficial | bolsa (MEP). */
   dolarTipo: string;
+  /** Qué hace el negocio: arma el menú. */
+  actividades: Actividad[];
 }
 
 export interface Ubicacion {

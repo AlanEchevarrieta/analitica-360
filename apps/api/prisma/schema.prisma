@@ -300,6 +300,9 @@ model ConfiguracionEmpresa {
   condicionFiscal         String   @default("monotributo") @map("condicion_fiscal")
   /// Letra de la categoría de monotributo (A a K), si corresponde.
   categoriaMonotributo    String?  @map("categoria_monotributo")
+  /// Qué hace el negocio: productos (compra y venta), produccion (fabrica), servicios.
+  /// Ordena el menú (lo que no usa queda escondido, no bloqueado). Se elige al registrarse.
+  actividades             String[] @default(["productos", "produccion"])
   usaVariantes            Boolean  @default(false) @map("usa_variantes")
   /// Costo de una hora de trabajo (para el costo de fabricar; no suma al valor del stock).
   valorHora               Decimal? @map("valor_hora") @db.Decimal(12, 2)

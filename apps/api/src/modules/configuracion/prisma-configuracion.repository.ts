@@ -12,7 +12,7 @@ import type {
 const texto = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
 
 /** Planes por defecto del legacy (se usan si la empresa nunca configuró cuotas). */
-const TASAS_DEFAULT: TasaCuota[] = [
+export const TASAS_DEFAULT: TasaCuota[] = [
   { cuotas: 1, tasa: 0, label: '1 cuota', activo: true, personalizada: false },
   { cuotas: 3, tasa: 0, label: '3 cuotas', activo: true, personalizada: false },
   { cuotas: 6, tasa: 15, label: '6 cuotas', activo: true, personalizada: false },
@@ -56,6 +56,7 @@ export function aRecord(c: ConfiguracionEmpresa | null): ConfiguracionRecord {
     dolarTipo: c?.dolarTipo ?? 'blue',
     valorHora: c?.valorHora?.toNumber() ?? null,
     categoriaMonotributo: c?.categoriaMonotributo ?? null,
+    actividades: c?.actividades?.length ? c.actividades : ['productos', 'produccion'],
   };
 }
 
@@ -107,6 +108,7 @@ export class PrismaConfiguracionRepository implements ConfiguracionRepository {
         ...(input.dolarTipo ? { dolarTipo: input.dolarTipo } : {}),
         ...(input.valorHora !== undefined ? { valorHora: input.valorHora } : {}),
         ...(input.categoriaMonotributo !== undefined ? { categoriaMonotributo: input.categoriaMonotributo } : {}),
+        ...(input.actividades ? { actividades: [...new Set(input.actividades)] } : {}),
         inventario: inventario as Prisma.InputJsonValue,
         flujoVentas: flujo as Prisma.InputJsonValue,
       };

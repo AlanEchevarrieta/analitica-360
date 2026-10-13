@@ -4,7 +4,7 @@ import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { formatoFechaHora } from "@/lib/formato";
-import { nombreRubro } from "@/lib/rubros";
+import { ACTIVIDADES, nombreRubro } from "@/lib/rubros";
 import { cn } from "@/lib/utils";
 import { useAccionesAdmin, useAvisosAdmin } from "../hooks/use-admin";
 import { Panel } from "./comunes";
@@ -30,7 +30,7 @@ export function AvisosRegistro() {
       <ul className="flex flex-col divide-y">
         {avisos.map((a) => {
           const d = a.detalle;
-          const wa = d.telefono ? `https://wa.me/${d.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${d.dueno?.split(" ")[0] ?? ""}! Soy Alan de Analítica 360, vi que te registraste. ¿Te ayudo a cargar tus productos?`)}` : null;
+          const wa = d.telefono ? `https://wa.me/${d.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${d.dueno?.split(" ")[0] ?? ""}! Soy Alan de Analítica 360, vi que te registraste. ¿Te ayudo a cargar tus ${d.actividades?.length === 1 && d.actividades[0] === "servicios" ? "servicios" : "productos"}?`)}` : null;
           return (
             <li key={a.id} className="flex flex-wrap items-center gap-3 py-2.5 text-sm">
               {!a.leido && <span className="size-2 rounded-full bg-primary" aria-label="Sin ver" />}
@@ -43,6 +43,7 @@ export function AvisosRegistro() {
                   <span className="font-medium">{d.nombre ?? a.titulo}</span>
                 )}
                 <span className="text-muted-foreground"> · {nombreRubro(d.rubro)}</span>
+                {d.actividades?.length ? <span className="text-muted-foreground"> · {ACTIVIDADES.filter((x) => d.actividades!.includes(x.valor)).map((x) => x.icono).join(" ")}</span> : null}
                 <span className="block text-xs text-muted-foreground">
                   {[d.dueno, d.email, d.origen && `nos conoció por ${d.origen}`, formatoFechaHora(a.createdAt)].filter(Boolean).join(" · ")}
                 </span>

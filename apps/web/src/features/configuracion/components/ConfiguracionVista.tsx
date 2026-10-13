@@ -7,6 +7,7 @@ import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { cn } from "@/lib/utils";
 import type { Configuracion } from "../hooks/use-configuracion";
 import { useConfiguracion } from "../hooks/use-configuracion";
+import { ActividadesConfig } from "./ActividadesConfig";
 import { AparienciaConfig } from "./AparienciaConfig";
 import { EquipoConfig, ExportarConfig } from "./EquipoExportarConfig";
 import { AtributosConfig, CategoriasConfig, UbicacionesConfig } from "./ListasConfig";
@@ -70,6 +71,7 @@ const GRUPOS: { titulo: string; opciones: Opcion[] }[] = [
   {
     titulo: "Mi negocio",
     opciones: [
+      { clave: "actividades", icono: "🧭", titulo: "Qué hace mi negocio", subtitulo: "Vendo productos, fabrico o doy servicios: arma el menú", panel: (c) => <ActividadesConfig config={c} /> },
       { clave: "remitente", icono: "📬", titulo: "Datos del remitente", subtitulo: "Quién figura en el remito y en los documentos", panel: (c) => <RemitenteConfig config={c} /> },
       { clave: "documentos", icono: "📄", titulo: "Documentos", subtitulo: "Logo y textos del comprobante, el recibo y el presupuesto", panel: () => <DocumentosConfig /> },
       { clave: "fiscal", icono: "🌎", titulo: "Configuración fiscal", subtitulo: "País, moneda e IVA", panel: (c) => <FiscalConfig config={c} /> },

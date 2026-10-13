@@ -30,6 +30,7 @@ export interface ConfiguracionRecord {
   dolarTipo: string;
   valorHora: number | null;
   categoriaMonotributo: string | null;
+  actividades: string[];
 }
 
 export type ResultadoActualizarConfiguracion =

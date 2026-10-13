@@ -46,6 +46,8 @@ import type { ModuloClave } from "@/lib/rol";
 import { useRol } from "@/hooks/use-rol";
 import { useTicketsNoLeidos } from "@/hooks/use-tickets-no-leidos";
 import { useEsAdmin } from "@/features/admin/hooks/use-admin";
+import { useConfiguracion } from "@/features/configuracion/hooks/use-configuracion";
+import { ACTIVIDADES_POR_DEFECTO, type Actividad } from "@/lib/rubros";
 
 interface Item {
   href: string;
@@ -55,6 +57,8 @@ interface Item {
   modulo?: ModuloClave;
   /** Función del plan: si el plan no la incluye, se ve apagado con un candado. */
   funcion?: string;
+  /** Solo para negocios que hacen alguna de estas cosas (Configuración → Qué hace mi negocio). Sin esto: todos. */
+  para?: Actividad[];
   /** Condición extra (rol, administrador de la app…). */
   visible?: boolean;
   badge?: number;
@@ -83,6 +87,9 @@ export function AppSidebar() {
   const verConfig = puede("configuracion");
   const plan = usePlan();
   const rol = useRol();
+  // Lo que el negocio no usa queda escondido (no bloqueado: se prende en Configuración).
+  const actividades = useConfiguracion().data?.actividades ?? ACTIVIDADES_POR_DEFECTO;
+  const vendeProductos = actividades.includes("productos") || actividades.includes("produccion");
   const activo = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   const grupos: Grupo[] = [
@@ -91,19 +98,20 @@ export function AppSidebar() {
       items: [
         { href: "/ventas", label: "Ventas", icon: Wallet, modulo: "ventas" },
         { href: "/clientes", label: "Clientes", icon: Users, modulo: "clientes" },
-        { href: "/pedidos", label: "Pedidos", icon: Truck, modulo: "pedidos" },
-        { href: "/agenda", label: "Agenda", icon: CalendarDays, modulo: "ventas", funcion: "agenda" },
-        { href: "/ordenes-trabajo", label: "Órdenes de trabajo", icon: Wrench, modulo: "ventas", funcion: "ordenes_trabajo" },
+        { href: "/pedidos", label: "Pedidos", icon: Truck, modulo: "pedidos", para: ["productos", "produccion"] },
+        { href: "/agenda", label: "Agenda", icon: CalendarDays, modulo: "ventas", funcion: "agenda", para: ["servicios"] },
+        { href: "/ordenes-trabajo", label: "Órdenes de trabajo", icon: Wrench, modulo: "ventas", funcion: "ordenes_trabajo", para: ["servicios"] },
       ],
     },
     {
-      titulo: "Stock y compras",
+      // Un negocio solo de servicios no tiene stock: ahí están sus servicios (y algún producto).
+      titulo: vendeProductos ? "Stock y compras" : "Catálogo",
       items: [
-        { href: "/productos", label: "Productos", icon: Package, modulo: "productos" },
-        { href: "/inventario", label: "Inventario", icon: ClipboardList, modulo: "inventario" },
-        { href: "/compras", label: "Compras", icon: ShoppingCart, modulo: "compras" },
-        { href: "/proveedores", label: "Proveedores", icon: Factory, modulo: "proveedores" },
-        { href: "/produccion", label: "Producción", icon: Hammer, modulo: "produccion" },
+        { href: "/productos", label: vendeProductos ? "Productos" : "Servicios y productos", icon: Package, modulo: "productos" },
+        { href: "/inventario", label: "Inventario", icon: ClipboardList, modulo: "inventario", para: ["productos", "produccion"] },
+        { href: "/compras", label: "Compras", icon: ShoppingCart, modulo: "compras", para: ["productos", "produccion"] },
+        { href: "/proveedores", label: "Proveedores", icon: Factory, modulo: "proveedores", para: ["productos", "produccion"] },
+        { href: "/produccion", label: "Producción", icon: Hammer, modulo: "produccion", para: ["produccion"] },
       ],
     },
     {
@@ -129,7 +137,7 @@ export function AppSidebar() {
     },
   ];
 
-  const visibles = (g: Grupo) => g.items.filter((i) => i.visible !== false && (!i.modulo || puede(i.modulo)));
+  const visibles = (g: Grupo) => g.items.filter((i) => i.visible !== false && (!i.modulo || puede(i.modulo)) && (!i.para || i.para.some((a) => actividades.includes(a))));
 
   return (
     <Sidebar collapsible="icon" className="print:hidden">

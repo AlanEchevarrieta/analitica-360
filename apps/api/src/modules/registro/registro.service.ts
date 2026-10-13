@@ -1,15 +1,19 @@
 import { BadGatewayException, BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.validation.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
 import { ClerkCuentasService } from './clerk-cuentas.service.js';
 import { CuponesService, normalizarCuit, type Verificacion } from '../alianzas/cupones.service.js';
+import { TASAS_DEFAULT } from '../configuracion/prisma-configuracion.repository.js';
 import { finDePrueba, limpiarNombre, normalizarTelefono, PLAN_PRUEBA, resumenPrimerosPasos, type PrimerosPasos } from './registro.util.js';
 
 export interface RegistroInput {
   nombreNegocio: string;
   rubro: string;
+  /** productos | produccion | servicios (al menos una). */
+  actividades: string[];
   telefono: string;
   origen: string | null;
   /** Código de una cámara o cupón (opcional). */
@@ -103,6 +107,13 @@ export class RegistroService {
           create: { clerkUserId, empresaId: empresa.id, nombre: datos.nombre, email: datos.email, rolCrudo: 'dueno' },
           update: { empresaId: empresa.id, nombre: datos.nombre, email: datos.email, rolCrudo: 'dueno', deletedAt: null, activo: true },
         });
+        // Qué hace el negocio: con eso se arma su menú.
+        const actividades = [...new Set(input.actividades)];
+        await tx.configuracionEmpresa.upsert({
+          where: { empresaId: empresa.id },
+          create: { empresaId: empresa.id, tasasCuotas: TASAS_DEFAULT as unknown as Prisma.InputJsonValue, actividades },
+          update: { actividades },
+        });
         const plan = await tx.plan.findFirst({ where: { nombre: PLAN_PRUEBA }, select: { id: true } });
         if (!(await tx.suscripcion.findFirst({ where: { empresaId: empresa.id }, select: { id: true } }))) {
           await tx.suscripcion.create({
@@ -116,7 +127,7 @@ export class RegistroService {
             tipo: 'registro',
             titulo: `Nuevo registro: ${nombre}`,
             empresaId: empresa.id,
-            detalle: { nombre, rubro: input.rubro, telefono, origen: input.origen, dueno: datos.nombre, email: datos.email, finPrueba, codigo: codigo?.cupon.codigo ?? null, camara: codigo?.cupon.camaraNombre ?? null },
+            detalle: { nombre, rubro: input.rubro, actividades: input.actividades, telefono, origen: input.origen, dueno: datos.nombre, email: datos.email, finPrueba, codigo: codigo?.cupon.codigo ?? null, camara: codigo?.cupon.camaraNombre ?? null },
           },
         });
         return empresa.id;

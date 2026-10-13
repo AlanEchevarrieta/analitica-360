@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const ACTIVIDADES = ['productos', 'produccion', 'servicios'] as const;
+
 export const MEDIOS_PAGO_CONFIG = ['efectivo', 'transferencia', 'debito', 'credito', 'mp_qr'] as const;
 
 const tasaCuotaSchema = z.object({
@@ -38,6 +40,8 @@ export const actualizarConfiguracionSchema = z
     dolarTipo: z.enum(['blue', 'oficial', 'bolsa']).optional(),
     /** Costo de una hora de trabajo (Producción). null = sin cargar. */
     valorHora: z.number().min(0).max(10_000_000).nullable().optional(),
+    /** Qué hace el negocio: ordena el menú. */
+    actividades: z.array(z.enum(ACTIVIDADES)).min(1, 'Elegí al menos una actividad').max(3).optional(),
     categoriaMonotributo: z.enum(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']).nullable().optional(),
   })
   .refine((c) => !c.tasasCuotas || new Set(c.tasasCuotas.map((t) => t.cuotas)).size === c.tasasCuotas.length, {

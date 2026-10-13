@@ -154,7 +154,7 @@ export interface AvisoAdmin {
   id: string;
   tipo: string;
   titulo: string;
-  detalle: { nombre?: string; rubro?: string; telefono?: string; origen?: string | null; dueno?: string; email?: string; finPrueba?: string };
+  detalle: { nombre?: string; rubro?: string; actividades?: string[]; telefono?: string; origen?: string | null; dueno?: string; email?: string; finPrueba?: string };
   empresaId: string | null;
   leido: boolean;
   createdAt: string;
