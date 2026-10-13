@@ -22,6 +22,8 @@ export const confirmarVentaSchema = z.object({
   ubicacionOrigen: z.string().trim().nullable().optional(),
   esSenia: z.boolean().default(false),
   montoSenia: z.number().nonnegative().default(0),
+  /** Profesional que atendió (comisiones). */
+  profesionalId: z.uuid().nullable().optional(),
 });
 export type ConfirmarVentaInput = z.infer<typeof confirmarVentaSchema>;
 

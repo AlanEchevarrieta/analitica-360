@@ -47,6 +47,18 @@ export class TiendaController {
     return this.turnos.libres(empresaId, q.fecha, q.servicioId, q.recursoId);
   }
 
+  /** Link "cancelar mi turno" (firmado; sin cuenta). */
+  @Get('turnos/cancelar/:token')
+  verTurno(@Param('empresaId', new ParseUUIDPipe()) empresaId: string, @Param('token') token: string) {
+    return this.turnos.verPorToken(empresaId, String(token).slice(0, 200));
+  }
+
+  @Post('turnos/cancelar/:token')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  cancelarTurno(@Param('empresaId', new ParseUUIDPipe()) empresaId: string, @Param('token') token: string) {
+    return this.turnos.cancelarPorToken(empresaId, String(token).slice(0, 200));
+  }
+
   // Como los pedidos: una persona real no reserva más de un par de turnos por minuto.
   @Post('turnos')
   @Throttle({ default: { ttl: 60_000, limit: 5 } })

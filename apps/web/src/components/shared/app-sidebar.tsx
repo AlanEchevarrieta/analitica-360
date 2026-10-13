@@ -17,6 +17,7 @@ import {
   FolderOpen,
   Gift,
   Hammer,
+  HandCoins,
   Home,
   Package,
   Settings,
@@ -48,6 +49,7 @@ import { useRol } from "@/hooks/use-rol";
 import { useTicketsNoLeidos } from "@/hooks/use-tickets-no-leidos";
 import { useEsAdmin } from "@/features/admin/hooks/use-admin";
 import { useConfiguracion } from "@/features/configuracion/hooks/use-configuracion";
+import { useNuevasOnline } from "@/features/agenda/use-agenda";
 import { ACTIVIDADES_POR_DEFECTO, type Actividad } from "@/lib/rubros";
 
 interface Item {
@@ -90,6 +92,8 @@ export function AppSidebar() {
   const rol = useRol();
   // Lo que el negocio no usa queda escondido (no bloqueado: se prende en Configuración).
   const actividades = useConfiguracion().data?.actividades ?? ACTIVIDADES_POR_DEFECTO;
+  // Reservas o cancelaciones online sin ver: numerito en "Agenda".
+  const nuevasOnline = useNuevasOnline(actividades.includes("servicios") && plan.disponible("agenda")).data?.length ?? 0;
   const vendeProductos = actividades.includes("productos") || actividades.includes("produccion");
   const activo = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
@@ -100,7 +104,7 @@ export function AppSidebar() {
         { href: "/ventas", label: "Ventas", icon: Wallet, modulo: "ventas" },
         { href: "/clientes", label: "Clientes", icon: Users, modulo: "clientes" },
         { href: "/pedidos", label: "Pedidos", icon: Truck, modulo: "pedidos", para: ["productos", "produccion"] },
-        { href: "/agenda", label: "Agenda", icon: CalendarDays, modulo: "ventas", funcion: "agenda", para: ["servicios"] },
+        { href: "/agenda", label: "Agenda", icon: CalendarDays, modulo: "ventas", funcion: "agenda", para: ["servicios"], badge: nuevasOnline },
         { href: "/abonos", label: "Abonos", icon: Repeat, modulo: "ventas", funcion: "abonos", para: ["servicios"] },
         { href: "/ordenes-trabajo", label: "Órdenes de trabajo", icon: Wrench, modulo: "ventas", funcion: "ordenes_trabajo", para: ["servicios"] },
       ],
@@ -123,6 +127,7 @@ export function AppSidebar() {
         // Cada usuario ve sus propios objetivos: no depende del permiso de Analytics.
         { href: "/objetivos", label: "Objetivos", icon: Target, funcion: "objetivos" },
         // Contratos y facturas pueden ser sensibles: solo el dueño y el contador (igual que la API).
+        { href: "/comisiones", label: "Comisiones", icon: HandCoins, modulo: "ventas", funcion: "comisiones", para: ["servicios"] },
         { href: "/documentos", label: "Documentos", icon: FolderOpen, funcion: "archivo", visible: rol === "dueno" || rol === "contador" },
       ],
     },

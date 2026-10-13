@@ -1,3 +1,5 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
+
 /**
  * Agenda (módulo de servicios, pieza 3): horas de Argentina (UTC−3, sin horario de
  * verano), superposiciones y horarios libres. Todo puro: se prueba sin base.
@@ -99,4 +101,21 @@ export function cuandoTexto(inicio: Date): string {
 export function mensajeRecordatorio(d: { cliente: string | null; servicio: string | null; profesional: string; inicio: Date; negocio: string }): string {
   const saludo = `Hola${d.cliente ? ` ${d.cliente.split(' ')[0]}` : ''}!`;
   return `${saludo} Te recordamos tu turno${d.servicio ? ` de ${d.servicio}` : ''} con ${d.profesional} ${cuandoTexto(d.inicio)}. Si no podés venir, avisanos así se lo damos a otra persona. ¡Gracias!\n${d.negocio}`;
+}
+
+// ---- Link para que el cliente cancele su turno (sin cuenta) ----
+
+const firmaTurno = (secreto: string, id: string) => createHmac('sha256', `turnos:${secreto}`).update(id).digest('base64url');
+
+export function tokenTurno(secreto: string, turnoId: string): string {
+  return `${turnoId}.${firmaTurno(secreto, turnoId)}`;
+}
+
+/** El id del turno si la firma es válida (si no, null). */
+export function leerTokenTurno(secreto: string, token: string): string | null {
+  const [id, f] = token.split('.');
+  if (!id || !f || !/^[0-9a-f-]{36}$/.test(id)) return null;
+  const esperada = Buffer.from(firmaTurno(secreto, id));
+  const recibida = Buffer.from(f);
+  return esperada.length === recibida.length && timingSafeEqual(esperada, recibida) ? id : null;
 }

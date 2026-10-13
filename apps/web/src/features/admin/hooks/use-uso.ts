@@ -70,6 +70,7 @@ const PANTALLAS: Record<string, string> = {
   "/agenda": "Agenda",
   "/abonos": "Abonos",
   "/abonos/:id": "Ficha de abono",
+  "/comisiones": "Comisiones",
   "/agenda/configuracion": "Profesionales y horarios",
   "/ventas/presupuestos/nuevo": "Nuevo presupuesto",
   "/ventas/presupuestos/:id": "Ficha de presupuesto",

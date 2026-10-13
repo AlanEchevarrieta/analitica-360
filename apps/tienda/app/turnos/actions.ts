@@ -3,7 +3,7 @@
 import { cabecerasTienda, mensajeDeError, urlTienda } from "@/lib/api";
 import { tokenSesion } from "@/lib/sesion";
 import { obtenerSitio } from "@/lib/sitio";
-import type { HorarioLibre, TurnoReservado } from "@/lib/turnos";
+import type { HorarioLibre, TurnoACancelar, TurnoReservado } from "@/lib/turnos";
 
 /** Horarios libres de un día para un servicio (de un profesional o de cualquiera). */
 export async function horariosLibres(fecha: string, servicioId: string, recursoId: string | null): Promise<{ ok: true; libres: HorarioLibre[] } | { ok: false; error: string }> {
@@ -44,5 +44,19 @@ export async function reservarTurno(datos: { servicioId: string; recursoId: stri
     return { ok: true, turno: (await res.json()) as TurnoReservado };
   } catch {
     return { ok: false, error: "No pudimos reservar el turno. Probá de nuevo." };
+  }
+}
+
+/** El cliente cancela su turno con el link que le quedó al reservar. */
+export async function cancelarTurno(token: string): Promise<{ ok: true; turno: TurnoACancelar } | { ok: false; error: string }> {
+  const sitio = await obtenerSitio();
+  if (!sitio) return { ok: false, error: "Esta tienda no está disponible" };
+  try {
+    const res = await fetch(urlTienda(sitio.empresaId, `/turnos/cancelar/${encodeURIComponent(token.slice(0, 200))}`), { method: "POST", headers: await cabecerasTienda(), cache: "no-store" });
+    if (res.status === 429) return { ok: false, error: "Esperá un minuto y volvé a intentar." };
+    if (!res.ok) return { ok: false, error: await mensajeDeError(res, "No pudimos cancelar el turno") };
+    return { ok: true, turno: (await res.json()) as TurnoACancelar };
+  } catch {
+    return { ok: false, error: "No pudimos cancelar el turno. Probá de nuevo." };
   }
 }

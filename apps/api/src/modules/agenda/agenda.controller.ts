@@ -21,6 +21,9 @@ const recursoSchema = z.object({
   online: z.boolean().optional(),
   activo: z.boolean().optional(),
   horarios: z.array(z.object({ diaSemana: z.number().int().min(0).max(6), desde: z.string(), hasta: z.string() })).max(50).default([]),
+  comisionServicios: z.number().min(0).max(100).optional(),
+  comisionProductos: z.number().min(0).max(100).optional(),
+  comisionSesion: z.number().min(0).max(10_000_000).optional(),
 });
 const turnoSchema = z.object({
   recursoId: z.uuid(),
@@ -100,6 +103,16 @@ export class AgendaController {
   @Roles('dueno')
   borrarBloqueo(@CurrentEmpresa() empresa: EmpresaContext, @Param('id', new ParseUUIDPipe()) id: string) {
     return this.agenda.borrarBloqueo(empresa.id, id);
+  }
+
+  @Get('nuevas')
+  nuevas(@CurrentEmpresa() empresa: EmpresaContext) {
+    return this.agenda.nuevas(empresa.id);
+  }
+
+  @Post('nuevas/vistas')
+  marcarVistas(@CurrentEmpresa() empresa: EmpresaContext, @Body(new ZodValidationPipe(z.object({ ids: z.array(z.uuid()).max(100) }))) body: { ids: string[] }) {
+    return this.agenda.marcarVistas(empresa.id, body.ids);
   }
 
   @Get('turnos')

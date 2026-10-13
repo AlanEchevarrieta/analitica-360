@@ -178,6 +178,12 @@ export class PrismaVentasRepository implements VentasRepository {
     return resultado.ok ? { ok: true, venta: this.toRecord(resultado.venta) } : resultado;
   }
 
+  async asignarProfesional(empresaId: string, ventaId: string, profesionalId: string | null): Promise<boolean> {
+    if (profesionalId && !(await this.prisma.agendaRecurso.count({ where: { id: profesionalId, empresaId } }))) return false;
+    const { count } = await this.prisma.venta.updateMany({ where: { id: ventaId, empresaId }, data: { profesionalId } });
+    return count > 0;
+  }
+
   async anular(empresaId: string, usuarioId: string, id: string, motivo: string): Promise<ResultadoAnularVenta> {
     return this.prisma.$transaction(async (tx) => {
       const venta = await tx.venta.findFirst({ where: { id, empresaId } });

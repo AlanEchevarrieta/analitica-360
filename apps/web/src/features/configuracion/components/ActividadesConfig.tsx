@@ -24,7 +24,7 @@ export function ActividadesConfig({ config }: { config: Configuracion }) {
           <strong>Fabrico o produzco:</strong> lo anterior y Producción.
         </li>
         <li>
-          <strong>Doy servicios:</strong> Agenda, Abonos y Órdenes de trabajo (plan Pro).
+          <strong>Doy servicios:</strong> Agenda, Abonos, Órdenes de trabajo y Comisiones (plan Pro).
         </li>
       </ul>
       {valor.length === 0 && <p className="text-destructive">Tildá al menos una.</p>}

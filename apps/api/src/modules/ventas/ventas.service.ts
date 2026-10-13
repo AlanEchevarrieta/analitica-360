@@ -73,7 +73,13 @@ export class VentasService {
       montoSenia: input.montoSenia,
     });
     if (!resultado.ok) throw new BadRequestException(MOTIVO_MENSAJE[resultado.motivo]);
+    // Quién atendió: si no es de la empresa, se ignora (la venta ya está hecha).
+    if (input.profesionalId) await this.ventasRepository.asignarProfesional(empresaId, resultado.venta.id, input.profesionalId);
     return resultado.venta;
+  }
+
+  async asignarProfesional(empresaId: string, ventaId: string, profesionalId: string | null): Promise<void> {
+    if (!(await this.ventasRepository.asignarProfesional(empresaId, ventaId, profesionalId))) throw new NotFoundException('No encontramos la venta o el profesional');
   }
 
   async anular(empresaId: string, usuarioId: string, id: string, input: AnularVentaInput): Promise<void> {

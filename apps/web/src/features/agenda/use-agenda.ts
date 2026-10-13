@@ -26,6 +26,10 @@ export interface Recurso {
   online: boolean;
   activo: boolean;
   horarios: Horario[];
+  /** Comisiones: % de servicios, % de productos y $ por sesión de abono. */
+  comisionServicios: number;
+  comisionProductos: number;
+  comisionSesion: number;
 }
 
 export interface Turno {
@@ -78,6 +82,9 @@ export interface RecursoInput {
   online: boolean;
   activo: boolean;
   horarios: Horario[];
+  comisionServicios?: number;
+  comisionProductos?: number;
+  comisionSesion?: number;
 }
 
 function useConsulta<T>(clave: unknown[], ruta: string | null) {
@@ -96,6 +103,15 @@ export interface ConfigAgenda {
 export const useConfigAgenda = () => useConsulta<ConfigAgenda>(["config"], "/agenda/config");
 /** Para el link de la reserva online: la dirección de la tienda. */
 export const useTiendaDireccion = () => useConsulta<{ activa: boolean; subdominio: string; dominioPropio: string | null }>(["tienda"], "/tienda-config");
+/** Reservas y cancelaciones online que todavía no se vieron. */
+export function useNuevasOnline(habilitado = true) {
+  const api = useApiFetch();
+  const { orgId } = useAuth();
+  // Se revisa cada minuto: así el numerito del menú aparece sin recargar la página.
+  return useQuery({ queryKey: ["agenda", "nuevas", orgId], queryFn: () => api<Turno[]>("/agenda/nuevas"), enabled: Boolean(orgId && habilitado), refetchInterval: 60_000 });
+}
+/** Usuarios de la empresa (para vincular un profesional a su usuario: así ve sus comisiones). */
+export const useUsuariosEmpresa = () => useConsulta<{ id: string; nombre: string }[]>(["usuarios"], "/ordenes-trabajo/responsables");
 export const useRecursos = () => useConsulta<Recurso[]>(["recursos"], "/agenda/recursos");
 export const useTurnos = (desde: string, hasta: string) => useConsulta<Turno[]>(["turnos", desde, hasta], `/agenda/turnos?desde=${desde}&hasta=${hasta}`);
 export const useTurno = (id: string | null, fecha: string | null) => {
@@ -119,6 +135,7 @@ export function useAccionesAgenda() {
   const enviar = <T,>(ruta: string, body?: unknown, method = "POST") => api<T>(ruta, { method, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
 
   return {
+    marcarVistas: useOp((ids: string[]) => enviar<{ ok: boolean }>("/agenda/nuevas/vistas", { ids })),
     guardarConfig: useOp((d: ConfigAgenda) => enviar<ConfigAgenda>("/agenda/config", d, "PUT")),
     crearTurno: useOp((d: TurnoInput) => enviar<Turno>("/agenda/turnos", d)),
     reprogramar: useOp(({ id, ...d }: Partial<TurnoInput> & { id: string }) => enviar<Turno>(`/agenda/turnos/${id}`, d, "PATCH")),

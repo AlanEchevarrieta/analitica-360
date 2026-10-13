@@ -310,6 +310,11 @@ export class OrdenesTrabajoService implements OnModuleInit {
           if (v.saldoPendiente.toNumber() <= 0.009) await tx.venta.update({ where: { id: venta.id }, data: { saldoPendiente: 0, estadoCobro: 'pagado', fechaCobroSaldo: new Date(senia.fecha) } });
         }
         const { count } = await tx.ordenTrabajo.updateMany({ where: { id, estado: { in: ['recibido', 'en_proceso', 'listo'] } }, data: { estado: 'entregado', ventaId: venta.id, entregadaEn: new Date() } });
+        // Comisiones: si el responsable es un profesional de la agenda, la venta queda a su nombre.
+        if (ot.responsableId) {
+          const profesional = await tx.agendaRecurso.findFirst({ where: { empresaId, usuarioId: ot.responsableId, deletedAt: null }, select: { id: true } });
+          if (profesional) await tx.venta.update({ where: { id: venta.id }, data: { profesionalId: profesional.id } });
+        }
         if (count === 0) throw new ConflictException('La orden cambió mientras se entregaba');
         await tx.ordenTrabajoEstado.create({ data: { ordenId: id, estado: 'entregado', usuarioId, nota: `Venta ${venta.numeroVenta}` } });
         if (ot.presupuestoId) await tx.presupuesto.update({ where: { id: ot.presupuestoId }, data: { estado: 'aceptado', ventaId: venta.id } }).catch(() => undefined);

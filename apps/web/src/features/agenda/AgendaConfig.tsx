@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { hoyAR, moverDias } from "@/lib/periodos";
-import { DIAS_SEMANA, useAccionesAgenda, useBloqueos, useConfigAgenda, useRecursos, useTiendaDireccion, type ConfigAgenda, type Horario, type Recurso } from "./use-agenda";
+import { usePlan } from "@/hooks/use-plan";
+import { DIAS_SEMANA, useAccionesAgenda, useBloqueos, useConfigAgenda, useRecursos, useTiendaDireccion, useUsuariosEmpresa, type ConfigAgenda, type Horario, type Recurso } from "./use-agenda";
 
 const COLORES = ["#6366f1", "#e11d48", "#059669", "#d97706", "#0891b2", "#7c3aed", "#db2777", "#65a30d"];
 // Lunes primero, domingo al final.
@@ -46,6 +47,13 @@ function RecursoCard({ recurso, orden = 0, onListo }: { recurso?: Recurso; orden
   const [online, setOnline] = useState(recurso?.online ?? true);
   const [activo, setActivo] = useState(recurso?.activo ?? true);
   const [horarios, setHorarios] = useState<Horario[]>(recurso?.horarios ?? HABITUAL);
+  const plan = usePlan();
+  const conComisiones = plan.disponible("comisiones");
+  const usuarios = useUsuariosEmpresa();
+  const [usuarioId, setUsuarioId] = useState(recurso?.usuarioId ?? "");
+  const [cServicios, setCServicios] = useState(recurso?.comisionServicios ? String(recurso.comisionServicios) : "");
+  const [cProductos, setCProductos] = useState(recurso?.comisionProductos ? String(recurso.comisionProductos) : "");
+  const [cSesion, setCSesion] = useState(recurso?.comisionSesion ? String(recurso.comisionSesion) : "");
   const [error, setError] = useState<string | null>(null);
   const guardando = crearRecurso.isPending || editarRecurso.isPending;
 
@@ -54,7 +62,16 @@ function RecursoCard({ recurso, orden = 0, onListo }: { recurso?: Recurso; orden
   function guardar() {
     if (!nombre.trim()) return setError("Poné un nombre.");
     setError(null);
-    const datos = { nombre: nombre.trim(), usuarioId: recurso?.usuarioId ?? null, color, online, activo, horarios };
+    const pct = (v: string) => Math.min(100, Math.max(0, Number(v.replace(",", ".")) || 0));
+    const datos = {
+      nombre: nombre.trim(),
+      usuarioId: usuarioId || null,
+      color,
+      online,
+      activo,
+      horarios,
+      ...(conComisiones ? { comisionServicios: pct(cServicios), comisionProductos: pct(cProductos), comisionSesion: Math.max(0, Number(cSesion.replace(/\./g, "").replace(",", ".")) || 0) } : {}),
+    };
     const listo = { onSuccess: () => (toast.success(`${datos.nombre} guardado`), onListo?.()), onError: (e: unknown) => setError(e instanceof Error ? e.message : "No se pudo guardar") };
     if (recurso) editarRecurso.mutate({ id: recurso.id, ...datos }, listo);
     else crearRecurso.mutate(datos, listo);
@@ -113,6 +130,40 @@ function RecursoCard({ recurso, orden = 0, onListo }: { recurso?: Recurso; orden
             );
           })}
         </div>
+        <div className="grid gap-3 text-sm sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={`rec-usuario-${recurso?.id ?? "nuevo"}`}>Su usuario en la app (opcional)</Label>
+            <select id={`rec-usuario-${recurso?.id ?? "nuevo"}`} className="h-8 rounded-lg border bg-transparent px-2 text-sm" value={usuarioId} onChange={(e) => setUsuarioId(e.target.value)}>
+              <option value="">Sin usuario (un sillón, una cancha, alguien que no entra)</option>
+              {(usuarios.data ?? []).map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nombre}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-muted-foreground">Si tiene usuario, ve sus comisiones y sus órdenes de trabajo quedan a su nombre.</span>
+          </div>
+        </div>
+        {conComisiones && (
+          <div className="flex flex-col gap-2 text-sm">
+            <span className="font-medium">Comisiones</span>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={`rec-cs-${recurso?.id ?? "nuevo"}`}>% de los servicios</Label>
+                <Input id={`rec-cs-${recurso?.id ?? "nuevo"}`} inputMode="decimal" value={cServicios} onChange={(e) => setCServicios(e.target.value)} placeholder="Ej. 40" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={`rec-cp-${recurso?.id ?? "nuevo"}`}>% de los productos</Label>
+                <Input id={`rec-cp-${recurso?.id ?? "nuevo"}`} inputMode="decimal" value={cProductos} onChange={(e) => setCProductos(e.target.value)} placeholder="Ej. 10" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={`rec-cse-${recurso?.id ?? "nuevo"}`}>$ por sesión de abono</Label>
+                <Input id={`rec-cse-${recurso?.id ?? "nuevo"}`} inputMode="decimal" value={cSesion} onChange={(e) => setCSesion(e.target.value)} placeholder="Ej. 1500" />
+              </div>
+            </div>
+            <span className="text-xs text-muted-foreground">Sobre lo que vende o atiende, con descuentos y devoluciones. Vacío = sin comisión.</span>
+          </div>
+        )}
         <div className="flex flex-col gap-2 text-sm">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={online} onChange={(e) => setOnline(e.target.checked)} />

@@ -24,6 +24,10 @@ export interface RecursoInput {
   online?: boolean;
   activo?: boolean;
   horarios: { diaSemana: number; desde: string; hasta: string }[];
+  /** Comisiones (pieza 5): % servicios, % productos y $ por sesión de abono. */
+  comisionServicios?: number;
+  comisionProductos?: number;
+  comisionSesion?: number;
 }
 
 export interface TurnoInput {
@@ -59,32 +63,35 @@ export class AgendaService {
       include: { horarios: { orderBy: [{ diaSemana: 'asc' }, { desde: 'asc' }] } },
       orderBy: [{ orden: 'asc' }, { nombre: 'asc' }],
     });
-    return filas.map((r) => ({ id: r.id, nombre: r.nombre, usuarioId: r.usuarioId, color: r.color, online: r.online, activo: r.activo, horarios: r.horarios.map((h) => ({ diaSemana: h.diaSemana, desde: h.desde, hasta: h.hasta })) }));
+    return filas.map((r) => ({ id: r.id, nombre: r.nombre, usuarioId: r.usuarioId, color: r.color, online: r.online, activo: r.activo, comisionServicios: r.comisionServicios.toNumber(), comisionProductos: r.comisionProductos.toNumber(), comisionSesion: r.comisionSesion.toNumber(), horarios: r.horarios.map((h) => ({ diaSemana: h.diaSemana, desde: h.desde, hasta: h.hasta })) }));
   }
 
-  private async validarRecurso(empresaId: string, input: RecursoInput) {
+  private async validarRecurso(empresaId: string, input: RecursoInput, id?: string) {
     const error = validarHorarios(input.horarios);
     if (error) throw new BadRequestException(error);
     if (input.usuarioId && !(await this.prisma.usuario.count({ where: { id: input.usuarioId, empresaId } }))) throw new BadRequestException('Ese usuario no es de tu empresa');
+    if (input.usuarioId && (await this.prisma.agendaRecurso.count({ where: { empresaId, usuarioId: input.usuarioId, deletedAt: null, ...(id ? { id: { not: id } } : {}) } }))) {
+      throw new BadRequestException('Ese usuario ya está vinculado a otro profesional');
+    }
   }
 
   async crearRecurso(empresaId: string, input: RecursoInput) {
     await this.validarRecurso(empresaId, input);
     const orden = await this.prisma.agendaRecurso.count({ where: { empresaId, deletedAt: null } });
     const r = await this.prisma.agendaRecurso.create({
-      data: { empresaId, nombre: input.nombre.trim(), usuarioId: input.usuarioId ?? null, color: input.color ?? '#6366f1', online: input.online ?? true, orden, horarios: { create: input.horarios } },
+      data: { empresaId, nombre: input.nombre.trim(), usuarioId: input.usuarioId ?? null, color: input.color ?? '#6366f1', online: input.online ?? true, orden, comisionServicios: input.comisionServicios ?? 0, comisionProductos: input.comisionProductos ?? 0, comisionSesion: input.comisionSesion ?? 0, horarios: { create: input.horarios } },
     });
     return (await this.recursos(empresaId)).find((x) => x.id === r.id)!;
   }
 
   async editarRecurso(empresaId: string, id: string, input: RecursoInput) {
     if (!(await this.prisma.agendaRecurso.count({ where: { id, empresaId, deletedAt: null } }))) throw new NotFoundException('No encontramos ese profesional o recurso');
-    await this.validarRecurso(empresaId, input);
+    await this.validarRecurso(empresaId, input, id);
     await this.prisma.$transaction([
       this.prisma.agendaHorario.deleteMany({ where: { recursoId: id } }),
       this.prisma.agendaRecurso.update({
         where: { id },
-        data: { nombre: input.nombre.trim(), usuarioId: input.usuarioId ?? null, color: input.color, online: input.online, activo: input.activo, horarios: { create: input.horarios } },
+        data: { nombre: input.nombre.trim(), usuarioId: input.usuarioId ?? null, color: input.color, online: input.online, activo: input.activo, comisionServicios: input.comisionServicios, comisionProductos: input.comisionProductos, comisionSesion: input.comisionSesion, horarios: { create: input.horarios } },
       }),
     ]);
     return (await this.recursos(empresaId)).find((x) => x.id === id)!;
@@ -202,7 +209,7 @@ export class AgendaService {
     if (!input.clienteId && !input.clienteNombre?.trim()) throw new BadRequestException('Cargá a quién es el turno');
     const t = await this.prisma.$transaction(async (tx) => {
       const datos = await this.preparar(tx, empresaId, input, null);
-      return tx.turno.create({ data: { empresaId, usuarioId, origen: input.origen ?? 'interno', ...datos } });
+      return tx.turno.create({ data: { empresaId, usuarioId, origen: input.origen ?? 'interno', vistoEn: input.origen === 'online' ? null : new Date(), ...datos } });
     });
     return (await this.vistas(empresaId, [t]))[0];
   }
@@ -257,6 +264,8 @@ export class AgendaService {
     if (actual.ventaId) throw new ConflictException('El turno ya se cobró con otra venta');
     if (!(await this.prisma.venta.count({ where: { id: ventaId, empresaId, deletedAt: null } }))) throw new BadRequestException('La venta no existe en tu empresa');
     const t = await this.prisma.turno.update({ where: { id }, data: { estado: 'atendido', ventaId } });
+    // Comisiones: la venta es de quien atendió el turno (si no se eligió otro al cobrar).
+    await this.prisma.venta.updateMany({ where: { id: ventaId, empresaId, profesionalId: null }, data: { profesionalId: actual.recursoId } });
     return (await this.vistas(empresaId, [t]))[0];
   }
 
@@ -269,6 +278,17 @@ export class AgendaService {
     const telefono = telefonoWhatsApp(t.clienteTelefono);
     await this.prisma.turno.update({ where: { id }, data: { recordadoEn: new Date() } });
     return { mensaje, telefono, whatsapp: `https://wa.me/${telefono ?? ''}?text=${encodeURIComponent(mensaje)}` };
+  }
+
+  /** Reservas y cancelaciones online que el negocio todavía no vio (aviso arriba de la agenda y en el menú). */
+  async nuevas(empresaId: string) {
+    const filas = await this.prisma.turno.findMany({ where: { empresaId, origen: 'online', vistoEn: null }, orderBy: { updatedAt: 'desc' }, take: 50 });
+    return this.vistas(empresaId, filas);
+  }
+
+  async marcarVistas(empresaId: string, ids: string[]) {
+    await this.prisma.turno.updateMany({ where: { empresaId, id: { in: ids }, vistoEn: null }, data: { vistoEn: new Date() } });
+    return { ok: true };
   }
 
   /** Horarios libres de un recurso en un día (para la reserva online y para ayudar al cargar). */

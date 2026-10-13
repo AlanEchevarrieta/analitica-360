@@ -20,7 +20,8 @@ import { LineasProductos } from "@/features/productos/components/LineasProductos
 import { etiquetaAjuste, precioConLista, useListasPrecios } from "@/features/listas-precios/listas-precios";
 import { aNumero, calcularTotales, COBRO_INICIAL, CobroVenta, esClienteNuevo, type DatosCobro } from "./CobroVenta";
 import { useAccionesPresupuesto, usePresupuesto } from "@/features/presupuestos/use-presupuestos";
-import { useAccionesAgenda, useTurno } from "@/features/agenda/use-agenda";
+import { useAccionesAgenda, useRecursos, useTurno } from "@/features/agenda/use-agenda";
+import { usePlan } from "@/hooks/use-plan";
 
 // Medio de pago y ubicación se recuerdan por dispositivo (localStorage): en
 // un stand casi siempre se repiten, así no hay que elegirlos en cada venta.
@@ -113,6 +114,11 @@ export function NuevaVentaForm({ presupuestoId = null, turno: turnoRef = null }:
     setCobro((c) => ({ ...c, cliente: t.clienteNombre ?? "", telefono: t.clienteTelefono ?? "" }));
   }
   const desdeTurno = t && cargado === t.id ? t : null;
+  // Comisiones: quién atendió (del turno, si viene de uno).
+  const conComisiones = usePlan().disponible("comisiones");
+  const profesionales = useRecursos();
+  const [profesionalElegido, setProfesional] = useState<string | undefined>(undefined);
+  const profesionalId = profesionalElegido ?? desdeTurno?.recursoId ?? "";
   const clientes = useClientes();
   const listas = useListasPrecios();
   const clienteElegido = clientes.data?.find((c) => c.nombre.toLowerCase() === cobro.cliente.trim().toLowerCase());
@@ -180,6 +186,7 @@ export function NuevaVentaForm({ presupuestoId = null, turno: turnoRef = null }:
         ubicacionOrigen: lugares.length > 1 ? cobro.ubicacion || lugares[0].nombre : null,
         esSenia: cobro.esSenia,
         montoSenia: cobro.esSenia ? aNumero(cobro.montoSenia) : 0,
+        profesionalId: conComisiones && profesionalId ? profesionalId : null,
       });
 
       if (desdePresupuesto) {
@@ -202,6 +209,7 @@ export function NuevaVentaForm({ presupuestoId = null, turno: turnoRef = null }:
       setCarrito([]);
       setListaElegida(undefined);
       setCobro({ ...COBRO_VACIO, formaPago: cobro.formaPago, ubicacion: cobro.ubicacion });
+      setProfesional(undefined);
       toast.success(`Venta ${venta.numeroVenta ?? ""} registrada por ${formatoPesos(venta.total)}`, {
         action: { label: "Ver ventas", onClick: () => router.push("/ventas") },
       });
@@ -294,6 +302,21 @@ export function NuevaVentaForm({ presupuestoId = null, turno: turnoRef = null }:
             ubicaciones={ubicaciones.data ?? []}
             config={config.data}
           />
+          {conComisiones && (profesionales.data ?? []).length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="venta-profesional" className="text-sm font-medium">
+                Atendió (comisiones)
+              </label>
+              <select id="venta-profesional" className="h-8 rounded-lg border bg-transparent px-2 text-sm" value={profesionalId} onChange={(e) => setProfesional(e.target.value)}>
+                <option value="">Nadie en particular</option>
+                {profesionales.data!.filter((r) => r.activo || r.id === profesionalId).map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           {error && (
             <p role="alert" className="text-sm text-destructive">
               {error}

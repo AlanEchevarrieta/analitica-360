@@ -12,7 +12,7 @@ import { useRol } from "@/hooks/use-rol";
 import { hoyAR, moverDias } from "@/lib/periodos";
 import { COLOR_ESTADO_TURNO, TurnoPanel } from "./TurnoPanel";
 import { TurnoForm } from "./TurnoForm";
-import { diaSemana, fechaLarga, hhmm, minutos, NOMBRE_ESTADO_TURNO, OCUPAN, useBloqueos, useRecursos, useTurnos, type Recurso, type Turno } from "./use-agenda";
+import { diaSemana, fechaLarga, hhmm, minutos, NOMBRE_ESTADO_TURNO, OCUPAN, useAccionesAgenda, useBloqueos, useNuevasOnline, useRecursos, useTurnos, type Recurso, type Turno } from "./use-agenda";
 
 const PX_MIN = 1.1; // 66 px por hora
 const PASO = 15;
@@ -73,6 +73,14 @@ export function Agenda({ fechaInicial }: { fechaInicial?: string | null }) {
           ))}
         </div>
       </div>
+
+      <NuevasOnline
+        onVer={(t) => {
+          setVista("dia");
+          setFecha(t.inicio.slice(0, 10));
+          setAbierto({ tipo: "turno", id: t.id });
+        }}
+      />
 
       {recursos.isLoading || turnos.isLoading ? (
         <Skeleton className="h-96 w-full" />
@@ -251,6 +259,37 @@ function VistaSemana({ desde, turnos, onDia, onTurno }: { desde: string; turnos:
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** Reservas y cancelaciones que llegaron desde la tienda y nadie vio todavía. */
+function NuevasOnline({ onVer }: { onVer: (t: Turno) => void }) {
+  const nuevas = useNuevasOnline();
+  const { marcarVistas } = useAccionesAgenda();
+  const lista = nuevas.data ?? [];
+  if (!lista.length) return null;
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-primary/40 bg-primary/5 p-3 text-sm">
+      <div className="flex items-center gap-2 font-medium">
+        <Globe className="size-4 text-primary" aria-hidden />
+        {lista.length === 1 ? "Novedad de la reserva online" : `${lista.length} novedades de la reserva online`}
+        <Button size="sm" variant="ghost" className="ml-auto" onClick={() => marcarVistas.mutate(lista.map((t) => t.id))} disabled={marcarVistas.isPending}>
+          Entendido
+        </Button>
+      </div>
+      <ul className="flex flex-col gap-1">
+        {lista.map((t) => (
+          <li key={t.id} className="flex flex-wrap items-center gap-x-2">
+            <span className={t.estado === "cancelado" ? "text-muted-foreground line-through" : ""}>
+              <strong>{t.clienteNombre}</strong> {t.estado === "cancelado" ? "canceló" : "reservó"} {t.servicio ?? "un turno"} con {t.recurso}, {fechaLarga(t.inicio.slice(0, 10)).toLowerCase()} a las {t.inicio.slice(11, 16)}
+            </span>
+            <button type="button" className="text-primary underline" onClick={() => (onVer(t), marcarVistas.mutate([t.id]))}>
+              Ver
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

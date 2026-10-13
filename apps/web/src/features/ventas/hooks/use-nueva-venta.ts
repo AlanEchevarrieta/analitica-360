@@ -44,6 +44,8 @@ export interface ConfirmarVentaInput {
   ubicacionOrigen: string | null;
   esSenia: boolean;
   montoSenia: number;
+  /** Profesional que atendió (comisiones). */
+  profesionalId?: string | null;
 }
 
 export function useUbicaciones() {

@@ -568,6 +568,8 @@ model Venta {
   listaPrecioId      String?   @map("lista_precio_id") @db.Uuid
   /// Envío que pagó el cliente (pedidos de la tienda): ya está sumado en los totales.
   costoEnvio         Decimal   @default(0) @map("costo_envio") @db.Decimal(12, 2)
+  /// Profesional que atendió (agenda_recursos): para las comisiones (pieza 5 de servicios).
+  profesionalId      String?   @map("profesional_id") @db.Uuid
   deletedAt          DateTime? @map("deleted_at")
 
   empresa         Empresa           @relation(fields: [empresaId], references: [id])
@@ -584,6 +586,7 @@ model Venta {
 
   @@index([empresaId, fecha])
   @@index([clienteId]) // historial de compras de un cliente
+  @@index([empresaId, profesionalId])
   @@map("ventas")
 }
 
@@ -1549,6 +1552,10 @@ model AgendaRecurso {
   online    Boolean   @default(true)
   activo    Boolean   @default(true)
   orden     Int       @default(0)
+  /// Comisiones (pieza 5): % de los servicios y de los productos que vende, y $ fijo por sesión de abono atendida.
+  comisionServicios Decimal @default(0) @map("comision_servicios") @db.Decimal(5, 2)
+  comisionProductos Decimal @default(0) @map("comision_productos") @db.Decimal(5, 2)
+  comisionSesion    Decimal @default(0) @map("comision_sesion") @db.Decimal(12, 2)
   createdAt DateTime  @default(now()) @map("created_at")
   deletedAt DateTime? @map("deleted_at")
 
@@ -1668,6 +1675,23 @@ model AbonoUso {
   @@map("abono_usos")
 }
 
+/// Pago de comisiones a un profesional por un período (queda también como gasto, si se elige).
+model ComisionPago {
+  id        String   @id @default(uuid()) @db.Uuid
+  empresaId String   @map("empresa_id") @db.Uuid
+  recursoId String   @map("recurso_id") @db.Uuid
+  desde     DateTime @db.Date
+  hasta     DateTime @db.Date
+  monto     Decimal  @db.Decimal(12, 2)
+  gastoId   String?  @map("gasto_id") @db.Uuid
+  nota      String?  @db.VarChar(200)
+  usuarioId String?  @map("usuario_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([empresaId, recursoId])
+  @@map("comision_pagos")
+}
+
 /// Reserva online de turnos desde la tienda (pieza 3, parte 2). Una por empresa.
 model AgendaConfig {
   id              String   @id @default(uuid()) @db.Uuid
@@ -1702,6 +1726,8 @@ model Turno {
   origen          String    @default("interno") @db.VarChar(10)
   ventaId         String?   @unique @map("venta_id") @db.Uuid
   recordadoEn     DateTime? @map("recordado_en")
+  /// Reservas (y cancelaciones) online: null hasta que el negocio las ve en la agenda.
+  vistoEn         DateTime? @map("visto_en")
   usuarioId       String?   @map("usuario_id") @db.Uuid
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")

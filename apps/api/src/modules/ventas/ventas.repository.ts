@@ -141,6 +141,8 @@ export interface VentasRepository {
   confirmar(empresaId: string, input: ConfirmarVentaInput): Promise<ResultadoConfirmarVenta>;
   /** Revierte cada MovimientoInventario original (signo +1) y crea el registro de Anulacion. */
   anular(empresaId: string, usuarioId: string, id: string, motivo: string): Promise<ResultadoAnularVenta>;
+  /** Quién atendió (comisiones). false = la venta o el profesional no son de la empresa. */
+  asignarProfesional(empresaId: string, ventaId: string, profesionalId: string | null): Promise<boolean>;
   cobrarSaldo(
     empresaId: string,
     id: string,

@@ -7,7 +7,18 @@ export type OpcionesTurnos =
   | { activa: false }
   | { activa: true; diasMaximo: number; mensaje: string | null; hoy: string; servicios: ServicioTurno[]; profesionales: ProfesionalTurno[] };
 export type HorarioLibre = { hora: string; profesionales: string[] };
-export type TurnoReservado = { id: string; servicio: string; profesional: string; inicio: string; fin: string; cuando: string; mensaje: string | null };
+export type TurnoReservado = { id: string; servicio: string; profesional: string; inicio: string; fin: string; cuando: string; mensaje: string | null; cancelar: string };
+export type TurnoACancelar = { servicio: string | null; profesional: string; cliente: string | null; cuando: string; estado: string; cancelable: boolean };
+
+/** El turno del link "cancelar" (solo desde el servidor). null = link inválido. */
+export async function turnoACancelar(empresaId: string, token: string): Promise<TurnoACancelar | null> {
+  try {
+    const res = await fetch(urlTienda(empresaId, `/turnos/cancelar/${encodeURIComponent(token)}`), { headers: await cabecerasTienda(), cache: "no-store" });
+    return res.ok ? ((await res.json()) as TurnoACancelar) : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Servicios y profesionales que el negocio ofrece para reservar (solo desde el servidor). */
 export async function opcionesTurnos(empresaId: string): Promise<OpcionesTurnos> {

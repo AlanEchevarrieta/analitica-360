@@ -24,6 +24,7 @@ export const NOMBRE_FUNCION: Record<string, string> = {
   ordenes_trabajo: "Órdenes de trabajo (talleres y service)",
   agenda: "Agenda y turnos",
   abonos: "Abonos y cuotas mensuales",
+  comisiones: "Comisiones por profesional",
 };
 
 /**

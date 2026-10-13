@@ -120,8 +120,27 @@ describe.skipIf(!URL_E2E)('Reserva online de turnos (e2e)', () => {
     await api().put('/agenda/config').set(DUENO).send({ reservaOnline: true, anticipacionMin: 120, diasMaximo: 14 }).expect(200);
   });
 
+  it('el negocio ve las reservas nuevas y el cliente cancela con su link', async () => {
+    const nuevas = (await api().get('/agenda/nuevas').set(DUENO).expect(200)).body;
+    expect(nuevas.map((t: { clienteNombre: string }) => t.clienteNombre).sort()).toEqual(['Juan', 'Laura Pérez']);
+    await api().post('/agenda/nuevas/vistas').set(DUENO).send({ ids: nuevas.map((t: { id: string }) => t.id) }).expect(201);
+    expect((await api().get('/agenda/nuevas').set(DUENO).expect(200)).body).toEqual([]);
+
+    // Una reserva más, que el cliente después cancela solo.
+    const r = (await reservar({ hora: '11:00', nombre: 'Ana' }).expect(201)).body;
+    expect(r.cancelar).toMatch(/^[0-9a-f-]{36}\./);
+    await api().get(`/tienda/${empresa}/turnos/cancelar/${r.id}.firmafalsa`).expect(404);
+    await api().get(`/tienda/${basica}/turnos/cancelar/${r.cancelar}`).expect(404);
+    expect((await api().get(`/tienda/${empresa}/turnos/cancelar/${r.cancelar}`).expect(200)).body).toMatchObject({ cliente: 'Ana', servicio: 'Limpieza facial', cancelable: true });
+    expect((await api().post(`/tienda/${empresa}/turnos/cancelar/${r.cancelar}`).expect(201)).body).toMatchObject({ estado: 'cancelado', cancelable: false });
+    await api().post(`/tienda/${empresa}/turnos/cancelar/${r.cancelar}`).expect(201);
+    // Vuelve a aparecer como novedad (cancelado) y el horario quedó libre.
+    expect((await api().get('/agenda/nuevas').set(DUENO).expect(200)).body).toEqual([expect.objectContaining({ id: r.id, estado: 'cancelado' })]);
+    expect((await api().get(`/tienda/${empresa}/turnos/libres`).query({ fecha: FECHA, servicioId: corte }).expect(200)).body.libres.map((l: { hora: string }) => l.hora)).toContain('11:00');
+  });
+
   it('queda en la agenda interna como reserva online', async () => {
-    const turnos = (await api().get('/agenda/turnos').query({ desde: FECHA, hasta: FECHA }).set(DUENO).expect(200)).body;
+    const turnos = (await api().get('/agenda/turnos').query({ desde: FECHA, hasta: FECHA }).set(DUENO).expect(200)).body.filter((t: { estado: string }) => t.estado !== 'cancelado');
     expect(turnos).toHaveLength(2);
     expect(turnos[0]).toMatchObject({ origen: 'online', servicio: 'Limpieza facial', clienteTelefono: '2615551234', estado: 'reservado' });
   });

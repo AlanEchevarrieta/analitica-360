@@ -62,6 +62,7 @@ export function ReservaTurno({ opciones, nombreTienda, whatsapp, cuenta }: { opc
 
   if (listo) {
     const avisar = urlWhatsApp(whatsapp, `Hola! Reservé un turno de ${listo.servicio} con ${listo.profesional} ${listo.cuando}. A nombre de ${nombre.trim()}.`);
+    const linkCancelar = `/turnos/cancelar/${listo.cancelar}`;
     return (
       <div className="mx-auto max-w-lg px-4 py-12">
         <div className={`${TARJETA} text-center`}>
@@ -73,7 +74,13 @@ export function ReservaTurno({ opciones, nombreTienda, whatsapp, cuenta }: { opc
             {listo.servicio} con <strong>{listo.profesional}</strong>, {listo.cuando}.
           </p>
           {listo.mensaje ? <p className="mt-3 rounded-xl bg-[var(--marca)]/10 px-3 py-2 text-sm">{listo.mensaje}</p> : null}
-          <p className="mt-3 text-sm text-[var(--tinta)]/60">Si no podés venir, avisá a {nombreTienda} así se lo dan a otra persona.</p>
+          <p className="mt-3 text-sm text-[var(--tinta)]/60">
+            Si no podés venir, cancelalo desde{" "}
+            <a href={linkCancelar} className="text-[var(--marca)] underline">
+              este link
+            </a>{" "}
+            (guardalo) o avisá a {nombreTienda}, así el horario queda para otra persona.
+          </p>
           {avisar ? (
             <a href={avisar} target="_blank" rel="noreferrer" className={`${BOTON} mt-6 inline-block`}>
               Avisar por WhatsApp
