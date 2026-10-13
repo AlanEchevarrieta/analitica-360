@@ -20,6 +20,7 @@ export function Header({ categorias, conSesion }: { categorias: CategoriaTienda[
   const [buscar, setBuscar] = useState(false);
   const [productos, setProductos] = useState(false);
   const pathname = usePathname();
+  const nav = sitio.turnosOnline ? [{ href: "/turnos", label: "Reservar turno" }, ...NAV] : NAV;
 
   // Al cambiar de página se cierran el buscador y los menús.
   const [rutaAnterior, setRutaAnterior] = useState(pathname);
@@ -78,7 +79,7 @@ export function Header({ categorias, conSesion }: { categorias: CategoriaTienda[
               </div>
             ) : null}
           </div>
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link key={item.href} href={item.href} className={link}>
               {item.label}
             </Link>
@@ -146,7 +147,7 @@ export function Header({ categorias, conSesion }: { categorias: CategoriaTienda[
               <span className="text-xs text-[var(--tinta)]/45">{c.cantidad}</span>
             </Link>
           ))}
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link key={item.href} href={item.href} onClick={() => setMenu(false)} className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-[var(--marca-oscuro)]/10">
               {item.label}
             </Link>

@@ -5,6 +5,7 @@ import { AlmacenArchivosService } from '../../common/archivos/almacen-archivos.s
 import { optimizarImagen, TAMANOS } from '../../common/archivos/optimizar-imagen.js';
 import { esViolacionUnica } from '../../common/prisma-errors.util.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { AgendaOnlineService } from '../agenda/agenda-online.service.js';
 import { normalizarDominio, problemaSubdominio, sitioDesdeHost, sugerirSubdominio, tipoImagen } from './tienda-sitio.util.js';
 
 export interface GuardarTienda {
@@ -61,6 +62,7 @@ export class TiendaAdminService {
     private readonly prisma: PrismaService,
     private readonly almacen: AlmacenArchivosService,
     private readonly config: ConfigService<Env, true>,
+    private readonly turnosOnline: AgendaOnlineService,
   ) {}
 
   private base() {
@@ -239,12 +241,12 @@ export class TiendaAdminService {
       select: PUBLICO,
     });
     if (!tienda) throw new NotFoundException('No hay una tienda en esta dirección');
-    return conMontos(tienda);
+    return { ...conMontos(tienda), turnosOnline: Boolean(await this.turnosOnline.habilitada(tienda.empresaId)) };
   }
 
   async configPublica(empresaId: string) {
     const tienda = await this.prisma.tiendaConfig.findFirst({ where: { empresaId, activa: true }, select: PUBLICO });
     if (!tienda) throw new NotFoundException('La tienda no está activa');
-    return conMontos(tienda);
+    return { ...conMontos(tienda), turnosOnline: Boolean(await this.turnosOnline.habilitada(empresaId)) };
   }
 }

@@ -37,6 +37,8 @@ export type Sitio = {
   pedidoMinimo: number | null;
   /** % de descuento si paga por transferencia (0 = no hay). Lo aplica la API al crear el pedido. */
   descuentoTransferencia: number;
+  /** Toma turnos online (agenda del plan Pro): muestra "Reservar turno" en el menú. */
+  turnosOnline: boolean;
 };
 
 const POR_DEFECTO: Partial<Sitio> = {
@@ -48,6 +50,7 @@ const POR_DEFECTO: Partial<Sitio> = {
   seccionesOcultas: [],
   pedidoMinimo: null,
   descuentoTransferencia: 0,
+  turnosOnline: false,
 };
 
 /**

@@ -84,6 +84,16 @@ function useConsulta<T>(clave: unknown[], ruta: string | null) {
   return useQuery({ queryKey: ["agenda", ...clave, orgId], queryFn: () => api<T>(ruta!), enabled: Boolean(orgId && ruta) });
 }
 
+export interface ConfigAgenda {
+  reservaOnline: boolean;
+  anticipacionMin: number;
+  diasMaximo: number;
+  mensaje: string | null;
+}
+
+export const useConfigAgenda = () => useConsulta<ConfigAgenda>(["config"], "/agenda/config");
+/** Para el link de la reserva online: la dirección de la tienda. */
+export const useTiendaDireccion = () => useConsulta<{ activa: boolean; subdominio: string; dominioPropio: string | null }>(["tienda"], "/tienda-config");
 export const useRecursos = () => useConsulta<Recurso[]>(["recursos"], "/agenda/recursos");
 export const useTurnos = (desde: string, hasta: string) => useConsulta<Turno[]>(["turnos", desde, hasta], `/agenda/turnos?desde=${desde}&hasta=${hasta}`);
 export const useTurno = (id: string | null, fecha: string | null) => {
@@ -107,6 +117,7 @@ export function useAccionesAgenda() {
   const enviar = <T,>(ruta: string, body?: unknown, method = "POST") => api<T>(ruta, { method, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
 
   return {
+    guardarConfig: useOp((d: ConfigAgenda) => enviar<ConfigAgenda>("/agenda/config", d, "PUT")),
     crearTurno: useOp((d: TurnoInput) => enviar<Turno>("/agenda/turnos", d)),
     reprogramar: useOp(({ id, ...d }: Partial<TurnoInput> & { id: string }) => enviar<Turno>(`/agenda/turnos/${id}`, d, "PATCH")),
     estado: useOp(({ id, estado }: { id: string; estado: EstadoTurno }) => enviar<Turno>(`/agenda/turnos/${id}/estado`, { estado })),

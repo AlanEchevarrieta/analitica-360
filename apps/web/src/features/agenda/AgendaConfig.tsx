@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { hoyAR, moverDias } from "@/lib/periodos";
-import { DIAS_SEMANA, useAccionesAgenda, useBloqueos, useRecursos, type Horario, type Recurso } from "./use-agenda";
+import { DIAS_SEMANA, useAccionesAgenda, useBloqueos, useConfigAgenda, useRecursos, useTiendaDireccion, type ConfigAgenda, type Horario, type Recurso } from "./use-agenda";
 
 const COLORES = ["#6366f1", "#e11d48", "#059669", "#d97706", "#0891b2", "#7c3aed", "#db2777", "#65a30d"];
 // Lunes primero, domingo al final.
@@ -34,6 +34,7 @@ export function AgendaConfig() {
         </Button>
       )}
       <DiasCerrados recursos={recursos.data ?? []} />
+      <ReservaOnlineCarga />
     </div>
   );
 }
@@ -207,6 +208,85 @@ function DiasCerrados({ recursos }: { recursos: Recurso[] }) {
             ))}
           </ul>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ReservaOnlineCarga() {
+  const config = useConfigAgenda();
+  if (!config.data) return <Skeleton className="h-32 w-full" />;
+  return <ReservaOnline inicial={config.data} />;
+}
+
+const ANTICIPACIONES = [
+  { valor: 0, nombre: "Sin mínimo" },
+  { valor: 60, nombre: "1 hora" },
+  { valor: 120, nombre: "2 horas" },
+  { valor: 240, nombre: "4 horas" },
+  { valor: 720, nombre: "12 horas" },
+  { valor: 1440, nombre: "1 día" },
+  { valor: 2880, nombre: "2 días" },
+];
+
+function ReservaOnline({ inicial }: { inicial: ConfigAgenda }) {
+  const tienda = useTiendaDireccion();
+  const { guardarConfig } = useAccionesAgenda();
+  const [c, setC] = useState(inicial);
+  const direccion = tienda.data ? `https://${tienda.data.dominioPropio ?? `${tienda.data.subdominio}.analitica360.app`}/turnos` : null;
+
+  function guardar() {
+    guardarConfig.mutate(c, { onSuccess: () => toast.success(c.reservaOnline ? "Reserva online prendida" : "Reserva online guardada"), onError: (e) => toast.error(e instanceof Error ? e.message : "No se pudo guardar") });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Reserva online</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4 text-sm">
+        <p className="text-muted-foreground">Tus clientes eligen el servicio, el profesional (o «el que esté libre»), el día y la hora desde tu tienda online. El turno aparece en la agenda marcado como reserva online.</p>
+        <label className="flex items-center gap-2 font-medium">
+          <input type="checkbox" checked={c.reservaOnline} onChange={(e) => setC({ ...c, reservaOnline: e.target.checked })} />
+          Tomar turnos desde la tienda
+        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="ro-anticipacion">Anticipación mínima</Label>
+            <select id="ro-anticipacion" className="h-8 rounded-lg border bg-transparent px-2 text-sm" value={c.anticipacionMin} onChange={(e) => setC({ ...c, anticipacionMin: Number(e.target.value) })}>
+              {ANTICIPACIONES.map((a) => (
+                <option key={a.valor} value={a.valor}>
+                  {a.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="ro-dias">Hasta cuántos días para adelante</Label>
+            <Input id="ro-dias" type="number" min={1} max={365} value={c.diasMaximo} onChange={(e) => setC({ ...c, diasMaximo: Math.max(1, Math.min(365, Number(e.target.value) || 1)) })} />
+          </div>
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <Label htmlFor="ro-mensaje">Mensaje para el cliente al reservar (opcional)</Label>
+            <Input id="ro-mensaje" maxLength={300} value={c.mensaje ?? ""} onChange={(e) => setC({ ...c, mensaje: e.target.value })} placeholder="Ej. Llegá 5 minutos antes. Si no podés venir, avisanos por WhatsApp." />
+          </div>
+        </div>
+        <ul className="list-disc pl-5 text-muted-foreground">
+          <li>Solo se ofrecen los profesionales con «Se puede reservar online» tildado y con horario cargado.</li>
+          <li>Los servicios son los activos de Productos marcados como servicio, con su duración y su precio (si es fijo).</li>
+          {tienda.data && !tienda.data.activa && <li className="text-amber-600">Tu tienda online está apagada: prendela en Configuración → Tienda online para que se vea.</li>}
+        </ul>
+        {c.reservaOnline && direccion && tienda.data?.activa && (
+          <p>
+            Dirección para compartir:{" "}
+            <a href={direccion} target="_blank" rel="noreferrer" className="font-medium text-primary underline">
+              {direccion.replace("https://", "")}
+            </a>
+          </p>
+        )}
+        <Button className="w-fit" onClick={guardar} disabled={guardarConfig.isPending}>
+          {guardarConfig.isPending && <Loader2 className="animate-spin" aria-hidden />}
+          Guardar
+        </Button>
       </CardContent>
     </Card>
   );

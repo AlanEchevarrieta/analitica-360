@@ -1582,6 +1582,22 @@ model AgendaBloqueo {
   @@map("agenda_bloqueos")
 }
 
+/// Reserva online de turnos desde la tienda (pieza 3, parte 2). Una por empresa.
+model AgendaConfig {
+  id              String   @id @default(uuid()) @db.Uuid
+  empresaId       String   @unique @map("empresa_id") @db.Uuid
+  reservaOnline   Boolean  @default(false) @map("reserva_online")
+  /// Con cuánta anticipación mínima se puede reservar (minutos).
+  anticipacionMin Int      @default(120) @map("anticipacion_min")
+  /// Hasta cuántos días para adelante.
+  diasMaximo      Int      @default(30) @map("dias_maximo")
+  /// Texto que ve el cliente al reservar (ej. "Llegá 5 minutos antes").
+  mensaje         String?  @db.VarChar(300)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("agenda_config")
+}
+
 /// Turno: un recurso ocupado de inicio a fin (no se superponen, salvo cancelados y "no vino").
 model Turno {
   id              String    @id @default(uuid()) @db.Uuid

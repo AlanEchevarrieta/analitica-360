@@ -7,6 +7,7 @@ import { RequireFuncion } from '../../common/decorators/funcion.decorator.js';
 import { RequirePermiso } from '../../common/decorators/permiso.decorator.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
+import { AgendaOnlineService, type ConfigAgendaInput } from './agenda-online.service.js';
 import { AgendaService, type RecursoInput, type TurnoInput } from './agenda.service.js';
 import { ESTADOS_TURNO } from './agenda.util.js';
 
@@ -32,6 +33,12 @@ const turnoSchema = z.object({
   notas: texto(1000),
   forzar: z.boolean().optional(),
 });
+const configSchema = z.object({
+  reservaOnline: z.boolean(),
+  anticipacionMin: z.number().int().min(0).max(10_080),
+  diasMaximo: z.number().int().min(1).max(365),
+  mensaje: texto(300),
+});
 const rangoSchema = z.object({ desde: fecha, hasta: fecha, recursoId: z.uuid().optional() });
 const libresSchema = z.object({ recursoId: z.uuid(), fecha, duracionMin: z.coerce.number().int().min(5).max(1440).optional(), servicioId: z.uuid().optional() });
 
@@ -39,7 +46,21 @@ const libresSchema = z.object({ recursoId: z.uuid(), fecha, duracionMin: z.coerc
 @Controller('agenda')
 @RequireFuncion('agenda')
 export class AgendaController {
-  constructor(private readonly agenda: AgendaService) {}
+  constructor(
+    private readonly agenda: AgendaService,
+    private readonly online: AgendaOnlineService,
+  ) {}
+
+  @Get('config')
+  config(@CurrentEmpresa() empresa: EmpresaContext) {
+    return this.online.config(empresa.id);
+  }
+
+  @Put('config')
+  @Roles('dueno')
+  guardarConfig(@CurrentEmpresa() empresa: EmpresaContext, @Body(new ZodValidationPipe(configSchema)) body: ConfigAgendaInput) {
+    return this.online.guardarConfig(empresa.id, body);
+  }
 
   @Get('recursos')
   recursos(@CurrentEmpresa() empresa: EmpresaContext) {

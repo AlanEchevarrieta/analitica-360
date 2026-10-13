@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Settings } from "lucide-react";
+import { ChevronLeft, ChevronRight, Globe, Plus, Settings } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -201,6 +201,7 @@ function VistaDia({
                         >
                           <span className="font-medium">{t.inicio.slice(11, 16)}</span> {t.clienteNombre}
                           {t.estado === "atendido" && " ✓"}
+                          {t.origen === "online" && <Globe className="ml-1 inline size-3 text-muted-foreground" aria-label="Reservado online" />}
                           {alturaTurno > 34 && t.servicio && <span className="block truncate text-muted-foreground">{t.servicio}</span>}
                           {t.ventaId && <span className="sr-only"> (cobrado)</span>}
                         </button>
