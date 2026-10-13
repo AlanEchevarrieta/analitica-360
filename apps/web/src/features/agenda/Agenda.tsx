@@ -195,10 +195,12 @@ function VistaDia({
                           key={t.id}
                           type="button"
                           onClick={(e) => (e.stopPropagation(), onTurno(t.id))}
-                          className={`absolute inset-x-1 overflow-hidden rounded-md border-l-4 px-1.5 py-0.5 text-left text-xs shadow-sm ${t.estado === "atendido" ? "bg-emerald-50 dark:bg-emerald-950" : "bg-background"}`}
-                          style={{ top: (desdeMin - ini) * PX_MIN, height: alturaTurno, borderLeftColor: r.color }}
+                          className={`absolute inset-x-1 overflow-hidden rounded-md border-l-4 bg-background px-1.5 py-0.5 text-left text-xs shadow-sm ${t.estado === "atendido" ? "opacity-70" : ""}`}
+                          // Fondo con el color del profesional, suave (el hex + transparencia).
+                          style={{ top: (desdeMin - ini) * PX_MIN, height: alturaTurno, borderLeftColor: r.color, backgroundImage: `linear-gradient(${r.color}33, ${r.color}33)` }}
                         >
                           <span className="font-medium">{t.inicio.slice(11, 16)}</span> {t.clienteNombre}
+                          {t.estado === "atendido" && " ✓"}
                           {alturaTurno > 34 && t.servicio && <span className="block truncate text-muted-foreground">{t.servicio}</span>}
                           {t.ventaId && <span className="sr-only"> (cobrado)</span>}
                         </button>
