@@ -17,7 +17,7 @@ export interface GananciaProducto {
 
 interface PeriodoRespuesta {
   avisoLimite: number | null;
-  data: { productos: GananciaProducto[] } | null;
+  data: { productos: GananciaProducto[]; evolucionDiaria: { fecha: string; total: number }[] } | null;
 }
 
 export function useGananciaProductos(desde: string, hasta: string) {
