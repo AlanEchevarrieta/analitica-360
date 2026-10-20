@@ -21,7 +21,11 @@ function clasificar(herramienta, hallazgos) {
 const lineas = (lista, max = 15) => lista.slice(0, max).map((h) => `${h.severidad ? `[${h.severidad}] ` : ''}${h.regla} — ${h.ruta}${h.motivo ? ` (aceptado: ${h.motivo})` : ''}`);
 
 export async function gitleaks(dir) {
-  const r = await correr('docker', ['run', '--rm', '-v', `${rutaDocker(RAIZ)}:/repo`, 'zricethezav/gitleaks:latest', 'git', '/repo', '--report-format', 'json', '--report-path', `/repo/${path.relative(RAIZ, dir).replace(/\\/g, '/')}/gitleaks.json`, '--no-banner', '--redact']);
+  // El historial va por stdin (tar de .git): montar la carpeta de Windows tardaba más de 30 minutos.
+  const tar = spawn('tar', ['cf', '-', '.git'], { cwd: RAIZ });
+  const cmd = 'mkdir -p /tmp/repo && tar xf - -C /tmp/repo && git config --global --add safe.directory /tmp/repo && gitleaks git /tmp/repo --report-format json --report-path /tmp/r.json --no-banner --redact; cat /tmp/r.json';
+  const r = await correr('docker', ['run', '--rm', '-i', '--entrypoint', 'sh', 'zricethezav/gitleaks:latest', '-c', cmd], { entrada: tar.stdout });
+  fs.writeFileSync(path.join(dir, 'gitleaks.json'), r.salida);
   const datos = leerJson(path.join(dir, 'gitleaks.json'));
   if (!datos) return control({ id: 'SEC-01', titulo: 'Secretos en el código y su historial (Gitleaks)', estado: 'gris', resumen: `No se pudo correr: ${r.error.slice(-200)}`, normas: ['asvs-v2.10', 'soc2-cc6.1', 'iso-a8.4'] });
   const { nuevos, aceptados } = clasificar('gitleaks', datos.map((x) => ({ regla: x.RuleID, ruta: `${x.File}:${x.StartLine}` })));
