@@ -61,7 +61,7 @@ function mensajes(m: Monotributo): { texto: string; grave: boolean }[] {
     if (a === "supera_categoria") out.push({ grave: true, texto: `Ya superaste el tope de la categoría ${e.categoriaActual}: en la recategorización de ${recat} te corresponde la ${e.categoriaSegunIngresos}.` });
     if (a === "cerca_tope") out.push({ grave: true, texto: `Ya facturaste el ${e.usoPct?.toLocaleString("es-AR")}% del tope de tu categoría. Te quedan ${formatoPesos(e.margenDisponible)} antes de pasarte.` });
     if (a === "puede_bajar") out.push({ grave: false, texto: `Con lo que facturaste en 12 meses te alcanza la categoría ${e.categoriaSegunIngresos}, que es más barata. Consultalo con tu contador en la recategorización de ${recat}.` });
-    if (a === "sin_categoria") out.push({ grave: false, texto: `Cargá tu categoría en Configuración → Configuración fiscal para ver cuánto margen te queda.${e.categoriaSegunIngresos ? ` Por tus ingresos correspondería la ${e.categoriaSegunIngresos}.` : ""}` });
+    if (a === "sin_categoria") out.push({ grave: false, texto: `Cargá tu categoría en Configuración → Impuestos y facturación para ver cuánto margen te queda.${e.categoriaSegunIngresos ? ` Por tus ingresos correspondería la ${e.categoriaSegunIngresos}.` : ""}` });
     if (a === "topes_desactualizados") out.push({ grave: false, texto: `Los topes cargados rigen desde ${m.vigenciaTopes ? mesLargo(m.vigenciaTopes.slice(0, 7)) : "—"}: ARCA los actualiza en febrero y agosto, pueden estar desactualizados.` });
   }
   return out;

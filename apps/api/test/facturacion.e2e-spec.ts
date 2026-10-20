@@ -105,7 +105,7 @@ describe.skipIf(!URL_E2E)('Factura electrónica ARCA (e2e)', () => {
 
   it('sin configurar, pide cargar los datos', async () => {
     const r = await facturar(ventas[0]).expect(400);
-    expect(r.body.message).toContain('Configuración → Factura electrónica');
+    expect(r.body.message).toContain('Configuración → Impuestos y facturación');
   });
 
   it('la dueña configura y verifica; el vendedor no puede configurar; el CUIT se controla', async () => {

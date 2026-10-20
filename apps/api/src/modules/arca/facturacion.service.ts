@@ -79,7 +79,7 @@ export class FacturacionService {
 
   private async config(empresaId: string) {
     const c = await this.prisma.arcaConfig.findUnique({ where: { empresaId } });
-    if (!c) throw new BadRequestException('Primero cargá los datos de facturación en Configuración → Factura electrónica');
+    if (!c) throw new BadRequestException('Primero cargá los datos de facturación en Configuración → Impuestos y facturación');
     return c;
   }
 

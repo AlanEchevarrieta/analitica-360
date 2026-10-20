@@ -55,7 +55,7 @@ export const MATRIZ = [
   // ---- Ley 25.326 (Argentina) / GDPR ----
   { clave: 'gdpr-5.1d', marco: 'Ley 25.326 / GDPR', ref: 'Art. 4 / GDPR 5.1.d', titulo: 'Datos exactos y actualizados' },
   { clave: 'gdpr-13', marco: 'Ley 25.326 / GDPR', ref: 'Art. 6 / GDPR 13', titulo: 'Informar al titular qué se guarda y para qué', estadoManual: 'cumple', motivo: 'Política de privacidad v1.2 con datos, uso, terceros (Clerk), plazos y el registro de uso de la app.' },
-  { clave: 'gdpr-15', marco: 'Ley 25.326 / GDPR', ref: 'Art. 14 / GDPR 15 y 20', titulo: 'Acceso y portabilidad de los datos', estadoManual: 'cumple', motivo: 'Configuración → Exportar mis datos descarga todo el historial.' },
+  { clave: 'gdpr-15', marco: 'Ley 25.326 / GDPR', ref: 'Art. 14 / GDPR 15 y 20', titulo: 'Acceso y portabilidad de los datos', estadoManual: 'cumple', motivo: 'Configuración → Mis datos y mi cuenta → Exportar mis datos descarga todo el historial.' },
   { clave: 'gdpr-17', marco: 'Ley 25.326 / GDPR', ref: 'Art. 16 / GDPR 17', titulo: 'Supresión a pedido del titular', estadoManual: 'parcial', motivo: 'Se promete en la política, pero no hay un procedimiento ni una herramienta para borrar una cuenta completa (respetando la bitácora).' },
   { clave: 'gdpr-30', marco: 'Ley 25.326 / GDPR', ref: 'GDPR 30', titulo: 'Registro de actividades de tratamiento', estadoManual: 'parcial', motivo: 'Borrador listo en Obsidian (Seguridad/Registro de actividades de tratamiento): falta completar el responsable y decidir el plazo de la bitácora.' },
   { clave: 'gdpr-32', marco: 'Ley 25.326 / GDPR', ref: 'Art. 9 / GDPR 32', titulo: 'Seguridad del tratamiento' },
