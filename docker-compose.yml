@@ -80,6 +80,8 @@ services:
       # Sin límite de pedidos en la compu: la prueba de carga sale toda de la misma IP.
       LIMITE_PEDIDOS_POR_MINUTO: "0"
       AVISOS_EMAIL: ${AVISOS_EMAIL:-}
+      # Remitente de los emails: con el dominio verificado en Resend, por ejemplo "Analítica 360 <avisos@analitica360.app>".
+      AVISOS_EMAIL_DESDE: ${AVISOS_EMAIL_DESDE:-Analítica 360 <onboarding@resend.dev>}
     volumes:
       # La misma carpeta de fotos que usa la API en desarrollo.
       - ./apps/api/uploads:/data/archivos
