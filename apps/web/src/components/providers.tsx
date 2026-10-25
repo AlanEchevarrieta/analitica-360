@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api-client";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { CopilotFloatingWidget } from "@/features/copilot/components/copilot-floating-widget";
 
 export function Providers({ children, nonce }: { children: React.ReactNode; nonce?: string }) {
   const [queryClient] = React.useState(
@@ -28,6 +29,7 @@ export function Providers({ children, nonce }: { children: React.ReactNode; nonc
         <TooltipProvider>
           {children}
           <Toaster />
+          <CopilotFloatingWidget />
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
