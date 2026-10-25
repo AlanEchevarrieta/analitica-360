@@ -1,10 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import { CopilotChatView } from './copilot-chat-view';
 
 export const CopilotFloatingWidget: React.FC = () => {
   const [abierto, setAbierto] = useState(false);
+  const pathname = usePathname();
+  const { isSignedIn, isLoaded } = useAuth();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -17,35 +21,43 @@ export const CopilotFloatingWidget: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Ocultar en páginas de autenticación o antes de cargar la sesión
+  const esRutaAuth = pathname?.startsWith('/sign-in') || pathname?.startsWith('/sign-up');
+  if (esRutaAuth || (isLoaded && !isSignedIn)) {
+    return null;
+  }
+
   return (
     <>
-      {/* Ventana de Chat Flotante Anclada a la Esquina Inferior Derecha */}
+      {/* Ventana de Chat Flotante Anclada sobre la bolita */}
       {abierto && (
-        <div className="fixed bottom-20 right-4 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[420px] h-[580px] max-h-[80vh] rounded-2xl border border-zinc-800 bg-zinc-950/95 shadow-2xl shadow-black/90 flex flex-col overflow-hidden backdrop-blur-xl animate-in slide-in-from-bottom-4 fade-in duration-200">
+        <div className="fixed bottom-24 right-4 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-[420px] h-[580px] max-h-[80vh] rounded-2xl border border-zinc-800 bg-zinc-950/95 shadow-2xl shadow-black/90 flex flex-col overflow-hidden backdrop-blur-xl animate-in slide-in-from-bottom-5 fade-in duration-200">
           <CopilotChatView esModal onCerrar={() => setAbierto(false)} />
         </div>
       )}
 
-      {/* Botón Flotante en la Esquina */}
+      {/* Bolita Flotante Circular (Estilo Chat Flotante) */}
       <button
         onClick={() => setAbierto((prev) => !prev)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-xl shadow-emerald-950/50 border border-emerald-400/30 transition-all hover:scale-105 cursor-pointer active:scale-95"
-        title="Abrir o cerrar Copilot IA (⌘J)"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 text-white shadow-xl shadow-emerald-500/25 border border-emerald-400/40 transition-all duration-300 hover:scale-110 hover:shadow-emerald-500/40 active:scale-95 cursor-pointer group"
+        title={abierto ? 'Cerrar Copilot IA' : 'Abrir Copilot IA (⌘J)'}
+        aria-label="Copilot IA"
       >
         {abierto ? (
-          <>
-            <span className="text-sm font-bold">✕</span>
-            <span>Cerrar Chat</span>
-          </>
+          <span className="text-xl font-bold transition-transform duration-200 group-hover:rotate-90">
+            ✕
+          </span>
         ) : (
-          <>
-            <span className="flex h-2 w-2 rounded-full bg-emerald-200 animate-ping" />
-            <span className="text-base">✨</span>
-            <span>Copilot IA</span>
-            <span className="hidden sm:inline-block rounded bg-black/30 px-1.5 py-0.5 text-[10px] text-emerald-200 font-mono">
-              ⌘J
+          <div className="relative flex items-center justify-center">
+            {/* Indicador pulsante de estado en vivo */}
+            <span className="absolute -top-3.5 -right-3.5 flex h-3.5 w-3.5 items-center justify-center">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 border border-zinc-950" />
             </span>
-          </>
+            <span className="text-2xl transition-transform duration-300 group-hover:scale-110">
+              ✨
+            </span>
+          </div>
         )}
       </button>
     </>
