@@ -46,26 +46,37 @@ export async function POST(request: Request) {
   }
 
   // Desde el servidor: en Docker la API está en la red interna (API_URL_INTERNA=http://api:3001),
-  // no en el localhost del contenedor.
-  const apiUrl = process.env.API_URL_INTERNA ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+  // o en el VPS (ej. API_URL_INTERNA=http://127.0.0.1:4000).
+  const rawApiUrl = process.env.API_URL_INTERNA || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  // Normalizar: si termina en /api o / se limpia para construir /internal/clerk-webhook
+  const baseApiUrl = rawApiUrl.replace(/\/+$/, "").replace(/\/api$/, "");
+  const targetUrl = `${baseApiUrl}/internal/clerk-webhook`;
+
   const internalSecret = process.env.INTERNAL_WEBHOOK_SECRET;
   if (!internalSecret) {
-    console.error("[webhooks/clerk] INTERNAL_WEBHOOK_SECRET no configurado en apps/web/.env.local");
+    console.error("[webhooks/clerk] INTERNAL_WEBHOOK_SECRET no configurado en apps/web");
     return NextResponse.json({ error: "reenvío interno no configurado" }, { status: 500 });
   }
 
-  const forwarded = await fetch(`${apiUrl}/internal/clerk-webhook`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-internal-webhook-secret": internalSecret,
-    },
-    body: JSON.stringify(event),
-  });
+  let forwarded: Response;
+  try {
+    forwarded = await fetch(targetUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-internal-webhook-secret": internalSecret,
+      },
+      body: JSON.stringify(event),
+    });
+  } catch (error) {
+    console.error(`[webhooks/clerk] Error conectando con backend en ${targetUrl}:`, error);
+    return NextResponse.json({ error: "no se pudo conectar con el backend" }, { status: 502 });
+  }
 
   if (!forwarded.ok) {
-    console.error(`[webhooks/clerk] apps/api rechazó el evento: ${forwarded.status}`);
-    return NextResponse.json({ error: "backend rechazó el evento" }, { status: 502 });
+    const errorText = await forwarded.text().catch(() => "");
+    console.error(`[webhooks/clerk] apps/api en ${targetUrl} rechazó el evento: ${forwarded.status} - ${errorText}`);
+    return NextResponse.json({ error: "backend rechazó el evento", status: forwarded.status }, { status: 502 });
   }
 
   return NextResponse.json({ received: true });

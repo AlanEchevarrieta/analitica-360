@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start -p 4001",
     "lint": "eslint",
+    "test": "echo \"web: no unit tests yet\"",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {

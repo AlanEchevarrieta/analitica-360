@@ -32,8 +32,10 @@ export class UsuariosService {
   ) {}
 
   async procesarEventoClerk(event: ClerkWebhookEvent): Promise<void> {
+    this.logger.log(`Evento de Clerk recibido: ${event.type}`);
     switch (event.type) {
-      case 'organization.created': {
+      case 'organization.created':
+      case 'organization.updated': {
         const { data } = event as ClerkOrganizationCreatedEvent;
         await this.usuariosRepository.upsertEmpresa({
           clerkOrgId: data.id,

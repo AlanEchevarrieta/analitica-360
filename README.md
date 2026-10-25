@@ -1,32 +1,78 @@
-# React + TypeScript + Vite
+# Analítica 360
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Monorepo de **Analítica 360**: plataforma de gestión comercial (stock, ventas, compras, pedidos, clientes, contabilidad y analytics) y tiendas online multi-negocio.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🏗️ Estructura del Proyecto
 
-## React Compiler
+El repositorio está organizado como un monorepo administrado con **pnpm workspaces** y **Turborepo**:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```
+.
+├── apps/
+│   ├── api/            # Backend NestJS + Prisma ORM + PostgreSQL (puerto 3001)
+│   ├── web/            # Panel de control / Dashboard en Next.js (puerto 4001)
+│   └── tienda/         # Storefront público multi-negocio en Next.js (puerto 3010)
+├── packages/
+│   └── shared-types/   # Contratos de tipos y validaciones compartidas (Zod)
+├── deploy/             # Archivos de despliegue y scripts de backup (Caddyfile, etc.)
+└── scripts/            # Scripts de auditoría, pruebas de carga y utilidades
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+---
+
+## 🚀 Inicio Rápido (Desarrollo Local)
+
+### Requisitos previos
+- **Node.js**: >= 20 (recomendado v24)
+- **pnpm**: v12 (`corepack enable pnpm`)
+- **Docker**: para la base de datos PostgreSQL
+
+### 1. Instalar dependencias
+```bash
+pnpm install
+```
+
+### 2. Levantar la base de datos local
+```bash
+docker compose up -d postgres
+```
+
+### 3. Ejecutar los proyectos en modo desarrollo
+Con un solo comando levantás todas las aplicaciones concurrentemente:
+```bash
+pnpm dev
+```
+O de forma individual por aplicación:
+- **API**: `pnpm --filter api dev` (http://localhost:3001)
+- **Web**: `pnpm --filter web dev` (http://localhost:4001)
+- **Tienda**: `pnpm --filter tienda dev` (http://localhost:3010)
+
+---
+
+## 🛠️ Comandos Globales
+
+Desde la raíz del monorepo podés ejecutar:
+
+| Comando | Descripción |
+|---|---|
+| `pnpm build` | Compila todas las aplicaciones (`api`, `web`, `tienda`, `shared-types`) |
+| `pnpm dev` | Inicia los entornos de desarrollo concurrentes con Turborepo |
+| `pnpm lint` | Corre el linter en todos los módulos (`oxlint` en API, `eslint` en Web y Tienda) |
+| `pnpm typecheck` | Valida tipos estáticos de TypeScript en todo el monorepo |
+| `pnpm test` | Ejecuta las pruebas unitarias (Vitest en API, Node test en Tienda) |
+| `pnpm auditar` | Corre la suite completa de auditorías de seguridad, DAST y carga |
+
+---
+
+## 🐳 Ejecución con Docker
+
+Para levantar la suite completa en contenedores Docker:
+```bash
+# Copiar plantilla de entorno
+cp .env.docker.example .env.docker
+
+# Levantar todos los servicios (Postgres, API, Migraciones, Web, Tienda)
+docker compose --profile apps --env-file .env.docker up -d --build
+```

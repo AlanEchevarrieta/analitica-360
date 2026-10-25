@@ -26,7 +26,23 @@
 
 {$DOMINIO}, www.{$DOMINIO} {
 	import comun
-	reverse_proxy web:4001
+
+	# Webhooks públicos (Clerk, etc.) los procesa Next.js con svix
+	@webhook path /api/webhooks/*
+	handle @webhook {
+		reverse_proxy web:4001
+	}
+
+	# Si la web llama al backend bajo /api/*, se quita el prefijo y va directo a la API
+	@api path /api/*
+	handle @api {
+		uri strip_prefix /api
+		reverse_proxy api:3001
+	}
+
+	handle {
+		reverse_proxy web:4001
+	}
 }
 
 api.{$DOMINIO} {

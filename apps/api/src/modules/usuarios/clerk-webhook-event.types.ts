@@ -7,7 +7,7 @@
  * Referencia de payload: https://clerk.com/docs/webhooks/overview
  */
 export interface ClerkOrganizationCreatedEvent {
-  type: 'organization.created';
+  type: 'organization.created' | 'organization.updated';
   data: { id: string; name: string };
 }
 

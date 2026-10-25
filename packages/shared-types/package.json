@@ -8,7 +8,8 @@
   "scripts": {
     "lint": "echo \"shared-types: no lint configured yet\"",
     "build": "echo \"shared-types: no build step yet (consumed as TS source)\"",
-    "test": "echo \"shared-types: no tests yet\""
+    "test": "echo \"shared-types: no tests yet\"",
+    "typecheck": "echo \"shared-types: ok\""
   },
   "dependencies": {
     "zod": "^3.23.0"
