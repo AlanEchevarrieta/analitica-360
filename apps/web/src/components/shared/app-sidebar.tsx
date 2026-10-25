@@ -21,6 +21,7 @@ import {
   Home,
   Package,
   Settings,
+  Sparkles,
   Shield,
   ShoppingCart,
   Star,
@@ -162,6 +163,17 @@ export function AppSidebar() {
                 <SidebarMenuButton render={<Link href="/inicio" />} isActive={pathname === "/inicio"} tooltip="Inicio">
                   <Home />
                   <span>Inicio</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton render={<Link href="/ia" />} isActive={pathname === "/ia"} tooltip="Copilot IA">
+                  <Sparkles className="text-emerald-400" />
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span>Copilot IA</span>
+                    <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-400 border border-emerald-500/20">
+                      GPT-6
+                    </span>
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
