@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   type GuiaItem,
   type CategoriaGuia,
@@ -16,11 +17,16 @@ import {
   Compass,
   Layers,
   Sparkles,
+  PlayCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
-import { iniciarTourAnalitica360 } from "@/lib/tour";
+import {
+  iniciarTourModulo,
+  GUIA_A_TOUR_MAP,
+  TOURS_MODULOS,
+} from "@/lib/tour";
 
 const CATEGORIA_COLOR: Record<CategoriaGuia, string> = {
   "Arranque y Configuración": "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
@@ -43,7 +49,19 @@ export function GuiaDetalleVista({
   anterior,
   siguiente,
 }: GuiaDetalleVistaProps) {
+  const router = useRouter();
   const [copiado, setCopiado] = useState(false);
+
+  const idTour = GUIA_A_TOUR_MAP[guia.slug] || "general";
+  const defTour = TOURS_MODULOS[idTour];
+
+  const ejecutarTour = () => {
+    if (defTour && defTour.ruta && defTour.ruta !== "/inicio") {
+      router.push(`${defTour.ruta}?tour=1`);
+    } else {
+      iniciarTourModulo(idTour);
+    }
+  };
 
   const copiarEnlace = () => {
     if (typeof window !== "undefined") {
@@ -104,11 +122,11 @@ export function GuiaDetalleVista({
           <Button
             variant="default"
             size="sm"
-            onClick={() => iniciarTourAnalitica360()}
-            className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+            onClick={ejecutarTour}
+            className="gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-xs"
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Tour Interactivo</span>
+            <PlayCircle className="h-3.5 w-3.5" />
+            <span>Paso a Paso en Pantalla (Driver.js)</span>
           </Button>
         </div>
       </div>

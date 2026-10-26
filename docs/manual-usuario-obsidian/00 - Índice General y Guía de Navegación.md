@@ -29,6 +29,12 @@ aliases:
 > - Abrí la vista de **Grafo** (`Ctrl + G`) para visualizar la interconexión entre ventas, inventario, clientes y facturación.
 > - Al final de cada manual encontrarás una sección desplegable 🔍 **Ficha Técnica y Trazabilidad** pensada para el equipo de soporte técnico o administradores de sistemas.
 
+> [!example] 🚀 Tours Interactivos con Driver.js Integrados en la Plataforma
+> ¡No necesitás memorizar manuales extensos para operar el sistema!
+> - En la barra lateral de la app web disponés de la pestaña **Guías y Manuales** (`/guias`).
+> - Cada pantalla cuenta con un botón **"Paso a paso (Driver.js)"** en el encabezado superior que te guía visualmente paso por paso en tiempo real.
+> - Podés iniciar el tour general o el tour específico de cada módulo (Ventas, Stock, Clientes, Facturación ARCA, etc.) en cualquier momento.
+
 ---
 
 ## 🗺️ Mapa de la Bóveda y Módulos del Sistema

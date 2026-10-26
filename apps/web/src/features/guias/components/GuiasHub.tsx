@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   TODAS_LAS_GUIAS,
   CATEGORIAS_GUIAS,
@@ -16,13 +17,19 @@ import {
   Compass,
   ArrowRight,
   HelpCircle,
+  PlayCircle,
   Tag,
   CheckCircle2,
   Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { iniciarTourAnalitica360 } from "@/lib/tour";
+import {
+  iniciarTourAnalitica360,
+  iniciarTourModulo,
+  GUIA_A_TOUR_MAP,
+  TOURS_MODULOS,
+} from "@/lib/tour";
 
 const CATEGORIA_COLOR: Record<CategoriaGuia, string> = {
   "Arranque y Configuración": "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
@@ -33,6 +40,7 @@ const CATEGORIA_COLOR: Record<CategoriaGuia, string> = {
 };
 
 export function GuiasHub() {
+  const router = useRouter();
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>("todas");
   const [busqueda, setBusqueda] = useState<string>("");
 
@@ -64,38 +72,60 @@ export function GuiasHub() {
     return mapa;
   }, []);
 
+  const ejecutarTourGuia = (e: React.MouseEvent, slug: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const idTour = GUIA_A_TOUR_MAP[slug] || "general";
+    const def = TOURS_MODULOS[idTour];
+    if (def && def.ruta && def.ruta !== "/inicio") {
+      router.push(`${def.ruta}?tour=1`);
+    } else {
+      iniciarTourModulo(idTour);
+    }
+  };
+
   return (
     <div className="space-y-8 pb-16">
       {/* Hero Banner Header */}
       <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card/90 to-primary/5 p-6 sm:p-10 shadow-sm">
         <div className="relative z-10 max-w-3xl space-y-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-            <BookOpen className="h-3.5 w-3.5" />
-            Bóveda Operativa Analítica 360
+            <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+            Tours Interactivos con Driver.js
           </div>
 
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-foreground">
-            Centro de Guías, Manuales y Procesos
+            Aprende con Tours Paso a Paso en Pantalla
           </h1>
 
           <p className="text-base text-muted-foreground leading-relaxed sm:text-lg">
-            Documentación exhaustiva con casos de uso paso a paso, manuales de usuario, especificaciones técnicas y buenas prácticas para operar tu comercio con máxima eficiencia.
+            Olvidate de manuales pesados y textos interminables. Recorré cada módulo de Analítica 360 de forma interactiva con nuestros tours guiados en vivo que te muestran dónde hacer clic y cómo operar tu comercio.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <Button
-              onClick={() => iniciarTourAnalitica360()}
-              className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 font-medium shadow-sm cursor-pointer"
+              onClick={() => iniciarTourAnalitica360(true)}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-sm cursor-pointer"
             >
-              <Sparkles className="h-4 w-4" />
-              Iniciar Tour Interactivo
+              <PlayCircle className="h-4 w-4" />
+              Tour General del Sistema
             </Button>
-            <Link href="/guias/indice-general">
-              <Button variant="outline" className="gap-2 border-border hover:bg-muted cursor-pointer">
-                <Compass className="h-4 w-4" />
-                Ver Índice General (#00)
-              </Button>
-            </Link>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/ventas?tour=1")}
+              className="gap-2 border-border hover:bg-muted cursor-pointer"
+            >
+              <Sparkles className="h-4 w-4 text-emerald-500" />
+              Paso a Paso: Punto de Venta
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/ia?tour=1")}
+              className="gap-2 border-border hover:bg-muted cursor-pointer"
+            >
+              <Sparkles className="h-4 w-4 text-purple-500" />
+              Paso a Paso: Analítica IA
+            </Button>
           </div>
         </div>
 
@@ -104,30 +134,30 @@ export function GuiasHub() {
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              Manuales Completos
+              Tours Interactivos
             </div>
-            <div className="text-2xl font-bold tracking-tight text-foreground">26</div>
+            <div className="text-2xl font-bold tracking-tight text-foreground">Driver.js</div>
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
               <Layers className="h-4 w-4 text-blue-500" />
-              Módulos Cubiertos
+              Módulos Guiados
             </div>
-            <div className="text-2xl font-bold tracking-tight text-foreground">5 Áreas</div>
+            <div className="text-2xl font-bold tracking-tight text-foreground">14 Áreas</div>
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
               <Sparkles className="h-4 w-4 text-purple-500" />
-              Inteligencia Artificial
+              Asistencia en Vivo
             </div>
             <div className="text-2xl font-bold tracking-tight text-foreground">Analítica IA</div>
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
               <HelpCircle className="h-4 w-4 text-cyan-500" />
-              Soporte y FAQ
+              Documentación
             </div>
-            <div className="text-2xl font-bold tracking-tight text-foreground">Integrado</div>
+            <div className="text-2xl font-bold tracking-tight text-foreground">Bóveda 26</div>
           </div>
         </div>
       </div>
@@ -140,14 +170,13 @@ export function GuiasHub() {
             <Input
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por módulo, tema, #tag o palabra clave..."
+              placeholder="Buscar por módulo, función o proceso..."
               className="pl-9 bg-card border-border"
             />
           </div>
 
           <div className="text-sm text-muted-foreground">
-            Mostrando <span className="font-semibold text-foreground">{guiasFiltradas.length}</span> de{" "}
-            {TODAS_LAS_GUIAS.length} manuales
+            Mostrando <span className="font-semibold text-foreground">{guiasFiltradas.length}</span> módulos
           </div>
         </div>
 
@@ -161,7 +190,7 @@ export function GuiasHub() {
                 : "bg-card text-muted-foreground border-border hover:bg-muted hover:text-foreground"
             }`}
           >
-            Todas las Guías ({conteoPorCategoria["todas"]})
+            Todos ({conteoPorCategoria["todas"]})
           </button>
           {CATEGORIAS_GUIAS.map((cat) => {
             const activa = categoriaSeleccionada === cat;
@@ -182,13 +211,13 @@ export function GuiasHub() {
         </div>
       </div>
 
-      {/* Grid de Manuales */}
+      {/* Grid de Manuales con botón de Tour Directo */}
       {guiasFiltradas.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-12 text-center space-y-3">
           <BookOpen className="mx-auto h-8 w-8 text-muted-foreground/60" />
-          <h3 className="text-base font-semibold text-foreground">No encontramos manuales para tu búsqueda</h3>
+          <h3 className="text-base font-semibold text-foreground">No encontramos módulos para tu búsqueda</h3>
           <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-            Probá con otros términos como &quot;POS&quot;, &quot;facturación&quot;, &quot;inventario&quot; o &quot;clientes&quot;.
+            Probá con &quot;ventas&quot;, &quot;stock&quot;, &quot;facturación&quot; o &quot;clientes&quot;.
           </p>
           <Button variant="outline" size="sm" onClick={() => { setBusqueda(""); setCategoriaSeleccionada("todas"); }}>
             Restablecer filtros
@@ -197,9 +226,8 @@ export function GuiasHub() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {guiasFiltradas.map((guia: GuiaItem) => (
-            <Link
+            <div
               key={guia.slug}
-              href={`/guias/${guia.slug}`}
               className="group relative flex flex-col justify-between rounded-xl border border-border/80 bg-card p-5 transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-md"
             >
               <div className="space-y-3">
@@ -224,31 +252,48 @@ export function GuiasHub() {
                 </div>
 
                 {/* Título */}
-                <h2 className="text-base font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                  {guia.titulo}
-                </h2>
+                <Link href={`/guias/${guia.slug}`}>
+                  <h2 className="text-base font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2 cursor-pointer">
+                    {guia.titulo}
+                  </h2>
+                </Link>
 
-                {/* Resumen */}
-                <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+                {/* Resumen conciso */}
+                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                   {guia.resumen}
                 </p>
               </div>
 
-              {/* Footer: Tags y CTA */}
-              <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1 overflow-hidden">
-                  <Tag className="h-3 w-3 text-muted-foreground shrink-0" />
-                  <span className="text-[11px] text-muted-foreground truncate">
-                    {guia.tags.slice(0, 2).map((t) => `#${t}`).join(" ")}
-                  </span>
-                </div>
+              {/* Botones de Acción: Tour Driver.js Directo + Leer Detalle */}
+              <div className="mt-4 pt-3 border-t border-border/50 flex flex-col gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => ejecutarTourGuia(e, guia.slug)}
+                  className="w-full text-xs font-semibold gap-1.5 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer justify-center"
+                >
+                  <PlayCircle className="h-3.5 w-3.5 text-emerald-500" />
+                  <span>Ver Paso a Paso (Driver.js)</span>
+                </Button>
 
-                <div className="inline-flex items-center gap-1 text-xs font-semibold text-primary shrink-0 group-hover:translate-x-1 transition-transform">
-                  <span>Ver guía</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <div className="flex items-center gap-1 overflow-hidden">
+                    <Tag className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span className="text-[10px] text-muted-foreground truncate">
+                      {guia.tags.slice(0, 2).map((t) => `#${t}`).join(" ")}
+                    </span>
+                  </div>
+
+                  <Link
+                    href={`/guias/${guia.slug}`}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-primary transition-colors shrink-0"
+                  >
+                    <span>Ficha y detalles</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}
