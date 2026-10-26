@@ -19,6 +19,9 @@ export type CopilotChatDto = z.infer<typeof copilotChatSchema>;
 
 export interface CopilotRespuesta {
   respuesta: string;
+  proveedor?: 'openai' | 'heuristico';
+  modelo?: string;
+  errorLlm?: string;
   metricasUtilizadas?: {
     totalVentasPeriodo?: number;
     ticketPromedio?: number;
@@ -31,4 +34,5 @@ export interface CopilotRespuesta {
   };
   sugerenciasSiguientes: string[];
 }
+
 

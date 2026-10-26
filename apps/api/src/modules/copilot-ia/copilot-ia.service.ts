@@ -90,13 +90,31 @@ export class CopilotIaService {
       const modelo = process.env.COPILOT_MODEL || defaultModel;
 
       let respuestaTexto: string;
+      let proveedor: 'openai' | 'heuristico' = 'heuristico';
+      let errorLlm: string | undefined;
 
       if (apiKey) {
         this.logger.log(`Consultando Copilot IA (${modelo}) para empresa ${empresaId} [tópico: ${topicoDeterminado}]`);
-        respuestaTexto = await this.consultarLlm(apiKey, modelo, input, metricasUtilizadas, topicoDeterminado);
+        try {
+          respuestaTexto = await this.consultarLlm(apiKey, modelo, input, metricasUtilizadas, topicoDeterminado);
+          proveedor = 'openai';
+          respuestaTexto += `\n\n> ✨ *Generado con IA en vivo (${modelo})*`;
+        } catch (err) {
+          errorLlm = (err as Error).message;
+          this.logger.warn(`Fallo llamada a LLM, usando motor heurístico: ${errorLlm}`);
+          respuestaTexto = this.generarRespuestaHeuristica(input.mensaje, metricasUtilizadas, topicoDeterminado);
+          const motivo = errorLlm.includes('429')
+            ? 'Cuota de OpenAI agotada o sin saldo'
+            : errorLlm.includes('401')
+              ? 'API Key de OpenAI inválida'
+              : 'Error de conexión con OpenAI';
+          respuestaTexto += `\n\n> ℹ️ *Aviso: Se utilizó el motor heurístico interno (${motivo})*`;
+        }
       } else {
+        errorLlm = 'Sin OPENAI_API_KEY configurada en .env';
         this.logger.log(`Sin API Key configurada. Usando motor heurístico financiero para empresa ${empresaId}`);
         respuestaTexto = this.generarRespuestaHeuristica(input.mensaje, metricasUtilizadas, topicoDeterminado);
+        respuestaTexto += `\n\n> ℹ️ *Motor: Heurístico local (Sin OPENAI_API_KEY en .env)*`;
       }
 
       // 4. Generar sugerencias dinámicas según la salud del negocio
@@ -104,6 +122,9 @@ export class CopilotIaService {
 
       return Result.ok<CopilotRespuesta>({
         respuesta: respuestaTexto,
+        proveedor,
+        modelo: proveedor === 'openai' ? modelo : 'motor-heuristico',
+        errorLlm,
         metricasUtilizadas,
         sugerenciasSiguientes: sugerencias,
       });
@@ -346,25 +367,60 @@ ${JSON.stringify(metricas, null, 2)}
         { role: 'user', content: input.mensaje },
       ];
 
+      const payload: Record<string, unknown> = {
+        model: modelo,
+        messages,
+        max_completion_tokens: 1000,
+      };
+
+      const esModeloRazonamiento = modelo.startsWith('o1') || modelo.startsWith('o3') || modelo.includes('luna');
+      if (!esModeloRazonamiento) {
+        payload.temperature = 0.3;
+      }
+
       const apiUrl = process.env.COPILOT_API_URL || 'https://api.openai.com/v1/chat/completions';
-      const res = await fetch(apiUrl, {
+      let res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          model: modelo,
-          messages,
-          temperature: 0.3,
-          max_tokens: 1000,
-        }),
-        signal: AbortSignal.timeout(20000),
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(25000),
       });
 
       if (!res.ok) {
         const errorText = await res.text();
-        throw new Error(`Error API LLM (${res.status}): ${errorText}`);
+        // Si el proveedor es legado y pide max_tokens en vez de max_completion_tokens
+        if (errorText.includes('max_completion_tokens') && !errorText.includes('Use \'max_completion_tokens\'')) {
+          delete payload.max_completion_tokens;
+          payload.max_tokens = 1000;
+          res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(25000),
+          });
+        } else if (errorText.includes('temperature')) {
+          delete payload.temperature;
+          res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(25000),
+          });
+        }
+
+        if (!res.ok) {
+          const finalError = await res.text();
+          throw new Error(`Error API LLM (${res.status}): ${finalError}`);
+        }
       }
 
       const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
@@ -374,8 +430,7 @@ ${JSON.stringify(metricas, null, 2)}
       }
       return respuesta;
     } catch (e) {
-      this.logger.warn(`Fallo llamada a LLM, usando motor heurístico: ${(e as Error).message}`);
-      return this.generarRespuestaHeuristica(input.mensaje, metricas, topico);
+      throw e;
     }
   }
 
