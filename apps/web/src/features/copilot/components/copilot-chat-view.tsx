@@ -5,6 +5,7 @@ import { useCopilotChat } from '../hooks/use-copilot-chat';
 import { CopilotKpiBanner } from './copilot-kpi-banner';
 import { CopilotMessageBubble } from './copilot-message-bubble';
 import { CopilotTopicsGrid } from './copilot-topics-grid';
+import type { CopilotTopico } from '../types/copilot.types';
 
 interface CopilotChatViewProps {
   onCerrar?: () => void;
@@ -32,31 +33,31 @@ export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esMo
     enviar(msg);
   };
 
-  const handleSeleccionarTopico = (prompt: string) => {
+  const handleSeleccionarTopico = (prompt: string, topico?: CopilotTopico) => {
     setMostrarTopicos(false);
-    enviar(prompt);
+    enviar(prompt, topico);
   };
 
   // Si solo hay el mensaje de bienvenida inicial, mostramos los tópicos abiertos
   const esInicio = mensajes.length <= 1;
 
   return (
-    <div className={`flex flex-col bg-zinc-950 text-zinc-100 ${esModal ? 'h-full w-full' : 'h-full w-full rounded-2xl border border-zinc-800 shadow-2xl overflow-hidden'}`}>
+    <div className={`flex flex-col bg-card text-card-foreground ${esModal ? 'h-full w-full' : 'h-full w-full rounded-2xl border border-border shadow-2xl overflow-hidden'}`}>
       {/* Header del Chat */}
-      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3 bg-zinc-900/80 backdrop-blur-md">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-card/90 backdrop-blur-md">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 text-white font-bold text-sm shadow-md shadow-emerald-500/20">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-md shadow-primary/25">
             ✨
           </div>
           <div>
-            <h3 className="font-semibold text-xs sm:text-sm text-zinc-100 flex items-center gap-1.5">
+            <h3 className="font-semibold text-xs sm:text-sm text-foreground flex items-center gap-1.5">
               Copilot IA
-              <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-medium text-emerald-400 border border-emerald-500/20">
-                <span className="h-1 w-1 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary border border-primary/20">
+                <span className="h-1 w-1 rounded-full bg-primary animate-pulse" />
                 En vivo
               </span>
             </h3>
-            <p className="text-[10px] text-zinc-400">Análisis y finanzas en tiempo real</p>
+            <p className="text-[10px] text-muted-foreground">Análisis de negocio en tiempo real</p>
           </div>
         </div>
 
@@ -66,8 +67,8 @@ export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esMo
             onClick={() => setMostrarTopicos((prev) => !prev)}
             className={`rounded-lg px-2 py-1 text-[11px] font-medium transition cursor-pointer ${
               mostrarTopicos
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                ? 'bg-primary/15 text-primary border border-primary/30'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
             title="Ver tópicos de análisis"
           >
@@ -77,7 +78,7 @@ export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esMo
             <button
               type="button"
               onClick={onCerrar}
-              className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition cursor-pointer"
+              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
               title="Cerrar chat"
             >
               ✕
@@ -101,25 +102,25 @@ export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esMo
         )}
 
         {cargando && (
-          <div className="flex items-center gap-3 text-zinc-400 text-xs py-2 px-1">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800 shrink-0">
-              <span className="animate-spin text-emerald-400 text-xs">✦</span>
+          <div className="flex items-center gap-3 text-muted-foreground text-xs py-2 px-1">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted border border-border shrink-0">
+              <span className="animate-spin text-primary text-xs">✦</span>
             </div>
-            <p className="animate-pulse text-[11px]">Analizando métricas del negocio con GPT-6 Luna...</p>
+            <p className="animate-pulse text-[11px]">Consultando métricas y analizando con IA...</p>
           </div>
         )}
       </div>
 
       {/* Suggestions Pills */}
       {!mostrarTopicos && sugerencias.length > 0 && (
-        <div className="px-3 py-1.5 flex flex-wrap gap-1 border-t border-zinc-900 bg-zinc-950/90 max-h-24 overflow-y-auto">
+        <div className="px-3 py-1.5 flex flex-wrap gap-1 border-t border-border/80 bg-card/90 max-h-24 overflow-y-auto">
           {sugerencias.slice(0, 3).map((sug, i) => (
             <button
               key={i}
               type="button"
               disabled={cargando}
               onClick={() => handleSeleccionarTopico(sug)}
-              className="rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-0.5 text-[11px] text-zinc-300 transition text-left cursor-pointer disabled:opacity-50 truncate max-w-full"
+              className="rounded-full bg-muted hover:bg-muted/80 border border-border px-2.5 py-0.5 text-[11px] text-foreground transition text-left cursor-pointer disabled:opacity-50 truncate max-w-full"
             >
               💡 {sug}
             </button>
@@ -128,7 +129,7 @@ export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esMo
       )}
 
       {/* Chat Input */}
-      <form onSubmit={handleSubmit} className="border-t border-zinc-800/80 p-2.5 bg-zinc-900/60">
+      <form onSubmit={handleSubmit} className="border-t border-border p-2.5 bg-card/90">
         <div className="relative flex items-center">
           <input
             type="text"
@@ -136,12 +137,12 @@ export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esMo
             onChange={(e) => setInputTexto(e.target.value)}
             disabled={cargando}
             placeholder="Preguntale al Copilot (ej: ¿Cuáles son mis ventas?)..."
-            className="w-full rounded-xl bg-zinc-900 border border-zinc-800 py-2.5 pl-3 pr-20 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition"
+            className="w-full rounded-xl bg-background border border-border py-2.5 pl-3 pr-20 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
           />
           <button
             type="submit"
             disabled={!inputTexto.trim() || cargando}
-            className="absolute right-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-600 px-3 py-1.5 text-xs font-semibold text-white transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
+            className="absolute right-1.5 rounded-lg bg-primary hover:opacity-90 disabled:bg-muted disabled:text-muted-foreground px-3 py-1.5 text-xs font-semibold text-primary-foreground transition shadow-sm cursor-pointer disabled:cursor-not-allowed"
           >
             Enviar
           </button>

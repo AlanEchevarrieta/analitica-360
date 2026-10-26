@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { enviarMensajeCopilot, obtenerSugerenciasCopilot } from '../services/copilot.api';
-import type { CopilotMensaje, MetricasNegocio } from '../types/copilot.types';
+import type { CopilotMensaje, MetricasNegocio, CopilotTopico } from '../types/copilot.types';
 
 export function useCopilotChat() {
   const { getToken } = useAuth();
@@ -44,7 +44,7 @@ export function useCopilotChat() {
   }, [getToken]);
 
   const enviar = useCallback(
-    async (texto: string) => {
+    async (texto: string, topico?: CopilotTopico) => {
       const limpio = texto.trim();
       if (!limpio || cargando) return;
 
@@ -55,6 +55,7 @@ export function useCopilotChat() {
         rol: 'user',
         contenido: limpio,
         fecha: new Date().toISOString(),
+        topico,
       };
 
       setMensajes((prev) => [...prev, mensajeUsuario]);
@@ -66,12 +67,13 @@ export function useCopilotChat() {
           contenido: m.contenido,
         }));
 
-        const res = await enviarMensajeCopilot(token, limpio, historialParaApi);
+        const res = await enviarMensajeCopilot(token, limpio, historialParaApi, topico);
 
         const mensajeAsistente: CopilotMensaje = {
           rol: 'assistant',
           contenido: res.respuesta,
           fecha: new Date().toISOString(),
+          topico,
         };
 
         setMensajes((prev) => [...prev, mensajeAsistente]);

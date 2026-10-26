@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const copilotChatSchema = z.object({
   mensaje: z.string().trim().min(1, 'El mensaje no puede estar vacío').max(2000, 'El mensaje supera los 2000 caracteres'),
+  topico: z.enum(['ventas', 'productos', 'stock', 'cobranzas', 'inflacion', 'general']).optional().default('general'),
   historial: z
     .array(
       z.object({
@@ -25,6 +26,9 @@ export interface CopilotRespuesta {
     stockCriticoCount?: number;
     deudaClientesTotal?: number;
     dolarReferencia?: { tipo: string; valor: number };
+    topicoAnalizado?: string;
+    detalleTopico?: Record<string, unknown>;
   };
   sugerenciasSiguientes: string[];
 }
+
