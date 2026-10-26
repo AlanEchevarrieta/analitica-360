@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import type { EmpresaContext } from '../../common/auth/request-context.types.js';
 import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
 import { RequireModulo, RequirePermiso } from '../../common/decorators/permiso.decorator.js';
@@ -49,7 +49,10 @@ export class ProductosController {
   }
 
   @Get(':id')
-  buscarPorId(@CurrentEmpresa() empresa: EmpresaContext, @Param('id') id: string) {
+  buscarPorId(
+    @CurrentEmpresa() empresa: EmpresaContext,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
     return this.productosService.buscarPorId(empresa.id, id);
   }
 
@@ -66,7 +69,7 @@ export class ProductosController {
   @RequirePermiso('editar_productos')
   actualizar(
     @CurrentEmpresa() empresa: EmpresaContext,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body(new ZodValidationPipe(guardarProductoSchema)) body: GuardarProductoInput,
   ) {
     return this.productosService.actualizar(empresa.id, id, body);
@@ -76,7 +79,7 @@ export class ProductosController {
   @RequirePermiso('editar_productos')
   guardarCodigoBarra(
     @CurrentEmpresa() empresa: EmpresaContext,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body(new ZodValidationPipe(codigoBarraProductoSchema)) body: CodigoBarraProductoInput,
   ) {
     return this.productosService.guardarCodigoBarra(empresa.id, id, body.codigoBarra);
@@ -86,7 +89,7 @@ export class ProductosController {
   @RequirePermiso('editar_productos')
   guardarSku(
     @CurrentEmpresa() empresa: EmpresaContext,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body(new ZodValidationPipe(skuProductoSchema)) body: SkuProductoInput,
   ) {
     return this.productosService.guardarSku(empresa.id, id, body.sku);
@@ -96,7 +99,7 @@ export class ProductosController {
   @RequirePermiso('editar_productos')
   guardarDimensiones(
     @CurrentEmpresa() empresa: EmpresaContext,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body(new ZodValidationPipe(dimensionesProductoSchema)) body: DimensionesProductoInput,
   ) {
     return this.productosService.guardarDimensiones(empresa.id, id, body);

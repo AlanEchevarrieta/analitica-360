@@ -154,6 +154,9 @@ export class PrismaProductosRepository implements ProductosRepository {
   }
 
   async buscarPorId(empresaId: string, id: string): Promise<ProductoRecord | null> {
+    const esUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+    if (!esUuid) return null;
+
     const producto = await this.prisma.producto.findFirst({
       where: { id, empresaId, deletedAt: null },
       include: { categoriaRel: { select: { nombre: true } } },

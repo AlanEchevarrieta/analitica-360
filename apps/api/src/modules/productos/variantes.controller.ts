@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Put } from '@nestjs/common';
 import type { EmpresaContext, UsuarioContext } from '../../common/auth/request-context.types.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
@@ -13,13 +13,19 @@ export class VariantesController {
   constructor(private readonly variantesService: VariantesService) {}
 
   @Get()
-  listar(@CurrentEmpresa() empresa: EmpresaContext, @Param('productoId') productoId: string) {
+  listar(
+    @CurrentEmpresa() empresa: EmpresaContext,
+    @Param('productoId', new ParseUUIDPipe({ version: '4' })) productoId: string,
+  ) {
     return this.variantesService.listarPorProducto(empresa.id, productoId);
   }
 
   /** Unidades que no están en ninguna variante (hay que repartirlas al agregar variantes). */
   @Get('sin-asignar')
-  sinAsignar(@CurrentEmpresa() empresa: EmpresaContext, @Param('productoId') productoId: string) {
+  sinAsignar(
+    @CurrentEmpresa() empresa: EmpresaContext,
+    @Param('productoId', new ParseUUIDPipe({ version: '4' })) productoId: string,
+  ) {
     return this.variantesService.stockSinVariante(empresa.id, productoId);
   }
 
@@ -28,7 +34,7 @@ export class VariantesController {
   guardar(
     @CurrentEmpresa() empresa: EmpresaContext,
     @CurrentUser() usuario: UsuarioContext,
-    @Param('productoId') productoId: string,
+    @Param('productoId', new ParseUUIDPipe({ version: '4' })) productoId: string,
     @Body(new ZodValidationPipe(guardarVariantesProductoSchema)) body: GuardarVariantesProductoInput,
   ) {
     return this.variantesService.guardar(empresa.id, usuario.id, productoId, body);
