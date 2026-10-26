@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import { CopilotChatView } from './copilot-chat-view';
 
 export const CopilotFloatingWidget: React.FC = () => {
   const [abierto, setAbierto] = useState(false);
   const pathname = usePathname();
+  const { isLoaded, isSignedIn, orgId } = useAuth();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -19,9 +21,26 @@ export const CopilotFloatingWidget: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Ocultar únicamente en los formularios de autenticación para no estorbar
-  const esRutaAuth = pathname?.startsWith('/sign-in') || pathname?.startsWith('/sign-up');
-  if (esRutaAuth) {
+  // Exclusivo: Solo usuarios autenticados con empresa (organización) activa
+  if (!isLoaded || !isSignedIn || !orgId) {
+    return null;
+  }
+
+  // Si el usuario ya está en la pantalla principal de Copilot IA (/ia), no superponer el widget flotante
+  if (pathname === '/ia') {
+    return null;
+  }
+
+  // Rutas públicas o de onboarding donde no debe figurar la IA flotante
+  const esRutaExcluida =
+    pathname === '/' ||
+    pathname?.startsWith('/sign-in') ||
+    pathname?.startsWith('/sign-up') ||
+    pathname?.startsWith('/bienvenida') ||
+    pathname?.startsWith('/elegir-empresa') ||
+    pathname?.startsWith('/terminos') ||
+    pathname?.startsWith('/privacidad');
+  if (esRutaExcluida) {
     return null;
   }
 

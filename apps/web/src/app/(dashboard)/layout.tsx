@@ -8,6 +8,7 @@ import { GuardaDeRuta } from "@/components/shared/requiere-modulo";
 import { RastreoUso } from "@/components/shared/rastreo-uso";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { CopilotFloatingWidget } from "@/features/copilot/components/copilot-floating-widget";
 
 export default async function DashboardLayout({ children }: LayoutProps<"/">) {
   // Sin empresa activa la API responde 403 en todo: pedirla antes de entrar.
@@ -32,6 +33,7 @@ export default async function DashboardLayout({ children }: LayoutProps<"/">) {
           <GuardaDeRuta>{children}</GuardaDeRuta>
         </div>
       </SidebarInset>
+      <CopilotFloatingWidget />
     </SidebarProvider>
   );
 }

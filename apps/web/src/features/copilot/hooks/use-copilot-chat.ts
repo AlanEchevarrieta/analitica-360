@@ -6,7 +6,9 @@ import { enviarMensajeCopilot, obtenerSugerenciasCopilot } from '../services/cop
 import type { CopilotMensaje, MetricasNegocio, CopilotTopico } from '../types/copilot.types';
 
 export function useCopilotChat() {
-  const { getToken } = useAuth();
+  const { getToken, isLoaded, isSignedIn, orgId } = useAuth();
+  const tieneAccesoEmpresa = Boolean(isLoaded && isSignedIn && orgId);
+
   const [mensajes, setMensajes] = useState<CopilotMensaje[]>([
     {
       rol: 'assistant',
@@ -26,6 +28,8 @@ export function useCopilotChat() {
 
   useEffect(() => {
     let montado = true;
+    if (!isLoaded || !isSignedIn || !orgId) return;
+
     (async () => {
       try {
         const token = await getToken();
@@ -41,12 +45,17 @@ export function useCopilotChat() {
     return () => {
       montado = false;
     };
-  }, [getToken]);
+  }, [getToken, isLoaded, isSignedIn, orgId]);
 
   const enviar = useCallback(
     async (texto: string, topico?: CopilotTopico) => {
       const limpio = texto.trim();
       if (!limpio || cargando) return;
+
+      if (!isSignedIn || !orgId) {
+        setError('Debés iniciar sesión y tener una empresa activa para consultar a Analítica Copilot.');
+        return;
+      }
 
       setError(null);
       setCargando(true);
@@ -98,7 +107,7 @@ export function useCopilotChat() {
         setCargando(false);
       }
     },
-    [cargando, getToken, mensajes],
+    [cargando, getToken, mensajes, isSignedIn, orgId],
   );
 
   return {
@@ -108,5 +117,9 @@ export function useCopilotChat() {
     cargando,
     error,
     enviar,
+    tieneAccesoEmpresa,
+    isLoaded,
+    isSignedIn,
+    orgId,
   };
 }

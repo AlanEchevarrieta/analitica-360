@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
 import { CopilotChatView } from '@/features/copilot/components/copilot-chat-view';
 import { Sparkles, Bot, ShieldCheck } from 'lucide-react';
 
@@ -7,7 +9,10 @@ export const metadata: Metadata = {
   description: 'Asistente de inteligencia artificial y análisis estratégico para tu negocio',
 };
 
-export default function IaPage() {
+export default async function IaPage() {
+  const { userId, orgId } = await auth();
+  if (!userId) redirect('/sign-in');
+  if (!orgId) redirect('/elegir-empresa');
   return (
     <div className="flex h-[calc(100dvh-6.2rem)] sm:h-[calc(100dvh-7.2rem)] flex-col max-w-5xl mx-auto w-full min-w-0">
       {/* Header armonizado con tokens de Analítica 360 */}

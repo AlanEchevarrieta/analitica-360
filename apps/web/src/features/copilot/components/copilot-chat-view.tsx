@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { useCopilotChat } from '../hooks/use-copilot-chat';
 import { CopilotKpiBanner } from './copilot-kpi-banner';
 import { CopilotMessageBubble } from './copilot-message-bubble';
 import { CopilotTopicsGrid } from './copilot-topics-grid';
 import type { CopilotTopico } from '../types/copilot.types';
-import { Sparkles, Send, Cpu, LayoutGrid, X } from 'lucide-react';
+import { Sparkles, Send, Cpu, LayoutGrid, X, ShieldAlert, Building2 } from 'lucide-react';
 
 interface CopilotChatViewProps {
   onCerrar?: () => void;
@@ -14,7 +15,8 @@ interface CopilotChatViewProps {
 }
 
 export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esModal = false }) => {
-  const { mensajes, sugerencias, metricasActivas, cargando, enviar } = useCopilotChat();
+  const { mensajes, sugerencias, metricasActivas, cargando, enviar, tieneAccesoEmpresa, isLoaded, isSignedIn, orgId } =
+    useCopilotChat();
   const [inputTexto, setInputTexto] = useState('');
   const [mostrarTopicos, setMostrarTopicos] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -27,7 +29,7 @@ export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esMo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputTexto.trim() || cargando) return;
+    if (!inputTexto.trim() || cargando || !tieneAccesoEmpresa) return;
     const msg = inputTexto;
     setInputTexto('');
     setMostrarTopicos(false);
@@ -35,9 +37,58 @@ export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esMo
   };
 
   const handleSeleccionarTopico = (prompt: string, topico?: CopilotTopico) => {
+    if (!tieneAccesoEmpresa) return;
     setMostrarTopicos(false);
     enviar(prompt, topico);
   };
+
+  // Si no está registrado o no tiene empresa activa, se bloquea el acceso
+  if (isLoaded && !tieneAccesoEmpresa) {
+    return (
+      <div
+        className={`flex flex-col items-center justify-center p-6 text-center bg-card/70 backdrop-blur-xl ${
+          esModal ? 'h-full w-full' : 'h-full w-full flex-1 min-h-[360px]'
+        }`}
+      >
+        <div className="relative mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-500 shadow-lg shadow-amber-500/10">
+          <ShieldAlert className="h-8 w-8" />
+        </div>
+        <h3 className="text-lg font-bold text-foreground">Acceso Restringido a Copilot IA</h3>
+        <p className="mt-2 text-xs sm:text-sm text-muted-foreground max-w-sm leading-relaxed">
+          Copilot IA está disponible exclusivamente para usuarios registrados con una empresa activa vinculada en
+          Analítica 360.
+        </p>
+
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          {!isSignedIn ? (
+            <Link
+              href="/sign-in"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition shadow-md cursor-pointer"
+            >
+              Iniciar sesión
+            </Link>
+          ) : (
+            <Link
+              href="/elegir-empresa"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition shadow-md cursor-pointer"
+            >
+              <Building2 className="h-3.5 w-3.5" />
+              <span>Seleccionar empresa</span>
+            </Link>
+          )}
+          {onCerrar && (
+            <button
+              type="button"
+              onClick={onCerrar}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
+            >
+              Cerrar
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // Si solo hay el mensaje de bienvenida inicial, mostramos los tópicos abiertos
   const esInicio = mensajes.length <= 1;
@@ -149,13 +200,17 @@ export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esMo
             type="text"
             value={inputTexto}
             onChange={(e) => setInputTexto(e.target.value)}
-            disabled={cargando}
-            placeholder="Escribí una consulta estratégica a Analítica IA..."
+            disabled={cargando || !tieneAccesoEmpresa}
+            placeholder={
+              tieneAccesoEmpresa
+                ? 'Escribí una consulta estratégica a Analítica IA...'
+                : 'Seleccioná tu empresa para consultar a Analítica IA...'
+            }
             className="w-full bg-transparent py-2.5 sm:py-3 pl-3.5 pr-24 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition"
           />
           <button
             type="submit"
-            disabled={!inputTexto.trim() || cargando}
+            disabled={!inputTexto.trim() || cargando || !tieneAccesoEmpresa}
             className="absolute right-1.5 inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary to-indigo-600 hover:from-primary/90 hover:to-indigo-500 disabled:from-muted disabled:to-muted disabled:text-muted-foreground px-3.5 py-1.5 text-xs font-semibold text-white transition-all shadow-sm cursor-pointer disabled:cursor-not-allowed"
           >
             <span>Consultar</span>

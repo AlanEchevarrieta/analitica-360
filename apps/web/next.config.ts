@@ -31,6 +31,15 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/analytics/copilot",
+        destination: "/ia",
+        permanent: true,
+      },
+    ];
+  },
   ...(standalone ? { output: "standalone", outputFileTracingRoot: path.resolve(process.cwd(), "../..") } : {}),
 };
 
