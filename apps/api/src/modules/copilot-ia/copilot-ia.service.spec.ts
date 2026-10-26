@@ -7,6 +7,23 @@ describe('CopilotIaService', () => {
     $queryRaw: vi.fn().mockResolvedValue([
       { nombre: 'Remera Algodón', cantidad: BigInt(10) },
     ]),
+    empresa: {
+      findUnique: vi.fn().mockResolvedValue({
+        nombre: 'Mi Negocio Test',
+        categoria: 'Comercio',
+        condicionIva: 'Responsable Inscripto',
+      }),
+    },
+    gasto: {
+      findMany: vi.fn().mockResolvedValue([
+        { categoria: 'alquiler', monto: new Prisma.Decimal(50000), descripcion: 'Local central', tipoCosto: 'fijo' },
+      ]),
+    },
+    compra: {
+      findMany: vi.fn().mockResolvedValue([
+        { total: new Prisma.Decimal(120000), proveedorNombre: 'Distribuidora Mayorista' },
+      ]),
+    },
     venta: {
       findMany: vi.fn().mockResolvedValue([
         {

@@ -12,79 +12,30 @@ export class CopilotIaService {
 
   /**
    * Procesa la consulta del usuario combinando métricas en vivo con OpenAI / LLM o heurística contextual.
-   * Ejecuta queries especializadas según el tópico seleccionado (ventas, stock, productos, cobranzas, inflación).
+   * Alimenta a GPT-6 Luna con un Dossier 360° integral de todo el negocio (ventas, compras, gastos, stock, cta cte, dólar).
    */
   async procesarMensaje(empresaId: string, input: CopilotChatDto): Promise<Result<CopilotRespuesta>> {
     try {
-      const ahora = new Date();
-      const hace30Dias = new Date(ahora.getTime() - 30 * 24 * 3600_000);
-
       const topicoDeterminado = this.determinarTopico(input.topico, input.mensaje);
 
-      // 1. Recopilar métricas en vivo base del tenant de manera aislada (Anti-BOLA/IDOR)
-      const [ventas30Dias, productosLideresRaw, totalProductos, ventasConSaldo, dolarHoy] = await Promise.all([
-        this.prisma.venta.findMany({
-          where: { empresaId, deletedAt: null, fecha: { gte: hace30Dias } },
-          select: { totalSinInteres: true, totalConInteres: true, saldoPendiente: true, estadoCobro: true },
-        }),
-        this.prisma.$queryRaw<{ nombre: string; cantidad: bigint }[]>(Prisma.sql`
-          SELECT p.nombre, COALESCE(SUM(i.cantidad), 0)::bigint AS cantidad
-          FROM ventas_items i
-          JOIN ventas v ON v.id = i.venta_id
-          JOIN productos p ON p.id = i.producto_id
-          WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL
-            AND v.fecha >= ${hace30Dias}
-          GROUP BY p.nombre
-          ORDER BY SUM(i.cantidad) DESC
-          LIMIT 5
-        `).catch((err) => {
-          this.logger.warn(`No se pudo obtener productos líderes con queryRaw: ${(err as Error).message}`);
-          return [];
-        }),
-        this.prisma.producto.count({
-          where: { empresaId, deletedAt: null },
-        }).catch(() => 0),
-        this.prisma.venta.findMany({
-          where: { empresaId, deletedAt: null, saldoPendiente: { gt: 0 } },
-          select: { saldoPendiente: true },
-        }).catch(() => []),
-        this.prisma.cotizacionDolar.findFirst({
-          where: { casa: 'blue' },
-          orderBy: { fecha: 'desc' },
-        }).catch(() => null),
-      ]);
-
-      const totalVentas = ventas30Dias.reduce((acc, v) => {
-        const con = Number(v.totalConInteres ?? 0);
-        const sin = Number(v.totalSinInteres ?? 0);
-        return acc + (con > 0 ? con : sin);
-      }, 0);
-
-      const ticketPromedio = ventas30Dias.length > 0 ? Math.round(totalVentas / ventas30Dias.length) : 0;
-      const deudaTotal = ventasConSaldo.reduce((acc, v) => acc + Number(v.saldoPendiente ?? 0), 0);
-      const dolarBlue = dolarHoy ? Number(dolarHoy.venta) : 1200;
-
-      const productosLideres = productosLideresRaw.map((p) => ({
-        nombre: p.nombre,
-        cantidad: Number(p.cantidad),
-        total: Number(p.cantidad) * (ticketPromedio > 0 ? ticketPromedio : 1000),
-      }));
-
-      // 2. Ejecutar queries profundas en base al tópico para alimentar al agente
-      const detalleTopico = await this.obtenerDetallePorTopico(empresaId, topicoDeterminado, ahora, hace30Dias);
+      // 1. Recopilar Dossier 360° completo del negocio en tiempo real (Anti-BOLA/IDOR con aislamiento de tenant)
+      const dossierCompleto = await this.recopilarDossierNegocio360(empresaId, topicoDeterminado);
 
       const metricasUtilizadas = {
-        totalVentasPeriodo: totalVentas,
-        ticketPromedio,
-        productosLideres,
-        stockCriticoCount: Math.min(totalProductos, 3),
-        deudaClientesTotal: deudaTotal,
-        dolarReferencia: { tipo: 'Dólar Blue', valor: dolarBlue },
+        totalVentasPeriodo: (dossierCompleto.ventas as any)?.totalUltimos30Dias ?? 0,
+        ticketPromedio: (dossierCompleto.ventas as any)?.ticketPromedio ?? 0,
+        productosLideres: (dossierCompleto.productos as any)?.topVendidos ?? [],
+        stockCriticoCount: Math.min((dossierCompleto.inventario as any)?.totalProductosActivos ?? 0, 3),
+        deudaClientesTotal: (dossierCompleto.cuentasCorrientes as any)?.totalAdeudado ?? 0,
+        dolarReferencia: {
+          tipo: 'Dólar Blue',
+          valor: (dossierCompleto.macroeconomia as any)?.dolarBlue ?? 1200,
+        },
         topicoAnalizado: topicoDeterminado,
-        detalleTopico,
+        detalleTopico: dossierCompleto,
       };
 
-      // 3. Ejecutar inferencia con OpenAI o LLM si está disponible la clave, o motor heurístico experto
+      // 2. Ejecutar inferencia con GPT-6 Luna u OpenAI si está disponible la clave, o motor heurístico experto
       const apiKey = process.env.OPENAI_API_KEY || process.env.COPILOT_API_KEY;
       const modelo = process.env.COPILOT_MODEL || 'gpt-6-luna';
 
@@ -95,7 +46,7 @@ export class CopilotIaService {
       if (apiKey) {
         this.logger.log(`Consultando Copilot IA (${modelo}) para empresa ${empresaId} [tópico: ${topicoDeterminado}]`);
         try {
-          respuestaTexto = await this.consultarLlm(apiKey, modelo, input, metricasUtilizadas, topicoDeterminado);
+          respuestaTexto = await this.consultarLlm(apiKey, modelo, input, dossierCompleto, topicoDeterminado);
           proveedor = 'openai';
           respuestaTexto += `\n\n> ✨ *Generado con IA en vivo (${modelo})*`;
         } catch (err) {
@@ -116,7 +67,7 @@ export class CopilotIaService {
         respuestaTexto += `\n\n> ℹ️ *Motor: Heurístico local (Sin OPENAI_API_KEY en .env)*`;
       }
 
-      // 4. Generar sugerencias dinámicas según la salud del negocio
+      // 3. Generar sugerencias dinámicas según la salud del negocio
       const sugerencias = this.generarSugerenciasDinamicas(metricasUtilizadas);
 
       return Result.ok<CopilotRespuesta>({
@@ -142,12 +93,12 @@ export class CopilotIaService {
     }).catch(() => 0);
 
     const sugerencias = [
-      '¿Cómo vienen mis ventas de los últimos 30 días?',
-      '¿Cuáles son mis 5 productos más vendidos?',
+      '¿Cómo vienen mis ventas de los últimos 30 días y mi punto de equilibrio?',
+      '¿Cuáles son mis 5 productos más vendidos y qué margen me dejan?',
     ];
 
     if (ventasPendientes > 0) {
-      sugerencias.push(`Tengo ${ventasPendientes} ventas con saldo a cobrar: ¿cómo recuperarlo rápido?`);
+      sugerencias.push(`Tengo ${ventasPendientes} ventas con saldo a cobrar: ¿quiénes me deben más?`);
     }
 
     sugerencias.push('¿Cómo cubrir mis costos frente a la inflación y el dólar?');
@@ -155,176 +106,234 @@ export class CopilotIaService {
   }
 
   /**
-   * Alimenta al agente con queries profundas y específicas según el tópico seleccionado.
+   * Construye el Dossier 360° más exhaustivo del negocio para alimentar la IA:
+   * Ventas, Márgenes, Gastos fijos/variables, Compras, Stock, Deudores y Tipo de cambio.
    */
-  private async obtenerDetallePorTopico(
+  private async recopilarDossierNegocio360(
     empresaId: string,
-    topico: string,
-    ahora: Date,
-    hace30Dias: Date,
+    topicoDeterminado: string,
   ): Promise<Record<string, unknown>> {
-    try {
-      switch (topico) {
-        case 'ventas': {
-          const hace60Dias = new Date(ahora.getTime() - 60 * 24 * 3600_000);
-          const [ventasPrevias, ventasDetalle] = await Promise.all([
-            this.prisma.venta.findMany({
-              where: { empresaId, deletedAt: null, fecha: { gte: hace60Dias, lt: hace30Dias } },
-              select: { totalSinInteres: true, totalConInteres: true },
-            }).catch(() => []),
-            this.prisma.venta.findMany({
-              where: { empresaId, deletedAt: null, fecha: { gte: hace30Dias } },
-              select: { formaPago: true, descuento: true, totalSinInteres: true, totalConInteres: true },
-            }).catch(() => []),
-          ]);
+    const ahora = new Date();
+    const hace30Dias = new Date(ahora.getTime() - 30 * 24 * 3600_000);
+    const hace60Dias = new Date(ahora.getTime() - 60 * 24 * 3600_000);
 
-          const totalPrevio = ventasPrevias.reduce((sum, v) => {
-            const con = Number(v.totalConInteres ?? 0);
-            const sin = Number(v.totalSinInteres ?? 0);
-            return sum + (con > 0 ? con : sin);
-          }, 0);
+    const [
+      empresa,
+      ventas30Dias,
+      ventasPrevias,
+      productosLideresRaw,
+      productosConMargenRaw,
+      gastosMesRaw,
+      comprasMesRaw,
+      ventasImpagasRaw,
+      cotizacionesDolarRaw,
+      totalProductosActivos,
+      totalProductosInactivos,
+    ] = await Promise.all([
+      this.prisma.empresa.findUnique({
+        where: { id: empresaId },
+        select: { nombre: true, categoria: true, condicionIva: true },
+      }).catch(() => null),
 
-          const totalActual = ventasDetalle.reduce((sum, v) => {
-            const con = Number(v.totalConInteres ?? 0);
-            const sin = Number(v.totalSinInteres ?? 0);
-            return sum + (con > 0 ? con : sin);
-          }, 0);
+      this.prisma.venta.findMany({
+        where: { empresaId, deletedAt: null, fecha: { gte: hace30Dias } },
+        select: {
+          totalSinInteres: true,
+          totalConInteres: true,
+          formaPago: true,
+          descuento: true,
+          saldoPendiente: true,
+          fecha: true,
+        },
+      }).catch(() => []),
 
-          const variacionPorcentual = totalPrevio > 0 ? Number((((totalActual - totalPrevio) / totalPrevio) * 100).toFixed(1)) : 0;
+      this.prisma.venta.findMany({
+        where: { empresaId, deletedAt: null, fecha: { gte: hace60Dias, lt: hace30Dias } },
+        select: { totalSinInteres: true, totalConInteres: true },
+      }).catch(() => []),
 
-          const porFormaPago: Record<string, { count: number; total: number }> = {};
-          let totalDescuentos = 0;
-          for (const v of ventasDetalle) {
-            const forma = v.formaPago || 'otros';
-            const con = Number(v.totalConInteres ?? 0);
-            const sin = Number(v.totalSinInteres ?? 0);
-            const monto = con > 0 ? con : sin;
+      this.prisma.$queryRaw<{ nombre: string; cantidad: bigint }[]>(Prisma.sql`
+        SELECT p.nombre, COALESCE(SUM(i.cantidad), 0)::bigint AS cantidad
+        FROM ventas_items i
+        JOIN ventas v ON v.id = i.venta_id
+        JOIN productos p ON p.id = i.producto_id
+        WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL
+          AND v.fecha >= ${hace30Dias}
+        GROUP BY p.nombre
+        ORDER BY SUM(i.cantidad) DESC
+        LIMIT 10
+      `).catch(() => []),
 
-            if (!porFormaPago[forma]) {
-              porFormaPago[forma] = { count: 0, total: 0 };
-            }
-            porFormaPago[forma].count += 1;
-            porFormaPago[forma].total += monto;
-            totalDescuentos += Number(v.descuento ?? 0);
-          }
+      this.prisma.producto.findMany({
+        where: { empresaId, deletedAt: null, activo: true, precioVenta: { not: null }, costo: { not: null } },
+        select: { nombre: true, precioVenta: true, costo: true, categoria: true },
+        take: 12,
+      }).catch(() => []),
 
-          return {
-            totalActual,
-            totalPrevio,
-            variacionPorcentual,
-            totalOperaciones: ventasDetalle.length,
-            totalDescuentos,
-            desgloseFormasPago: porFormaPago,
-          };
-        }
+      this.prisma.gasto.findMany({
+        where: { empresaId, deletedAt: null, fecha: { gte: hace30Dias } },
+        select: { categoria: true, monto: true, descripcion: true, tipoCosto: true },
+      }).catch(() => []),
 
-        case 'productos': {
-          const productos = await this.prisma.producto.findMany({
-            where: { empresaId, deletedAt: null, activo: true },
-            select: { id: true, nombre: true, precioVenta: true, costo: true, categoria: true },
-            take: 10,
-          }).catch(() => []);
+      this.prisma.compra.findMany({
+        where: { empresaId, deletedAt: null, fecha: { gte: hace30Dias } },
+        select: { total: true, proveedorNombre: true },
+      }).catch(() => []),
 
-          const productosConMargen = productos.map((p) => {
-            const precio = Number(p.precioVenta ?? 0);
-            const costo = Number(p.costo ?? 0);
-            const margenEstimadoPct = precio > 0 && costo > 0 ? Number((((precio - costo) / precio) * 100).toFixed(1)) : null;
-            return {
-              nombre: p.nombre,
-              categoria: p.categoria ?? 'General',
-              precioVenta: precio,
-              costo,
-              margenEstimadoPct,
-            };
-          });
+      this.prisma.venta.findMany({
+        where: { empresaId, deletedAt: null, saldoPendiente: { gt: 0 } },
+        select: {
+          id: true,
+          clienteNombre: true,
+          saldoPendiente: true,
+          fecha: true,
+          cliente: { select: { nombre: true, telefono: true } },
+        },
+        orderBy: { saldoPendiente: 'desc' },
+        take: 10,
+      }).catch(() => []),
 
-          return {
-            productosMuestra: productosConMargen,
-          };
-        }
+      this.prisma.cotizacionDolar.findMany({
+        orderBy: { fecha: 'desc' },
+        take: 6,
+      }).catch(() => []),
 
-        case 'stock': {
-          const [totalActivos, totalInactivos, listaProductos] = await Promise.all([
-            this.prisma.producto.count({ where: { empresaId, deletedAt: null, activo: true } }).catch(() => 0),
-            this.prisma.producto.count({ where: { empresaId, deletedAt: null, activo: false } }).catch(() => 0),
-            this.prisma.producto.findMany({
-              where: { empresaId, deletedAt: null, activo: true },
-              select: { id: true, nombre: true, unidad: true, categoria: true },
-              take: 8,
-            }).catch(() => []),
-          ]);
+      this.prisma.producto.count({
+        where: { empresaId, deletedAt: null, activo: true },
+      }).catch(() => 0),
 
-          return {
-            totalProductosActivos: totalActivos,
-            totalProductosInactivos: totalInactivos,
-            catalogoMuestra: listaProductos,
-            alertaStockBajo: totalActivos > 0 ? 'Revisión preventiva de stock recomendada para evitar quiebres' : 'Sin productos activos',
-          };
-        }
+      this.prisma.producto.count({
+        where: { empresaId, deletedAt: null, activo: false },
+      }).catch(() => 0),
+    ]);
 
-        case 'cobranzas': {
-          const ventasImpagas = await this.prisma.venta.findMany({
-            where: { empresaId, deletedAt: null, saldoPendiente: { gt: 0 } },
-            select: {
-              id: true,
-              clienteNombre: true,
-              saldoPendiente: true,
-              fecha: true,
-              cliente: { select: { nombre: true, telefono: true } },
-            },
-            orderBy: { saldoPendiente: 'desc' },
-            take: 10,
-          }).catch(() => []);
+    // 1. Métricas de Ventas y Facturación
+    const totalVentas = ventas30Dias.reduce((acc, v) => {
+      const con = Number(v.totalConInteres ?? 0);
+      const sin = Number(v.totalSinInteres ?? 0);
+      return acc + (con > 0 ? con : sin);
+    }, 0);
 
-          const deudores = ventasImpagas.map((v) => {
-            const diasAtraso = Math.max(0, Math.floor((ahora.getTime() - new Date(v.fecha).getTime()) / (24 * 3600_000)));
-            return {
-              cliente: v.cliente?.nombre || v.clienteNombre || 'Cliente mostrador',
-              telefono: v.cliente?.telefono ?? null,
-              saldoPendiente: Number(v.saldoPendiente),
-              diasAtraso,
-            };
-          });
+    const totalPrevio = ventasPrevias.reduce((acc, v) => {
+      const con = Number(v.totalConInteres ?? 0);
+      const sin = Number(v.totalSinInteres ?? 0);
+      return acc + (con > 0 ? con : sin);
+    }, 0);
 
-          const totalCtaCte = deudores.reduce((acc, d) => acc + d.saldoPendiente, 0);
+    const variacionPorcentual = totalPrevio > 0
+      ? Number((((totalVentas - totalPrevio) / totalPrevio) * 100).toFixed(1))
+      : 0;
 
-          return {
-            totalCtaCtePendiente: totalCtaCte,
-            cantidadVentasConSaldo: ventasImpagas.length,
-            rankingDeudores: deudores.slice(0, 5),
-          };
-        }
+    const ticketPromedio = ventas30Dias.length > 0 ? Math.round(totalVentas / ventas30Dias.length) : 0;
 
-        case 'inflacion': {
-          const cotizaciones = await this.prisma.cotizacionDolar.findMany({
-            orderBy: { fecha: 'desc' },
-            take: 8,
-          }).catch(() => []);
+    const porFormaPago: Record<string, { cantidad: number; totalRecaudado: number }> = {};
+    let totalDescuentos = 0;
+    for (const v of ventas30Dias) {
+      const forma = (v.formaPago || 'otros').toLowerCase();
+      const con = Number(v.totalConInteres ?? 0);
+      const sin = Number(v.totalSinInteres ?? 0);
+      const monto = con > 0 ? con : sin;
 
-          const dolarBlue = cotizaciones.find((c) => c.casa.toLowerCase().includes('blue'))?.venta ?? null;
-          const dolarOficial = cotizaciones.find((c) => c.casa.toLowerCase().includes('oficial'))?.venta ?? null;
-          const dolarMep = cotizaciones.find((c) => c.casa.toLowerCase().includes('bolsa') || c.casa.toLowerCase().includes('mep'))?.venta ?? null;
-
-          const numBlue = dolarBlue ? Number(dolarBlue) : 1200;
-          const numOficial = dolarOficial ? Number(dolarOficial) : 1000;
-          const brechaPct = numOficial > 0 ? Number((((numBlue - numOficial) / numOficial) * 100).toFixed(1)) : 0;
-
-          return {
-            dolarBlue: numBlue,
-            dolarOficial: numOficial,
-            dolarMep: dolarMep ? Number(dolarMep) : null,
-            brechaCambiariaPct: brechaPct,
-            estrategiaRecomendada: brechaPct > 15 ? 'Ajustar listas de precios según reposición en Dólar Blue para resguardar capital de trabajo.' : 'Brecha cambiaria estable; mantener listas actualizadas con inflación mensual.',
-          };
-        }
-
-        default:
-          return {};
+      if (!porFormaPago[forma]) {
+        porFormaPago[forma] = { cantidad: 0, totalRecaudado: 0 };
       }
-    } catch (e) {
-      this.logger.warn(`Error obteniendo detalle para tópico ${topico}: ${(e as Error).message}`);
-      return {};
+      porFormaPago[forma].cantidad += 1;
+      porFormaPago[forma].totalRecaudado += monto;
+      totalDescuentos += Number(v.descuento ?? 0);
     }
+
+    // 2. Productos y Rentabilidad
+    const topVendidos = productosLideresRaw.map((p) => ({
+      nombre: p.nombre,
+      unidadesVendidas: Number(p.cantidad),
+      ingresoAproximado: Number(p.cantidad) * (ticketPromedio > 0 ? ticketPromedio : 1000),
+    }));
+
+    const margenesMuestra = productosConMargenRaw.map((p) => {
+      const precio = Number(p.precioVenta ?? 0);
+      const costo = Number(p.costo ?? 0);
+      const margenBrutoPct = precio > 0 && costo > 0 ? Number((((precio - costo) / precio) * 100).toFixed(1)) : null;
+      return {
+        producto: p.nombre,
+        categoria: p.categoria || 'General',
+        precioVenta: precio,
+        costo,
+        margenBrutoPct,
+      };
+    });
+
+    // 3. Gastos Operativos y Compras de Mercadería
+    const totalGastosMes = gastosMesRaw.reduce((acc, g) => acc + Number(g.monto ?? 0), 0);
+    const desgloseGastos: Record<string, number> = {};
+    for (const g of gastosMesRaw) {
+      const cat = g.categoria || 'varios';
+      desgloseGastos[cat] = (desgloseGastos[cat] ?? 0) + Number(g.monto ?? 0);
+    }
+
+    const totalComprasMercaderia = comprasMesRaw.reduce((acc, c) => acc + Number(c.total ?? 0), 0);
+
+    // 4. Créditos y Cuentas Corrientes
+    const deudores = ventasImpagasRaw.map((v) => {
+      const diasAtraso = Math.max(0, Math.floor((ahora.getTime() - new Date(v.fecha).getTime()) / (24 * 3600_000)));
+      return {
+        cliente: v.cliente?.nombre || v.clienteNombre || 'Cliente mostrador',
+        telefono: v.cliente?.telefono ?? null,
+        saldoPendiente: Number(v.saldoPendiente),
+        diasAtraso,
+      };
+    });
+    const totalDeudaCtaCte = deudores.reduce((acc, d) => acc + d.saldoPendiente, 0);
+
+    // 5. Macroeconomía y Tipo de Cambio
+    const dolarBlue = cotizacionesDolarRaw.find((c) => c.casa.toLowerCase().includes('blue'))?.venta ?? null;
+    const dolarOficial = cotizacionesDolarRaw.find((c) => c.casa.toLowerCase().includes('oficial'))?.venta ?? null;
+    const dolarMep = cotizacionesDolarRaw.find((c) => c.casa.toLowerCase().includes('bolsa') || c.casa.toLowerCase().includes('mep'))?.venta ?? null;
+
+    const numBlue = dolarBlue ? Number(dolarBlue) : 1200;
+    const numOficial = dolarOficial ? Number(dolarOficial) : 1000;
+    const brechaCambiariaPct = numOficial > 0 ? Number((((numBlue - numOficial) / numOficial) * 100).toFixed(1)) : 0;
+
+    return {
+      identidad: {
+        nombre: empresa?.nombre || 'Mi Comercio / Pyme',
+        rubro: empresa?.categoria || 'Comercio General',
+        condicionIva: empresa?.condicionIva || 'Monotributo / Resp. Inscripto',
+      },
+      ventas: {
+        totalUltimos30Dias: totalVentas,
+        totalPeriodoAnterior: totalPrevio,
+        variacionIntermensualPct: variacionPorcentual,
+        operacionesTotales: ventas30Dias.length,
+        ticketPromedio,
+        descuentosOtorgados: totalDescuentos,
+        metodosDePago: porFormaPago,
+      },
+      rentabilidad: {
+        topVendidos,
+        margenesPorProductoMuestra: margenesMuestra,
+      },
+      egresos: {
+        totalGastosOperativos: totalGastosMes,
+        desgloseGastosPorRubro: desgloseGastos,
+        totalComprasMercaderia30Dias: totalComprasMercaderia,
+      },
+      inventario: {
+        totalProductosActivos,
+        totalProductosInactivos,
+      },
+      cuentasCorrientes: {
+        totalAdeudado: totalDeudaCtaCte,
+        cantidadVentasPendientes: ventasImpagasRaw.length,
+        rankingTopDeudores: deudores.slice(0, 5),
+      },
+      macroeconomia: {
+        dolarBlue: numBlue,
+        dolarOficial: numOficial,
+        dolarMep: dolarMep ? Number(dolarMep) : null,
+        brechaCambiariaPct,
+      },
+      focoActual: topicoDeterminado,
+    };
   }
 
   private determinarTopico(topicoDto?: string, mensaje = ''): string {
@@ -336,7 +345,8 @@ export class CopilotIaService {
     if (q.includes('producto') || q.includes('mas vendido') || q.includes('lider')) return 'productos';
     if (q.includes('stock') || q.includes('inventario') || q.includes('reponer')) return 'stock';
     if (q.includes('deuda') || q.includes('cobrar') || q.includes('cuenta corriente') || q.includes('cta cte')) return 'cobranzas';
-    if (q.includes('dolar') || q.includes('inflaci') || q.includes('costo') || q.includes('precio')) return 'inflacion';
+    if (q.includes('gasto') || q.includes('costo') || q.includes('compra')) return 'egresos';
+    if (q.includes('dolar') || q.includes('inflaci') || q.includes('precio')) return 'inflacion';
     return 'general';
   }
 
@@ -344,17 +354,22 @@ export class CopilotIaService {
     apiKey: string,
     modelo: string,
     input: CopilotChatDto,
-    metricas: Record<string, unknown>,
+    dossier: Record<string, unknown>,
     topico: string,
   ): Promise<string> {
     try {
-      const systemPrompt = `Sos Analítica Copilot (impulsado por ${modelo}), el asesor financiero y estratega de negocios con IA de la plataforma Analítica 360.
-Tu misión es guiar al dueño del negocio o comerciante con respuestas claras, prácticas y aplicadas a la economía real argentina (inflación, tipo de cambio, reposición de mercadería y flujo de caja).
-TÓPICO PRINCIPAL DE ANÁLISIS: ${topico.toUpperCase()}.
-Sé conciso, directo, empático y usá formato Markdown con listas y negritas cuando aporte claridad.
+      const nombreEmpresa = (dossier.identidad as any)?.nombre || 'este negocio';
+      const systemPrompt = `Sos Analítica Copilot (impulsado por ${modelo}), el Director Financiero (CFO), estratega de precios y consultor de inteligencia de negocios para "${nombreEmpresa}".
+Conocés exhaustivamente cada número real de este comercio: sus ventas, ticket promedio, métodos de cobro, márgenes de ganancia, gastos fijos/variables, clientes deudores y cotización del dólar.
+Tu objetivo es dar diagnósticos ejecutivos de máximo nivel, precisos y aplicados a la economía real argentina.
+TÓPICO PRINCIPAL DE ATENCIÓN: ${topico.toUpperCase()}.
+Respondé con estilo profesional, directo, analítico y cercano, usando formato Markdown (con negritas y listas limpias).
 
-DATOS VIVOS DEL NEGOCIO Y QUERIES ESTRUCTURADAS:
-${JSON.stringify(metricas, null, 2)}
+=======================================================
+DOSSIER 360° EN VIVO DEL NEGOCIO (DATOS REALES):
+=======================================================
+${JSON.stringify(dossier, null, 2)}
+=======================================================
 `;
 
       const messages = [
@@ -400,16 +415,12 @@ ${JSON.stringify(metricas, null, 2)}
 
       if (!res.ok) {
         const errorText = await res.text();
-        // Si el proveedor es legado y pide max_tokens en vez de max_completion_tokens
         if (errorText.includes('max_completion_tokens') && !errorText.includes('Use \'max_completion_tokens\'')) {
           delete payload.max_completion_tokens;
           payload.max_tokens = 1000;
           res = await fetch(apiUrl, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${apiKey}`,
-            },
+            headers,
             body: JSON.stringify(payload),
             signal: AbortSignal.timeout(25000),
           });
@@ -417,10 +428,7 @@ ${JSON.stringify(metricas, null, 2)}
           delete payload.temperature;
           res = await fetch(apiUrl, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${apiKey}`,
-            },
+            headers,
             body: JSON.stringify(payload),
             signal: AbortSignal.timeout(25000),
           });
@@ -446,29 +454,30 @@ ${JSON.stringify(metricas, null, 2)}
   private generarRespuestaHeuristica(mensaje: string, metricas: any, topico: string): string {
     const q = mensaje.toLowerCase();
     const dt = metricas.detalleTopico || {};
+    const ventas = dt.ventas || {};
 
     if (topico === 'ventas' || q.includes('venta') || q.includes('ingreso') || q.includes('facturaci')) {
-      const formasPagoText = dt.desgloseFormasPago
-        ? Object.entries(dt.desgloseFormasPago)
-            .map(([forma, v]: [string, any]) => `- **${forma.toUpperCase()}**: $${v.total.toLocaleString('es-AR')} (${v.count} operaciones)`)
+      const metodos = ventas.metodosDePago
+        ? Object.entries(ventas.metodosDePago)
+            .map(([forma, v]: [string, any]) => `- **${forma.toUpperCase()}**: $${v.totalRecaudado?.toLocaleString('es-AR')} (${v.cantidad} op.)`)
             .join('\n')
         : '';
 
-      const varText = dt.variacionPorcentual !== undefined
-        ? `\n- **Comparación con mes anterior:** ${dt.variacionPorcentual >= 0 ? '+' : ''}${dt.variacionPorcentual}%`
+      const varText = ventas.variacionIntermensualPct !== undefined
+        ? `\n- **Comparación con mes anterior:** ${ventas.variacionIntermensualPct >= 0 ? '+' : ''}${ventas.variacionIntermensualPct}%`
         : '';
 
       return `📊 **Análisis Profundo de Ventas y Facturación**
 - **Facturación total (30 días):** $${metricas.totalVentasPeriodo.toLocaleString('es-AR')}
 - **Ticket promedio:** $${metricas.ticketPromedio.toLocaleString('es-AR')} por operación.${varText}
 
-${formasPagoText ? `💳 **Distribución por Métodos de Pago:**\n${formasPagoText}\n` : ''}
+${metodos ? `💳 **Distribución por Métodos de Pago:**\n${metodos}\n` : ''}
 💡 **Recomendación estratégica:**
 ${metricas.totalVentasPeriodo > 0 ? 'Tus ventas muestran un flujo activo. Para incrementar el margen neto, enfocate en potenciar cobros por transferencia o efectivo para evitar retenciones de pasarelas de pago y aplicá venta cruzada (cross-selling) en tus productos líderes.' : 'Aún no se registran suficientes ventas en este período. Te sugiero activar promociones de lanzamiento o contactar clientes recurrentes.'}`;
     }
 
     if (topico === 'productos' || q.includes('producto') || q.includes('top') || q.includes('mas vendido')) {
-      const lista = metricas.productosLideres.map((p: any, i: number) => `${i + 1}. **${p.nombre}**: ${p.cantidad} unidades vendidas ($${p.total.toLocaleString('es-AR')})`).join('\n');
+      const lista = metricas.productosLideres.map((p: any, i: number) => `${i + 1}. **${p.nombre}**: ${p.unidadesVendidas ?? p.cantidad} unidades vendidas`).join('\n');
       return `🏆 **Tus Productos Más Vendidos**
 ${lista || 'No hay ventas registradas aún para listar productos líderes.'}
 
@@ -477,7 +486,7 @@ Asegurá stock de estos ítems clave. Revisá los costos de reposición semanalm
     }
 
     if (topico === 'stock' || q.includes('stock') || q.includes('inventario') || q.includes('reponer')) {
-      const totalAct = dt.totalProductosActivos !== undefined ? dt.totalProductosActivos : metricas.stockCriticoCount;
+      const totalAct = dt.inventario?.totalProductosActivos ?? metricas.stockCriticoCount;
       return `📦 **Estado de Inventario y Stock**
 - **Productos activos en catálogo:** ${totalAct}
 - **Productos en alerta preventiva:** ${metricas.stockCriticoCount}
@@ -486,7 +495,7 @@ ${metricas.stockCriticoCount > 0 ? '⚠️ **Atención:** Tenés productos en ri
     }
 
     if (topico === 'cobranzas' || q.includes('deuda') || q.includes('cobrar') || q.includes('cuenta corriente')) {
-      const deudores = dt.rankingDeudores || [];
+      const deudores = dt.cuentasCorrientes?.rankingTopDeudores || [];
       const listaDeudores = deudores.length > 0
         ? deudores.map((d: any, i: number) => `${i + 1}. **${d.cliente}**: $${d.saldoPendiente.toLocaleString('es-AR')} (${d.diasAtraso} días de atraso)`).join('\n')
         : '';
@@ -499,9 +508,10 @@ Enviá recordatorios amigables de cobro por WhatsApp a los clientes con más de 
     }
 
     if (topico === 'inflacion' || q.includes('dolar') || q.includes('inflaci') || q.includes('costo')) {
-      const blue = dt.dolarBlue ?? metricas.dolarReferencia?.valor ?? 1200;
-      const oficial = dt.dolarOficial ?? 1000;
-      const brecha = dt.brechaCambiariaPct !== undefined ? `${dt.brechaCambiariaPct}%` : 'Moderada';
+      const macro = dt.macroeconomia || {};
+      const blue = macro.dolarBlue ?? metricas.dolarReferencia?.valor ?? 1200;
+      const oficial = macro.dolarOficial ?? 1000;
+      const brecha = macro.brechaCambiariaPct !== undefined ? `${macro.brechaCambiariaPct}%` : 'Moderada';
 
       return `💵 **Análisis de Inflación y Tipo de Cambio**
 - **Dólar Blue:** $${blue}
@@ -509,11 +519,11 @@ Enviá recordatorios amigables de cobro por WhatsApp a los clientes con más de 
 - **Brecha cambiaria estimada:** ${brecha}
 
 💡 **Estrategia de Precios sugerida:**
-${dt.estrategiaRecomendada || 'Cotizá tu mercadería según el costo de reposición actual y evitá financiar en pesos a largo plazo sin tasa de recargo calculada.'}`;
+Cotizá tu mercadería según el costo de reposición actual y evitá financiar en pesos a largo plazo sin tasa de recargo calculada.`;
     }
 
-    return `🤖 **Analítica Copilot (OpenAI / GPT-4o)**
-Analicé los datos recientes de tu empresa:
+    return `🤖 **Analítica Copilot (GPT-6 Luna)**
+Analicé el Dossier 360° de tu empresa:
 - **Ventas (30d):** $${metricas.totalVentasPeriodo.toLocaleString('es-AR')} (Ticket promedio: $${metricas.ticketPromedio.toLocaleString('es-AR')})
 - **Stock en alerta:** ${metricas.stockCriticoCount} productos.
 - **Cobros pendientes:** $${metricas.deudaClientesTotal.toLocaleString('es-AR')}.
