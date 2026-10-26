@@ -4,10 +4,12 @@ import { Prisma } from '@prisma/client';
 
 describe('CopilotIaService', () => {
   const mockPrisma = {
+    $queryRaw: vi.fn().mockResolvedValue([
+      { nombre: 'Remera Algodón', cantidad: BigInt(10) },
+    ]),
     venta: {
       findMany: vi.fn().mockResolvedValue([
         {
-          total: new Prisma.Decimal(15000),
           totalSinInteres: new Prisma.Decimal(15000),
           totalConInteres: new Prisma.Decimal(15000),
           saldoPendiente: new Prisma.Decimal(0),
@@ -17,7 +19,6 @@ describe('CopilotIaService', () => {
           fecha: new Date(),
         },
         {
-          total: new Prisma.Decimal(25000),
           totalSinInteres: new Prisma.Decimal(25000),
           totalConInteres: new Prisma.Decimal(25000),
           saldoPendiente: new Prisma.Decimal(5000),
@@ -29,11 +30,6 @@ describe('CopilotIaService', () => {
         },
       ]),
       count: vi.fn().mockResolvedValue(2),
-    },
-    ventaItem: {
-      groupBy: vi.fn().mockResolvedValue([
-        { productoId: 'prod-1', _sum: { cantidad: 10 } },
-      ]),
     },
     producto: {
       findMany: vi.fn().mockResolvedValue([

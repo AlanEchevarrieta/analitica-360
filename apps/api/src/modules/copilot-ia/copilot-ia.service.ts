@@ -1,18 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { CopilotChatDto, CopilotRespuesta } from './dto/copilot-chat.dto.js';
 import { Result } from '../../common/result/result.js';
-
-interface VentaResumen {
-  total: { toNumber(): number };
-  saldoPendiente: { toNumber(): number };
-  estadoCobro: string;
-}
-
-interface ItemGrupo {
-  productoId: string;
-  _sum: { cantidad: number | null };
-}
 
 @Injectable()
 export class CopilotIaService {
@@ -21,7 +11,7 @@ export class CopilotIaService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Procesa la consulta del usuario combinando métricas en vivo con GPT-6 Luna o heurística contextual.
+   * Procesa la consulta del usuario combinando métricas en vivo con OpenAI / LLM o heurística contextual.
    * Ejecuta queries especializadas según el tópico seleccionado (ventas, stock, productos, cobranzas, inflación).
    */
   async procesarMensaje(empresaId: string, input: CopilotChatDto): Promise<Result<CopilotRespuesta>> {
@@ -32,48 +22,52 @@ export class CopilotIaService {
       const topicoDeterminado = this.determinarTopico(input.topico, input.mensaje);
 
       // 1. Recopilar métricas en vivo base del tenant de manera aislada (Anti-BOLA/IDOR)
-      const [ventas30Dias, productosVendidos, totalProductos, ventasConSaldo, dolarHoy] = await Promise.all([
+      const [ventas30Dias, productosLideresRaw, totalProductos, ventasConSaldo, dolarHoy] = await Promise.all([
         this.prisma.venta.findMany({
           where: { empresaId, deletedAt: null, fecha: { gte: hace30Dias } },
-          select: { total: true, saldoPendiente: true, estadoCobro: true },
-        }) as Promise<VentaResumen[]>,
-        (this.prisma.ventaItem.groupBy({
-          by: ['productoId'],
-          where: { empresaId, venta: { deletedAt: null, fecha: { gte: hace30Dias } } },
-          _sum: { cantidad: true },
-          orderBy: { _sum: { cantidad: 'desc' } },
-          take: 5,
-        }) as unknown as Promise<ItemGrupo[]>),
+          select: { totalSinInteres: true, totalConInteres: true, saldoPendiente: true, estadoCobro: true },
+        }),
+        this.prisma.$queryRaw<{ nombre: string; cantidad: bigint }[]>(Prisma.sql`
+          SELECT p.nombre, COALESCE(SUM(i.cantidad), 0)::bigint AS cantidad
+          FROM ventas_items i
+          JOIN ventas v ON v.id = i.venta_id
+          JOIN productos p ON p.id = i.producto_id
+          WHERE v.empresa_id = ${empresaId}::uuid AND v.deleted_at IS NULL
+            AND v.fecha >= ${hace30Dias}
+          GROUP BY p.nombre
+          ORDER BY SUM(i.cantidad) DESC
+          LIMIT 5
+        `).catch((err) => {
+          this.logger.warn(`No se pudo obtener productos líderes con queryRaw: ${(err as Error).message}`);
+          return [];
+        }),
         this.prisma.producto.count({
           where: { empresaId, deletedAt: null },
-        }),
+        }).catch(() => 0),
         this.prisma.venta.findMany({
           where: { empresaId, deletedAt: null, saldoPendiente: { gt: 0 } },
           select: { saldoPendiente: true },
-        }),
+        }).catch(() => []),
         this.prisma.cotizacionDolar.findFirst({
           where: { casa: 'blue' },
           orderBy: { fecha: 'desc' },
-        }),
+        }).catch(() => null),
       ]);
 
-      // Nombres de los productos líderes
-      const productoIds = productosVendidos.map((p) => p.productoId);
-      const nombresProductos = await this.prisma.producto.findMany({
-        where: { id: { in: productoIds } },
-        select: { id: true, nombre: true },
-      });
-      const mapaNombres = new Map(nombresProductos.map((p) => [p.id, p.nombre]));
+      const totalVentas = ventas30Dias.reduce((acc, v) => {
+        const con = Number(v.totalConInteres ?? 0);
+        const sin = Number(v.totalSinInteres ?? 0);
+        return acc + (con > 0 ? con : sin);
+      }, 0);
 
-      const totalVentas = ventas30Dias.reduce((acc, v) => acc + v.total.toNumber(), 0);
       const ticketPromedio = ventas30Dias.length > 0 ? Math.round(totalVentas / ventas30Dias.length) : 0;
-      const deudaTotal = ventasConSaldo.reduce((acc, v) => acc + v.saldoPendiente.toNumber(), 0);
+      const deudaTotal = ventasConSaldo.reduce((acc, v) => acc + Number(v.saldoPendiente ?? 0), 0);
       const dolarBlue = dolarHoy ? Number(dolarHoy.venta) : 1200;
 
-      const productosLideres = productosVendidos.map((p) => ({
-        nombre: mapaNombres.get(p.productoId) ?? 'Producto',
-        cantidad: p._sum.cantidad ?? 0,
-        total: (p._sum.cantidad ?? 0) * (ticketPromedio > 0 ? ticketPromedio : 1000),
+      const productosLideres = productosLideresRaw.map((p) => ({
+        nombre: p.nombre,
+        cantidad: Number(p.cantidad),
+        total: Number(p.cantidad) * (ticketPromedio > 0 ? ticketPromedio : 1000),
       }));
 
       // 2. Ejecutar queries profundas en base al tópico para alimentar al agente
@@ -90,15 +84,18 @@ export class CopilotIaService {
         detalleTopico,
       };
 
-      // 3. Ejecutar inferencia con LLM si está disponible la clave, o motor heurístico experto
+      // 3. Ejecutar inferencia con OpenAI o LLM si está disponible la clave, o motor heurístico experto
       const apiKey = process.env.OPENAI_API_KEY || process.env.COPILOT_API_KEY;
-      const modelo = process.env.COPILOT_MODEL || 'gpt-6-luna';
+      const defaultModel = process.env.OPENAI_API_KEY && !process.env.COPILOT_API_KEY ? 'gpt-4o-mini' : 'gpt-6-luna';
+      const modelo = process.env.COPILOT_MODEL || defaultModel;
 
       let respuestaTexto: string;
 
       if (apiKey) {
+        this.logger.log(`Consultando Copilot IA (${modelo}) para empresa ${empresaId} [tópico: ${topicoDeterminado}]`);
         respuestaTexto = await this.consultarLlm(apiKey, modelo, input, metricasUtilizadas, topicoDeterminado);
       } else {
+        this.logger.log(`Sin API Key configurada. Usando motor heurístico financiero para empresa ${empresaId}`);
         respuestaTexto = this.generarRespuestaHeuristica(input.mensaje, metricasUtilizadas, topicoDeterminado);
       }
 
@@ -111,7 +108,7 @@ export class CopilotIaService {
         sugerenciasSiguientes: sugerencias,
       });
     } catch (error) {
-      this.logger.error(`Error procesando consulta de Copilot: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(`Error crítico procesando consulta de Copilot: ${(error as Error).message}`, (error as Error).stack);
       return Result.internal('No se pudo procesar la consulta con Copilot IA');
     }
   }
@@ -122,7 +119,7 @@ export class CopilotIaService {
   async obtenerSugerencias(empresaId: string): Promise<string[]> {
     const ventasPendientes = await this.prisma.venta.count({
       where: { empresaId, saldoPendiente: { gt: 0 }, deletedAt: null },
-    });
+    }).catch(() => 0);
 
     const sugerencias = [
       '¿Cómo vienen mis ventas de los últimos 30 días?',
@@ -154,22 +151,35 @@ export class CopilotIaService {
             this.prisma.venta.findMany({
               where: { empresaId, deletedAt: null, fecha: { gte: hace60Dias, lt: hace30Dias } },
               select: { totalSinInteres: true, totalConInteres: true },
-            }),
+            }).catch(() => []),
             this.prisma.venta.findMany({
               where: { empresaId, deletedAt: null, fecha: { gte: hace30Dias } },
               select: { formaPago: true, descuento: true, totalSinInteres: true, totalConInteres: true },
-            }),
+            }).catch(() => []),
           ]);
 
-          const totalPrevio = ventasPrevias.reduce((sum, v) => sum + Number(v.totalConInteres ?? v.totalSinInteres ?? 0), 0);
-          const totalActual = ventasDetalle.reduce((sum, v) => sum + Number(v.totalConInteres ?? v.totalSinInteres ?? 0), 0);
+          const totalPrevio = ventasPrevias.reduce((sum, v) => {
+            const con = Number(v.totalConInteres ?? 0);
+            const sin = Number(v.totalSinInteres ?? 0);
+            return sum + (con > 0 ? con : sin);
+          }, 0);
+
+          const totalActual = ventasDetalle.reduce((sum, v) => {
+            const con = Number(v.totalConInteres ?? 0);
+            const sin = Number(v.totalSinInteres ?? 0);
+            return sum + (con > 0 ? con : sin);
+          }, 0);
+
           const variacionPorcentual = totalPrevio > 0 ? Number((((totalActual - totalPrevio) / totalPrevio) * 100).toFixed(1)) : 0;
 
           const porFormaPago: Record<string, { count: number; total: number }> = {};
           let totalDescuentos = 0;
           for (const v of ventasDetalle) {
             const forma = v.formaPago || 'otros';
-            const monto = Number(v.totalConInteres ?? v.totalSinInteres ?? 0);
+            const con = Number(v.totalConInteres ?? 0);
+            const sin = Number(v.totalSinInteres ?? 0);
+            const monto = con > 0 ? con : sin;
+
             if (!porFormaPago[forma]) {
               porFormaPago[forma] = { count: 0, total: 0 };
             }
@@ -193,7 +203,7 @@ export class CopilotIaService {
             where: { empresaId, deletedAt: null, activo: true },
             select: { id: true, nombre: true, precioVenta: true, costo: true, categoria: true },
             take: 10,
-          });
+          }).catch(() => []);
 
           const productosConMargen = productos.map((p) => {
             const precio = Number(p.precioVenta ?? 0);
@@ -215,13 +225,13 @@ export class CopilotIaService {
 
         case 'stock': {
           const [totalActivos, totalInactivos, listaProductos] = await Promise.all([
-            this.prisma.producto.count({ where: { empresaId, deletedAt: null, activo: true } }),
-            this.prisma.producto.count({ where: { empresaId, deletedAt: null, activo: false } }),
+            this.prisma.producto.count({ where: { empresaId, deletedAt: null, activo: true } }).catch(() => 0),
+            this.prisma.producto.count({ where: { empresaId, deletedAt: null, activo: false } }).catch(() => 0),
             this.prisma.producto.findMany({
               where: { empresaId, deletedAt: null, activo: true },
               select: { id: true, nombre: true, unidad: true, categoria: true },
               take: 8,
-            }),
+            }).catch(() => []),
           ]);
 
           return {
@@ -244,7 +254,7 @@ export class CopilotIaService {
             },
             orderBy: { saldoPendiente: 'desc' },
             take: 10,
-          });
+          }).catch(() => []);
 
           const deudores = ventasImpagas.map((v) => {
             const diasAtraso = Math.max(0, Math.floor((ahora.getTime() - new Date(v.fecha).getTime()) / (24 * 3600_000)));
@@ -269,7 +279,7 @@ export class CopilotIaService {
           const cotizaciones = await this.prisma.cotizacionDolar.findMany({
             orderBy: { fecha: 'desc' },
             take: 8,
-          });
+          }).catch(() => []);
 
           const dolarBlue = cotizaciones.find((c) => c.casa.toLowerCase().includes('blue'))?.venta ?? null;
           const dolarOficial = cotizaciones.find((c) => c.casa.toLowerCase().includes('oficial'))?.venta ?? null;
@@ -353,11 +363,16 @@ ${JSON.stringify(metricas, null, 2)}
       });
 
       if (!res.ok) {
-        throw new Error(`Error API LLM (${res.status}): ${await res.text()}`);
+        const errorText = await res.text();
+        throw new Error(`Error API LLM (${res.status}): ${errorText}`);
       }
 
       const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-      return data.choices?.[0]?.message?.content?.trim() || this.generarRespuestaHeuristica(input.mensaje, metricas, topico);
+      const respuesta = data.choices?.[0]?.message?.content?.trim();
+      if (!respuesta) {
+        throw new Error('La respuesta de OpenAI vino vacía');
+      }
+      return respuesta;
     } catch (e) {
       this.logger.warn(`Fallo llamada a LLM, usando motor heurístico: ${(e as Error).message}`);
       return this.generarRespuestaHeuristica(input.mensaje, metricas, topico);
@@ -433,7 +448,7 @@ Enviá recordatorios amigables de cobro por WhatsApp a los clientes con más de 
 ${dt.estrategiaRecomendada || 'Cotizá tu mercadería según el costo de reposición actual y evitá financiar en pesos a largo plazo sin tasa de recargo calculada.'}`;
     }
 
-    return `🤖 **Analítica Copilot (GPT-6 Luna)**
+    return `🤖 **Analítica Copilot (OpenAI / GPT-4o)**
 Analicé los datos recientes de tu empresa:
 - **Ventas (30d):** $${metricas.totalVentasPeriodo.toLocaleString('es-AR')} (Ticket promedio: $${metricas.ticketPromedio.toLocaleString('es-AR')})
 - **Stock en alerta:** ${metricas.stockCriticoCount} productos.
