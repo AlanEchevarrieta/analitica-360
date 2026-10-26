@@ -532,11 +532,27 @@ export const GUIA_A_TOUR_MAP: Record<string, string> = {
   "glosario-y-faq": "general",
 };
 
+let instanciaDriverActiva: ReturnType<typeof driver> | null = null;
+
+export function cerrarTour(): void {
+  if (typeof window === "undefined") return;
+  if (instanciaDriverActiva && instanciaDriverActiva.isActive()) {
+    instanciaDriverActiva.destroy();
+    instanciaDriverActiva = null;
+  }
+}
+
 /**
  * Inicia el tour interactivo con Driver.js de un módulo específico.
  */
 export function iniciarTourModulo(moduloId: string): void {
   if (typeof window === "undefined") return;
+
+  // Si ya hay un tour activo, cerrarlo limpiamente primero
+  if (instanciaDriverActiva && instanciaDriverActiva.isActive()) {
+    instanciaDriverActiva.destroy();
+    instanciaDriverActiva = null;
+  }
 
   const def = TOURS_MODULOS[moduloId] || TOURS_MODULOS.general;
   if (!def || !def.pasos || def.pasos.length === 0) return;
@@ -554,18 +570,27 @@ export function iniciarTourModulo(moduloId: string): void {
     showProgress: true,
     animate: true,
     allowClose: true,
+    overlayClickBehavior: "close",
+    showButtons: ["next", "previous", "close"],
     nextBtnText: "Siguiente paso →",
     prevBtnText: "← Anterior",
     doneBtnText: "¡Excelente, comenzar!",
     progressText: "{{current}} de {{total}}",
     steps: pasosFinales,
-    onDestroyStarted: () => {
+    onCloseClick: (_el, _step, { driver: d }) => {
+      d.destroy();
+    },
+    onDoneClick: (_el, _step, { driver: d }) => {
+      d.destroy();
+    },
+    onDestroyed: () => {
+      instanciaDriverActiva = null;
       marcarTourCompletado();
     },
   };
 
-  const driverObj = driver(config);
-  driverObj.drive();
+  instanciaDriverActiva = driver(config);
+  instanciaDriverActiva.drive();
 }
 
 /**
