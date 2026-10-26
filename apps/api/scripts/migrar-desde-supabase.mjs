@@ -14,6 +14,7 @@
 import 'dotenv/config';
 import pg from 'pg';
 
+const SUPABASE_DB_URL = process.env.SUPABASE_DB_URL;
 const SUPABASE_URL = process.env.SUPABASE_URL?.replace(/\/+$/, '');
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESET = process.argv.includes('--reset');
@@ -22,8 +23,8 @@ const UPSERT = process.argv.includes('--upsert');
 const PAGINA = 1000; // máximo por request de PostgREST en Supabase
 const LOTE_INSERT = 500;
 
-if (!SUPABASE_URL || !SUPABASE_KEY || !process.env.DATABASE_URL) {
-  console.error('Faltan SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY o DATABASE_URL');
+if ((!SUPABASE_DB_URL && (!SUPABASE_URL || !SUPABASE_KEY)) || !process.env.DATABASE_URL) {
+  console.error('Faltan SUPABASE_DB_URL (o SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY) o DATABASE_URL');
   process.exit(1);
 }
 
@@ -43,6 +44,21 @@ const MOTIVO_OMISION = { anulaciones: 'anulación de compra (el schema nuevo sol
 
 const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
 await db.connect();
+
+let supabaseDb = null;
+let tablasEnSupabase = null;
+
+if (SUPABASE_DB_URL) {
+  supabaseDb = new pg.Client({
+    connectionString: SUPABASE_DB_URL,
+    ssl: { rejectUnauthorized: false },
+  });
+  await supabaseDb.connect();
+  const { rows } = await supabaseDb.query(`
+    SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'
+  `);
+  tablasEnSupabase = new Set(rows.map((r) => r.table_name));
+}
 
 async function columnasLocales() {
   const { rows } = await db.query(`
@@ -83,9 +99,9 @@ async function ordenPorDependencias(tablas) {
   const visitadas = new Set();
   const visitar = (t, camino = new Set()) => {
     if (visitadas.has(t)) return;
-    if (camino.has(t)) throw new Error(`Ciclo de FKs en ${t}`);
+    if (camino.has(t)) return; // rompe ciclos circulares (ej: cupones <-> empresas)
     camino.add(t);
-    for (const p of padres.get(t) ?? []) visitar(p, camino);
+    for (const p of padres.get(t) ?? []) visitar(p, new Set(camino));
     visitadas.add(t);
     orden.push(t);
   };
@@ -94,6 +110,17 @@ async function ordenPorDependencias(tablas) {
 }
 
 async function leerSupabase(tabla, orden) {
+  if (supabaseDb) {
+    if (!tablasEnSupabase.has(tabla)) return null;
+    try {
+      const { rows } = await supabaseDb.query(`SELECT * FROM "${tabla}" ORDER BY "${orden}" ASC`);
+      return rows;
+    } catch {
+      const { rows } = await supabaseDb.query(`SELECT * FROM "${tabla}"`);
+      return rows;
+    }
+  }
+
   const filas = [];
   for (let desde = 0; ; desde += PAGINA) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?select=*&order=${orden}.asc`, {
@@ -171,23 +198,28 @@ async function main() {
     console.log('Base local vaciada.');
   }
 
+  await db.query("SET session_replication_role = 'replica'");
   const resumen = [];
-  for (const tabla of tablas) {
-    if (CALCULADAS.has(tabla)) continue;
-    const filas = await leerSupabase(tabla, pks.get(tabla) ?? 'id');
-    if (filas === null) {
-      resumen.push({ tabla, supabase: '-', copiadas: 0, nota: 'no existe en Supabase' });
-      continue;
+  try {
+    for (const tabla of tablas) {
+      if (CALCULADAS.has(tabla)) continue;
+      const filas = await leerSupabase(tabla, pks.get(tabla) ?? 'id');
+      if (filas === null) {
+        resumen.push({ tabla, supabase: '-', copiadas: 0, nota: 'no existe en Supabase' });
+        continue;
+      }
+      const transformar = TRANSFORMAR[tabla] ?? ((f) => f);
+      const aCopiar = filas.map(transformar).filter(Boolean);
+      const omitidas = filas.length - aCopiar.length;
+      const { ok, fallidas } = await insertar(tabla, columnas.get(tabla), pks.get(tabla), aCopiar);
+      const notas = [];
+      if (omitidas) notas.push(`${omitidas} omitidas: ${MOTIVO_OMISION[tabla] ?? 'transformación'}`);
+      if (fallidas.length) notas.push(`${fallidas.length} con error (ej: ${fallidas[0].error})`);
+      resumen.push({ tabla, supabase: filas.length, copiadas: ok, nota: notas.join(' · ') });
+      process.stdout.write(`  ${tabla}: ${ok}/${filas.length}\n`);
     }
-    const transformar = TRANSFORMAR[tabla] ?? ((f) => f);
-    const aCopiar = filas.map(transformar).filter(Boolean);
-    const omitidas = filas.length - aCopiar.length;
-    const { ok, fallidas } = await insertar(tabla, columnas.get(tabla), pks.get(tabla), aCopiar);
-    const notas = [];
-    if (omitidas) notas.push(`${omitidas} omitidas: ${MOTIVO_OMISION[tabla] ?? 'transformación'}`);
-    if (fallidas.length) notas.push(`${fallidas.length} con error (ej: ${fallidas[0].error})`);
-    resumen.push({ tabla, supabase: filas.length, copiadas: ok, nota: notas.join(' · ') });
-    process.stdout.write(`  ${tabla}: ${ok}/${filas.length}\n`);
+  } finally {
+    await db.query("SET session_replication_role = 'origin'");
   }
 
   // Derivados que el legacy no guardaba.
@@ -211,11 +243,13 @@ async function main() {
 
   console.log('\nResumen:');
   console.table(resumen);
+  if (supabaseDb) await supabaseDb.end();
   await db.end();
 }
 
 main().catch(async (error) => {
   console.error(error);
-  await db.end();
+  if (supabaseDb) await supabaseDb.end().catch(() => {});
+  await db.end().catch(() => {});
   process.exit(1);
 });
