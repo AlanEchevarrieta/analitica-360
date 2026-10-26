@@ -92,8 +92,8 @@ aliases:
 - **Margen Neto:** Lo que realmente le queda al comerciante una vez deducidos los fletes, impuestos, alquileres, sueldos y costos operativos generales.
 - Relacionado: `[[16 - Analytics Comercial, Rentabilidad y Monotributo]]`.
 
-#### Copilot IA (GPT-6 Luna)
-- Modelo de lenguaje avanzado integrado en Analítica 360 entrenado con contexto de gestión comercial para realizar diagnósticos estratégicos y responder preguntas en lenguaje natural.
+#### Copilot IA (Analítica IA)
+- Motor de inteligencia artificial integrado en Analítica 360, entrenado exclusivamente con contexto de gestión comercial y operacional para diagnósticos estratégicos y proyecciones de negocio.
 - Relacionado: `[[04 - Copilot IA - Asistente Estratégico de Negocio]]`.
 
 ---

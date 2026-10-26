@@ -14,14 +14,14 @@ version: "1.0"
 aliases:
   - "Copilot IA"
   - "Asistente Inteligente"
-  - "GPT-6 Luna"
+  - "Analítica IA"
   - "CU-004"
 ---
 
 # 🤖 Manual de Uso: Copilot IA - Asistente Estratégico de Negocio
 
 > [!info] Objetivo de la Funcionalidad
-> **Analítica Copilot** es tu asesor estratégico de inteligencia artificial integrado en la plataforma. Potenciado por **GPT-6 Luna**, analiza en tiempo real todas las transacciones de tu negocio (ventas, compras, rotación de stock, cuentas corrientes y márgenes) para responder tus dudas operativas y estratégicas en lenguaje natural, tal como si hablaras con un consultor financiero personal.
+> **Analítica Copilot** es tu asesor estratégico de inteligencia artificial integrado en la plataforma. Potenciado por **Analítica IA**, analiza en tiempo real todas las transacciones de tu negocio (ventas, compras, rotación de stock, cuentas corrientes y márgenes) para responder tus dudas operativas y estratégicas en lenguaje natural, tal como si hablaras con un consultor financiero personal.
 
 > [!abstract] Requisitos Previos y Permisos
 > - **Rol de Usuario Requerido:** `Dueño` o colaborador con acceso a métricas analíticas.
@@ -100,7 +100,7 @@ Para abrir el asistente inteligente:
 
 | Situación en Pantalla | Causa Probable | Solución Sugerida |
 | :--- | :--- | :--- |
-| **"Función bloqueada con candado"** | Tu plan actual no incluye el módulo Copilot GPT-6. | Mejorá a un plan Pro o E-commerce desde `[[22 - Suscripción, Planes y Límites del Sistema]]`. |
+| **"Función bloqueada con candado"** | Tu plan actual no incluye el módulo Analítica IA. | Mejorá a un plan Pro o E-commerce desde `[[22 - Suscripción, Planes y Límites del Sistema]]`. |
 | **"La respuesta tarda unos segundos"** | La IA está realizando consultas analíticas profundas sobre grandes volúmenes de ventas. | Aguardá a que finalice el indicador de escritura en tiempo real. |
 | **"No tengo ventas suficientes para responder"** | El comercio es nuevo y cuenta con pocas transacciones históricas. | A medida que registres ventas y compras, las proyecciones se volverán más precisas. |
 
@@ -131,6 +131,6 @@ Para abrir el asistente inteligente:
   - `POST /copilot-ia/chat` (Envío de mensajes con contexto transaccional en streaming/JSON).
   - `GET /copilot-ia/kpis` (Obtención de métricas en vivo para el banner).
   - `GET /copilot-ia/sugerencias` (Tópicos analíticos recomendados según el rubro).
-- **Modelo de IA:** Integración interna calibrada con GPT-6 Luna y prompts estructurados con RLS por empresa.
+- **Modelo de IA:** Motor interno calibrado de Analítica IA con prompts estructurados y RLS por empresa.
 
 </details>

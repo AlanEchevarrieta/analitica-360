@@ -5,6 +5,7 @@
 @import "../styles/paletas.css";
 @import "../styles/consola.css";
 @import "../styles/tour.css";
+@import "../styles/guias.css";
 
 @custom-variant dark (&:is(.dark *));
 

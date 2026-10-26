@@ -84,7 +84,7 @@ graph TD
 3. **[[03 - Dashboard de Inicio y Métricas en Tiempo Real]]**
    - Ventas de hoy, semana y mes, compras mensuales, gráfico de 7 días y alertas de Monotributo.
 4. **[[04 - Copilot IA - Asistente Estratégico de Negocio]]**
-   - Inteligencia artificial GPT-6 Luna para análisis de rentabilidad, proyecciones de stock y respuestas ejecutivas en lenguaje natural.
+   - Inteligencia artificial Analítica IA para análisis de rentabilidad, proyecciones de stock y respuestas ejecutivas en lenguaje natural.
 
 ### 💰 2. Ventas, Clientes y Servicios
 5. **[[05 - Punto de Venta (POS), Cobros y Facturación ARCA]]**

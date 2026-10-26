@@ -62,7 +62,7 @@ graph TD
 | **Stock, Compras e Inventario** | Limitado | ✅ | ✅ | ✅ |
 | **Facturación Electrónica ARCA** | Opcional | ✅ | ✅ | ✅ |
 | **Objetivos de Venta** | ❌ | ✅ | ✅ | ✅ |
-| **Copilot IA (GPT-6 Luna)** | ❌ | ❌ | ✅ | ✅ |
+| **Copilot IA (Analítica IA)** | ❌ | ❌ | ✅ | ✅ |
 | **Agenda de Turnos y Citas** | ❌ | ❌ | ✅ | ✅ |
 | **Abonos y Membresías** | ❌ | ❌ | ✅ | ✅ |
 | **Órdenes de Trabajo (Taller)** | ❌ | ❌ | ✅ | ✅ |

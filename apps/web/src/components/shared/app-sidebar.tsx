@@ -9,6 +9,7 @@ import { SoloCliente } from "@/components/shared/solo-cliente";
 import { useAcceso } from "@/hooks/use-acceso";
 import {
   BarChart3,
+  BookOpen,
   CalendarDays,
   Repeat,
   Target,
@@ -136,6 +137,7 @@ export function AppSidebar() {
       titulo: "Cuenta",
       abajo: true,
       items: [
+        { href: "/guias", label: "Guías y Manuales", icon: BookOpen },
         { href: "/soporte", label: "Soporte", icon: Ticket, badge: ticketsNoLeidos ?? 0 },
         { href: "/planes", label: "Planes", icon: Star },
         { href: "/recomendar", label: "Recomendá y ganá", icon: Gift, visible: verConfig },
