@@ -19,8 +19,47 @@ const isPublicRoute = createRouteMatcher([
   "/api/webhooks/clerk",
 ]);
 
-// La API (datos y fotos de /archivos) vive en otro origen: hay que permitirla.
-const API = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
+function obtenerOrigenesValidos(url?: string): string[] {
+  if (!url) return [];
+  try {
+    const parsed = new URL(url);
+    // CSP requiere el origen (protocolo + host + puerto), sin ruta (/api)
+    return [parsed.origin];
+  } catch {
+    const limpio = url.replace(/\/+$/, "");
+    return limpio ? [limpio] : [];
+  }
+}
+
+const apiOrigins = [
+  ...obtenerOrigenesValidos(process.env.NEXT_PUBLIC_API_URL),
+  ...obtenerOrigenesValidos(process.env.API_URL_INTERNA),
+];
+
+const dominiosConexion = Array.from(
+  new Set([
+    "self",
+    "https://analitica360.app",
+    "https://*.analitica360.app",
+    "http://localhost:*",
+    "http://127.0.0.1:*",
+    ...apiOrigins,
+  ]),
+);
+
+const dominiosImagenes = Array.from(
+  new Set([
+    "self",
+    "data:",
+    "blob:",
+    "https://analitica360.app",
+    "https://*.analitica360.app",
+    "https://img.clerk.com",
+    "http://localhost:*",
+    "http://127.0.0.1:*",
+    ...apiOrigins,
+  ]),
+);
 
 export default clerkMiddleware(
   async (auth, request) => {
@@ -37,10 +76,9 @@ export default clerkMiddleware(
     contentSecurityPolicy: {
       strict: true,
       directives: {
-        "connect-src": API ? [API] : [],
-        // Fotos: de la API (/archivos) y avatares de Clerk (que ya trae su default). Con el
-        // almacenamiento de producción, sumar su dominio acá.
-        "img-src": ["self", "data:", "blob:", ...(API ? [API] : [])],
+        "connect-src": dominiosConexion,
+        // Fotos: de la API (/archivos) y avatares de Clerk (que ya trae su default).
+        "img-src": dominiosImagenes,
         "font-src": ["self", "data:"],
         "object-src": ["none"],
         "base-uri": ["self"],
