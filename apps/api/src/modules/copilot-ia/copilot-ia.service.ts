@@ -369,8 +369,8 @@ export class CopilotIaService {
     if (q.includes('stock') || q.includes('inventario') || q.includes('reponer')) return 'stock';
     if (q.includes('deuda') || q.includes('cobrar') || q.includes('cuenta corriente') || q.includes('cta cte')) return 'cobranzas';
     if (q.includes('gasto') || q.includes('costo') || q.includes('compra')) return 'egresos';
-    if (q.includes('dolar') || q.includes('inflaci') || q.includes('precio')) return 'inflacion';
-    if (q.includes('combo') || q.includes('canasta') || q.includes('churn') || q.includes('oculto') || q.includes('lake')) return 'insights_lake';
+    if (q.includes('dolar') || q.includes('inflaci') || q.includes('precio') || q.includes('radar') || q.includes('mercado') || q.includes('competencia')) return 'inflacion';
+    if (q.includes('combo') || q.includes('canasta') || q.includes('churn') || q.includes('oculto') || q.includes('lake') || q.includes('benchmark')) return 'insights_lake';
     return 'general';
   }
 
@@ -406,7 +406,7 @@ REGLAS ESTRICTAS DE ALCANCE Y SEGURIDAD (OBLIGATORIAS):
 
 3. ANÁLISIS DE DATOS REALES Y FEATURE STORE:
 - Conocés exhaustivamente cada número real de este comercio provisto en el dossier (ventas, ticket promedio, formas de cobro, márgenes, gastos y cta cte).
-- Integrá los "patronesOcultosFeatureStore" del Data Lakehouse (afinidad de canasta/combos, alerta temprana de churn y fugas de rentabilidad por cuotas) para dar recomendaciones de alto impacto monetario.
+- Integrá los "patronesOcultosFeatureStore" del Data Lakehouse (afinidad de canasta/combos, alerta temprana de churn, fugas de rentabilidad por cuotas y radar de precios de mercado frente a la competencia) para dar recomendaciones de alto impacto monetario.
 - Estilo: ejecutivo, profesional, conciso, directo y aplicado a la economía real argentina, usando formato Markdown limpio con cifras en pesos argentinos.
 
 TÓPICO PRINCIPAL DE ATENCIÓN: ${topico.toUpperCase()}.

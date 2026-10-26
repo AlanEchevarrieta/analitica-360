@@ -54,6 +54,7 @@ import { TiendaModule } from './modules/tienda/tienda.module.js';
 import { ConfiguracionModule } from './modules/configuracion/configuracion.module.js';
 import { CopilotIaModule } from './modules/copilot-ia/copilot-ia.module.js';
 import { LakeModule } from './modules/lake/lake.module.js';
+import { RadarPreciosModule } from './modules/radar-precios/radar-precios.module.js';
 
 @Module({
   imports: [
@@ -107,6 +108,7 @@ import { LakeModule } from './modules/lake/lake.module.js';
     MpTiendaModule,
     LakeModule,
     CopilotIaModule,
+    RadarPreciosModule,
   ],
   controllers: [AppController],
   // Límite general de pedidos por cliente (ver LimitePedidosGuard).

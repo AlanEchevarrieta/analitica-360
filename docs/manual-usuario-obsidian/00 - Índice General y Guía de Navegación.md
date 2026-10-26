@@ -64,6 +64,7 @@ graph TD
     D --> D3["[[13 - Compras a Proveedores y Recepción de Mercadería]]"]
     D --> D4["[[14 - Directorio de Proveedores y Cuentas Corrientes]]"]
     D --> D5["[[15 - Producción, Fórmulas y Recetas de Fabricación]]"]
+    D --> D6["[[26 - Radar de Precios de Mercado y Benchmark Competitivo]]"]
 
     E --> E1["[[16 - Analytics Comercial, Rentabilidad y Monotributo]]"]
     E --> E2["[[17 - Metas y Objetivos de Venta]]"]
@@ -117,6 +118,8 @@ graph TD
     - Padrón de proveedores comerciales, plazos de pago y seguimiento de saldos pendientes.
 15. **[[15 - Producción, Fórmulas y Recetas de Fabricación]]**
     - Definición de recetas (BOM), explosión de insumos de stock, cálculo de costo unitario y registro de órdenes de fabricación.
+16. **[[26 - Radar de Precios de Mercado y Benchmark Competitivo]]**
+    - Scraping de precios en MercadoLibre y e-commerce, filtrado estadístico IQR, detección de margen regalado y alineación en 1 clic.
 
 ### 📈 4. Gestión, Control y Finanzas
 16. **[[16 - Analytics Comercial, Rentabilidad y Monotributo]]**

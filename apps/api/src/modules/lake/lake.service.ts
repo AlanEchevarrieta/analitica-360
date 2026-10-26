@@ -241,6 +241,89 @@ export class LakeService {
         }
       }
 
+      // 4. Algoritmo de Competitividad de Precios de Mercado (Radar de Precios)
+      const eventosBenchmark = this.prisma.lakeEvento?.findMany
+        ? await this.prisma.lakeEvento.findMany({
+            where: {
+              empresaId,
+              tipoEvento: 'benchmark_precio_mercado',
+              fecha: { gte: hace60Dias },
+            },
+            orderBy: { fecha: 'desc' },
+            take: 50,
+          })
+        : [];
+
+      if (eventosBenchmark.length > 0) {
+        // Tomamos el último benchmark por producto
+        const ultimosPorProd = new Map<string, any>();
+        for (const ev of eventosBenchmark) {
+          if (ev.entidadId && !ultimosPorProd.has(ev.entidadId)) {
+            ultimosPorProd.set(ev.entidadId, ev.payload);
+          }
+        }
+
+        const baratos: any[] = [];
+        const caros: any[] = [];
+
+        for (const b of ultimosPorProd.values()) {
+          const brecha = Number(b?.metricas?.brechaPorcentaje ?? 0);
+          if (brecha < -12) {
+            baratos.push(b);
+          } else if (brecha > 12) {
+            caros.push(b);
+          }
+        }
+
+        if (baratos.length > 0) {
+          baratos.sort((a, b) => (a.metricas?.brechaPorcentaje ?? 0) - (b.metricas?.brechaPorcentaje ?? 0));
+          const topBaratos = baratos.slice(0, 3);
+          const listaStr = topBaratos
+            .map(
+              (p) =>
+                `"${p.nombre}" ($${Number(p.precioLocal).toLocaleString('es-AR')} vs mercado $${Number(p.metricas.precioMediana).toLocaleString('es-AR')}, ${p.metricas.brechaPorcentaje}%)`,
+            )
+            .join(' · ');
+
+          insights.push({
+            categoria: 'oportunidad_margen',
+            prioridad: 'alta',
+            titulo: `Oportunidad de Margen: ${baratos.length} producto(s) están muy por debajo del mercado`,
+            descripcionTecnica: `El Radar de Precios detectó productos con precios inferiores en más de un 12% a la mediana del mercado: ${listaStr}.`,
+            sugerenciaAccionable: `Revisar y actualizar estos precios en el Catálogo o usar "Alinear Precio" en el Radar de Precios para capturar mayor rentabilidad sin perder competitividad.`,
+            datos: {
+              cantidadProductosBaratos: baratos.length,
+              productos: topBaratos,
+            },
+            validoHasta,
+          });
+        }
+
+        if (caros.length > 0) {
+          caros.sort((a, b) => (b.metricas?.brechaPorcentaje ?? 0) - (a.metricas?.brechaPorcentaje ?? 0));
+          const topCaros = caros.slice(0, 3);
+          const listaStr = topCaros
+            .map(
+              (p) =>
+                `"${p.nombre}" ($${Number(p.precioLocal).toLocaleString('es-AR')} vs mercado $${Number(p.metricas.precioMediana).toLocaleString('es-AR')}, +${p.metricas.brechaPorcentaje}%)`,
+            )
+            .join(' · ');
+
+          insights.push({
+            categoria: 'desfasaje_competitivo',
+            prioridad: 'alta',
+            titulo: `Alerta de Competitividad: ${caros.length} producto(s) están caros frente al mercado`,
+            descripcionTecnica: `Productos con precio más de 12% superior al promedio de mercado: ${listaStr}.`,
+            sugerenciaAccionable: `Si estos artículos experimentan bajas ventas, evaluar aplicar una oferta temporal o ajustar el margen para evitar que los clientes elijan a la competencia.`,
+            datos: {
+              cantidadProductosCaros: caros.length,
+              productos: topCaros,
+            },
+            validoHasta,
+          });
+        }
+      }
+
       // Guardamos los insights generados en la caché del Feature Store
       if (insights.length > 0) {
         // Borramos insights previos de estas categorías para evitar duplicación

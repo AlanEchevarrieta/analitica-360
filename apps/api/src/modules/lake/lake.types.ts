@@ -11,7 +11,9 @@ export type CategoriaInsight =
   | 'churn_cliente'
   | 'rentabilidad_oculta'
   | 'proveedor_retraso'
-  | 'estacionalidad_horaria';
+  | 'estacionalidad_horaria'
+  | 'oportunidad_margen'
+  | 'desfasaje_competitivo';
 
 export type PrioridadInsight = 'critica' | 'alta' | 'media' | 'informativa';
 
