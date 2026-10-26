@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import {
   VENTAS_REPOSITORY,
   type ConfiguracionVenta,
@@ -15,6 +15,7 @@ import type {
   ConfirmarVentaInput,
   ListarVentasQuery,
 } from './ventas.dto.js';
+import { LakeService } from '../lake/lake.service.js';
 
 const MOTIVO_MENSAJE: Record<MotivoRechazoVenta, string> = {
   sin_productos: 'Agregá al menos un producto',
@@ -30,7 +31,10 @@ const MOTIVO_MENSAJE: Record<MotivoRechazoVenta, string> = {
 
 @Injectable()
 export class VentasService {
-  constructor(@Inject(VENTAS_REPOSITORY) private readonly ventasRepository: VentasRepository) {}
+  constructor(
+    @Inject(VENTAS_REPOSITORY) private readonly ventasRepository: VentasRepository,
+    @Optional() private readonly lakeService?: LakeService,
+  ) {}
 
   listar(empresaId: string, query: ListarVentasQuery): Promise<ListaVentas> {
     const filtro: FiltrosVentas = {
@@ -75,6 +79,24 @@ export class VentasService {
     if (!resultado.ok) throw new BadRequestException(MOTIVO_MENSAJE[resultado.motivo]);
     // Quién atendió: si no es de la empresa, se ignora (la venta ya está hecha).
     if (input.profesionalId) await this.ventasRepository.asignarProfesional(empresaId, resultado.venta.id, input.profesionalId);
+
+    // Ingesta al Data Lakehouse asíncrono
+    this.lakeService?.ingestarEvento({
+      empresaId,
+      tipoEvento: 'venta.registrada',
+      entidadId: resultado.venta.id,
+      payload: {
+        totalSinInteres: Number(resultado.venta.totalSinInteres),
+        totalConInteres: Number(resultado.venta.totalConInteres),
+        formaPago: resultado.venta.formaPago,
+        cuotas: input.cuotas,
+        coeficienteInteres: input.coeficienteInteres,
+        descuento: Number(resultado.venta.descuento ?? 0),
+        clienteId: input.clienteId ?? null,
+        itemsCount: input.items.length,
+      },
+    }).catch(() => {});
+
     return resultado.venta;
   }
 
@@ -90,6 +112,14 @@ export class VentasService {
     if (resultado === 'tiene_devoluciones') {
       throw new BadRequestException('La venta tiene devoluciones o cambios: cancelalos antes de anularla');
     }
+
+    // Ingesta de anulación en el Data Lakehouse
+    this.lakeService?.ingestarEvento({
+      empresaId,
+      tipoEvento: 'venta.anulada',
+      entidadId: id,
+      payload: { motivo: input.motivo, usuarioId },
+    }).catch(() => {});
   }
 
   async cobrarSaldo(empresaId: string, id: string, input: CobrarSaldoVentaInput, usuarioId: string): Promise<VentaRecord> {

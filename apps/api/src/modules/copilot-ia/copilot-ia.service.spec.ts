@@ -3,9 +3,24 @@ import { CopilotIaService } from './copilot-ia.service.js';
 import { Prisma } from '@prisma/client';
 
 describe('CopilotIaService', () => {
+  const mockLakeService = {
+    ingestarEvento: vi.fn().mockResolvedValue(undefined),
+    generarInsightsOcultos: vi.fn().mockResolvedValue([]),
+    obtenerInsightsEmpresa: vi.fn().mockResolvedValue([
+      {
+        categoria: 'afinidad_canasta',
+        prioridad: 'alta',
+        titulo: 'Afinidad Oculta: Remera y Jean',
+        descripcionTecnica: 'Co-ocurrencia del 80%',
+        sugerenciaAccionable: 'Crear combo promocional',
+        datos: {},
+      },
+    ]),
+  };
+
   const mockPrisma = {
     $queryRaw: vi.fn().mockResolvedValue([
-      { nombre: 'Remera Algodón', cantidad: BigInt(10) },
+      { nombre: 'Remera Algodón', cantidad: BigInt(10), total_recaudado: 50000, ganancia_bruta: 25000 },
     ]),
     empresa: {
       findUnique: vi.fn().mockResolvedValue({
@@ -64,7 +79,7 @@ describe('CopilotIaService', () => {
   };
 
   it('procesa una consulta general y retorna análisis con métricas del negocio', async () => {
-    const service = new CopilotIaService(mockPrisma as any);
+    const service = new CopilotIaService(mockPrisma as any, mockLakeService as any);
     const resultado = await service.procesarMensaje('empresa-123', {
       mensaje: '¿Cómo vienen mis ventas y productos más vendidos?',
     });
@@ -79,7 +94,7 @@ describe('CopilotIaService', () => {
   });
 
   it('procesa consulta específica del tópico cobranzas alimentando datos de deudores', async () => {
-    const service = new CopilotIaService(mockPrisma as any);
+    const service = new CopilotIaService(mockPrisma as any, mockLakeService as any);
     const resultado = await service.procesarMensaje('empresa-123', {
       mensaje: '¿Quiénes me deben plata?',
       topico: 'cobranzas',
@@ -92,11 +107,12 @@ describe('CopilotIaService', () => {
   });
 
   it('obtiene sugerencias contextuales basadas en la situación de la empresa', async () => {
-    const service = new CopilotIaService(mockPrisma as any);
+    const service = new CopilotIaService(mockPrisma as any, mockLakeService as any);
     const sugerencias = await service.obtenerSugerencias('empresa-123');
 
     expect(sugerencias).toBeInstanceOf(Array);
     expect(sugerencias.length).toBeGreaterThan(2);
     expect(sugerencias.some((s) => s.includes('ventas con saldo a cobrar'))).toBe(true);
+    expect(sugerencias.some((s) => s.includes('combo'))).toBe(true);
   });
 });

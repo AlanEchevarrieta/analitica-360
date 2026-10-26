@@ -3,8 +3,10 @@ import { VentasController } from './ventas.controller.js';
 import { VentasService } from './ventas.service.js';
 import { VENTAS_REPOSITORY } from './ventas.repository.js';
 import { PrismaVentasRepository } from './prisma-ventas.repository.js';
+import { LakeModule } from '../lake/lake.module.js';
 
 @Module({
+  imports: [LakeModule],
   controllers: [VentasController],
   providers: [
     VentasService,

@@ -53,6 +53,7 @@ import { AuditoriaModule } from './modules/auditoria/auditoria.module.js';
 import { TiendaModule } from './modules/tienda/tienda.module.js';
 import { ConfiguracionModule } from './modules/configuracion/configuracion.module.js';
 import { CopilotIaModule } from './modules/copilot-ia/copilot-ia.module.js';
+import { LakeModule } from './modules/lake/lake.module.js';
 
 @Module({
   imports: [
@@ -104,6 +105,7 @@ import { CopilotIaModule } from './modules/copilot-ia/copilot-ia.module.js';
     ArcaModule,
     EnviosModule,
     MpTiendaModule,
+    LakeModule,
     CopilotIaModule,
   ],
   controllers: [AppController],

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
+import { LakeService } from '../lake/lake.service.js';
 import type { CopilotChatDto, CopilotRespuesta } from './dto/copilot-chat.dto.js';
 import { Result } from '../../common/result/result.js';
 
@@ -8,11 +9,14 @@ import { Result } from '../../common/result/result.js';
 export class CopilotIaService {
   private readonly logger = new Logger('CopilotIA');
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly lakeService: LakeService,
+  ) {}
 
   /**
    * Procesa la consulta del usuario combinando métricas en vivo con OpenAI / LLM o heurística contextual.
-   * Alimenta a GPT-6 Luna con un Dossier 360° integral de todo el negocio (ventas, compras, gastos, stock, cta cte, dólar).
+   * Alimenta a GPT-6 Luna con un Dossier 360° integral de todo el negocio (ventas, compras, gastos, stock, cta cte, dólar y Lake Feature Store).
    */
   async procesarMensaje(empresaId: string, input: CopilotChatDto): Promise<Result<CopilotRespuesta>> {
     try {
@@ -24,13 +28,14 @@ export class CopilotIaService {
       const metricasUtilizadas = {
         totalVentasPeriodo: (dossierCompleto.ventas as any)?.totalUltimos30Dias ?? 0,
         ticketPromedio: (dossierCompleto.ventas as any)?.ticketPromedio ?? 0,
-        productosLideres: (dossierCompleto.productos as any)?.topVendidos ?? [],
+        productosLideres: (dossierCompleto.rentabilidad as any)?.topVendidos ?? [],
         stockCriticoCount: Math.min((dossierCompleto.inventario as any)?.totalProductosActivos ?? 0, 3),
         deudaClientesTotal: (dossierCompleto.cuentasCorrientes as any)?.totalAdeudado ?? 0,
         dolarReferencia: {
           tipo: 'Dólar Blue',
           valor: (dossierCompleto.macroeconomia as any)?.dolarBlue ?? 1200,
         },
+        patronesOcultos: dossierCompleto.patronesOcultosFeatureStore ?? [],
         topicoAnalizado: topicoDeterminado,
         detalleTopico: dossierCompleto,
       };
@@ -48,7 +53,7 @@ export class CopilotIaService {
         try {
           respuestaTexto = await this.consultarLlm(apiKey, modelo, input, dossierCompleto, topicoDeterminado);
           proveedor = 'openai';
-          respuestaTexto += `\n\n> ✨ *Generado con IA en vivo (${modelo})*`;
+          respuestaTexto += `\n\n> ✨ *Generado con IA en vivo (${modelo}) + Data Lake Feature Store*`;
         } catch (err) {
           errorLlm = (err as Error).message;
           this.logger.warn(`Fallo llamada a LLM, usando motor heurístico: ${errorLlm}`);
@@ -64,7 +69,7 @@ export class CopilotIaService {
         errorLlm = 'Sin OPENAI_API_KEY configurada en .env';
         this.logger.log(`Sin API Key configurada. Usando motor heurístico financiero para empresa ${empresaId}`);
         respuestaTexto = this.generarRespuestaHeuristica(input.mensaje, metricasUtilizadas, topicoDeterminado);
-        respuestaTexto += `\n\n> ℹ️ *Motor: Heurístico local (Sin OPENAI_API_KEY en .env)*`;
+        respuestaTexto += `\n\n> ℹ️ *Motor: Heurístico local + Data Lake Feature Store (Sin OPENAI_API_KEY en .env)*`;
       }
 
       // 3. Generar sugerencias dinámicas según la salud del negocio
@@ -85,12 +90,15 @@ export class CopilotIaService {
   }
 
   /**
-   * Genera sugerencias contextuales para el usuario según sus métricas de negocio.
+   * Genera sugerencias contextuales para el usuario según sus métricas de negocio y patrones ocultos del lake.
    */
   async obtenerSugerencias(empresaId: string): Promise<string[]> {
-    const ventasPendientes = await this.prisma.venta.count({
-      where: { empresaId, saldoPendiente: { gt: 0 }, deletedAt: null },
-    }).catch(() => 0);
+    const [ventasPendientes, insights] = await Promise.all([
+      this.prisma.venta.count({
+        where: { empresaId, saldoPendiente: { gt: 0 }, deletedAt: null },
+      }).catch(() => 0),
+      this.lakeService.obtenerInsightsEmpresa(empresaId).catch(() => []),
+    ]);
 
     const sugerencias = [
       '¿Cómo vienen mis ventas de los últimos 30 días y mi punto de equilibrio?',
@@ -101,13 +109,24 @@ export class CopilotIaService {
       sugerencias.push(`Tengo ${ventasPendientes} ventas con saldo a cobrar: ¿quiénes me deben más?`);
     }
 
+    for (const ins of insights.slice(0, 2)) {
+      if (ins.categoria === 'afinidad_canasta') {
+        sugerencias.push('¿Qué productos se compran juntos y qué combo promocional puedo armar?');
+      } else if (ins.categoria === 'churn_cliente') {
+        sugerencias.push('¿Qué clientes habituales dejaron de comprar y cómo reactivarlos?');
+      } else if (ins.categoria === 'rentabilidad_oculta') {
+        sugerencias.push('¿Estoy perdiendo margen al financiar ventas en cuotas?');
+      }
+    }
+
     sugerencias.push('¿Cómo cubrir mis costos frente a la inflación y el dólar?');
-    return sugerencias;
+    return Array.from(new Set(sugerencias)).slice(0, 5);
   }
 
   /**
    * Construye el Dossier 360° más exhaustivo del negocio para alimentar la IA:
-   * Ventas, Márgenes, Gastos fijos/variables, Compras, Stock, Deudores y Tipo de cambio.
+   * Ventas, Márgenes, Gastos fijos/variables, Compras, Stock, Deudores, Tipo de cambio
+   * y Patrones Ocultos precalculados por el Data Lake & Feature Store.
    */
   private async recopilarDossierNegocio360(
     empresaId: string,
@@ -129,6 +148,7 @@ export class CopilotIaService {
       cotizacionesDolarRaw,
       totalProductosActivos,
       totalProductosInactivos,
+      insightsOcultosLake,
     ] = await Promise.all([
       this.prisma.empresa.findUnique({
         where: { id: empresaId },
@@ -152,8 +172,12 @@ export class CopilotIaService {
         select: { totalSinInteres: true, totalConInteres: true },
       }).catch(() => []),
 
-      this.prisma.$queryRaw<{ nombre: string; cantidad: bigint }[]>(Prisma.sql`
-        SELECT p.nombre, COALESCE(SUM(i.cantidad), 0)::bigint AS cantidad
+      this.prisma.$queryRaw<{ nombre: string; cantidad: bigint; total_recaudado: number; ganancia_bruta: number }[]>(Prisma.sql`
+        SELECT 
+          p.nombre, 
+          COALESCE(SUM(i.cantidad), 0)::bigint AS cantidad,
+          COALESCE(SUM(i.cantidad * i.precio_unitario), 0)::numeric AS total_recaudado,
+          COALESCE(SUM(i.cantidad * (i.precio_unitario - COALESCE(i.costo_unitario, p.costo, 0))), 0)::numeric AS ganancia_bruta
         FROM ventas_items i
         JOIN ventas v ON v.id = i.venta_id
         JOIN productos p ON p.id = i.producto_id
@@ -205,6 +229,8 @@ export class CopilotIaService {
       this.prisma.producto.count({
         where: { empresaId, deletedAt: null, activo: false },
       }).catch(() => 0),
+
+      this.lakeService.obtenerInsightsEmpresa(empresaId).catch(() => []),
     ]);
 
     // 1. Métricas de Ventas y Facturación
@@ -242,11 +268,12 @@ export class CopilotIaService {
       totalDescuentos += Number(v.descuento ?? 0);
     }
 
-    // 2. Productos y Rentabilidad
+    // 2. Productos y Rentabilidad (Con totales exactos de facturación y margen)
     const topVendidos = productosLideresRaw.map((p) => ({
       nombre: p.nombre,
       unidadesVendidas: Number(p.cantidad),
-      ingresoAproximado: Number(p.cantidad) * (ticketPromedio > 0 ? ticketPromedio : 1000),
+      totalRecaudadoExacto: Number(p.total_recaudado ?? 0),
+      gananciaBrutaExacta: Number(p.ganancia_bruta ?? 0),
     }));
 
     const margenesMuestra = productosConMargenRaw.map((p) => {
@@ -332,6 +359,7 @@ export class CopilotIaService {
         dolarMep: dolarMep ? Number(dolarMep) : null,
         brechaCambiariaPct,
       },
+      patronesOcultosFeatureStore: insightsOcultosLake,
       focoActual: topicoDeterminado,
     };
   }
@@ -347,6 +375,7 @@ export class CopilotIaService {
     if (q.includes('deuda') || q.includes('cobrar') || q.includes('cuenta corriente') || q.includes('cta cte')) return 'cobranzas';
     if (q.includes('gasto') || q.includes('costo') || q.includes('compra')) return 'egresos';
     if (q.includes('dolar') || q.includes('inflaci') || q.includes('precio')) return 'inflacion';
+    if (q.includes('combo') || q.includes('canasta') || q.includes('churn') || q.includes('oculto') || q.includes('lake')) return 'insights_lake';
     return 'general';
   }
 
@@ -361,12 +390,18 @@ export class CopilotIaService {
       const nombreEmpresa = (dossier.identidad as any)?.nombre || 'este negocio';
       const systemPrompt = `Sos Analítica Copilot (impulsado por ${modelo}), el Director Financiero (CFO), estratega de precios y consultor de inteligencia de negocios para "${nombreEmpresa}".
 Conocés exhaustivamente cada número real de este comercio: sus ventas, ticket promedio, métodos de cobro, márgenes de ganancia, gastos fijos/variables, clientes deudores y cotización del dólar.
+Además, contás con la sección "patronesOcultosFeatureStore" proveniente del Data Lakehouse en PostgreSQL del comercio, que detecta patrones matemáticos no visibles en los dashboards comunes:
+1. Afinidad de canasta (Market Basket Analysis): Productos con altísima co-ocurrencia para armar combos y cross-selling inmediato.
+2. Detección temprana de Churn / Retención: Clientes habituales cuyo tiempo sin comprar superó el doble de su frecuencia normal (riesgo de pérdida).
+3. Fuga silenciosa de rentabilidad: Ventas en cuotas con coeficiente de interés menor a la inflación o retenciones de tarjetas.
+
 Tu objetivo es dar diagnósticos ejecutivos de máximo nivel, precisos y aplicados a la economía real argentina.
 TÓPICO PRINCIPAL DE ATENCIÓN: ${topico.toUpperCase()}.
 Respondé con estilo profesional, directo, analítico y cercano, usando formato Markdown (con negritas y listas limpias).
+Siempre que sea relevante, integrá y destacá los patrones ocultos del Data Lake para sorprender al comerciante con oportunidades de ingresos que no vio en sus reportes tradicionales.
 
 =======================================================
-DOSSIER 360° EN VIVO DEL NEGOCIO (DATOS REALES):
+DOSSIER 360° EN VIVO DEL NEGOCIO (DATOS REALES & FEATURE STORE):
 =======================================================
 ${JSON.stringify(dossier, null, 2)}
 =======================================================
@@ -522,18 +557,48 @@ Enviá recordatorios amigables de cobro por WhatsApp a los clientes con más de 
 Cotizá tu mercadería según el costo de reposición actual y evitá financiar en pesos a largo plazo sin tasa de recargo calculada.`;
     }
 
-    return `🤖 **Analítica Copilot (GPT-6 Luna)**
-Analicé el Dossier 360° de tu empresa:
+    if (topico === 'insights_lake' || q.includes('combo') || q.includes('canasta') || q.includes('churn') || q.includes('oculto') || q.includes('lake')) {
+      const insights = (metricas.patronesOcultos as any[]) || [];
+      if (insights.length === 0) {
+        return `🔍 **Patrones Ocultos & Data Lake**
+Aún estamos procesando y clusterizando suficientes eventos históricos para tu comercio. A medida que registres más ventas, nuestro algoritmo de Market Basket y detección de Churn te sugerirá combos de alta conversión y clientes en riesgo.`;
+      }
+
+      const lista = insights.map((ins, i) => {
+        const icon = ins.categoria === 'afinidad_canasta' ? '🧺' : ins.categoria === 'riesgo_churn' ? '👥' : '⚠️';
+        return `### ${icon} ${ins.titulo} (Prioridad: ${ins.prioridad.toUpperCase()})
+- **Diagnóstico:** ${ins.descripcionTecnica}
+- **Acción recomendada:** ${ins.sugerenciaAccionable}`;
+      }).join('\n\n');
+
+      return `🧠 **Hallazgos Ocultos Detectados por el Data Lakehouse**
+Hemos detectado correlaciones que no figuran en los dashboards tradicionales:
+
+${lista}
+
+💡 *Estos patrones se actualizan automáticamente en el Feature Store en segundo plano.*`;
+    }
+
+    const insights = (metricas.patronesOcultos as any[]) || [];
+    const alertaLake = insights.length > 0
+      ? `\n- 🔍 **Patrones ocultos activos en Lake:** ${insights.length} hallazgo(s) listos para aprovechar.`
+      : '';
+
+    return `🤖 **Analítica Copilot (GPT-6 Luna + Data Lakehouse)**
+Analicé el Dossier 360° y el Feature Store de tu empresa:
 - **Ventas (30d):** $${metricas.totalVentasPeriodo.toLocaleString('es-AR')} (Ticket promedio: $${metricas.ticketPromedio.toLocaleString('es-AR')})
 - **Stock en alerta:** ${metricas.stockCriticoCount} productos.
 - **Cobros pendientes:** $${metricas.deudaClientesTotal.toLocaleString('es-AR')}.
-- **Dólar de referencia:** $${metricas.dolarReferencia.valor} (${metricas.dolarReferencia.tipo}).
+- **Dólar de referencia:** $${metricas.dolarReferencia.valor} (${metricas.dolarReferencia.tipo}).${alertaLake}
 
-Seleccioná un tópico para ver queries y métricas en profundidad o hacé tu consulta.`;
+Seleccioná un tópico para ver métricas en profundidad o preguntame directamente por combos, clientes en riesgo o rentabilidad.`;
   }
 
   private generarSugerenciasDinamicas(metricas: any): string[] {
     const sugerencias = ['¿Cómo mejorar mi ticket promedio?'];
+    if (metricas.patronesOcultos && metricas.patronesOcultos.length > 0) {
+      sugerencias.push('¿Cuáles son los patrones ocultos que detectó el Data Lake?');
+    }
     if (metricas.stockCriticoCount > 0) {
       sugerencias.push('¿Qué productos tengo en stock crítico?');
     }
@@ -541,6 +606,6 @@ Seleccioná un tópico para ver queries y métricas en profundidad o hacé tu co
       sugerencias.push('¿Cómo cobrar las cuentas corrientes pendientes?');
     }
     sugerencias.push('¿Cuál es mi rentabilidad estimada este mes?');
-    return sugerencias;
+    return sugerencias.slice(0, 5);
   }
 }

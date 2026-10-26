@@ -159,13 +159,13 @@ export function AppSidebar() {
         {puede("inicio") && (
           <SidebarGroup className="py-1">
             <SidebarMenu>
-              <SidebarMenuItem>
+              <SidebarMenuItem id="tour-inicio">
                 <SidebarMenuButton render={<Link href="/inicio" />} isActive={pathname === "/inicio"} tooltip="Inicio">
                   <Home />
                   <span>Inicio</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
+              <SidebarMenuItem id="tour-copilot">
                 <SidebarMenuButton render={<Link href="/ia" />} isActive={pathname === "/ia"} tooltip="Copilot IA">
                   <Sparkles className="text-emerald-400" />
                   <span className="flex items-center gap-1.5 font-medium">
@@ -190,8 +190,9 @@ export function AppSidebar() {
                 {items.map((item) => {
                   const funcion = item.funcion ?? item.modulo;
                   const bloqueado = Boolean(funcion) && !plan.incluye(funcion!);
+                  const tourId = `tour-${item.href.replace(/^\//, '')}`;
                   return (
-                    <SidebarMenuItem key={item.href}>
+                    <SidebarMenuItem key={item.href} id={tourId}>
                       <SidebarMenuButton render={<Link href={item.href} />} isActive={activo(item.href)} tooltip={item.label} className={bloqueado ? "text-muted-foreground" : undefined}>
                         <item.icon />
                         <span>{item.label}</span>

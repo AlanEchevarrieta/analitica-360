@@ -4,6 +4,7 @@
 @import "../styles/tokens.css";
 @import "../styles/paletas.css";
 @import "../styles/consola.css";
+@import "../styles/tour.css";
 
 @custom-variant dark (&:is(.dark *));
 

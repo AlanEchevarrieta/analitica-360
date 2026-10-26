@@ -125,12 +125,14 @@ model Empresa {
   eventosUso     EventoUso[]
   objetivos      Objetivo[]
   mercadoPago    MercadoPagoSuscripcion?
-  arcaConfig     ArcaConfig?
-  envioConfig    EnvioConfig?
-  mpCuentaTienda MpCuentaTienda?
-  comprobantes   Comprobante[]
-  cuponesTienda  CuponTienda[]
-  cuentasTienda  CuentaTienda[]
+  arcaConfig           ArcaConfig?
+  envioConfig          EnvioConfig?
+  mpCuentaTienda       MpCuentaTienda?
+  comprobantes         Comprobante[]
+  cuponesTienda        CuponTienda[]
+  cuentasTienda        CuentaTienda[]
+  lakeEventos          LakeEvento[]
+  copilotInsightsCache CopilotInsightCache[]
 
   @@unique([camaraId, ordenCamara])
   @@map("empresas")
@@ -2394,4 +2396,41 @@ model MpCuentaTienda {
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@map("mp_cuentas_tienda")
+}
+
+// ==== Lakehouse & Feature Store Analítico para Copilot IA ====
+
+model LakeEvento {
+  id         String   @id @default(uuid()) @db.Uuid
+  empresaId  String   @map("empresa_id") @db.Uuid
+  tipoEvento String   @map("tipo_evento") @db.VarChar(50)
+  entidadId  String?  @map("entidad_id") @db.VarChar(100)
+  fecha      DateTime @default(now())
+  horaDia    Int      @map("hora_dia") @db.SmallInt
+  diaSemana  Int      @map("dia_semana") @db.SmallInt
+  payload    Json
+  metadata   Json?
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, tipoEvento, fecha], map: "idx_lake_empresa_tipo")
+  @@map("lake_eventos")
+}
+
+model CopilotInsightCache {
+  id                   String    @id @default(uuid()) @db.Uuid
+  empresaId            String    @map("empresa_id") @db.Uuid
+  categoria            String    @db.VarChar(50)
+  prioridad            String    @default("media") @db.VarChar(20)
+  titulo               String    @db.VarChar(200)
+  descripcionTecnica   String    @map("descripcion_tecnica")
+  sugerenciaAccionable String    @map("sugerencia_accionable")
+  datos                Json
+  validoHasta          DateTime? @map("valido_hasta")
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, categoria, prioridad], map: "idx_insights_empresa")
+  @@map("copilot_insights_cache")
 }

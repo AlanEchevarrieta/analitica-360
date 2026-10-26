@@ -1,372 +1,335 @@
-# Graph Report - analitica-360  (2026-10-05)
+# Graph Report - analitica-360  (2026-10-26)
 
 ## Corpus Check
-- 849 files · ~515,788 words
+- 1129 files · ~488,842 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 8497 nodes · 23536 edges · 367 communities (266 shown, 101 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 495 edges (avg confidence: 0.82)
-- Token cost: 198,942 input · 0 output
+- 8101 nodes · 22545 edges · 312 communities (255 shown, 57 thin omitted)
+- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 629 edges (avg confidence: 0.79)
+- Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `abc353d1`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- Web: analytics
-- App vieja (Vite): lib
-- Web: produccion
-- API: tienda
-- API común: auth
-- API: clientes
-- App vieja (Vite): lib (2)
-- API: tienda (2)
-- Web: configuracion
-- App vieja (Vite): components
-- Web: ventas
-- Web: clientes
-- API: soporte
-- App vieja (Vite): lib (3)
-- App vieja (Vite): lib (4)
-- Web: configuracion (2)
-- App vieja (Vite): App
-- Web componentes: shared
-- API: ventas
-- App vieja (Vite): lib (5)
-- API: analytics
-- API: compras
-- App vieja (Vite): lib (6)
-- App vieja (Vite): lib (7)
-- Web: admin
-- App vieja (Vite): components (2)
-- App vieja (Vite): lib (8)
-- Web: admin (2)
-- API: tienda (3)
-- API: contabilidad
-- API: alianzas
-- API: analytics (2)
-- API: proveedores
-- API: ubicaciones
-- App vieja (Vite): lib (9)
-- API: alianzas (2)
-- Web: planes
-- API común: auditoria
-- API: contabilidad (2)
-- App vieja (Vite): lib (10)
-- API común: cache
-- API: admin-saas
-- API: analytics (3)
-- API: contabilidad (3)
-- API: alianzas (3)
-- API: productos
-- API: alianzas (4)
-- API: productos (2)
-- App vieja (Vite): lib (11)
-- Tienda modelo: app
-- API: productos (3)
-- API: import-export
-- API: productos (4)
-- Web: productos
-- Base de datos: migrations
-- API: compras (2)
-- API: productos (5)
-- App vieja (Vite): lib (12)
-- API: contabilidad (4)
-- API: planes
-- App vieja (Vite): lib (13)
-- App vieja (Vite): lib (14)
-- Tienda modelo: lib
-- API: configuracion
-- Web: package.json
-- Tienda modelo: README
-- Web: configuracion (3)
-- API: cuenta-corriente
-- Web: pedidos
-- App vieja (Vite): lib (15)
-- API: inventario
-- API: uso
-- Scripts: auditoria
-- App vieja (Vite): lib (16)
-- API: pedidos
-- API: tienda (4)
-- Web componentes: ui
-- Base de datos: migrations (2)
-- API: bajas
-- API: analytics (4)
-- API: tienda (5)
-- Tienda modelo: lib (2)
-- Web: src
-- Docs: especificacion_funcional_legacy
-- App vieja (Vite): lib (17)
-- API: contabilidad (5)
-- API: informes
-- General: package.json
-- General: tests
-- App vieja (Vite): lib (18)
-- API: alianzas (5)
-- API: listas-precios
-- API: tienda (6)
-- Scripts: auditoria (2)
-- API: productos (6)
-- API: auditoria
-- API: inventario (2)
-- API: contabilidad (6)
-- API: inventario (3)
-- API: tienda (7)
-- Web: package.json (2)
-- Docs: especificacion_tecnica_maestra.html
-- API: planes (2)
-- API: contabilidad (7)
-- API: notificaciones
-- API: produccion
-- Scripts: auditoria (3)
-- General: apps
-- API: pedidos (2)
-- API: pedidos (3)
-- Tienda modelo: lib (3)
-- Base de datos: migrations (3)
-- API: informes (2)
-- API: informes (3)
-- API: inventario (4)
-- API: produccion (2)
-- API: productos (7)
-- General: docker-compose.prod.yml
-- API: import-export (2)
-- API: planes (3)
-- API: tienda (8)
-- Tienda modelo: components
-- API: informes (4)
-- Web: components.json
-- Web: src (2)
-- Supabase viejo: 039_tickets_soporte
-- Base de datos: migrations (4)
-- API: bajas (2)
-- API: devoluciones
-- API: inventario (5)
-- General: apps (2)
-- Web: inventario
-- General: package.json (2)
-- General: tsconfig.app.json
-- General: apps (3)
-- General: apps (4)
-- Tienda modelo: components (2)
-- Tienda modelo: tsconfig.json
-- Web: registro
-- Web: tsconfig.json
-- General: package.json (3)
-- Base de datos: migrations (5)
-- API: inventario (6)
-- API: tienda (9)
-- API: tienda (10)
-- General: package.json (4)
-- App vieja (Vite): lib (19)
-- App vieja (Vite): components (3)
-- Supabase viejo: 035_variantes
-- API: devoluciones (2)
-- Web componentes: ui (2)
-- Scripts: medir-pantallas
-- Supabase viejo: 042_analytics_agregados
-- General: tsconfig.node.json
-- API: pedidos (4)
-- Supabase viejo: 017_clientes
-- API: contabilidad (8)
-- General: packages
-- API: tienda (11)
-- App vieja (Vite): lib (20)
-- General: apps (5)
-- API: alianzas (6)
-- API: devoluciones (3)
-- Scripts: recorrido-pantallas
-- Web componentes: shared (2)
-- Scripts: auditoria (4)
-- Scripts: prueba-carga
-- Supabase viejo: 046_lotes
-- General: apps (6)
-- General: apps (7)
-- API: analytics (5)
-- API: devoluciones (4)
-- API: inventario (7)
-- API: pedidos (5)
-- API: productos (8)
-- General: packages (2)
-- Supabase viejo: 006_productos
-- General: turbo.json
-- General: apps (8)
-- General: apps (9)
-- General: apps (10)
-- API: planes (4)
-- API: produccion (3)
-- Tienda modelo: lib (4)
-- Web componentes: ui (3)
-- Supabase viejo: 007_ventas
-- Supabase viejo: 016_compras
-- Supabase viejo: 052_pedidos
-- Supabase viejo: 058_bugs_auditoria
-- Supabase viejo: 059_ordenes_compra
-- Base de datos: migrations (6)
-- API: alianzas (7)
-- API: inventario (8)
-- API: pedidos (6)
-- API: planes (5)
-- API: planes (6)
-- Web componentes: ui (4)
-- General: public
-- App vieja (Vite): recoveryRedirect
-- Supabase viejo: 026_inventario_alertas
-- API: devoluciones (5)
-- API: inventario (9)
-- Tienda modelo: components (3)
-- Tienda modelo: package.json
-- Web componentes: ui (5)
-- Web: compras
-- Supabase viejo: 001_auth_empresa
-- Supabase viejo: 034_venta_total_con_interes
-- Supabase viejo: 060_invitaciones_flujo
-- Supabase viejo: 067_devoluciones
-- Base de datos: migrations (7)
-- API: devoluciones (6)
-- API: productos (9)
-- Web: package.json (3)
-- Web rutas: privacidad
-- Scripts: auditoria (5)
-- Supabase viejo: 025_admin_saas
-- Supabase viejo: 037_numero_venta_anular_compras_
-- Supabase viejo: 047_ubicaciones
-- Supabase viejo: 054_equipo_roles
-- API: registro
-- Web: productos (2)
-- Scripts: recorrido-tienda
-- Supabase viejo: 003_asignar_y_trial_en_alta
-- Supabase viejo: 022_proveedores
-- Supabase viejo: 032_inventario_movimientos
-- Supabase viejo: 056_permisos_granulares
-- Supabase viejo: 068_senias
-- General: apps (11)
-- Base de datos: migrations (8)
-- General: apps (12)
-- API: compras (3)
-- General: apps (13)
-- Tienda modelo: package.json (2)
-- Supabase viejo: 014_analytics
-- Supabase viejo: 024_anular_ventas
-- Supabase viejo: 038_perf_seguridad_productos_ven
-- Supabase viejo: 040_codigo_barra
-- Supabase viejo: 062_fix_costo_venta
-- General: public (2)
-- General: apps (14)
-- Base de datos: migrations (9)
-- Base de datos: migrations (10)
-- General: apps (15)
-- API: admin-saas (2)
-- API: informes (5)
-- API: planes (7)
-- Tienda modelo: eslint.config
-- General: .oxlintrc.json
-- Supabase viejo: 028_saas_metrics
-- Supabase viejo: 012_dashboard_inicio
-- Supabase viejo: 013_dashboard_stock
-- Supabase viejo: 019_analytics_avanzado
-- Supabase viejo: 033_indices_inventario
-- Supabase viejo: 061_contabilidad
-- Supabase viejo: 070_rol_contador
-- Base de datos: migrations (11)
-- Web: package.json (4)
-- Supabase viejo: 064_notificaciones
-- Scripts: levantar-local.ps1
-- App vieja (Vite): pages
-- Supabase viejo: 008_cuotas_y_precio_actual
-- Supabase viejo: 045_importar_venta_variante
-- Supabase viejo: 048_insights_combos
-- Supabase viejo: 049_combos_3
-- Supabase viejo: 072_analytics_periodo_productos
-- Base de datos: migrations (12)
-- API: pedidos (7)
-- Supabase viejo: 005_banner_y_prueba_faltante
-- Supabase viejo: 009_configuracion_empresa
-- Supabase viejo: 021_importar_ventas
-- Supabase viejo: 036_variantes_compras_dimensione
-- Supabase viejo: 057_listar_equipo
-- Supabase viejo: 063_fix_anulacion_stock
-- Supabase viejo: 065_segmentos_clientes
-- Supabase viejo: 066_difusiones
-- General: vercel.json
-- Base de datos: migrations (13)
-- Base de datos: migrations (14)
-- Base de datos: migrations (15)
-- Supabase viejo: functions
-- App vieja (Vite): vite-env.d
-- Supabase viejo: 043_analytics_periodo_simple
-- Supabase viejo: 068_costos_compras
-- Supabase viejo: 069_costos_compras
-- General: tsconfig.json
-- Base de datos: migrations (16)
-- Base de datos: migrations (17)
-- Tienda modelo: postcss.config
-- Tienda modelo: public
-- Tienda modelo: public (2)
-- Tienda modelo: public (3)
-- Tienda modelo: public (4)
-- Tienda modelo: public (5)
-- Web: postcss.config
-- Deploy: restaurar.sh
-- General: docker-compose.yml
-- App vieja (Vite): jsbarcode.d
-- Supabase viejo: functions (2)
-- General: Controller
-- General: Module
-- General: public.atributos
-- General: public (3)
-- App vieja (Vite): assets
-- General: public.movimientos_inventario
-- General: public.productos
-- General: public.ventas
-- General: public.usuarios
-- General: public.empresas
-- General: public.configuracion_empresa
-- General: public.compras
-- General: public.proveedores
-- General: public.empresas (2)
-- General: public.empresas (3)
-- General: public.configuracion_empresa (2)
-- General: public.compras_items
-- General: public.productos (2)
-- General: public.productos (3)
-- General: public.ventas (2)
-- General: public.compras_items (2)
-- General: public.configuracion_empresa (3)
-- General: public.ventas_items
-- General: public.configuracion_empresa (4)
-- General: public.configuracion_empresa (5)
-- General: public.pedidos
-- General: public.pedidos (2)
-- General: public.configuracion_empresa (6)
-- General: public.invitaciones_colaboradores
-- General: public.compras (2)
-- General: public.configuracion_empresa (7)
-- General: public.compras (3)
-- General: public.compras (4)
-- General: public.invitaciones_colaboradores (2)
-- General: public.compras (5)
+- formatoNumero
+- arca.util.ts
+- formato.ts
+- app.module.ts
+- rol.types.ts
+- prisma-clientes.repository.ts
+- documentos.service.ts
+- CurrentUser
+- Agenda.tsx
+- envios.service.ts
+- ref_react
+- clientes/components/ClienteFichaVista.tsx
+- prisma-ticket.repository.ts
+- precios-plan.service.ts
+- archivo.controller.ts
+- ConfiguracionVista.tsx
+- objetivos.ts
+- use-kardex.ts
+- prisma-ventas.repository.ts
+- Result
+- analytics.util.ts
+- ordenes-compra.controller.ts
+- mp-tienda.service.ts
+- mercadopago.service.ts
+- PreciosVista.tsx
+- public.decorator.ts
+- agenda.controller.ts
+- buttonVariants
+- tienda-admin.service.ts
+- prisma-estados-contables.repository.ts
+- AlianzasAdminService
+- diaAR
+- proveedores.service.ts
+- UbicacionesController
+- Public
+- registro.service.ts
+- useApiFetch
+- prisma.service.ts
+- estados-contables.util.ts
+- prisma-ordenes-compra.repository.ts
+- dashboard.service.ts
+- admin-saas.service.ts
+- analytics.module.ts
+- contabilidad.module.ts
+- PrismaService
+- categorias.service.ts
+- alianzas.dto.ts
+- variantes.module.ts
+- ordenes-trabajo.service.ts
+- cuenta/actions.ts
+- prisma-variantes.repository.ts
+- import-export.module.ts
+- productos.controller.ts
+- objetivos.service.ts
+- OrdenTrabajoFicha.tsx
+- compras.controller.ts
+- productos.module.ts
+- usuarios.module.ts
+- fechaHoyAR
+- AccesoCuentaService
+- presupuestos.service.ts
+- use-presupuestos.ts
+- tienda/app/layout.tsx
+- configuracion.controller.ts
+- web/package.json
+- API NestJS starter (apps/api)
+- TiendaOnlineConfig.tsx
+- cuenta-corriente.service.ts
+- formatoFechaHora
+- ClientesService
+- prisma-lotes.repository.ts
+- uso.service.ts
+- comun.mjs
+- vencimientos.service.ts
+- pedidos.repository.ts
+- tienda.module.ts
+- sidebar.tsx
+- copilot-chat-view.tsx
+- bajas.service.ts
+- CotizacionesService
+- OfertasController
+- productos.ts
+- ventas.controller.ts
+- Especificacion Funcional legacy (pre-reescritura)
+- Sitio.tsx
+- monotributo.service.ts
+- informes.util.ts
+- package.json
+- agenda-online.service.ts
+- TiendaConfigController
+- alianzas.util.ts
+- ListasPreciosService
+- TiendaService
+- auditar.mjs
+- categorizar-productos.ts
+- AuditoriaService
+- compras.module.ts
+- libro-diario.service.ts
+- inventario.module.ts
+- CuentasTiendaController
+- dependencies
+- Especificacion Tecnica Maestra - SaaS Gestion
+- planes.util.ts
+- RequireModulo
+- notificaciones.module.ts
+- produccion.service.ts
+- usuarios.repository.ts
+- api/package.json
+- CurrentEmpresa
+- pedidos.controller.ts
+- catalogo.ts
+- ReservaTurno.tsx
+- Roles
+- .planDe
+- EmpresaContext
+- produccion.controller.ts
+- variantes.service.ts
+- Servicio api (prod)
+- exportar-datos.repository.ts
+- SuscripcionService
+- cuentas-tienda.ts
+- obtenerSitio
+- components.json
+- AparienciaConfig.tsx
+- abonos.service.ts
+- AgendaService
+- TicketController
+- comisiones.service.ts
+- kardex.service.ts
+- compilerOptions
+- @analitica360/shared-types
+- dia-del-pase.mjs
+- 🛒 Ventas, Inventario y Logística
+- dependencies
+- devDependencies
+- CheckoutForm.tsx
+- compilerOptions
+- BienvenidaForm
+- compilerOptions
+- movimientos-generales.service.ts
+- AgendaOnlineService
+- .crear
+- TiendaRepository
+- tienda.controller.ts
+- productos-import.util.ts
+- ubicaciones.module.ts
+- GastoController
+- DocumentosController
+- prisma-devoluciones.repository.ts
+- selector-tema.tsx
+- ref_node_fs
+- AlmacenArchivosService
+- CacheLecturasService
+- PedidosRepository
+- esViolacionUnica
+- ordenes-trabajo.module.ts
+- src/planes.ts
+- TiendaController
+- AtributosController
+- scripts
+- UsuarioContext
+- contexto-auditoria.ts
+- ref_node_path
+- (dashboard)/layout.tsx
+- datos.mjs
+- prueba-carga.mjs
+- ⚙️ Manual de Uso: Configuración General, Datos Fiscales y Parámetros
+- migrar-desde-supabase.mjs
+- traer-compras-legacy.mjs
+- vista-previa-api.sh
+- AbonosService
+- movimientos.controller.ts
+- planes/planes.ts
+- precios-masivos.service.ts
+- shared-types/package.json
+- Planes.tsx
+- tasks
+- vincular-clerk.mjs
+- 🛒 Manual de Uso: Punto de Venta (POS), Cobros y Facturación ARCA
+- traer-ventas-legacy.mjs
+- acceso-cuenta.util.ts
+- 🌐 Manual de Uso: Tienda Online y Storefront Multi-Negocio
+- carrito.ts
+- providers.tsx
+- ClientesRepository
+- 🚀 Manual de Uso: Primeros Pasos, Registro y Acceso
+- 📅 Manual de Uso: Agenda de Turnos y Reservas Online
+- 🔁 Manual de Uso: Abonos Periódicos y Membresías Recurrentes
+- 🔧 Manual de Uso: Órdenes de Trabajo y Servicio Técnico
+- 🏷️ Manual de Uso: Catálogo de Productos, Servicios y Variantes
+- alianzas.module.ts
+- inventario.util.ts
+- 🚚 Manual de Uso: Compras a Proveedores y Recepción de Mercadería
+- admin-suscripcion.controller.ts
+- clientes.dto.ts
+- informes.module.ts
+- manifest.json
+- ref_react_dom
+- 🤖 Manual de Uso: Copilot IA - Asistente Estratégico de Negocio
+- 👥 Manual de Uso: Gestión de Clientes, Cuentas Corrientes y Difusiones
+- PrismaMovimientosRepository
+- 📦 Manual de Uso: Gestión de Pedidos, Picking y Despachos
+- devDependencies
+- formatoPesos
+- 📦 Manual de Uso: Control de Inventario, Kardex y Lotes
+- 🔨 Manual de Uso: Producción, Fórmulas y Recetas de Fabricación
+- 📈 Manual de Uso: Analytics Comercial, Rentabilidad y Monotributo
+- app.controller.ts
+- CategoriasService
+- VentasRepository
+- SkuRepository
+- devDependencies
+- .next/**
+- carga.k6.js
+- opengraph-image.tsx
+- use-precios.ts
+- 👥 Manual de Uso: Roles, Permisos y Gestión de Equipo
+- 🏭 Manual de Uso: Directorio de Proveedores y Cuentas Corrientes
+- bajas.module.ts
+- 🎯 Manual de Uso: Metas y Objetivos de Venta
+- recorrido-tienda.mjs
+- 🪙 Manual de Uso: Comisiones y Liquidaciones al Personal
+- 📁 Manual de Uso: Archivo Digital de Documentos y Contratos
+- ⭐ Manual de Uso: Suscripción, Planes y Límites del Sistema
+- 🎫 Manual de Uso: Mesa de Ayuda y Soporte Técnico
+- 🎁 Manual de Uso: Programa de Referidos (Recomendá y Ganá)
+- oxlint.json
+- limite-pedidos.guard.ts
+- bloquear-crear-organizaciones.mjs
+- VentasService
+- tsconfig.build.json
+- OrdenesCompraRepository
+- ArmadoresComprasPedidos
+- .guardar
+- backup-nube.sh
+- 📑 Índice Detallado por Módulos
+- 📊 Manual de Uso: Dashboard de Inicio y Métricas en Tiempo Real
+- src/app/page.tsx
+- nest-cli.json
+- ZipnovaFalso
+- MercadoPagoFalso
+- corregir-datos-legacy.mjs
+- MpFalso
+- Env
+- database.module.ts
+- tienda/eslint.config.mjs
+- ArcaFalso
+- proxy.ts
+- agenda.module.ts
+- CotizacionesModule
+- clerk/route.ts
+- vista-previa-web.sh
+- @analitica360/shared-types
+- @nestjs/config
+- pdfkit
+- @prisma/client
+- oxlint
+- levantar-local.ps1
+- supertest
+- @vitest/coverage-v8
+- web/eslint.config.mjs
+- @base-ui/react
+- date-fns
+- @hookform/resolvers
+- next-themes
+- react
+- react-day-picker
+- react-dom
+- react-hook-form
+- read-excel-file
+- shadcn
+- sonner
+- svix
+- @tanstack/react-query
+- @tanstack/react-table
+- tw-animate-css
+- zod
+- ref_npm_supabase
+- ref_dotenv
+- ref_eslint
+- ref_eslint_config_next
+- ref_node_assert
+- tienda/postcss.config.mjs
+- tienda file.svg (Next.js template icon)
+- tienda globe.svg (Next.js template icon)
+- tienda next.svg (Next.js wordmark)
+- tienda vercel.svg (Vercel logo)
+- tienda window.svg (Next.js template icon)
+- web/postcss.config.mjs
+- restaurar.sh
+- Servicio minio (perfil storage)
+- src_index
 
 ## God Nodes (most connected - your core abstractions)
-1. `@nestjs/common` - 238 edges
-2. `requireSupabase()` - 169 edges
-3. `useApiFetch()` - 149 edges
-4. `PrismaService` - 137 edges
-5. `formatoPesos()` - 122 edges
-6. `Button()` - 91 edges
-7. `useAuth()` - 90 edges
-8. `formatoARS()` - 81 edges
-9. `buttonVariants` - 68 edges
-10. `ConfiguracionPage()` - 66 edges
+1. `EmpresaContext` - 342 edges
+2. `CurrentEmpresa` - 341 edges
+3. `useApiFetch()` - 203 edges
+4. `PrismaService` - 176 edges
+5. `formatoPesos()` - 169 edges
+6. `UsuarioContext` - 136 edges
+7. `Button()` - 126 edges
+8. `CurrentUser` - 110 edges
+9. `buttonVariants` - 96 edges
+10. `RequirePermiso()` - 88 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Fase 3 diseno del schema Prisma` --conceptually_related_to--> `prisma`  [INFERRED]
-  docs/especificacion_funcional_legacy.md → apps/api/package.json
-- `features/ordenes-compra README` --conceptually_related_to--> `HU-008 Orden de compra con recepcion parcial`  [INFERRED]
-  apps/web/src/features/ordenes-compra/README.md → docs/especificacion_funcional_legacy.md
-- `features/segmentos-clientes README` --conceptually_related_to--> `HU-010 Segmentar clientes y difusion WhatsApp`  [INFERRED]
-  apps/web/src/features/segmentos-clientes/README.md → docs/especificacion_funcional_legacy.md
-- `Servicio postgres (prod)` --semantically_similar_to--> `Servicio postgres (dev)`  [INFERRED] [semantically similar]
+- `Servicio api (prod)` --semantically_similar_to--> `Servicio api (perfil apps)`  [INFERRED] [semantically similar]
   docker-compose.prod.yml → docker-compose.yml
 - `Servicio migrate (prod)` --semantically_similar_to--> `Servicio migrate (perfil apps)`  [INFERRED] [semantically similar]
+  docker-compose.prod.yml → docker-compose.yml
+- `Servicio postgres (prod)` --semantically_similar_to--> `Servicio postgres (dev)`  [INFERRED] [semantically similar]
+  docker-compose.prod.yml → docker-compose.yml
+- `Servicio tienda modelo (prod)` --semantically_similar_to--> `Servicio tienda (perfil apps)`  [INFERRED] [semantically similar]
+  docker-compose.prod.yml → docker-compose.yml
+- `Servicio web (prod)` --semantically_similar_to--> `Servicio web (perfil apps)`  [INFERRED] [semantically similar]
   docker-compose.prod.yml → docker-compose.yml
 
 ## Import Cycles
@@ -374,1103 +337,974 @@
 
 ## Hyperedges (group relationships)
 - **Módulos feature placeholder de apps/web (Fase 5)** — apps_web_src_features_admin_readme_feature_admin, apps_web_src_features_analytics_readme_feature_analytics, apps_web_src_features_clientes_readme_feature_clientes, apps_web_src_features_compras_readme_feature_compras, apps_web_src_features_configuracion_readme_feature_configuracion, apps_web_src_features_contabilidad_readme_feature_contabilidad, apps_web_src_features_dashboard_readme_feature_dashboard, apps_web_src_features_difusiones_readme_feature_difusiones, apps_web_src_features_equipo_readme_feature_equipo, apps_web_src_features_insights_readme_feature_insights [EXTRACTED 1.00]
-- **Apps nuevas verificadas por CI (api, web, tienda)** — _github_workflows_ci_verificar, apps_api_readme_nestjs_starter, apps_web_readme_create_next_app, apps_tienda_readme_tienda [INFERRED 0.85]
-- **Resolución multi-negocio de la tienda** — apps_tienda_readme_resolucion_negocio, apps_tienda_readme_tienda_host_forzado, apps_tienda_readme_modulos_tienda_api, apps_tienda_readme_configuracion_tienda_online [INFERRED 0.85]
+- **Principios de diseno de datos (no negociables)** — docs_especificacion_tecnica_maestra_borrado_logico, docs_especificacion_tecnica_maestra_precios_historial, docs_especificacion_tecnica_maestra_snapshot_precios, docs_especificacion_tecnica_maestra_stock_calculado, docs_especificacion_tecnica_maestra_empresa_id_rls [EXTRACTED 1.00]
 - **Stack de despliegue en produccion tras Caddy** — docker_compose_prod_postgres, docker_compose_prod_migrate, docker_compose_prod_api, docker_compose_prod_web, docker_compose_prod_tienda, docker_compose_prod_caddy, docker_compose_prod_backup [EXTRACTED 1.00]
 - **Modulos feature de apps/web pendientes de Fase 5** — apps_web_src_features_inventario_readme, apps_web_src_features_lotes_readme, apps_web_src_features_ordenes_compra_readme, apps_web_src_features_pedidos_readme, apps_web_src_features_planes_readme, apps_web_src_features_productos_readme, apps_web_src_features_proveedores_readme, apps_web_src_features_segmentos_clientes_readme, apps_web_src_features_soporte_readme, apps_web_src_features_ubicaciones_readme, apps_web_src_features_variantes_readme, apps_web_src_features_ventas_readme [EXTRACTED 1.00]
-- **Principios de diseno de datos (no negociables)** — docs_especificacion_tecnica_maestra_borrado_logico, docs_especificacion_tecnica_maestra_precios_historial, docs_especificacion_tecnica_maestra_snapshot_precios, docs_especificacion_tecnica_maestra_stock_calculado, docs_especificacion_tecnica_maestra_empresa_id_rls [EXTRACTED 1.00]
-- **Vite + React starter template assets (legacy SPA)** — src_assets_hero, src_assets_react, src_assets_vite, public_favicon, public_icons [INFERRED 0.85]
+- **Apps nuevas verificadas por CI (api, web, tienda)** — _github_workflows_ci_verificar, apps_api_readme_nestjs_starter, apps_web_readme_create_next_app, apps_tienda_readme_tienda [INFERRED 0.85]
 - **Unmodified create-next-app public assets in tienda and web apps** — apps_tienda_public_file, apps_tienda_public_globe, apps_tienda_public_next, apps_tienda_public_vercel, apps_tienda_public_window, apps_web_public_file, apps_web_public_globe, apps_web_public_next, apps_web_public_vercel, apps_web_public_window [INFERRED 0.85]
+- **Resolución multi-negocio de la tienda** — apps_tienda_readme_resolucion_negocio, apps_tienda_readme_tienda_host_forzado, apps_tienda_readme_modulos_tienda_api, apps_tienda_readme_configuracion_tienda_online [INFERRED 0.85]
 
-## Communities (367 total, 101 thin omitted)
+## Communities (312 total, 57 thin omitted)
 
-### Community 0 - "Web: analytics"
+### Community 0 - "formatoNumero"
 Cohesion: 0.03
-Nodes (126): PeriodoElegido, SelectorPeriodo(), useRangoFechas(), ChartConfig, ChartContainer(), ChartContext, ChartContextProps, apps_web_src_components_ui_chart_chartlegend (+118 more)
+Nodes (136): DolarHoy, NOMBRE_DOLAR, SelectorMoneda(), useRangoFechas(), ChartConfig, ChartContainer(), ChartContext, ChartContextProps (+128 more)
 
-### Community 1 - "App vieja (Vite): lib"
-Cohesion: 0.04
-Nodes (125): AccesoDenegado(), AjustarStockModal(), confirmar(), HistorialMovimientosPanel(), textoReferencia(), ImportarExcelModal(), confirmar(), onArchivo() (+117 more)
-
-### Community 2 - "Web: produccion"
+### Community 1 - "arca.util.ts"
 Cohesion: 0.06
-Nodes (95): CargandoFilas(), ErrorDatos(), SinDatos(), Paginacion(), Card(), CardContent(), CardDescription(), CardHeader() (+87 more)
+Nodes (55): ArcaCliente, pem(), Injectable, firmarCMS(), generarPedidoCertificado(), ArcaModule, Module, Ambiente (+47 more)
 
-### Community 3 - "API: tienda"
+### Community 2 - "formato.ts"
 Cohesion: 0.03
-Nodes (89): AppController, Controller, AppModule, Module, AppService, AlmacenArchivosService, Injectable, ArchivosModule (+81 more)
+Nodes (175): CargandoFilas(), ErrorDatos(), SinDatos(), Paginacion(), SelectorPeriodo(), Table(), TableBody(), TableCell() (+167 more)
 
-### Community 4 - "API común: auth"
-Cohesion: 0.03
-Nodes (91): AccesoColaborador, accesoDesde(), AccionClave, ACCIONES, ACCIONES_CONTADOR, ACCIONES_INICIALES, ModuloClave, MODULOS (+83 more)
-
-### Community 5 - "API: clientes"
-Cohesion: 0.03
-Nodes (72): aFechaSolo(), fechaSoloSchema, ClientesController, Body, Controller, CurrentEmpresa, CurrentUser, Get (+64 more)
-
-### Community 6 - "App vieja (Vite): lib (2)"
-Cohesion: 0.03
-Nodes (118): @supabase/supabase-js, AdminPage, AuthContext, AuthContextValue, AuthProvider(), esRateLimitAuth(), mensajeAuth(), rpcRegistrarEmpresa() (+110 more)
-
-### Community 7 - "API: tienda (2)"
-Cohesion: 0.07
-Nodes (70): ClerkAuthContext, EmpresaContext, express, Request, UsuarioContext, Rol, CACHE_LECTURA_KEY, CacheLectura() (+62 more)
-
-### Community 8 - "Web: configuracion"
-Cohesion: 0.05
-Nodes (80): Button(), Input(), Label(), CAMARA_VACIA, CamaraForm(), guardar(), encadenar(), TRAMOS_POR_DEFECTO (+72 more)
-
-### Community 9 - "App vieja (Vite): components"
-Cohesion: 0.07
-Nodes (85): react-router-dom, AppNav(), BadgeLote(), FiltroEstado, BadgeEstado(), BadgeMargen(), BadgePago(), Breadcrumb() (+77 more)
-
-### Community 10 - "Web: ventas"
-Cohesion: 0.04
-Nodes (86): n(), Page(), ClienteForm(), registrar(), aAjuste(), error(), FilaLista(), ListasPreciosConfig() (+78 more)
-
-### Community 11 - "Web: clientes"
-Cohesion: 0.04
-Nodes (62): Page(), Page(), Page(), Page(), Page(), Page(), Page(), Page() (+54 more)
-
-### Community 12 - "API: soporte"
-Cohesion: 0.04
-Nodes (43): PrismaTicketRepository, toFila(), toRespuesta(), Injectable, TicketController, Body, Controller, CurrentEmpresa (+35 more)
-
-### Community 13 - "App vieja (Vite): lib (3)"
-Cohesion: 0.04
-Nodes (80): HomePage, LandingPage, GraficoExpandible(), SelectorChips(), LimitePlanModal(), PlanesModal(), UpgradePlanPage(), lunesIso() (+72 more)
-
-### Community 14 - "App vieja (Vite): lib (4)"
-Cohesion: 0.04
-Nodes (90): CategoriaFila, eliminarCategoria(), guardarCategoria(), listarCategorias(), mapFila(), msgSql(), sembrarCategoriasDefault(), listarClientes() (+82 more)
-
-### Community 15 - "Web: configuracion (2)"
-Cohesion: 0.04
-Nodes (71): AppSidebar(), NavItem, AvisoCuenta(), diaAnterior(), fechaCorta(), CandadoPlan(), MejorarPlan(), novedades() (+63 more)
-
-### Community 16 - "App vieja (Vite): App"
-Cohesion: 0.04
-Nodes (74): AppRoutes(), ClienteFichaPage, ClienteFormPage, ClientesPage, CompletarAltaPage, CompraNuevaPage, ComprasPage, ConfiguracionPage (+66 more)
-
-### Community 17 - "Web componentes: shared"
-Cohesion: 0.04
-Nodes (70): DIAS, ACCIONES, BitacoraAuditoria(), exportar(), Cambios(), campo(), COLOR, ENTIDADES (+62 more)
-
-### Community 18 - "API: ventas"
-Cohesion: 0.05
-Nodes (53): salidasConKits(), calcularTotal(), confirmarVentaEnTx(), PrismaVentasRepository, Injectable, VentaConItemsNombre, Body, Controller (+45 more)
-
-### Community 19 - "App vieja (Vite): lib (5)"
-Cohesion: 0.05
-Nodes (77): CompraFichaPage, AnularCompraModal(), confirmar(), cargar(), InventarioLotesTab(), abrirModal(), guardarLote(), linkWhatsApp() (+69 more)
-
-### Community 20 - "API: analytics"
-Cohesion: 0.05
-Nodes (55): DIAS_ABREV, etiquetaDiaEs(), FECHA_AR, inicioAnioIso(), inicioMesIso(), lunesIso(), sumarDiasIso(), CurrentEmpresa (+47 more)
-
-### Community 21 - "API: compras"
-Cohesion: 0.05
-Nodes (49): OrdenesCompraController, Body, Controller, CurrentEmpresa, CurrentUser, Get, Param, Patch (+41 more)
-
-### Community 22 - "App vieja (Vite): lib (6)"
-Cohesion: 0.07
-Nodes (74): papaparse, xlsx, ImportarComprasModal(), ImportarOperacionModal(), cargar(), linkAyudaFormato(), PreviewTablaImport(), ImportarVentasModal() (+66 more)
-
-### Community 23 - "App vieja (Vite): lib (7)"
-Cohesion: 0.05
-Nodes (69): InsightsPage, ChartTooltipBox(), fechaHoyAR(), formatoEjeCompacto(), guardarPeriodoAnalytics(), inicioMesIso(), limpiarPeriodoAnalytics(), rangoPreset() (+61 more)
-
-### Community 24 - "Web: admin"
-Cohesion: 0.04
-Nodes (58): AlianzasVista(), nombreMes(), CamaraFichaVista(), ClientesCamara(), resumenCliente(), CuotasVencidasPanel(), CuotasGeneralesVista(), CuponesVista() (+50 more)
-
-### Community 25 - "App vieja (Vite): components (2)"
-Cohesion: 0.06
-Nodes (64): AnalyticsPage, ChartResponsive(), intervaloEjeX(), MARGIN_CHART, propsEjeX(), propsEjeY(), tamanoTick(), useAltoGrafico() (+56 more)
-
-### Community 26 - "App vieja (Vite): lib (8)"
-Cohesion: 0.07
-Nodes (69): ref_zxing_browser, ref_zxing_library, conexionSegura(), dispararPedidoCamara(), EscanerCodigoBarras(), reintentar(), esIphone(), Fase (+61 more)
-
-### Community 27 - "Web: admin (2)"
-Cohesion: 0.05
-Nodes (48): Skeleton(), CuotasClientePanel(), AvisosRegistro(), Acciones(), ClienteFichaVista(), G_VENTAS, mas(), ClientesVista() (+40 more)
-
-### Community 28 - "API: tienda (3)"
-Cohesion: 0.06
-Nodes (30): bootstrap(), ProductoFotosController, TiendaConfigController, TiendaSitioController, Body, Controller, CurrentEmpresa, Delete (+22 more)
-
-### Community 29 - "API: contabilidad"
-Cohesion: 0.06
-Nodes (26): dineroDevoluciones(), dineroDevolucionesPorDia(), DineroDevolucionProducto, diaAR(), DIA_VENTA, RendimientoService, Injectable, FilaRendimiento (+18 more)
-
-### Community 30 - "API: alianzas"
-Cohesion: 0.07
-Nodes (26): AlianzasAdminController, Body, Controller, CurrentUser, Get, HttpCode, Param, Patch (+18 more)
-
-### Community 31 - "API: analytics (2)"
-Cohesion: 0.06
-Nodes (36): fechaLocalAR(), DashboardDiaSerie, DashboardStockItem, DashboardTopProducto, sumarDinero(), ANALYTICS_PERIODO_REPOSITORY, AnalyticsEvolucionPunto, AnalyticsFormaPago (+28 more)
-
-### Community 32 - "API: proveedores"
-Cohesion: 0.06
-Nodes (34): PrismaProveedoresRepository, soloDigitos(), Injectable, ProveedoresController, Body, Controller, CurrentEmpresa, Get (+26 more)
-
-### Community 33 - "API: ubicaciones"
-Cohesion: 0.06
-Nodes (33): esViolacionUnica(), PLANES, PrismaUbicacionesRepository, Injectable, Body, Controller, CurrentEmpresa, Delete (+25 more)
-
-### Community 34 - "App vieja (Vite): lib (9)"
-Cohesion: 0.06
-Nodes (46): NotificacionesCampana(), ChipsSegmento(), ModalSegmento(), ORDEN, SegmentosCards(), actualizarCliente(), agregarInteraccion(), ClienteFicha (+38 more)
-
-### Community 35 - "API: alianzas (2)"
-Cohesion: 0.06
-Nodes (32): PrismaService, Injectable, diasDePrueba(), HistorialPrueba, puedeUsarPruebaDelCupon(), validarCupon(), CuponesService, Db (+24 more)
-
-### Community 36 - "Web: planes"
-Cohesion: 0.06
-Nodes (41): CartelBeneficios(), AvisoCuotas(), fecha(), PlanActual(), PlanesVista(), cicloQueMasAhorra(), SelectorCiclo(), POR_CICLO (+33 more)
-
-### Community 37 - "API común: auditoria"
-Cohesion: 0.07
-Nodes (42): Delegado, empresaDe(), ESCRITURAS, extensionAuditoria(), evento(), AuditoriaInterceptor, Injectable, Accion (+34 more)
-
-### Community 38 - "API: contabilidad (2)"
+### Community 3 - "app.module.ts"
 Cohesion: 0.09
-Nodes (47): CrearMovimientoFinancieroDto, crearMovimientoFinancieroSchema, DESCRIPCION_DEFAULT, fechaIso, periodoEstadosSchema, CrearMovimientoFinancieroInput, DeudaProveedor, ESTADOS_CONTABLES_REPOSITORY (+39 more)
+Nodes (20): ProduccionModule, Module, DatosUsuarioClerk, HOY, hoy, mesActual, sufijo, hoy (+12 more)
 
-### Community 39 - "App vieja (Vite): lib (10)"
-Cohesion: 0.08
-Nodes (50): SoporteNuevoPage, cardShell, BadgeEstadoTicket(), BadgePrioridadTicket(), ESTADO_STYLE, PRIORIDAD_STYLE, TicketHilo(), esAdminEmail() (+42 more)
+### Community 4 - "rol.types.ts"
+Cohesion: 0.09
+Nodes (29): accesoDesde(), AccionClave, ACCIONES, ACCIONES_CONTADOR, ACCIONES_INICIALES, ModuloClave, MODULOS, MODULOS_CONTADOR (+21 more)
 
-### Community 40 - "API común: cache"
-Cohesion: 0.06
-Nodes (28): CacheLecturasInterceptor, CacheLecturasService, Injectable, CurrentEmpresa, Get, Query, DASHBOARD_REPOSITORY, DashboardCumple (+20 more)
-
-### Community 41 - "API: admin-saas"
-Cohesion: 0.08
-Nodes (27): AdminEmpresaDetalle, AdminEmpresaFila, AdminEvolucionMes, AdminTablaTamano, AlertaEmpresa, alertasEmpresa(), DIAS_SIN_ACTIVIDAD, diasEntre() (+19 more)
-
-### Community 42 - "API: analytics (3)"
-Cohesion: 0.07
-Nodes (35): BcraInflacionClient, FilaBcra, filasBcra(), sumarDiasCapped(), trozosAnio(), Injectable, InflacionController, Controller (+27 more)
-
-### Community 43 - "API: contabilidad (3)"
-Cohesion: 0.07
-Nodes (33): GastoController, Body, Controller, CurrentEmpresa, CurrentUser, Get, HttpCode, Param (+25 more)
-
-### Community 44 - "API: alianzas (3)"
+### Community 5 - "prisma-clientes.repository.ts"
 Cohesion: 0.10
-Nodes (32): Beneficios, Cotizacion, cotizarPeriodo(), finDeComision(), montosCuotas(), primerDiaDelMes(), redondear(), ReglasCupon (+24 more)
+Nodes (25): fechaLocalAR(), AgregarInteraccionInput, ClienteFicha, ClienteRecord, CLIENTES_REPOSITORY, ClienteSegmentoRecord, CumpleProximoRecord, DestinatarioDifusion (+17 more)
 
-### Community 45 - "API: productos"
+### Community 6 - "documentos.service.ts"
+Cohesion: 0.08
+Nodes (32): cuitConGuiones(), DatosDocumentoPdf, dmy(), NegocioDoc, pdfDocumento(), Archivo, configSchema, emailSchema (+24 more)
+
+### Community 7 - "CurrentUser"
+Cohesion: 0.04
+Nodes (91): ClerkAuthContext, express, Request, Rol, RequireAdminApp(), CurrentUser, RequireFuncion(), SinEmpresa() (+83 more)
+
+### Community 8 - "Agenda.tsx"
+Cohesion: 0.06
+Nodes (59): PeriodoElegido, TopesMonotributo(), Abierto, Agenda(), lunesDe(), NuevasOnline(), VistaDia(), VistaSemana() (+51 more)
+
+### Community 9 - "envios.service.ts"
+Cohesion: 0.08
+Nodes (26): DestinoEnvio, EnviosService, OpcionGuardada, ProductoACotizar, Injectable, codigoOpcion(), CON_TRANSPORTISTA, entre() (+18 more)
+
+### Community 10 - "ref_react"
+Cohesion: 0.03
+Nodes (164): InputPlata(), Props, significativos(), Button(), Card(), CardAction(), CardContent(), CardDescription() (+156 more)
+
+### Community 11 - "clientes/components/ClienteFichaVista.tsx"
+Cohesion: 0.05
+Nodes (54): Page(), ClienteFichaVista(), ClienteForm(), ClientesListado(), fecha(), SEGMENTOS, SegmentosDifusion(), Cliente (+46 more)
+
+### Community 12 - "prisma-ticket.repository.ts"
+Cohesion: 0.05
+Nodes (32): PrismaTicketRepository, toFila(), toRespuesta(), Injectable, SoporteModule, Module, cambiarEstadoTicketSchema, categoriaValues (+24 more)
+
+### Community 13 - "precios-plan.service.ts"
+Cohesion: 0.09
+Nodes (28): PLANES_PAGOS, PlanPagoId, PreciosPublicosController, Controller, Delete, Get, Param, PreciosPlanProgramador (+20 more)
+
+### Community 14 - "archivo.controller.ts"
+Cohesion: 0.09
+Nodes (27): Archivo, datosSchema, fecha, filtroSchema, subida, ArchivoModule, Module, ArchivoProgramador (+19 more)
+
+### Community 15 - "ConfiguracionVista.tsx"
+Cohesion: 0.03
+Nodes (123): AppSidebar(), Grupo, Item, CandadoPlan(), MejorarPlan(), novedades(), coincide(), FUNCION_DE_RUTA (+115 more)
+
+### Community 16 - "objetivos.ts"
+Cohesion: 0.10
+Nodes (42): AvisosObjetivos(), hoyAR(), MetasPorPeriodo(), Alcance, ObjetivoForm(), ObjetivosInicio(), Filtro, GRUPOS (+34 more)
+
+### Community 17 - "use-kardex.ts"
+Cohesion: 0.10
+Nodes (15): KardexVista(), exportar(), PESTANAS, PestanasInventario(), StockListado(), AjusteInput, etiquetaMovimiento(), FilaKardex (+7 more)
+
+### Community 18 - "prisma-ventas.repository.ts"
+Cohesion: 0.09
+Nodes (25): calcularTotal(), CON_ITEMS_Y_USUARIO, confirmarVentaEnTx(), PrismaVentasRepository, Injectable, VentaConItemsNombre, ConfiguracionVenta, ConfirmarVentaInput (+17 more)
+
+### Community 19 - "Result"
+Cohesion: 0.08
+Nodes (17): mapDomainErrorToHttp(), unwrapResult(), DomainError, DomainErrorKind, Result, CopilotIaController, Body, Controller (+9 more)
+
+### Community 20 - "analytics.util.ts"
+Cohesion: 0.05
+Nodes (53): DIAS_ABREV, etiquetaDiaEs(), FECHA_AR, inicioAnioIso(), inicioMesIso(), lunesIso(), sumarDiasIso(), INSIGHTS_REPOSITORY (+45 more)
+
+### Community 21 - "ordenes-compra.controller.ts"
+Cohesion: 0.11
+Nodes (22): OrdenesCompraController, Body, Controller, Get, Param, Patch, Post, Query (+14 more)
+
+### Community 22 - "mp-tienda.service.ts"
+Cohesion: 0.08
+Nodes (23): cifrar(), clave(), descifrar(), CLAVE, TokensMp, Body, Get, Param (+15 more)
+
+### Community 23 - "mercadopago.service.ts"
 Cohesion: 0.07
-Nodes (27): CategoriasController, Body, Controller, CurrentEmpresa, Delete, Get, Param, Patch (+19 more)
+Nodes (21): AuthorizedPayment, MercadoPagoCliente, Preapproval, Injectable, MercadoPagoWebhookController, Body, Controller, Headers (+13 more)
 
-### Community 46 - "API: alianzas (4)"
+### Community 24 - "PreciosVista.tsx"
+Cohesion: 0.25
+Nodes (13): conAumento(), dia(), mesCorto(), NuevoAumento(), pesos(), PreciosVista(), Programados(), PlanPago (+5 more)
+
+### Community 25 - "public.decorator.ts"
+Cohesion: 0.07
+Nodes (26): REQUIRE_ADMIN_APP_KEY, FUNCION_PLAN_KEY, IS_PUBLIC_KEY, ROLES_KEY, EXPORTACION_KEY, PERMITIDO_SIN_SUSCRIPCION_KEY, AdminAppGuard, Injectable (+18 more)
+
+### Community 26 - "agenda.controller.ts"
+Cohesion: 0.09
+Nodes (21): AgendaController, configSchema, fecha, fechaHora, libresSchema, rangoSchema, recursoSchema, Body (+13 more)
+
+### Community 27 - "buttonVariants"
+Cohesion: 0.03
+Nodes (65): Page(), Page(), Page(), Page(), Page(), Page(), Page(), Page() (+57 more)
+
+### Community 28 - "tienda-admin.service.ts"
+Cohesion: 0.08
+Nodes (22): optimizarImagen(), TAMANOS, Query, BORDES, CampoImagen, conMontos(), FONDOS, FORMAS_FOTO (+14 more)
+
+### Community 29 - "prisma-estados-contables.repository.ts"
+Cohesion: 0.08
+Nodes (16): CrearMovimientoFinancieroInput, DeudaProveedor, EstadosContablesRepository, MovimientoFinanciero, Inject, CompraDato, MontoDia, MovimientoFinancieroDato (+8 more)
+
+### Community 30 - "AlianzasAdminService"
+Cohesion: 0.08
+Nodes (18): AlianzasAdminController, Body, Controller, Get, HttpCode, Param, Patch, Post (+10 more)
+
+### Community 31 - "diaAR"
+Cohesion: 0.06
+Nodes (41): dineroDevoluciones(), dineroDevolucionesPorDia(), DineroDevolucionProducto, diaAR(), ANALYTICS_PERIODO_REPOSITORY, AnalyticsEvolucionPunto, AnalyticsFormaPago, AnalyticsPeriodoBase (+33 more)
+
+### Community 32 - "proveedores.service.ts"
+Cohesion: 0.07
+Nodes (32): PrismaProveedoresRepository, soloDigitos(), Injectable, ProveedoresController, Body, Controller, Get, Param (+24 more)
+
+### Community 33 - "UbicacionesController"
+Cohesion: 0.12
+Nodes (12): Body, Controller, Delete, Get, Param, Patch, Post, Query (+4 more)
+
+### Community 34 - "Public"
+Cohesion: 0.09
+Nodes (21): Public(), AvisosZipnovaController, configSchema, credencial, EnviosController, PedidoEnvioController, Body, Controller (+13 more)
+
+### Community 35 - "registro.service.ts"
+Cohesion: 0.08
+Nodes (29): Get, Query, Req, diasDePrueba(), HistorialPrueba, puedeUsarPruebaDelCupon(), validarCupon(), CuponesService (+21 more)
+
+### Community 36 - "useApiFetch"
+Cohesion: 0.02
+Nodes (116): BajaClientePanel(), EstadoBaja, fecha(), PREMIO, ReferidosAdmin, ReferidosClientePanel(), consulta(), PANTALLAS (+108 more)
+
+### Community 37 - "prisma.service.ts"
+Cohesion: 0.15
+Nodes (21): Delegado, empresaDe(), ESCRITURAS, extensionAuditoria(), evento(), accionDeEdicion(), aplicarData(), AUDITADOS (+13 more)
+
+### Community 38 - "estados-contables.util.ts"
+Cohesion: 0.10
+Nodes (41): CrearMovimientoFinancieroDto, crearMovimientoFinancieroSchema, DESCRIPCION_DEFAULT, fechaIso, periodoEstadosSchema, CRITERIOS, EstadosContablesRespuesta, EstadosContablesService (+33 more)
+
+### Community 39 - "prisma-ordenes-compra.repository.ts"
+Cohesion: 0.12
+Nodes (23): EstadoOc, ESTADOS_EDITABLES, GuardarOrdenCompraInput, ItemOcInput, MotivoRechazoOc, OrdenCompraFicha, OrdenCompraItemRecord, OrdenCompraRecord (+15 more)
+
+### Community 40 - "dashboard.service.ts"
+Cohesion: 0.10
+Nodes (18): DASHBOARD_REPOSITORY, DashboardCumple, DashboardDiaSerie, DashboardHoy, DashboardInicio, DashboardInicioBase, DashboardRepository, DashboardStockItem (+10 more)
+
+### Community 41 - "admin-saas.service.ts"
+Cohesion: 0.07
+Nodes (29): AdminAccesoController, Controller, AdminEmpresaDetalle, AdminEmpresaFila, AdminEvolucionMes, AdminTablaTamano, AlertaEmpresa, alertasEmpresa() (+21 more)
+
+### Community 42 - "analytics.module.ts"
+Cohesion: 0.05
+Nodes (43): BcraInflacionClient, FilaBcra, filasBcra(), sumarDiasCapped(), trozosAnio(), Injectable, InsightCombo2, InsightCombo3 (+35 more)
+
+### Community 43 - "contabilidad.module.ts"
+Cohesion: 0.09
+Nodes (25): CONTABILIDAD_REPOSITORY, categoriaSchema, CrearGastoDto, crearGastoSchema, fechaIso, frecuenciaSchema, listarGastosQuerySchema, tipoCostoSchema (+17 more)
+
+### Community 44 - "PrismaService"
+Cohesion: 0.08
+Nodes (34): PrismaService, Injectable, ajustePorDevolucion(), Beneficios, Cotizacion, cotizarPeriodo(), CuotasGenerales, finDeComision() (+26 more)
+
+### Community 45 - "categorias.service.ts"
+Cohesion: 0.16
+Nodes (9): ActualizarCategoriaInput, CategoriaRecord, CATEGORIAS_REPOSITORY, CategoriasRepository, CrearCategoriaInput, ResultadoGuardarCategoria, categoriaBase, PrismaCategoriasRepository (+1 more)
+
+### Community 46 - "alianzas.dto.ts"
 Cohesion: 0.07
 Nodes (35): AdminSaasController, Body, Controller, Get, HttpCode, Param, Post, Query (+27 more)
 
-### Community 47 - "API: productos (2)"
-Cohesion: 0.08
-Nodes (25): AtributosController, Body, Controller, CurrentEmpresa, Delete, Get, Param, Patch (+17 more)
-
-### Community 48 - "App vieja (Vite): lib (11)"
-Cohesion: 0.07
-Nodes (47): ref_simple_statistics, sumarDiasIso(), agregarPorClave(), armarForecast(), armarVariantes(), bulletsSalud(), calcularElasticidades(), calcularSalud() (+39 more)
-
-### Community 49 - "Tienda modelo: app"
-Cohesion: 0.09
-Nodes (43): CheckoutPage(), dynamic, abrir(), borrarCuenta(), DatosCuenta, error(), guardarDatos(), ingresarConCodigo() (+35 more)
-
-### Community 50 - "API: productos (3)"
-Cohesion: 0.09
-Nodes (26): LineaPrecio, num(), ResultadoPreciosMasivos, margenPct(), ModoAumento, precioNuevo(), redondearArriba(), ReglaAumento (+18 more)
-
-### Community 51 - "API: import-export"
-Cohesion: 0.08
-Nodes (31): celdaEsNumero(), claveColumna(), claveNombre(), enteroCelda(), numeroCelda(), pad2(), parseFechaCelda(), textoCelda() (+23 more)
-
-### Community 52 - "API: productos (4)"
-Cohesion: 0.09
-Nodes (26): ProductosController, Body, Controller, CurrentEmpresa, Get, Param, Patch, Post (+18 more)
-
-### Community 53 - "Web: productos"
-Cohesion: 0.08
-Nodes (35): CampoCodigoBarra(), CategoriaSelector(), FotosProducto(), Eje, ejeVacio(), GeneradorCombinaciones(), valoresDe(), OfertaProducto() (+27 more)
-
-### Community 54 - "Base de datos: migrations"
-Cohesion: 0.09
-Nodes (44): "aceptaciones_terminos", "admin_emails", "anulaciones", anulaciones_venta_id_key, "atributos", "categorias", categorias_empresa_id_nombre_key, "colaborador_permisos" (+36 more)
-
-### Community 55 - "API: compras (2)"
-Cohesion: 0.08
-Nodes (29): booleanQuery(), ComprasController, Body, Controller, CurrentEmpresa, CurrentUser, Get, Param (+21 more)
-
-### Community 56 - "API: productos (5)"
-Cohesion: 0.10
-Nodes (19): PrismaProductosRepository, ProductoConCategoria, Injectable, ProductosModule, Module, DimensionesProducto, GuardarProductoInput, ListaProductos (+11 more)
-
-### Community 57 - "App vieja (Vite): lib (12)"
-Cohesion: 0.10
-Nodes (45): agruparEvolucion(), AnalyticsClientes, AnalyticsDiaSemanaRaw, AnalyticsPago, AnalyticsProducto, AnalyticsPunto, AnalyticsTop, anioDeFecha() (+37 more)
-
-### Community 58 - "API: contabilidad (4)"
+### Community 47 - "variantes.module.ts"
 Cohesion: 0.11
-Nodes (31): fechaHoyAR(), CONTABILIDAD_REPOSITORY, ContabilidadRepository, ValorStock, ContabilidadRespuesta, ContabilidadService, Inject, Injectable (+23 more)
+Nodes (14): Get, AtributoRecord, ATRIBUTOS_REPOSITORY, AtributosRepository, GuardarAtributoInput, AtributosService, atributoBase, Inject (+6 more)
 
-### Community 59 - "API: planes"
-Cohesion: 0.09
-Nodes (18): AccesoCuentaService, PlanEmpresa, Inject, Injectable, ordenarPlanesAdmin(), PlanId, masDias(), PLANES_QUE_ACTUALIZAN_EMPRESA (+10 more)
-
-### Community 60 - "App vieja (Vite): lib (13)"
-Cohesion: 0.09
-Nodes (38): CodigoBarrasPreview(), ProductoVariantesHandle, ean13DesdeEntidad(), etiquetasDeProductos(), defPlan(), actualizarProducto(), asignarCategoriaProducto(), crearProducto() (+30 more)
-
-### Community 61 - "App vieja (Vite): lib (14)"
-Cohesion: 0.10
-Nodes (36): DevolucionFichaPage, DevolucionNuevaPage, DevolucionesTab(), buscarVentasDevolucion(), cancelarDevolucion(), DevolucionFicha, DevolucionFila, diferenciaCambio() (+28 more)
-
-### Community 62 - "Tienda modelo: lib"
-Cohesion: 0.10
-Nodes (33): GET(), apps_tienda_app_globals, cormorant, generateMetadata(), inter, montserrat, nunito, playfair (+25 more)
-
-### Community 63 - "API: configuracion"
-Cohesion: 0.09
-Nodes (26): ConfiguracionController, MOTIVO, Body, Controller, CurrentEmpresa, Get, Inject, Patch (+18 more)
-
-### Community 64 - "Web: package.json"
-Cohesion: 0.06
-Nodes (38): dependencies, next, react, react-dom, next, react, tsx, name (+30 more)
-
-### Community 65 - "Tienda modelo: README"
-Cohesion: 0.12
-Nodes (38): CI Workflow (Analítica 360), GitHub Container Registry (ghcr.io), Job imagenes: build/push Docker (api, migrate, web), Imagen Docker migrate (target migrate de apps/api/Dockerfile), Build args NEXT_PUBLIC_* (API_URL, WHATSAPP_CONTACT, CLERK_PUBLISHABLE_KEY), Prisma generate (cliente de Prisma de la API), Job verificar: lint, tipos y tests, NestJS framework (+30 more)
-
-### Community 66 - "Web: configuracion (3)"
-Cohesion: 0.10
-Nodes (35): BORDES, cormorant, Fondo, FONDOS, FormaFoto, FORMAS_FOTO, montserrat, nunito (+27 more)
-
-### Community 67 - "API: cuenta-corriente"
-Cohesion: 0.10
-Nodes (24): CuentaCorrienteController, Body, Controller, CurrentEmpresa, CurrentUser, Get, HttpCode, Param (+16 more)
-
-### Community 68 - "Web: pedidos"
+### Community 48 - "ordenes-trabajo.service.ts"
 Cohesion: 0.13
-Nodes (27): Acciones, AccionesPedido(), Despacho(), despachar(), errorDe(), EstadoPedidoBadge(), PedidoFichaVista(), whatsapp() (+19 more)
+Nodes (16): Db, EntregaInput, fecha(), ItemOtInput, numeroOt(), OrdenesTrabajoService, r2(), Injectable (+8 more)
 
-### Community 69 - "App vieja (Vite): lib (15)"
-Cohesion: 0.10
-Nodes (35): jsbarcode, qrcode, CHECKS, EtiquetaOpcionesModal(), cambiarTamano(), toggle(), TAMANOS, aplicarCamposPorTamano() (+27 more)
-
-### Community 70 - "API: inventario"
-Cohesion: 0.11
-Nodes (17): InventarioModule, Module, CrearLoteInput, LoteRecord, LOTES_REPOSITORY, LotesRepository, ResultadoCrearLote, LotesService (+9 more)
-
-### Community 71 - "API: uso"
-Cohesion: 0.10
-Nodes (19): Body, Controller, CurrentEmpresa, CurrentUser, Get, HttpCode, Param, Post (+11 more)
-
-### Community 72 - "Scripts: auditoria"
-Cohesion: 0.17
-Nodes (30): ref_node_stream, carga(), env(), NIVELES, sesionClerk(), aceptado(), ACEPTADOS, API (+22 more)
-
-### Community 73 - "App vieja (Vite): lib (16)"
-Cohesion: 0.11
-Nodes (30): VentaFichaPage, AnularVentaModal(), confirmar(), esFechaSoloDia(), formatoFechaHora(), OPCIONES_DIA, OPCIONES_HORA, TZ_AR (+22 more)
-
-### Community 74 - "API: pedidos"
-Cohesion: 0.10
-Nodes (17): CrearPedidoInput, EstadoPedido, FiltrosPedidos, ListaPedidos, RemitentePedido, ResultadoAsignar, ResultadoCrearPedido, ResultadoItem (+9 more)
-
-### Community 75 - "API: tienda (4)"
-Cohesion: 0.10
-Nodes (13): CuponTienda, Oferta, atributosComoTexto(), fecha(), ofertaDe(), PrismaTiendaRepository, Injectable, CondicionesTienda (+5 more)
-
-### Community 76 - "Web componentes: ui"
-Cohesion: 0.09
-Nodes (22): NAV_OPERACIONES, NAV_PRINCIPAL, Sidebar(), SidebarContent(), SidebarContext, SidebarContextProps, SidebarFooter(), SidebarGroup() (+14 more)
-
-### Community 77 - "Base de datos: migrations (2)"
-Cohesion: 0.10
-Nodes (29): "compras_items", compras_items_compra_id_idx, "devoluciones", "devoluciones_items", "lotes", "movimientos_inventario", movimientos_inventario_empresa_id_producto_id_fecha_idx, "ordenes_compra_items" (+21 more)
-
-### Community 78 - "API: bajas"
-Cohesion: 0.11
-Nodes (15): sinContextoAuditoria(), BajasProgramador, Injectable, BajasService, condicionColgada(), EstadoBaja, fecha(), Injectable (+7 more)
-
-### Community 79 - "API: analytics (4)"
-Cohesion: 0.11
-Nodes (17): InsightsCombosController, Controller, CurrentEmpresa, Get, Query, RequireModulo, CombosQuery, InsightCombo2 (+9 more)
-
-### Community 80 - "API: tienda (5)"
-Cohesion: 0.10
-Nodes (17): aFecha(), CuponesTiendaController, DescuentosTiendaService, iso(), OfertasController, Body, Controller, CurrentEmpresa (+9 more)
-
-### Community 81 - "Tienda modelo: lib (2)"
+### Community 49 - "cuenta/actions.ts"
 Cohesion: 0.15
-Nodes (21): alternarFavorito(), AvisoMinimo(), useFaltaMinimo(), CarritoDrawer(), FichaProducto(), Header(), PaginaCarrito(), Precio() (+13 more)
+Nodes (22): abrir(), borrarCuenta(), DatosCuenta, error(), guardarDatos(), ingresarConCodigo(), ingresarConGoogle(), pedirCodigo() (+14 more)
 
-### Community 82 - "Web: src"
-Cohesion: 0.10
-Nodes (24): DolarHoy, NOMBRE_DOLAR, SelectorMoneda(), CardAction(), GananciaProducto, PeriodoRespuesta, useGananciaProductos(), InicioDashboard() (+16 more)
+### Community 50 - "prisma-variantes.repository.ts"
+Cohesion: 0.20
+Nodes (10): PrismaVariantesRepository, stockSinVariantePorUbicacion(), Injectable, repartirPorUbicacion(), Tramo, GuardarVarianteInput, RepartoStock, mismaCombinacion() (+2 more)
 
-### Community 83 - "Docs: especificacion_funcional_legacy"
-Cohesion: 0.10
-Nodes (32): RPC analytics_periodo, CU-001 Registrar venta con sena, CU-002 Traslado masivo de inventario, CU-003 Invitar colaborador contador, CU-004 Compra con OCR y costos extra, Especificacion Funcional legacy (pre-reescritura), Fase 8 QA del plan de reescritura, GateModulos: gate de modulos por plan (+24 more)
-
-### Community 84 - "App vieja (Vite): lib (17)"
+### Community 51 - "import-export.module.ts"
 Cohesion: 0.14
-Nodes (29): DifusionClientes(), abrirModal(), onChip(), insertarEn(), OPCIONES, truncar(), cargarCumpleanosMes(), cargarLinkTienda() (+21 more)
+Nodes (14): ClientesModule, Module, ImportExportModule, Module, PrismaProductosImportRepository, Injectable, PRODUCTOS_IMPORT_REPOSITORY, ProductosImportRepository (+6 more)
 
-### Community 85 - "API: contabilidad (5)"
-Cohesion: 0.10
-Nodes (18): Body, CurrentEmpresa, Get, HttpCode, Put, inicioDia(), MonotributoRespuesta, MonotributoService (+10 more)
-
-### Community 86 - "API: informes"
-Cohesion: 0.21
-Nodes (27): asuntoInforme(), celda(), esc(), htmlInforme(), textoInforme(), bloque(), C, colorDe() (+19 more)
-
-### Community 87 - "General: package.json"
-Cohesion: 0.08
-Nodes (24): engines, node, dotenv, oxlint, react, simple-statistics, tsx, name (+16 more)
-
-### Community 88 - "General: tests"
-Cohesion: 0.23
-Nodes (16): @playwright/test, credencialesListas(), anularUltimaVenta(), leerStockProducto(), parseStockCelda(), registrarVentaDeUnaUnidad(), waitIdle(), BASE_URL (+8 more)
-
-### Community 89 - "App vieja (Vite): lib (18)"
-Cohesion: 0.14
-Nodes (27): leerPeriodoAnalytics(), acumularPct(), cacheBcra, cargarInflacionVsPrecios(), fechaValidaIso(), fetchBcraTramo(), filasBcra(), finMesIso() (+19 more)
-
-### Community 90 - "API: alianzas (5)"
-Cohesion: 0.11
-Nodes (26): ajustePorDevolucion(), asignarOrdenes(), beneficiosDelCupon(), centavos(), comisionDePago(), cuotasDelPeriodo(), CuponParaValidar, descuentoDeEntrada() (+18 more)
-
-### Community 91 - "API: listas-precios"
+### Community 52 - "productos.controller.ts"
 Cohesion: 0.12
-Nodes (16): ListasPreciosController, Body, Controller, CurrentEmpresa, Delete, Get, Param, Post (+8 more)
+Nodes (15): CodigoBarraProductoInput, codigoBarraProductoSchema, DimensionesProductoInput, dimensionesProductoSchema, estadoProductoSchema, GuardarProductoInput, guardarProductoSchema, ListarProductosQuery (+7 more)
 
-### Community 92 - "API: tienda (6)"
-Cohesion: 0.16
-Nodes (18): evaluarCupon(), hoyAR(), MENSAJE_CUPON, MotivoCupon, normalizarCodigo(), pesos(), precioConOferta(), PrecioFinal (+10 more)
+### Community 53 - "objetivos.service.ts"
+Cohesion: 0.12
+Nodes (29): guardarObjetivoSchema, metaPeriodoSchema, texto, Filtro, ObjetivoConAvance, PorDia, ACUMULATIVOS, ADJETIVO_PERIODO (+21 more)
 
-### Community 93 - "Scripts: auditoria (2)"
+### Community 54 - "OrdenTrabajoFicha.tsx"
+Cohesion: 0.11
+Nodes (26): Page(), EntregaOrden(), dia(), EstadoOtChip(), FILTROS, OrdenesTrabajoListado(), Acciones(), error() (+18 more)
+
+### Community 55 - "compras.controller.ts"
+Cohesion: 0.06
+Nodes (30): booleanQuery(), ComprasController, Body, Controller, Get, Param, Post, Query (+22 more)
+
+### Community 56 - "productos.module.ts"
+Cohesion: 0.10
+Nodes (20): PrismaProductosRepository, ProductoConCategoria, Injectable, ProductosModule, Module, DimensionesProducto, GuardarProductoInput, ListaProductos (+12 more)
+
+### Community 57 - "usuarios.module.ts"
 Cohesion: 0.09
-Nodes (24): ref_node_os, args, config, controles, destinos, dir, general, inicio (+16 more)
+Nodes (20): ClerkCuentasService, Injectable, ClerkKnownWebhookEvent, ClerkOrganizationCreatedEvent, ClerkOrganizationMembershipDeletedEvent, ClerkOrganizationMembershipEvent, ClerkWebhookEvent, Body (+12 more)
 
-### Community 94 - "API: productos (6)"
+### Community 58 - "fechaHoyAR"
+Cohesion: 0.10
+Nodes (33): fechaHoyAR(), ContabilidadRepository, ValorStock, ContabilidadRespuesta, ContabilidadService, Inject, Injectable, acumuladoSerie() (+25 more)
+
+### Community 59 - "AccesoCuentaService"
+Cohesion: 0.09
+Nodes (19): AccesoCuentaService, PlanEmpresa, Inject, Injectable, ordenarPlanesAdmin(), PlanId, hoyAR(), masDias() (+11 more)
+
+### Community 60 - "presupuestos.service.ts"
+Cohesion: 0.13
+Nodes (14): MonedaPresupuesto, ConItems, EstadoPresupuesto, estadoVisible(), fecha(), ItemPresupuestoInput, PresupuestosService, sumarDias() (+6 more)
+
+### Community 61 - "use-presupuestos.ts"
+Cohesion: 0.07
+Nodes (27): Acciones(), dia(), error(), PresupuestoFicha(), lineasDe(), PresupuestoForm(), guardar(), sumarDias() (+19 more)
+
+### Community 62 - "tienda/app/layout.tsx"
+Cohesion: 0.20
+Nodes (9): apps_tienda_app_globals, cormorant, generateMetadata(), inter, montserrat, nunito, playfair, AppShell() (+1 more)
+
+### Community 63 - "configuracion.controller.ts"
+Cohesion: 0.11
+Nodes (22): ConfiguracionController, MOTIVO, Controller, Inject, ACTIVIDADES, ActualizarConfiguracionInput, actualizarConfiguracionSchema, MEDIOS_PAGO_CONFIG (+14 more)
+
+### Community 64 - "web/package.json"
+Cohesion: 0.17
+Nodes (11): name, packageManager, private, scripts, build, dev, lint, start (+3 more)
+
+### Community 65 - "API NestJS starter (apps/api)"
+Cohesion: 0.11
+Nodes (37): CI Workflow (Analítica 360), GitHub Container Registry (ghcr.io), Job imagenes: build/push Docker (api, migrate, web), Imagen Docker migrate (target migrate de apps/api/Dockerfile), Build args NEXT_PUBLIC_* (API_URL, WHATSAPP_CONTACT, CLERK_PUBLISHABLE_KEY), Prisma generate (cliente de Prisma de la API), Job verificar: lint, tipos y tests, NestJS framework (+29 more)
+
+### Community 66 - "TiendaOnlineConfig.tsx"
+Cohesion: 0.10
+Nodes (34): Bordes, cormorant, Fondo, FONDOS, FormaFoto, FORMAS_FOTO, montserrat, nunito (+26 more)
+
+### Community 67 - "cuenta-corriente.service.ts"
+Cohesion: 0.18
+Nodes (13): CobrarInput, CuentaCorrienteService, NOMBRE_PAGO, r2(), Injectable, aplicarCobro(), diasEntre(), estadoDeCuenta() (+5 more)
+
+### Community 68 - "formatoFechaHora"
+Cohesion: 0.06
+Nodes (48): DIAS, Page(), ACCIONES, BitacoraAuditoria(), exportar(), Cambios(), campo(), COLOR (+40 more)
+
+### Community 69 - "ClientesService"
+Cohesion: 0.08
+Nodes (9): GuardarClienteInput, ClientesService, Injectable, EXPORTAR_DATOS_REPOSITORY, ExportarDatosRepository, ExportarDatosService, ExportCliente, Inject (+1 more)
+
+### Community 70 - "prisma-lotes.repository.ts"
+Cohesion: 0.10
+Nodes (17): fechaHoyAR(), prefijoLoteMes(), CrearLoteInput, LoteRecord, LOTES_REPOSITORY, LotesRepository, ResultadoCrearLote, LotesService (+9 more)
+
+### Community 71 - "uso.service.ts"
+Cohesion: 0.12
+Nodes (18): Controller, Get, Param, Query, UsoAdminController, UsoController, EventosUsoDto, eventosUsoSchema (+10 more)
+
+### Community 72 - "comun.mjs"
+Cohesion: 0.18
+Nodes (28): ref_node_stream, carga(), env(), NIVELES, sesionClerk(), aceptado(), ACEPTADOS, API (+20 more)
+
+### Community 73 - "vencimientos.service.ts"
+Cohesion: 0.13
+Nodes (16): Controller, Get, VencimientosController, Module, VencimientosModule, Injectable, VencimientosProgramador, Injectable (+8 more)
+
+### Community 74 - "pedidos.repository.ts"
+Cohesion: 0.08
+Nodes (25): CrearPedidoInput, EstadoPedido, ESTADOS_PEDIDO, FiltrosPedidos, ItemPedidoInput, MotivoRechazoPedido, ORIGENES_PEDIDO, OrigenPedido (+17 more)
+
+### Community 75 - "tienda.module.ts"
+Cohesion: 0.07
+Nodes (36): EnviosModule, Module, MpTiendaModule, Module, PedidosModule, Module, CuponTienda, evaluarCupon() (+28 more)
+
+### Community 76 - "sidebar.tsx"
+Cohesion: 0.06
+Nodes (24): Separator(), Sheet(), SheetContent(), SheetDescription(), SheetHeader(), SheetTitle(), Sidebar(), SidebarContent() (+16 more)
+
+### Community 77 - "copilot-chat-view.tsx"
+Cohesion: 0.13
+Nodes (20): metadata, metadata, CopilotChatView(), CopilotChatViewProps, CopilotKpiBanner(), CopilotKpiBannerProps, CopilotMessageBubble(), CopilotMessageBubbleProps (+12 more)
+
+### Community 78 - "bajas.service.ts"
+Cohesion: 0.08
+Nodes (21): sinContextoAuditoria(), AdminBajasController, Controller, Delete, Get, HttpCode, Param, BajasProgramador (+13 more)
+
+### Community 79 - "CotizacionesService"
+Cohesion: 0.10
+Nodes (13): Inject, Inject, RendimientoService, Injectable, FilaRendimiento, FilaVentas, periodoAnterior(), r1() (+5 more)
+
+### Community 80 - "OfertasController"
+Cohesion: 0.15
+Nodes (10): CuponesTiendaController, OfertasController, Body, Controller, Delete, Get, Param, Patch (+2 more)
+
+### Community 81 - "productos.ts"
+Cohesion: 0.10
+Nodes (28): alternarFavorito(), dynamic, HomePage(), dynamic, generateMetadata(), ProductoPage(), FichaProducto(), Precio() (+20 more)
+
+### Community 82 - "ventas.controller.ts"
+Cohesion: 0.13
+Nodes (16): Body, Controller, Get, Param, Post, Query, VentasController, AnularVentaInput (+8 more)
+
+### Community 83 - "Especificacion Funcional legacy (pre-reescritura)"
+Cohesion: 0.10
+Nodes (31): RPC analytics_periodo, CU-001 Registrar venta con sena, CU-002 Traslado masivo de inventario, CU-003 Invitar colaborador contador, CU-004 Compra con OCR y costos extra, Especificacion Funcional legacy (pre-reescritura), Fase 3 diseno del schema Prisma, Fase 8 QA del plan de reescritura (+23 more)
+
+### Community 84 - "Sitio.tsx"
+Cohesion: 0.11
+Nodes (20): Encabezado(), ENLACES, Logo(), BARRAS, MaquetaDestacada(), MaquetaInicio(), MaquetaVentaCelular(), ICONOS_EXTRAS (+12 more)
+
+### Community 85 - "monotributo.service.ts"
+Cohesion: 0.11
+Nodes (19): AdminMonotributoController, Body, Controller, Get, HttpCode, Put, inicioDia(), MonotributoRespuesta (+11 more)
+
+### Community 86 - "informes.util.ts"
+Cohesion: 0.06
+Nodes (65): cifra(), mensual, mes, semana, semanal, asuntoInforme(), celda(), COLOR_SEMAFORO (+57 more)
+
+### Community 87 - "package.json"
+Cohesion: 0.08
+Nodes (25): devDependencies, dotenv, @playwright/test, tsx, turbo, typescript, engines, node (+17 more)
+
+### Community 88 - "agenda-online.service.ts"
+Cohesion: 0.18
+Nodes (22): POR_DEFECTO, Db, aHoraAR(), cuandoTexto(), dentroDelHorario(), desdeHoraAR(), DIAS, diaSemana() (+14 more)
+
+### Community 89 - "TiendaConfigController"
+Cohesion: 0.13
+Nodes (13): ProductoFotosController, TiendaConfigController, TiendaSitioController, Body, Controller, Delete, Get, Param (+5 more)
+
+### Community 90 - "alianzas.util.ts"
+Cohesion: 0.11
+Nodes (32): ClienteCamara, asignarOrdenes(), beneficiosDelCupon(), centavos(), comisionDePago(), cuotasDelPeriodo(), CuponParaValidar, descuentoDeEntrada() (+24 more)
+
+### Community 91 - "ListasPreciosService"
+Cohesion: 0.07
+Nodes (22): ClientesController, Body, Controller, Get, Param, Patch, Post, Query (+14 more)
+
+### Community 92 - "TiendaService"
+Cohesion: 0.14
+Nodes (10): aFecha(), DescuentosTiendaService, iso(), Injectable, hoyAR(), normalizarCodigo(), CrearPedidoTiendaInput, ARS() (+2 more)
+
+### Community 93 - "auditar.mjs"
+Cohesion: 0.10
+Nodes (19): args, config, controles, destinos, dir, general, inicio, matriz (+11 more)
+
+### Community 94 - "categorizar-productos.ts"
 Cohesion: 0.13
 Nodes (16): aplicar, args, crear, ctx, pedidos, prisma, PrismaSkuRepository, Injectable (+8 more)
 
-### Community 95 - "API: auditoria"
-Cohesion: 0.12
-Nodes (14): LECTURAS, AuditoriaAdminController, AuditoriaController, Controller, CurrentEmpresa, Get, Query, Roles (+6 more)
-
-### Community 96 - "API: inventario (2)"
-Cohesion: 0.17
-Nodes (17): CompraFicha, CompraItemInput, CompraRecord, ConfirmarCompraInput, ListaCompras, ResultadoConfirmarCompra, PrismaComprasRepository, Injectable (+9 more)
-
-### Community 97 - "API: contabilidad (6)"
-Cohesion: 0.13
-Nodes (23): CATEGORIAS, cierresDeMes(), Asiento, asientos(), CobroDato, CompraAsiento, Cuenta, CuentaFija (+15 more)
-
-### Community 98 - "API: inventario (3)"
-Cohesion: 0.14
-Nodes (15): RegistrarAjusteInput, RegistrarTrasladoInput, RegistrarTrasladoMasivoInput, CrearMovimientoInput, MovimientoKardexRecord, MovimientoRecord, MOVIMIENTOS_REPOSITORY, MovimientosRepository (+7 more)
-
-### Community 99 - "API: tienda (7)"
-Cohesion: 0.17
-Nodes (14): CuentasTiendaController, Body, Controller, Delete, Get, Headers, HttpCode, Param (+6 more)
-
-### Community 100 - "Web: package.json (2)"
-Cohesion: 0.07
-Nodes (27): dependencies, @analitica360/shared-types, @base-ui/react, class-variance-authority, @clerk/localizations, @clerk/nextjs, cn, date-fns (+19 more)
-
-### Community 101 - "Docs: especificacion_tecnica_maestra.html"
-Cohesion: 0.10
-Nodes (27): HU-005 Anular venta, RLS con get_empresa_id()/get_rol(), Stack legacy React+Vite+Supabase sin backend propio, Stock derivado de movimientos, nunca columna fija, Integracion ARCA (ex-AFIP), Borrado logico con deleted_at, Escaneo de codigo de barras y precarga inteligente, Principio de correcciones y estructura de anulacion (+19 more)
-
-### Community 102 - "API: planes (2)"
-Cohesion: 0.14
-Nodes (21): BASICO, CICLOS, clavePlan(), defPlan(), esPlanPago(), Funcion, idPlan(), MESES_CICLO (+13 more)
-
-### Community 103 - "API: contabilidad (7)"
-Cohesion: 0.10
-Nodes (20): ContabilidadController, Controller, CurrentEmpresa, Get, Query, RequireModulo, ContabilidadQuery, contabilidadQuerySchema (+12 more)
-
-### Community 104 - "API: notificaciones"
-Cohesion: 0.14
-Nodes (14): NotificacionesController, Controller, CurrentEmpresa, Get, NotificacionesModule, Module, ConteoNotificaciones, NOTIFICACIONES_REPOSITORY (+6 more)
-
-### Community 105 - "API: produccion"
-Cohesion: 0.16
-Nodes (18): CrearOrdenInput, etiqueta(), GuardarRecetaInput, num(), Tx, clave(), apps_api_src_modules_produccion_produccion_util_claveinsumo, ComponenteCosteado (+10 more)
-
-### Community 106 - "Scripts: auditoria (3)"
-Cohesion: 0.20
-Nodes (24): amarillo(), auditarEmpresa(), bloqCompras(), bloqProductos(), bloqVentas(), bold(), EMPRESAS, enChunks() (+16 more)
-
-### Community 107 - "General: apps"
-Cohesion: 0.08
-Nodes (24): author, description, svix, zod, license, name, private, type (+16 more)
-
-### Community 108 - "API: pedidos (2)"
-Cohesion: 0.20
-Nodes (12): PedidosController, Body, Controller, CurrentEmpresa, CurrentUser, Get, Param, Patch (+4 more)
-
-### Community 109 - "API: pedidos (3)"
-Cohesion: 0.12
-Nodes (19): asignarPedidoSchema, crearPedidoSchema, GuardarPreparacionItemInput, guardarPreparacionItemSchema, itemPedidoSchema, listarPedidosQuerySchema, registrarDespachoSchema, PedidosModule (+11 more)
-
-### Community 110 - "Tienda modelo: lib (3)"
+### Community 95 - "AuditoriaService"
 Cohesion: 0.18
-Nodes (18): ControlesCatalogo(), Migas(), Paginacion(), ProductosCatalogo(), coincide(), Consulta, entero(), ItemCatalogo (+10 more)
+Nodes (7): AuditoriaAdminController, Controller, Get, Query, AuditoriaQuery, AuditoriaService, Injectable
 
-### Community 111 - "Base de datos: migrations (3)"
-Cohesion: 0.12
-Nodes (18): _a_tachar, "registro_auditoria", registro_auditoria_actor_usuario_id_creado_en_idx, registro_auditoria_creado_en_idx, registro_auditoria_empresa_id_creado_en_idx, registro_auditoria_encadenar(), registro_auditoria_entidad_entidad_id_idx, registro_auditoria_sin_cambios (+10 more)
+### Community 96 - "compras.module.ts"
+Cohesion: 0.09
+Nodes (28): ConfirmarCompraInput, ComprasModule, Module, CompraFicha, CompraItemInput, CompraRecord, COMPRAS_REPOSITORY, ComprasRepository (+20 more)
 
-### Community 112 - "API: informes (2)"
+### Community 97 - "libro-diario.service.ts"
+Cohesion: 0.10
+Nodes (28): ESTADOS_CONTABLES_REPOSITORY, CATEGORIAS, cierresDeMes(), LibroDiarioService, Inject, Injectable, Asiento, asientos() (+20 more)
+
+### Community 98 - "inventario.module.ts"
 Cohesion: 0.13
-Nodes (13): escapar(), InformesController, Body, Controller, CurrentEmpresa, CurrentUser, Get, Param (+5 more)
+Nodes (17): KardexQuery, RegistrarAjusteInput, RegistrarTrasladoInput, InventarioModule, Module, CrearMovimientoInput, MovimientoKardexRecord, MovimientoRecord (+9 more)
 
-### Community 113 - "API: informes (3)"
-Cohesion: 0.21
-Nodes (7): InformesDatosService, Injectable, InformesService, nombreArchivo(), Injectable, Periodo, TipoInforme
+### Community 99 - "CuentasTiendaController"
+Cohesion: 0.18
+Nodes (13): CuentasTiendaController, Body, Controller, Delete, Get, Headers, HttpCode, Param (+5 more)
 
-### Community 114 - "API: inventario (4)"
-Cohesion: 0.17
-Nodes (14): KardexQuery, KardexValorizadoQuery, PeriodoQuery, MovimientosController, Body, Controller, CurrentEmpresa, CurrentUser (+6 more)
+### Community 100 - "dependencies"
+Cohesion: 0.11
+Nodes (19): dependencies, class-variance-authority, @clerk/localizations, @clerk/nextjs, cn, lucide-react, next, recharts (+11 more)
 
-### Community 115 - "API: produccion (2)"
+### Community 101 - "Especificacion Tecnica Maestra - SaaS Gestion"
+Cohesion: 0.11
+Nodes (26): HU-005 Anular venta, RLS con get_empresa_id()/get_rol(), Roles dueno/operador/contador, Stack legacy React+Vite+Supabase sin backend propio, Stock derivado de movimientos, nunca columna fija, Integracion ARCA (ex-AFIP), Borrado logico con deleted_at, Escaneo de codigo de barras y precarga inteligente (+18 more)
+
+### Community 102 - "planes.util.ts"
 Cohesion: 0.16
-Nodes (14): ProduccionController, Body, Controller, CurrentEmpresa, CurrentUser, Delete, Get, HttpCode (+6 more)
+Nodes (20): BASICO, CICLOS, clavePlan(), CUOTAS_ANUAL, defPlan(), DESCUENTO_CICLO, esPlanPago(), Funcion (+12 more)
 
-### Community 116 - "API: productos (7)"
+### Community 103 - "RequireModulo"
+Cohesion: 0.04
+Nodes (57): CACHE_LECTURA_KEY, CacheLectura(), Entrada, LECTURAS, RequireModulo(), Exportacion(), InsightsCombosController, Controller (+49 more)
+
+### Community 104 - "notificaciones.module.ts"
+Cohesion: 0.16
+Nodes (12): NotificacionesController, Controller, NotificacionesModule, Module, ConteoNotificaciones, NOTIFICACIONES_REPOSITORY, NotificacionesRepository, NotificacionesService (+4 more)
+
+### Community 105 - "produccion.service.ts"
+Cohesion: 0.10
+Nodes (22): salidasConKits(), CrearOrdenInput, etiqueta(), GuardarRecetaInput, num(), ProduccionService, r2(), Injectable (+14 more)
+
+### Community 106 - "usuarios.repository.ts"
+Cohesion: 0.13
+Nodes (10): AccesoColaborador, RolCrudo, Inject, PrismaUsuariosRepository, Injectable, EmpresaRecord, UpsertEmpresaInput, UpsertUsuarioInput (+2 more)
+
+### Community 107 - "api/package.json"
+Cohesion: 0.25
+Nodes (7): author, description, license, name, private, type, version
+
+### Community 108 - "CurrentEmpresa"
+Cohesion: 0.05
+Nodes (50): CurrentEmpresa, RequirePermiso(), DifusionesController, Body, Controller, Get, Post, CuentaCorrienteController (+42 more)
+
+### Community 109 - "pedidos.controller.ts"
+Cohesion: 0.09
+Nodes (22): AsignarPedidoInput, asignarPedidoSchema, CrearPedidoInput, crearPedidoSchema, FechaComprometidaInput, fechaComprometidaSchema, GuardarPreparacionItemInput, guardarPreparacionItemSchema (+14 more)
+
+### Community 110 - "catalogo.ts"
+Cohesion: 0.14
+Nodes (25): GET(), dynamic, generateMetadata(), ProductosPage(), Props, ControlesCatalogo(), Migas(), Paginacion() (+17 more)
+
+### Community 111 - "ReservaTurno.tsx"
+Cohesion: 0.13
+Nodes (20): dynamic, metadata, dynamic, metadata, CancelarTurno(), BOTON, ERROR, GoogleId (+12 more)
+
+### Community 112 - "Roles"
+Cohesion: 0.05
+Nodes (38): Roles(), ArchivoController, Body, Controller, Delete, Get, Param, Patch (+30 more)
+
+### Community 113 - ".planDe"
+Cohesion: 0.18
+Nodes (4): PlanGuard, Injectable, planEfectivo(), planMinimoParaModulo()
+
+### Community 114 - "EmpresaContext"
+Cohesion: 0.05
+Nodes (42): EmpresaContext, AbonosController, Body, Controller, Delete, Get, Param, Post (+34 more)
+
+### Community 115 - "produccion.controller.ts"
 Cohesion: 0.12
-Nodes (16): Body, Controller, CurrentEmpresa, CurrentUser, Get, Param, Put, RequireModulo (+8 more)
+Nodes (15): ordenSchema, previewQuery, ProduccionController, puedeVerCostos(), recetaQuery, recetaSchema, Body, Controller (+7 more)
 
-### Community 117 - "General: docker-compose.prod.yml"
+### Community 116 - "variantes.service.ts"
+Cohesion: 0.11
+Nodes (16): GuardarVariantesProductoInput, guardarVariantesProductoSchema, VarianteInput, varianteInputSchema, RepartoStockError, ServicioSinVariantesError, SkuDuplicadoError, VarianteConStockError (+8 more)
+
+### Community 117 - "Servicio api (prod)"
 Cohesion: 0.14
 Nodes (23): copia(), backup.sh script, Servicio api (perfil apps), Perfil Docker "apps", Servicio migrate (perfil apps), Postgres remapeado a puerto 5433, Servicio postgres (dev), Servicio api (prod) (+15 more)
 
-### Community 118 - "API: import-export (2)"
-Cohesion: 0.15
-Nodes (10): ExportarDatosRepository, ExportCompraCabecera, ExportCompraItem, ExportGasto, ExportMovimientoInventario, ExportProducto, ExportVentaCabecera, ExportVentaItem (+2 more)
+### Community 118 - "exportar-datos.repository.ts"
+Cohesion: 0.22
+Nodes (9): ExportCompraCabecera, ExportCompraItem, ExportGasto, ExportMovimientoInventario, ExportProducto, ExportVentaCabecera, ExportVentaItem, PrismaExportarDatosRepository (+1 more)
 
-### Community 119 - "API: planes (3)"
-Cohesion: 0.15
-Nodes (11): AdminSuscripcionController, Body, Controller, Get, HttpCode, Param, Patch, Post (+3 more)
+### Community 119 - "SuscripcionService"
+Cohesion: 0.16
+Nodes (7): Get, lanzarSegunMotivo(), SuscripcionService, Injectable, diasRestantes(), estaEnTrial(), trialVencido()
 
-### Community 120 - "API: tienda (8)"
-Cohesion: 0.17
-Nodes (18): DURACION_CODIGO_MS, DURACION_SESION_MS, ESPERA_ENTRE_CODIGOS_MS, generarCodigo(), generarToken(), hashCodigo(), hashToken(), MAX_CODIGOS_POR_HORA (+10 more)
+### Community 120 - "cuentas-tienda.ts"
+Cohesion: 0.12
+Nodes (20): DURACION_CODIGO_MS, DURACION_SESION_MS, ESPERA_ENTRE_CODIGOS_MS, generarCodigo(), generarToken(), hashCodigo(), hashToken(), MAX_CODIGOS_POR_HORA (+12 more)
 
-### Community 121 - "Tienda modelo: components"
-Cohesion: 0.19
-Nodes (17): crearPedidoTienda(), FormaPago, ResultadoPedido, validarCupon(), CheckoutForm(), onSubmit(), CuentaCheckout, vacio (+9 more)
+### Community 121 - "obtenerSitio"
+Cohesion: 0.13
+Nodes (39): cotizarEnvio(), crearPedidoTienda(), pagarConMercadoPago(), ResultadoPedido, validarCupon(), aceptaMercadoPago(), CheckoutPage(), dynamic (+31 more)
 
-### Community 122 - "API: informes (4)"
-Cohesion: 0.18
-Nodes (18): ConfigInformes, FUNCION_DE, ahoraAR(), AR, destinatarios(), DIAS, DIAS_DE_GRACIA, firma() (+10 more)
-
-### Community 123 - "Web: components.json"
+### Community 123 - "components.json"
 Cohesion: 0.09
 Nodes (21): aliases, components, hooks, lib, ui, utils, iconLibrary, menuAccent (+13 more)
 
-### Community 124 - "Web: src (2)"
-Cohesion: 0.17
-Nodes (17): apps_web_src_app_globals, inter, metadata, RootLayout(), MuestraPaleta(), SelectorTema(), AparienciaConfig(), opcion() (+9 more)
+### Community 124 - "AparienciaConfig.tsx"
+Cohesion: 0.18
+Nodes (16): apps_web_src_app_globals, inter, metadata, RootLayout(), Providers(), SelectorTema(), AparienciaConfig(), opcion() (+8 more)
 
-### Community 125 - "Supabase viejo: 039_tickets_soporte"
-Cohesion: 0.12
-Nodes (14): public.asignar_numero_ticket, public.tickets_before_write, public.tickets_respuestas_before_insert, public.tickets, public.tickets_respuestas, public.empresas, public.usuarios, tickets_created_idx (+6 more)
-
-### Community 126 - "Base de datos: migrations (4)"
+### Community 125 - "abonos.service.ts"
 Cohesion: 0.15
-Nodes (17): "clientes", clientes_empresa_id_idx, "clientes_interacciones", "pedidos", "ventas", ventas_empresa_id_fecha_idx, pedidos_venta_id_key, ventas_cliente_id_idx (+9 more)
+Nodes (16): fecha(), diaMes(), DIAS_AVISO, diasEntre(), estadoAbono, finPeriodo(), mensajeAbono(), PeriodoEstado (+8 more)
 
-### Community 127 - "API: bajas (2)"
+### Community 127 - "TicketController"
 Cohesion: 0.16
-Nodes (11): AdminBajasController, Body, Controller, CurrentEmpresa, CurrentUser, Delete, Get, HttpCode (+3 more)
+Nodes (11): TicketController, Body, Controller, Get, HttpCode, Param, Patch, Post (+3 more)
 
-### Community 128 - "API: devoluciones"
+### Community 128 - "comisiones.service.ts"
 Cohesion: 0.17
-Nodes (11): DevolucionesController, Body, Controller, CurrentEmpresa, CurrentUser, Param, Post, RequireModulo (+3 more)
+Nodes (11): ComisionesService, dia(), diaMes(), fecha(), Injectable, baseDeVenta(), ItemComision, liquidar() (+3 more)
 
-### Community 129 - "API: inventario (5)"
-Cohesion: 0.15
-Nodes (12): etiqueta(), FilaKardexRespuesta, KardexRespuesta, KardexService, PerdidasRespuesta, Injectable, FilaKardex, KardexValorizado (+4 more)
-
-### Community 130 - "General: apps (2)"
-Cohesion: 0.10
-Nodes (19): compilerOptions, allowSyntheticDefaultImports, declaration, emitDecoratorMetadata, esModuleInterop, experimentalDecorators, incremental, isolatedModules (+11 more)
-
-### Community 131 - "Web: inventario"
-Cohesion: 0.30
-Nodes (20): Fase 5 del plan de reescritura (features web), Patron feature-driven (components/hooks/api/types), features/inventario README, features/lotes README, features/ordenes-compra README, features/pedidos README, features/planes README, features/productos README (+12 more)
-
-### Community 132 - "General: package.json (2)"
-Cohesion: 0.10
-Nodes (20): dependencies, jsbarcode, jspdf, jspdf-autotable, lucide-react, papaparse, qrcode, react (+12 more)
-
-### Community 133 - "General: tsconfig.app.json"
-Cohesion: 0.10
-Nodes (19): compilerOptions, allowArbitraryExtensions, allowImportingTsExtensions, erasableSyntaxOnly, jsx, lib, module, moduleDetection (+11 more)
-
-### Community 134 - "General: apps (3)"
-Cohesion: 0.11
-Nodes (19): dependencies, @clerk/backend, dotenv, helmet, @nestjs/common, @nestjs/config, @nestjs/core, @nestjs/platform-express (+11 more)
-
-### Community 135 - "General: apps (4)"
-Cohesion: 0.11
-Nodes (19): devDependencies, @nestjs/cli, @nestjs/mau, @nestjs/schematics, @nestjs/testing, oxlint, prettier, prisma (+11 more)
-
-### Community 136 - "Tienda modelo: components (2)"
-Cohesion: 0.21
-Nodes (11): WhatsAppFlotante(), ConfirmacionPedido(), leerUltimoPedido(), parsearUltimoPedido(), sinSuscripcion(), Footer(), Contexto, SitioProvider() (+3 more)
-
-### Community 137 - "Tienda modelo: tsconfig.json"
-Cohesion: 0.11
-Nodes (18): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+10 more)
-
-### Community 138 - "Web: registro"
-Cohesion: 0.18
-Nodes (12): BienvenidaForm(), enviar(), validar(), INCLUYE, sinCambios(), CampoCodigo(), useVerificarCodigo(), codigoGuardado() (+4 more)
-
-### Community 139 - "Web: tsconfig.json"
-Cohesion: 0.11
-Nodes (18): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+10 more)
-
-### Community 140 - "General: package.json (3)"
-Cohesion: 0.11
-Nodes (19): scripts, auditar, auditoria, auditoria:acacia, auditoria:analitica, build, dev, lint (+11 more)
-
-### Community 141 - "Base de datos: migrations (5)"
-Cohesion: 0.22
-Nodes (17): "pagos", "camaras", "cambios_origen", cambios_origen_empresa_id_idx, "comisiones", comisiones_camara_id_mes_idx, comisiones_pago_id_tipo_key, "cupones" (+9 more)
-
-### Community 142 - "API: inventario (6)"
-Cohesion: 0.16
-Nodes (12): CrearLoteInput, DisponiblesQuery, LotesController, Body, Controller, CurrentEmpresa, CurrentUser, Get (+4 more)
-
-### Community 143 - "API: tienda (9)"
-Cohesion: 0.21
-Nodes (3): CuentasTiendaService, Inject, Injectable
-
-### Community 144 - "API: tienda (10)"
-Cohesion: 0.16
-Nodes (14): CrearPedidoTiendaInput, crearPedidoTiendaSchema, itemPedidoTiendaSchema, requerido(), texto(), ValidarCuponInput, validarCuponSchema, TiendaModule (+6 more)
-
-### Community 145 - "General: package.json (4)"
-Cohesion: 0.11
-Nodes (18): devDependencies, dotenv, oxlint, @playwright/test, rollup-plugin-visualizer, tailwindcss, @tailwindcss/vite, terser (+10 more)
-
-### Community 146 - "App vieja (Vite): lib (19)"
-Cohesion: 0.21
-Nodes (17): OcrFacturaPanel(), aplicar(), armarItems(), elegirArchivo(), payload(), procesar(), archivoABase64(), DatosFactura (+9 more)
-
-### Community 147 - "App vieja (Vite): components (3)"
-Cohesion: 0.22
-Nodes (15): createParticles(), leerColores(), Particle, ParticleNetwork(), bindObserver(), draw(), medidas(), onResize() (+7 more)
-
-### Community 148 - "Supabase viejo: 035_variantes"
-Cohesion: 0.16
-Nodes (17): idx_atributos_empresa, idx_items_variante, idx_mov_variante, idx_variantes_producto, public.analytics_variantes(), public.atributos, public.confirmar_venta(), public.producto_variantes (+9 more)
-
-### Community 149 - "API: devoluciones (2)"
-Cohesion: 0.17
-Nodes (13): DevolucionItemRecord, EstadoDevolucion, ItemDevolucionInput, MovimientoDevolucionRecord, RegistrarDevolucionInput, ResultadoRegistrarDevolucion, TipoDevolucion, TipoItemDevolucion (+5 more)
-
-### Community 150 - "Web componentes: ui (2)"
-Cohesion: 0.18
-Nodes (8): DropdownMenu(), DropdownMenuContent(), DropdownMenuGroup(), DropdownMenuLabel(), DropdownMenuRadioGroup(), DropdownMenuRadioItem(), DropdownMenuSeparator(), DropdownMenuTrigger()
-
-### Community 151 - "Scripts: medir-pantallas"
-Cohesion: 0.12
-Nodes (13): envPath, root, ref_node_fs, ref_node_url, env, errores, filas, RUTAS (+5 more)
-
-### Community 152 - "Supabase viejo: 042_analytics_agregados"
-Cohesion: 0.21
-Nodes (12): public.analytics_contar_ventas(), public.analytics_evolucion(), public.analytics_top_productos(), public.analytics_variantes(), base, LATERAL, public.producto_variantes, public.productos (+4 more)
-
-### Community 153 - "General: tsconfig.node.json"
-Cohesion: 0.12
-Nodes (16): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, lib, module, moduleDetection, noEmit, noFallthroughCasesInSwitch (+8 more)
-
-### Community 155 - "Supabase viejo: 017_clientes"
-Cohesion: 0.17
-Nodes (10): idx_clientes_empresa, idx_clientes_interacciones_cliente, idx_ventas_cliente, public.agregar_interaccion_cliente(), public.clientes, public.clientes_interacciones, public.confirmar_venta(), public.empresas (+2 more)
-
-### Community 156 - "API: contabilidad (8)"
-Cohesion: 0.21
-Nodes (10): Body, CurrentEmpresa, CurrentUser, Get, HttpCode, Param, Post, Query (+2 more)
-
-### Community 157 - "General: packages"
-Cohesion: 0.17
-Nodes (13): BASICO, CicloFacturacion, clavePlan(), defPlan(), Funcion, idPlan(), PLAN_DE_PRUEBA, PlanDef (+5 more)
-
-### Community 158 - "API: tienda (11)"
-Cohesion: 0.20
-Nodes (10): TiendaController, Body, Controller, Get, Headers, Param, Post, Public (+2 more)
-
-### Community 159 - "App vieja (Vite): lib (20)"
-Cohesion: 0.30
-Nodes (14): jspdf, jspdf-autotable, AnalyticsPeriodo, ticketPromedio(), exportarAnalyticsPdf(), exportarVentasExcel(), exportarVentasPdf(), fechaArchivo() (+6 more)
-
-### Community 160 - "General: apps (5)"
+### Community 129 - "kardex.service.ts"
 Cohesion: 0.14
-Nodes (14): scripts, build, deploy, format, lint, start, start:debug, start:dev (+6 more)
+Nodes (12): etiqueta(), FilaKardexRespuesta, KardexRespuesta, KardexService, PerdidasRespuesta, Injectable, FilaKardex, kardexValorizado (+4 more)
 
-### Community 161 - "API: alianzas (6)"
-Cohesion: 0.18
-Nodes (10): Body, CurrentEmpresa, CurrentUser, Get, HttpCode, Post, Query, Req (+2 more)
+### Community 130 - "compilerOptions"
+Cohesion: 0.09
+Nodes (21): compilerOptions, allowSyntheticDefaultImports, declaration, emitDecoratorMetadata, esModuleInterop, experimentalDecorators, incremental, isolatedModules (+13 more)
 
-### Community 162 - "API: devoluciones (3)"
-Cohesion: 0.22
-Nodes (7): DevolucionFicha, DevolucionRecord, FiltrosDevoluciones, ResultadoTransicionDevolucion, PrismaDevolucionesRepository, toMovimientoRecord(), Injectable
-
-### Community 163 - "Scripts: recorrido-pantallas"
-Cohesion: 0.14
-Nodes (10): CSP, nextConfig, nextConfig, ref_node_path, [clerkUserId, carpeta, ancho = '1440'], conocidas, env, problemas (+2 more)
-
-### Community 164 - "Web componentes: shared (2)"
-Cohesion: 0.23
-Nodes (9): EmpresaSwitcher(), Evento, nombreDelClic(), RastreoUso(), rutaSinIds(), sesionId(), sinSuscripcion(), SoloCliente() (+1 more)
-
-### Community 165 - "Scripts: auditoria (4)"
+### Community 131 - "@analitica360/shared-types"
 Cohesion: 0.26
-Nodes (11): simulacroBackup(), POSTGRES, sqlJson(), textoComoStream(), calidadDatos(), CHEQUEOS, integridadBitacora(), anotarSello() (+3 more)
+Nodes (22): Fase 5 del plan de reescritura (features web), Patron feature-driven (components/hooks/api/types), features/inventario README, features/lotes README, features/ordenes-compra README, features/pedidos README, features/planes README, features/productos README (+14 more)
 
-### Community 166 - "Scripts: prueba-carga"
+### Community 132 - "dia-del-pase.mjs"
+Cohesion: 0.11
+Nodes (14): APLICAR, aviso(), correr(), db, EMPRESA, informe, inicio, linea() (+6 more)
+
+### Community 133 - "🛒 Ventas, Inventario y Logística"
+Cohesion: 0.10
+Nodes (20): ARCA (ex-AFIP), BOM (Bill of Materials / Receta Maestra), CAE (Código de Autorización Electrónico), Copilot IA (GPT-6 Luna), EAN-13 / Código de Barras, 🏛️ Facturación y Aspectos Tributarios, Facturas A, B y C, 📊 Gestión, Finanzas y Estrategia (+12 more)
+
+### Community 134 - "dependencies"
+Cohesion: 0.06
+Nodes (35): dependencies, @clerk/backend, dotenv, helmet, @nestjs/common, @nestjs/core, @nestjs/platform-express, @nestjs/throttler (+27 more)
+
+### Community 135 - "devDependencies"
+Cohesion: 0.06
+Nodes (35): devDependencies, @nestjs/cli, @nestjs/mau, @nestjs/schematics, @nestjs/testing, prettier, prisma, source-map-support (+27 more)
+
+### Community 136 - "CheckoutForm.tsx"
+Cohesion: 0.10
+Nodes (29): codigo(), FormaPago, OpcionEnvio, WhatsAppFlotante(), AvisoMinimo(), useFaltaMinimo(), CarritoDrawer(), CheckoutForm() (+21 more)
+
+### Community 137 - "compilerOptions"
+Cohesion: 0.07
+Nodes (28): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+20 more)
+
+### Community 138 - "BienvenidaForm"
+Cohesion: 0.21
+Nodes (7): BienvenidaForm(), enviar(), validar(), sinCambios(), codigoGuardado(), GuardarCodigoDelLink(), olvidarCodigo()
+
+### Community 139 - "compilerOptions"
+Cohesion: 0.06
+Nodes (30): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+22 more)
+
+### Community 140 - "movimientos-generales.service.ts"
+Cohesion: 0.20
+Nodes (11): etiqueta(), FilaMovimiento, FiltrosMovimientos, MovimientosGeneralesService, Injectable, GrupoMovimiento, GRUPOS_MOVIMIENTO, NOMBRE_TIPO (+3 more)
+
+### Community 142 - ".crear"
+Cohesion: 0.21
+Nodes (9): CrearLoteInput, DisponiblesQuery, LotesController, Body, Controller, Get, Param, Post (+1 more)
+
+### Community 143 - "TiendaRepository"
+Cohesion: 0.14
+Nodes (4): Inject, TiendaRepository, Inject, Optional
+
+### Community 144 - "tienda.controller.ts"
+Cohesion: 0.16
+Nodes (14): ReservaOnlineInput, fecha, libresSchema, reservaSchema, CotizarEnvioTiendaInput, cotizarEnvioTiendaSchema, crearPedidoTiendaSchema, itemPedidoTiendaSchema (+6 more)
+
+### Community 145 - "productos-import.util.ts"
+Cohesion: 0.27
+Nodes (13): celdaEsNumero(), claveColumna(), claveNombre(), enteroCelda(), numeroCelda(), pad2(), parseFechaCelda(), textoCelda() (+5 more)
+
+### Community 146 - "ubicaciones.module.ts"
+Cohesion: 0.18
+Nodes (8): Module, UbicacionesModule, UBICACIONES_REPOSITORY, UbicacionesRepository, ubicacionBase, Inject, Injectable, UbicacionesService
+
+### Community 147 - "GastoController"
+Cohesion: 0.15
+Nodes (11): GastoController, Body, Controller, Get, HttpCode, Param, Patch, Post (+3 more)
+
+### Community 148 - "DocumentosController"
+Cohesion: 0.18
+Nodes (8): DocumentosController, Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors
+
+### Community 149 - "prisma-devoluciones.repository.ts"
+Cohesion: 0.06
+Nodes (38): BuscarVentasQuery, buscarVentasQuerySchema, itemDevolucionSchema, ListarDevolucionesQuery, listarDevolucionesQuerySchema, RegistrarDevolucionInput, registrarDevolucionSchema, DevolucionesModule (+30 more)
+
+### Community 150 - "selector-tema.tsx"
+Cohesion: 0.16
+Nodes (9): MuestraPaleta(), DropdownMenu(), DropdownMenuContent(), DropdownMenuGroup(), DropdownMenuLabel(), DropdownMenuRadioGroup(), DropdownMenuRadioItem(), DropdownMenuSeparator() (+1 more)
+
+### Community 151 - "ref_node_fs"
+Cohesion: 0.10
+Nodes (16): ref_node_fs, env, errores, filas, RUTAS, [usuario, ancho = '1440'], env, filas (+8 more)
+
+### Community 152 - "AlmacenArchivosService"
+Cohesion: 0.21
+Nodes (3): AlmacenArchivosService, Injectable, bootstrap()
+
+### Community 153 - "CacheLecturasService"
+Cohesion: 0.17
+Nodes (6): CacheLecturasInterceptor, CacheLecturasService, CacheLecturasModule, Global, Module, Injectable
+
+### Community 155 - "esViolacionUnica"
+Cohesion: 0.24
+Nodes (7): esViolacionUnica(), PrismaUbicacionesRepository, Injectable, GuardarUbicacionInput, ResultadoGuardarUbicacion, TipoUbicacion, UbicacionRecord
+
+### Community 156 - "ordenes-trabajo.module.ts"
+Cohesion: 0.12
+Nodes (12): AbonosModule, Module, ComisionesModule, Module, DocumentosModule, Module, OrdenesTrabajoModule, Module (+4 more)
+
+### Community 157 - "src/planes.ts"
+Cohesion: 0.14
+Nodes (15): BASICO, CicloFacturacion, clavePlan(), CUOTAS_ANUAL, defPlan(), DESCUENTO_CICLO, Funcion, idPlan() (+7 more)
+
+### Community 158 - "TiendaController"
+Cohesion: 0.22
+Nodes (10): TiendaController, Body, Controller, Get, Headers, Param, Post, Query (+2 more)
+
+### Community 159 - "AtributosController"
+Cohesion: 0.17
+Nodes (8): AtributosController, Body, Controller, Delete, Param, Patch, Post, GuardarAtributoInput
+
+### Community 160 - "scripts"
+Cohesion: 0.12
+Nodes (17): scripts, build, deploy, dev, format, lint, prebuild, start (+9 more)
+
+### Community 161 - "UsuarioContext"
+Cohesion: 0.05
+Nodes (31): UsuarioContext, Get, AlianzasController, Body, Controller, HttpCode, Post, MercadoPagoController (+23 more)
+
+### Community 162 - "contexto-auditoria.ts"
+Cohesion: 0.20
+Nodes (10): AuditoriaInterceptor, LECTURAS, Injectable, Accion, Cambios, almacen, conContextoAuditoria(), ContextoAuditoria (+2 more)
+
+### Community 163 - "ref_node_path"
+Cohesion: 0.10
+Nodes (18): alias, carpeta, clave, claves, csr, cuit, organizacion, CSP (+10 more)
+
+### Community 164 - "(dashboard)/layout.tsx"
+Cohesion: 0.18
+Nodes (12): AvisoCuenta(), diaAnterior(), fechaCorta(), EmpresaSwitcher(), Evento, nombreDelClic(), RastreoUso(), rutaSinIds() (+4 more)
+
+### Community 165 - "datos.mjs"
+Cohesion: 0.25
+Nodes (12): simulacroBackup(), POSTGRES, sqlJson(), textoComoStream(), calidadDatos(), CHEQUEOS, integridadBitacora(), vencimientos() (+4 more)
+
+### Community 166 - "prueba-carga.mjs"
 Cohesion: 0.15
 Nodes (11): env, excluir, fallas, fallo(), porRuta, RUTAS, soloEstas, t0 (+3 more)
 
-### Community 167 - "Supabase viejo: 046_lotes"
-Cohesion: 0.21
-Nodes (12): idx_lotes_producto, idx_lotes_vencimiento, idx_mov_lote, public.confirmar_compra(), public.lotes, public.clientes, public.empresas, public.movimientos_inventario (+4 more)
+### Community 167 - "⚙️ Manual de Uso: Configuración General, Datos Fiscales y Parámetros"
+Cohesion: 0.13
+Nodes (15): 1. ¿Qué hace mi negocio? (Actividades y Rubros), 2. Datos Fiscales y ARCA (AFIP), 3. Medios de Pago y Cuotas, ⚙️ Backend (Servicio y API), Caso 1: Conectar el Sistema con ARCA para Emitir Facturas Electrónicas, Caso 2: Configurar Cuotas con Tarjeta de Crédito, Caso 3: Consulta de la Bitácora de Auditoría, 📍 Flujo de Navegación (+7 more)
 
-### Community 168 - "General: apps (6)"
+### Community 168 - "migrar-desde-supabase.mjs"
 Cohesion: 0.22
 Nodes (12): CALCULADAS, clavesPrimarias(), columnasLocales(), db, insertar(), leerSupabase(), main(), MOTIVO_OMISION (+4 more)
 
-### Community 169 - "General: apps (7)"
+### Community 169 - "traer-compras-legacy.mjs"
 Cohesion: 0.18
 Nodes (7): APLICAR, costoPromedioPonderado(), costoUnitarioConAdicionales(), db, EMPRESA, redondear(), SUPABASE_URL
 
-### Community 170 - "API: analytics (5)"
+### Community 170 - "vista-previa-api.sh"
+Cohesion: 0.13
+Nodes (14): API_URL_PUBLICA, APP_URL_PUBLICA, ARCA_CERTIFICADO, ARCA_CLAVE, ARCA_CUIT, CLAVE_CIFRADO, CORS_ORIGINS, DATABASE_URL (+6 more)
+
+### Community 171 - "AbonosService"
+Cohesion: 0.24
+Nodes (3): AbonosService, dia(), Injectable
+
+### Community 172 - "movimientos.controller.ts"
+Cohesion: 0.17
+Nodes (16): crearLoteSchema, disponiblesQuerySchema, fechaIso, kardexQuerySchema, KardexValorizadoQuery, kardexValorizadoQuerySchema, lineaTrasladoSchema, MovimientosGeneralesQuery (+8 more)
+
+### Community 173 - "planes/planes.ts"
+Cohesion: 0.18
+Nodes (11): CICLOS, def(), ESTADOS_SUSCRIPCION, limite(), MODULOS, PlanDef, PLANES_PAGOS, PlanId (+3 more)
+
+### Community 174 - "precios-masivos.service.ts"
+Cohesion: 0.24
+Nodes (10): LineaPrecio, num(), PreciosMasivosService, ResultadoPreciosMasivos, Injectable, margenPct(), ModoAumento, precioNuevo() (+2 more)
+
+### Community 175 - "shared-types/package.json"
+Cohesion: 0.13
+Nodes (14): dependencies, zod, zod, main, name, private, scripts, build (+6 more)
+
+### Community 176 - "Planes.tsx"
 Cohesion: 0.22
-Nodes (10): AnalyticsPeriodoController, AnalyticsRendimientoController, Controller, CurrentEmpresa, Get, Query, RequireModulo, fechaIso (+2 more)
+Nodes (13): celda(), DESTACADOS, GrupoComparacion(), MENSAJE_CICLO, PARA_QUIEN, pesos(), Planes(), ahorroAnual() (+5 more)
 
-### Community 171 - "API: devoluciones (4)"
-Cohesion: 0.21
-Nodes (8): Get, Query, BuscarVentasQuery, buscarVentasQuerySchema, itemDevolucionSchema, ListarDevolucionesQuery, listarDevolucionesQuerySchema, registrarDevolucionSchema
+### Community 177 - "tasks"
+Cohesion: 0.16
+Nodes (14): ^build, dependsOn, cache, persistent, dependsOn, $schema, tasks, build (+6 more)
 
-### Community 172 - "API: inventario (7)"
-Cohesion: 0.15
-Nodes (12): crearLoteSchema, disponiblesQuerySchema, fechaIso, kardexQuerySchema, kardexValorizadoQuerySchema, lineaTrasladoSchema, MovimientosGeneralesQuery, movimientosGeneralesQuerySchema (+4 more)
+### Community 178 - "vincular-clerk.mjs"
+Cohesion: 0.33
+Nodes (3): db, email, empresaId
 
-### Community 173 - "API: pedidos (5)"
-Cohesion: 0.17
-Nodes (6): RegistrarDespachoInput, PedidoFicha, PedidoRecord, ResultadoDespacho, ResultadoListoDespacho, etiquetaAtributos()
+### Community 179 - "🛒 Manual de Uso: Punto de Venta (POS), Cobros y Facturación ARCA"
+Cohesion: 0.14
+Nodes (14): 1. Panel de Carrito de Productos, 2. Panel de Cobro y Facturación, ⚙️ Backend (Servicio y API), Caso 2: Emisión de Factura Electrónica ARCA (Factura A / B), Caso 3: Devoluciones y Anulaciones de Venta, Caso Principal: Venta en Mostrador con Efectivo, 🗺️ Diagrama del Flujo de Venta y Cobro, 📍 Flujo de Navegación (+6 more)
 
-### Community 174 - "API: productos (8)"
-Cohesion: 0.15
-Nodes (10): PreciosMasivosController, Body, Controller, CurrentEmpresa, HttpCode, Post, RequireModulo, RequirePermiso (+2 more)
-
-### Community 175 - "General: packages (2)"
-Cohesion: 0.15
-Nodes (12): dependencies, zod, main, name, private, scripts, build, lint (+4 more)
-
-### Community 176 - "Supabase viejo: 006_productos"
-Cohesion: 0.24
-Nodes (9): idx_mov_empresa_producto, idx_precios_empresa_producto, idx_productos_empresa, public.movimientos_inventario, public.precios_historial, public.productos, public, public.empresas (+1 more)
-
-### Community 177 - "General: turbo.json"
-Cohesion: 0.15
-Nodes (12): dependsOn, outputs, cache, persistent, dependsOn, $schema, tasks, build (+4 more)
-
-### Community 178 - "General: apps (8)"
-Cohesion: 0.17
-Nodes (8): db, email, empresaId, Fase 3 diseno del schema Prisma, pnpm workspace (apps/*, packages/*), Overrides de seguridad (dompurify, mysql2, deepmerge-ts), ref_dotenv, prisma
-
-### Community 179 - "General: apps (9)"
-Cohesion: 0.24
-Nodes (10): cifra(), mensual, mes, semana, semanal, Cifra, DatosInforme, FORMA_PAGO (+2 more)
-
-### Community 180 - "General: apps (10)"
+### Community 180 - "traer-ventas-legacy.mjs"
 Cohesion: 0.17
 Nodes (8): APLICAR, db, DESDE, EMPRESA, fin, HASTA, inicio, SUPABASE_URL
 
-### Community 181 - "API: planes (4)"
-Cohesion: 0.20
-Nodes (7): AccesoCuenta, ACTIVO, DIAS_GRACIA, MotivoBloqueo, NivelAcceso, sumarDias(), EstadoSuscripcionRespuesta
-
-### Community 182 - "API: produccion (3)"
-Cohesion: 0.27
-Nodes (3): ProduccionService, r2(), Injectable
-
-### Community 183 - "Tienda modelo: lib (4)"
-Cohesion: 0.27
-Nodes (11): CarritoContext, CarritoContextValue, CarritoProvider(), escribirItems(), ItemCarrito, leerItems(), listeners, mismaLinea() (+3 more)
-
-### Community 184 - "Web componentes: ui (3)"
-Cohesion: 0.23
-Nodes (8): Providers(), ThemeProvider(), Toaster(), Tooltip(), TooltipContent(), TooltipProvider(), TooltipTrigger(), next-themes
-
-### Community 185 - "Supabase viejo: 007_ventas"
+### Community 181 - "acceso-cuenta.util.ts"
 Cohesion: 0.24
-Nodes (8): idx_ventas_empresa_fecha, idx_ventas_items_empresa, idx_ventas_items_venta, public.ventas, public.ventas_items, public.empresas, public.productos, public.usuarios
+Nodes (7): accesoCuenta, ACTIVO, DIAS_GRACIA, MotivoBloqueo, NivelAcceso, sumarDias(), EstadoSuscripcionRespuesta
 
-### Community 186 - "Supabase viejo: 016_compras"
-Cohesion: 0.23
-Nodes (8): idx_compras_empresa, idx_compras_items_compra, public.compras, public.compras_items, public, public.empresas, public.productos, public.usuarios
+### Community 182 - "🌐 Manual de Uso: Tienda Online y Storefront Multi-Negocio"
+Cohesion: 0.14
+Nodes (14): 1. Identidad Visual y Estilo, 2. Formas de Envío y Pagos Online, ⚙️ Backend (Servicio y API), Caso 1: Publicar un Producto en la Tienda Web, Caso 2: Crear un Cupón de Descuento Promocional, Caso 3: Gestión de un Pedido Ingresado por la Web, 🗺️ Diagrama del Flujo de la Tienda Online, 📍 Flujo de Navegación (+6 more)
 
-### Community 187 - "Supabase viejo: 052_pedidos"
-Cohesion: 0.20
-Nodes (8): public.pedidos, public.pedidos_items, public.pedidos_numeracion, public.clientes, public.empresas, public.lotes, public.producto_variantes, public.productos
+### Community 183 - "carrito.ts"
+Cohesion: 0.12
+Nodes (17): Buscador(), LupaIcon(), Sugerencia, Header(), NAV, CarritoContext, CarritoContextValue, CarritoProvider() (+9 more)
 
-### Community 188 - "Supabase viejo: 058_bugs_auditoria"
-Cohesion: 0.24
-Nodes (11): public.analytics_periodo(), public.listar_productos_con_stock(), public.listar_productos_empresa(), public.listar_ubicaciones_empresa(), public.ventas_match_cliente(), public.movimientos_inventario, public.producto_variantes, public.productos (+3 more)
+### Community 184 - "providers.tsx"
+Cohesion: 0.19
+Nodes (8): ThemeProvider(), Toaster(), Tooltip(), TooltipContent(), TooltipProvider(), TooltipTrigger(), CopilotFloatingWidget(), ApiError
 
-### Community 189 - "Supabase viejo: 059_ordenes_compra"
-Cohesion: 0.20
-Nodes (8): public.ordenes_compra, public.ordenes_compra_items, public.ordenes_compra_numeracion, public, public.empresas, public.producto_variantes, public.productos, public.proveedores
+### Community 186 - "🚀 Manual de Uso: Primeros Pasos, Registro y Acceso"
+Cohesion: 0.15
+Nodes (13): 1. Formulario de Registro Inicial, ⚙️ Backend (Servicio y API), Caso 1: Alta de una Nueva Empresa (Comercio Nuevo), Caso 2: Unirte a una Empresa Existente vía Invitación, Caso 3: Cambio de Comercio (Multi-Organización), 🗺️ Diagrama del Proceso de Registro y Acceso, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario) (+5 more)
 
-### Community 190 - "Base de datos: migrations (6)"
-Cohesion: 0.33
-Nodes (10): "codigos_ingreso_tienda", codigos_ingreso_tienda_empresa_id_email_created_at_idx, "cuentas_tienda", cuentas_tienda_cliente_id_key, cuentas_tienda_empresa_id_email_key, cuentas_tienda_empresa_id_google_sub_key, "favoritos_tienda", "sesiones_tienda" (+2 more)
+### Community 187 - "📅 Manual de Uso: Agenda de Turnos y Reservas Online"
+Cohesion: 0.15
+Nodes (13): 1. Creación / Edición de Turno, ⚙️ Backend (Servicio y API), Caso 1: Dar de Alta un Turno en Mostrador o por Teléfono, Caso 2: Atender y Cobrar un Turno, Caso 3: Compartir tu Enlace de Reservas Online, 🗺️ Diagrama del Flujo de Agendamiento y Atención, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario) (+5 more)
 
-### Community 191 - "API: alianzas (7)"
+### Community 188 - "🔁 Manual de Uso: Abonos Periódicos y Membresías Recurrentes"
+Cohesion: 0.15
+Nodes (13): 1. Configuración de un Plan de Abono, ⚙️ Backend (Servicio y API), Caso 1: Crear un Plan y Adherir un Cliente, Caso 2: Emisión Masiva de Cuotas al Comenzar el Mes, Caso 3: Cobrar la Cuota de un Abonado, 🗺️ Diagrama del Ciclo de Cuotas y Membresías, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario) (+5 more)
+
+### Community 189 - "🔧 Manual de Uso: Órdenes de Trabajo y Servicio Técnico"
+Cohesion: 0.15
+Nodes (13): 1. Formulario de Ingreso de la Orden, ⚙️ Backend (Servicio y API), Caso 1: Recepción de un Equipo y Emisión de Ticket de Ingreso, Caso 2: Carga de Repuestos y Mano de Obra, Caso 3: Entrega y Cobro Final, 🗺️ Diagrama del Flujo de una Orden de Trabajo, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario) (+5 more)
+
+### Community 190 - "🏷️ Manual de Uso: Catálogo de Productos, Servicios y Variantes"
+Cohesion: 0.15
+Nodes (13): 1. Ficha Principal del Producto, ⚙️ Backend (Servicio y API), Caso 1: Crear un Producto con Variantes de Talles y Colores, Caso 2: Aumento Masivo de Precios por Porcentaje, Caso 3: Carga Masiva desde Planilla Excel (Importador), 🗺️ Estructura del Catálogo y Matriz de Precios, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario) (+5 more)
+
+### Community 191 - "alianzas.module.ts"
 Cohesion: 0.18
-Nodes (6): CurrentEmpresa, Get, Param, Roles, ReferidosService, Injectable
+Nodes (8): AdminReferidosController, ReferidosController, Controller, Get, Param, fecha(), ReferidosService, Injectable
 
-### Community 192 - "API: inventario (8)"
-Cohesion: 0.29
-Nodes (8): deltaStockKardex(), EstadoLote, fechaHoyAR(), prefijoLoteMes(), signoDeAjuste(), sumarDiasIso(), TipoAjuste, TIPOS_AJUSTE
+### Community 192 - "inventario.util.ts"
+Cohesion: 0.52
+Nodes (5): deltaStockKardex(), estadoLote, signoDeAjuste(), sumarDiasIso(), TipoAjuste
 
-### Community 193 - "API: pedidos (6)"
-Cohesion: 0.24
-Nodes (3): CrearPedidoInput, PedidosService, Injectable
+### Community 193 - "🚚 Manual de Uso: Compras a Proveedores y Recepción de Mercadería"
+Cohesion: 0.15
+Nodes (13): 1. Cabecera del Comprobante de Compra, 2. Gastos Adicionales y Prorrateo, ⚙️ Backend (Servicio y API), Caso 1: Carga Rápida con Escáner OCR de Facturas, Caso 2: Carga Manual con Prorrateo de Flete, 🗺️ Diagrama del Flujo de Compras y Costeo Real, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario) (+5 more)
 
-### Community 194 - "API: planes (5)"
-Cohesion: 0.29
-Nodes (9): AsignarSuscripcionDto, asignarSuscripcionSchema, CambiarEstadoSuscripcionDto, cambiarEstadoSuscripcionSchema, estadoValues, fechaIso, MarcarDemoDto, marcarDemoSchema (+1 more)
+### Community 194 - "admin-suscripcion.controller.ts"
+Cohesion: 0.17
+Nodes (16): AdminSuscripcionController, Body, Controller, HttpCode, Param, Patch, Post, AsignarSuscripcionDto (+8 more)
 
-### Community 195 - "API: planes (6)"
+### Community 195 - "clientes.dto.ts"
 Cohesion: 0.20
-Nodes (7): SuscripcionController, Controller, CurrentEmpresa, CurrentUser, Get, Post, Req
+Nodes (8): aFechaSolo(), fechaSoloSchema, agregarInteraccionSchema, cumpleanosProximosQuerySchema, guardarClienteSchema, GuardarDifusionInput, guardarDifusionSchema, TIPOS_INTERACCION
 
-### Community 196 - "Web componentes: ui (4)"
+### Community 196 - "informes.module.ts"
 Cohesion: 0.18
-Nodes (5): Sheet(), SheetContent(), SheetDescription(), SheetHeader(), SheetTitle()
+Nodes (10): AnalyticsModule, Module, ContabilidadModule, Module, CuentaCorrienteModule, Module, InformesModule, Module (+2 more)
 
-### Community 197 - "General: public"
-Cohesion: 0.18
-Nodes (10): background_color, description, display, icons, name, orientation, permissions, short_name (+2 more)
+### Community 197 - "manifest.json"
+Cohesion: 0.17
+Nodes (11): background_color, description, display, icons, name, orientation, permissions, short_name (+3 more)
 
-### Community 198 - "App vieja (Vite): recoveryRedirect"
-Cohesion: 0.20
-Nodes (8): ref_react_dom, @sentry/react, App(), src_index, hashParams, params, initSentry(), SENSITIVE_FIELDS
+### Community 199 - "🤖 Manual de Uso: Copilot IA - Asistente Estratégico de Negocio"
+Cohesion: 0.17
+Nodes (12): ⚙️ Backend (Servicio y API), Caso 1: Detección de Quiebres de Stock Inminentes, Caso 2: Auditoría de Clientes Deudores, Caso 3: Evaluación de Rentabilidad de Productos, 🗺️ Diagrama del Flujo de Consulta con Copilot IA, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Componentes y Funciones (+4 more)
 
-### Community 199 - "Supabase viejo: 026_inventario_alertas"
-Cohesion: 0.18
-Nodes (9): public.ajustar_stock(), public.clientes, public.compras, public.configuracion_empresa, public.movimientos_inventario, public.productos, public.usuarios, public.ventas (+1 more)
+### Community 200 - "👥 Manual de Uso: Gestión de Clientes, Cuentas Corrientes y Difusiones"
+Cohesion: 0.17
+Nodes (12): 1. Ficha y Datos del Cliente, ⚙️ Backend (Servicio y API), Caso 1: Registrar un Pago a Cuenta Corriente (Cobro de Saldo), Caso 2: Campaña de WhatsApp a Segmentos de Clientes, 🗺️ Diagrama del Ciclo de Vida del Cliente y Cuenta Corriente, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Campos e Interacciones (+4 more)
 
-### Community 200 - "API: devoluciones (5)"
-Cohesion: 0.24
-Nodes (7): DevolucionesModule, Module, DEVOLUCIONES_REPOSITORY, MotivoRechazoDevolucion, MOTIVO_MENSAJE, fichaBase, itemBase
-
-### Community 201 - "API: inventario (9)"
+### Community 201 - "PrismaMovimientosRepository"
 Cohesion: 0.31
 Nodes (3): etiquetaCombo(), PrismaMovimientosRepository, Injectable
 
-### Community 202 - "Tienda modelo: components (3)"
-Cohesion: 0.24
-Nodes (5): Buscador(), LupaIcon(), Sugerencia, NAV, CategoriaTienda
+### Community 202 - "📦 Manual de Uso: Gestión de Pedidos, Picking y Despachos"
+Cohesion: 0.17
+Nodes (12): ⚙️ Backend (Servicio y API), Caso 1: Preparación de Pedido con Chequeo de Picking, Caso 2: Emisión del Remito de Entrega, Caso 3: Confirmación de Entrega, 🗺️ Diagrama del Ciclo de Vida de un Pedido, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Campos e Interacciones (+4 more)
 
-### Community 203 - "Tienda modelo: package.json"
-Cohesion: 0.20
-Nodes (10): devDependencies, eslint, eslint-config-next, tailwindcss, @tailwindcss/postcss, tsx, @types/node, @types/react (+2 more)
+### Community 203 - "devDependencies"
+Cohesion: 0.05
+Nodes (36): dependencies, next, react, react-dom, devDependencies, eslint, eslint-config-next, tailwindcss (+28 more)
 
-### Community 205 - "Web: compras"
+### Community 205 - "formatoPesos"
+Cohesion: 0.03
+Nodes (68): aMonto(), registrar(), fecha(), LibroDiarioVista(), exportar(), monto(), CuentaCliente(), registrar() (+60 more)
+
+### Community 206 - "📦 Manual de Uso: Control de Inventario, Kardex y Lotes"
+Cohesion: 0.17
+Nodes (12): ⚙️ Backend (Servicio y API), Caso 1: Registrar una Transferencia entre Depósitos o Locales, Caso 2: Auditoría y Ajuste de Stock por Conteo Físico, Caso 3: Consulta del Kardex Histórico de un Producto, 🗺️ Diagrama del Flujo de Movimientos y Kardex, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Campos e Interacciones (+4 more)
+
+### Community 207 - "🔨 Manual de Uso: Producción, Fórmulas y Recetas de Fabricación"
+Cohesion: 0.17
+Nodes (12): 1. Editor de Fórmulas y Recetas (BOM), ⚙️ Backend (Servicio y API), Caso 1: Crear una Receta de Elaboración, Caso 2: Lanzar y Finalizar una Orden de Producción, 🗺️ Diagrama del Proceso de Fabricación y Explosión de Insumos, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Campos e Interacciones (+4 more)
+
+### Community 208 - "📈 Manual de Uso: Analytics Comercial, Rentabilidad y Monotributo"
+Cohesion: 0.17
+Nodes (12): ⚙️ Backend (Servicio y API), Caso 1: Detección de Productos Más Rentables vs. Menos Rentables, Caso 2: Control Preventivo del Semáforo de Monotributo, Caso 3: Carga de Gastos Fijos (Alquiler, Servicios, Sueldos), 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Indicadores y Paneles, 📈 Manual de Uso: Analytics Comercial, Rentabilidad y Monotributo (+4 more)
+
+### Community 209 - "app.controller.ts"
 Cohesion: 0.29
-Nodes (8): ComprasListado(), fechaCorta(), COMPRAS_POR_PAGINA, useCompras(), CompraFila, ConfirmarCompraInput, ListaCompras, ProveedorFila
+Nodes (5): AppController, Controller, Get, AppService, Injectable
 
-### Community 206 - "Supabase viejo: 001_auth_empresa"
-Cohesion: 0.33
-Nodes (9): auth, empresas, historial_planes, idx_usuarios_empresa, public.get_empresa_id(), public.get_rol(), public.registrar_empresa(), auth.users (+1 more)
-
-### Community 207 - "Supabase viejo: 034_venta_total_con_interes"
-Cohesion: 0.31
-Nodes (8): public.analytics_periodo(), public.confirmar_venta(), public.listar_ventas_empresa(), public.monto_venta(), public.clientes, public.productos, public.ventas, public.ventas_items
-
-### Community 208 - "Supabase viejo: 060_invitaciones_flujo"
-Cohesion: 0.24
-Nodes (9): public.aceptar_invitacion_colaborador(), public.eliminar_colaborador(), public.email_tiene_cuenta(), public.info_invitacion_empresa(), public.listar_equipo(), auth.users, public.empresas, public.invitaciones_colaboradores (+1 more)
-
-### Community 209 - "Supabase viejo: 067_devoluciones"
+### Community 210 - "CategoriasService"
 Cohesion: 0.22
-Nodes (7): public.devoluciones, public.devoluciones_items, public.empresas, public.producto_variantes, public.productos, public.usuarios, public.ventas
+Nodes (5): GuardarCategoriaInput, CategoriasService, desempacar(), Inject, Injectable
 
-### Community 210 - "Base de datos: migrations (7)"
-Cohesion: 0.42
-Nodes (8): "ordenes_produccion", ordenes_produccion_empresa_id_fecha_idx, ordenes_produccion_empresa_id_numero_key, "recetas", recetas_empresa_id_idx, "recetas_items", recetas_items_receta_id_idx, recetas_producto_variante_key
+### Community 213 - "devDependencies"
+Cohesion: 0.12
+Nodes (17): devDependencies, eslint, eslint-config-next, tailwindcss, @tailwindcss/postcss, @types/node, @types/react, @types/react-dom (+9 more)
 
-### Community 212 - "API: productos (9)"
-Cohesion: 0.22
-Nodes (3): Inject, SkuRepository, Inject
+### Community 214 - ".next/**"
+Cohesion: 0.11
+Nodes (10): metadata, metadata, metadata, metadata, PaginaLegal(), Seccion(), .next/**, !.next/cache/** (+2 more)
 
-### Community 213 - "Web: package.json (3)"
-Cohesion: 0.22
-Nodes (9): devDependencies, eslint, eslint-config-next, tailwindcss, @tailwindcss/postcss, @types/node, @types/react, @types/react-dom (+1 more)
-
-### Community 214 - "Web rutas: privacidad"
-Cohesion: 0.33
-Nodes (4): metadata, metadata, PaginaLegal(), Seccion()
-
-### Community 215 - "Scripts: auditoria (5)"
+### Community 215 - "carga.k6.js"
 Cohesion: 0.22
 Nodes (7): ref_k6, BOLSA, hace30, hoy, options, PANTALLAS, VUS
 
-### Community 216 - "Supabase viejo: 025_admin_saas"
-Cohesion: 0.31
-Nodes (6): idx_pagos_empresa_fecha, public.admin_saas_metrics(), public.pagos, public.empresas, public.planes, public.suscripciones
+### Community 216 - "opengraph-image.tsx"
+Cohesion: 0.18
+Nodes (8): alt, BARRAS, contentType, FUENTES, NEGRITA, SEMI, size, DIAS_PRUEBA
 
-### Community 217 - "Supabase viejo: 037_numero_venta_anular_compras_"
-Cohesion: 0.31
-Nodes (6): public.asignar_numero_venta(), public.categorias, public.sembrar_categorias_default(), public.ventas_numeracion, public.compras_items, public.empresas
+### Community 217 - "use-precios.ts"
+Cohesion: 0.35
+Nodes (9): EstadoMercadoPago, cicloQueMasAhorra(), SelectorCiclo(), Ciclo, PlanPagoId, Beneficios, CuotasEnCurso, PrecioCiclo (+1 more)
 
-### Community 218 - "Supabase viejo: 047_ubicaciones"
-Cohesion: 0.31
-Nodes (8): public.confirmar_compra(), public.confirmar_venta(), public.clientes, public.lotes, public.producto_variantes, public.productos, public.proveedores, public.ubicaciones
+### Community 218 - "👥 Manual de Uso: Roles, Permisos y Gestión de Equipo"
+Cohesion: 0.18
+Nodes (11): ⚙️ Backend (Servicio y API), Caso 1: Invitar a un Vendedor o Cajero, Caso 2: Dar Acceso al Estudio Contable (Rol Contador), 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Campos e Interacciones, 👥 Manual de Uso: Roles, Permisos y Gestión de Equipo, 🔗 Manuales y Documentos Relacionados (+3 more)
 
-### Community 219 - "Supabase viejo: 054_equipo_roles"
-Cohesion: 0.33
-Nodes (8): idx_invitaciones_empresa, public.aceptar_invitacion_colaborador(), public.get_rol(), public.invitaciones_colaboradores, public.invitar_colaborador(), auth.users, public.empresas, public.usuarios
+### Community 219 - "🏭 Manual de Uso: Directorio de Proveedores y Cuentas Corrientes"
+Cohesion: 0.18
+Nodes (11): ⚙️ Backend (Servicio y API), Caso 1: Dar de Alta un Proveedor Mayorista, Caso 2: Pagar una Factura de Compra Pendiente, 🗺️ Diagrama del Flujo de Proveedores y Cuentas por Pagar, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Campos e Interacciones, 🏭 Manual de Uso: Directorio de Proveedores y Cuentas Corrientes (+3 more)
 
-### Community 220 - "API: registro"
-Cohesion: 0.25
-Nodes (6): AdminAvisosController, Body, Controller, Get, HttpCode, Post
+### Community 220 - "bajas.module.ts"
+Cohesion: 0.10
+Nodes (15): ArchivosModule, Global, Module, AlianzasModule, Module, BajasModule, Module, AdminAvisosController (+7 more)
 
-### Community 221 - "Web: productos (2)"
-Cohesion: 0.25
-Nodes (5): ImportarProductosVista(), elegir(), leerArchivo(), leerCsv(), read-excel-file
+### Community 221 - "🎯 Manual de Uso: Metas y Objetivos de Venta"
+Cohesion: 0.18
+Nodes (11): ⚙️ Backend (Servicio y API), Caso 1: Crear una Meta de Facturación Mensual para el Negocio, Caso 2: Competencia de Vendedores y Ranking Comercial, 🗺️ Diagrama del Flujo de Metas y Progreso Comercial, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Campos e Interacciones, 🎯 Manual de Uso: Metas y Objetivos de Venta (+3 more)
 
-### Community 222 - "Scripts: recorrido-tienda"
-Cohesion: 0.29
-Nodes (6): ref_node_child_process, [carpeta, subArg, emailArg, cupon = ''], foto(), paso(), problemas, r
+### Community 222 - "recorrido-tienda.mjs"
+Cohesion: 0.40
+Nodes (5): ref_node_child_process, [carpeta, subArg, emailArg, cupon = ''], foto(), paso(), problemas
 
-### Community 223 - "Supabase viejo: 003_asignar_y_trial_en_alta"
-Cohesion: 0.25
-Nodes (4): public.registrar_empresa(), auth.users, public.planes, public.usuarios
+### Community 223 - "🪙 Manual de Uso: Comisiones y Liquidaciones al Personal"
+Cohesion: 0.18
+Nodes (11): ⚙️ Backend (Servicio y API), Caso 1: Asignar Comisión Automática en una Venta o Turno, Caso 2: Cierre y Pago de la Liquidación Quincenal o Mensual, 🗺️ Diagrama del Flujo de Comisiones y Liquidación, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Campos e Interacciones, 🪙 Manual de Uso: Comisiones y Liquidaciones al Personal (+3 more)
 
-### Community 224 - "Supabase viejo: 022_proveedores"
-Cohesion: 0.32
-Nodes (4): idx_proveedores_empresa_nombre, public.confirmar_compra(), public.proveedores, public.empresas
+### Community 224 - "📁 Manual de Uso: Archivo Digital de Documentos y Contratos"
+Cohesion: 0.18
+Nodes (11): ⚙️ Backend (Servicio y API), Caso 1: Carga y Protección de una Póliza de Seguros con Alerta, Caso 2: Resguardo de Remitos y Conformidades de Clientes, 🗺️ Diagrama del Flujo de Archivo y Monitoreo de Vencimientos, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Campos e Interacciones, 📁 Manual de Uso: Archivo Digital de Documentos y Contratos (+3 more)
 
-### Community 225 - "Supabase viejo: 032_inventario_movimientos"
-Cohesion: 0.32
-Nodes (7): idx_mov_tipo_fecha, public.listar_resumen_inventario(), public.registrar_traslado(), public.ubicaciones, public.empresas, public.movimientos_inventario, public.productos
+### Community 225 - "⭐ Manual de Uso: Suscripción, Planes y Límites del Sistema"
+Cohesion: 0.18
+Nodes (11): ⚙️ Backend (Servicio y API), Caso 1: Mejorar a un Plan Superior (Upgrade), Caso 2: ¿Qué significa un ícono de Candado en el Menú?, 📋 Comparativa Detallada de Planes, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), ⭐ Manual de Uso: Suscripción, Planes y Límites del Sistema, 🔗 Manuales y Documentos Relacionados (+3 more)
 
-### Community 226 - "Supabase viejo: 056_permisos_granulares"
-Cohesion: 0.36
-Nodes (7): public.aceptar_invitacion_colaborador(), public.colaborador_permisos, public.guardar_colaborador_permisos(), public.invitar_colaborador(), auth.users, public.empresas, public.usuarios
+### Community 226 - "🎫 Manual de Uso: Mesa de Ayuda y Soporte Técnico"
+Cohesion: 0.18
+Nodes (11): ⚙️ Backend (Servicio y API), Caso 1: Abrir un Ticket por Duda de Configuración, Caso 2: Responder y Continuar una Conversación, 🗺️ Diagrama del Flujo de Atención y Tickets, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Campos e Interacciones, 🎫 Manual de Uso: Mesa de Ayuda y Soporte Técnico (+3 more)
 
-### Community 227 - "Supabase viejo: 068_senias"
-Cohesion: 0.32
-Nodes (6): public.analytics_periodo(), public.marcar_senia_venta(), public.monto_venta(), public.productos, public.ventas, public.ventas_items
+### Community 227 - "🎁 Manual de Uso: Programa de Referidos (Recomendá y Ganá)"
+Cohesion: 0.18
+Nodes (11): ⚙️ Backend (Servicio y API), Caso 1: Invitar a un Colega Comerciante por WhatsApp, Caso 2: Aplicación del Descuento en tu Factura, 🗺️ Diagrama del Flujo de Recomendación y Recompensas, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Campos y Paneles, 🎁 Manual de Uso: Programa de Referidos (Recomendá y Ganá) (+3 more)
 
-### Community 228 - "General: apps (11)"
+### Community 228 - "oxlint.json"
 Cohesion: 0.29
 Nodes (6): env, node, rules, @typescript-eslint/no-explicit-any, @typescript-eslint/no-floating-promises, $schema
 
-### Community 229 - "Base de datos: migrations (8)"
-Cohesion: 0.48
-Nodes (6): "productos_imagenes", productos_imagenes_producto_id_orden_idx, "tiendas_config", tiendas_config_dominio_propio_key, tiendas_config_empresa_id_key, tiendas_config_subdominio_key
+### Community 229 - "limite-pedidos.guard.ts"
+Cohesion: 0.27
+Nodes (5): GENERAL, LimitePedidosGuard, POR_RUTA, quien(), Injectable
 
-### Community 230 - "General: apps (12)"
-Cohesion: 0.29
-Nodes (5): APLICAR, clerk, habilitados, usuarios, @clerk/backend
+### Community 230 - "bloquear-crear-organizaciones.mjs"
+Cohesion: 0.33
+Nodes (4): APLICAR, clerk, habilitados, usuarios
 
-### Community 232 - "General: apps (13)"
-Cohesion: 0.29
-Nodes (6): compilerOptions, rootDir, exclude, extends, include, ./tsconfig.json
+### Community 232 - "tsconfig.build.json"
+Cohesion: 0.17
+Nodes (11): compilerOptions, rootDir, exclude, extends, include, dist, node_modules, **/*spec.ts (+3 more)
 
-### Community 233 - "Tienda modelo: package.json (2)"
-Cohesion: 0.29
-Nodes (7): scripts, build, dev, lint, start, test, typecheck
+### Community 234 - "ArmadoresComprasPedidos"
+Cohesion: 0.31
+Nodes (4): ArmadoresComprasPedidos, conVariante(), Inject, Injectable
 
-### Community 234 - "Supabase viejo: 014_analytics"
+### Community 235 - ".guardar"
+Cohesion: 0.31
+Nodes (6): Body, Controller, Get, Param, Put, VariantesController
+
+### Community 236 - "backup-nube.sh"
+Cohesion: 0.25
+Nodes (8): RCLONE_CONFIG_R2_ACCESS_KEY_ID, RCLONE_CONFIG_R2_ENDPOINT, RCLONE_CONFIG_R2_NO_CHECK_BUCKET, RCLONE_CONFIG_R2_PROVIDER, RCLONE_CONFIG_R2_SECRET_ACCESS_KEY, RCLONE_CONFIG_R2_TYPE, backup-nube.sh script, subir()
+
+### Community 237 - "📑 Índice Detallado por Módulos"
+Cohesion: 0.22
+Nodes (9): 🚀 1. Plataforma, Acceso e Inteligencia Artificial, 💰 2. Ventas, Clientes y Servicios, 📦 3. Catálogo, Stock y Compras, 📈 4. Gestión, Control y Finanzas, ⚙️ 5. Configuración, Tienda y Cuenta, 📚 Manual de Usuario: Analítica 360, 🗺️ Mapa de la Bóveda y Módulos del Sistema, 🏷️ Navegación por Etiquetas (Tags) (+1 more)
+
+### Community 238 - "📊 Manual de Uso: Dashboard de Inicio y Métricas en Tiempo Real"
+Cohesion: 0.22
+Nodes (9): ⚙️ Backend (Servicio y API), 🗺️ Estructura Visual del Tablero Principal, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Componentes y Paneles, 📊 Manual de Uso: Dashboard de Inicio y Métricas en Tiempo Real, 🔗 Manuales y Documentos Relacionados, 🔄 Paso a Paso: Rutina Diaria del Administrador (+1 more)
+
+### Community 239 - "src/app/page.tsx"
 Cohesion: 0.38
-Nodes (6): idx_ventas_empresa_fecha, idx_ventas_items_empresa_venta, public.analytics_periodo(), public.productos, public.ventas, public.ventas_items
+Nodes (5): Home(), metadata, PRECIO_MENSUAL, PreciosLista, preciosVigentes()
 
-### Community 235 - "Supabase viejo: 024_anular_ventas"
-Cohesion: 0.29
-Nodes (6): public.anulaciones, public.anular_venta(), public.empresas, public.usuarios, public.ventas, public.ventas_items
-
-### Community 236 - "Supabase viejo: 038_perf_seguridad_productos_ven"
-Cohesion: 0.38
-Nodes (6): public.confirmar_venta(), public.listar_productos_con_stock(), public.clientes, public.movimientos_inventario, public.producto_variantes, public.productos
-
-### Community 237 - "Supabase viejo: 040_codigo_barra"
-Cohesion: 0.38
-Nodes (6): idx_productos_codigo_barra, public.listar_productos_con_stock(), public.listar_productos_empresa(), public.movimientos_inventario, public.producto_variantes, public.productos
-
-### Community 238 - "Supabase viejo: 062_fix_costo_venta"
-Cohesion: 0.29
-Nodes (6): public.confirmar_venta(), public.clientes, public.lotes, public.producto_variantes, public.productos, public.ubicaciones
-
-### Community 239 - "General: public (2)"
-Cohesion: 0.40
-Nodes (6): Analitica 360 PWA app icon branding, favicon.svg (Vite purple lightning logo), PWA icon 192px (white 'A' on indigo), PWA icon 512px, hero.png (Vite template isometric layered tiles illustration), vite.svg (Vite logo)
-
-### Community 240 - "General: apps (14)"
+### Community 240 - "nest-cli.json"
 Cohesion: 0.33
 Nodes (5): collection, compilerOptions, deleteOutDir, $schema, sourceRoot
 
-### Community 241 - "Base de datos: migrations (9)"
-Cohesion: 0.60
-Nodes (5): "cuotas_programadas", cuotas_programadas_empresa_id_idx, cuotas_programadas_estado_vence_idx, cuotas_programadas_grupo_id_numero_key, cuotas_programadas_pago_id_key
-
-### Community 242 - "Base de datos: migrations (10)"
-Cohesion: 0.53
-Nodes (5): "informes_config", informes_config_empresa_id_key, "informes_enviados", informes_enviados_creado_en_idx, informes_enviados_empresa_id_tipo_desde_key
-
-### Community 243 - "General: apps (15)"
+### Community 243 - "corregir-datos-legacy.mjs"
 Cohesion: 0.33
 Nodes (3): APLICAR, db, empresa
 
-### Community 244 - "API: admin-saas (2)"
-Cohesion: 0.33
-Nodes (4): AdminAccesoController, Controller, CurrentUser, Get
+### Community 245 - "Env"
+Cohesion: 0.08
+Nodes (14): AppModule, Module, Env, envSchema, obligatorias, validateEnv(), InformesProgramador, Injectable (+6 more)
 
-### Community 246 - "API: planes (7)"
-Cohesion: 0.80
-Nodes (3): diasRestantes(), estaEnTrial(), trialVencido()
-
-### Community 247 - "Tienda modelo: eslint.config"
-Cohesion: 0.40
-Nodes (4): eslintConfig, eslintConfig, ref_eslint, ref_eslint_config_next
-
-### Community 248 - "General: .oxlintrc.json"
-Cohesion: 0.33
-Nodes (5): plugins, rules, react/only-export-components, react/rules-of-hooks, $schema
-
-### Community 249 - "Supabase viejo: 028_saas_metrics"
-Cohesion: 0.33
-Nodes (5): public.pagos, public.admin_saas_metrics(), public.empresas, public.planes, public.suscripciones
-
-### Community 250 - "Supabase viejo: 012_dashboard_inicio"
-Cohesion: 0.33
-Nodes (5): public.dashboard_inicio(), public.movimientos_inventario, public.productos, public.ventas, public.ventas_items
-
-### Community 251 - "Supabase viejo: 013_dashboard_stock"
-Cohesion: 0.33
-Nodes (5): public.dashboard_inicio(), public.movimientos_inventario, public.productos, public.ventas, public.ventas_items
-
-### Community 252 - "Supabase viejo: 019_analytics_avanzado"
-Cohesion: 0.33
-Nodes (5): public.analytics_periodo(), public.clientes, public.productos, public.ventas, public.ventas_items
-
-### Community 253 - "Supabase viejo: 033_indices_inventario"
-Cohesion: 0.40
-Nodes (5): idx_movimientos_producto, idx_movimientos_tipo, idx_ubicaciones_empresa, public.movimientos_inventario, public.ubicaciones
-
-### Community 254 - "Supabase viejo: 061_contabilidad"
-Cohesion: 0.40
-Nodes (5): idx_gastos_empresa_fecha, public.gastos, public, public.empresas, public.usuarios
-
-### Community 255 - "Supabase viejo: 070_rol_contador"
-Cohesion: 0.47
-Nodes (5): public.aceptar_invitacion_colaborador(), public.get_rol(), public.invitar_contador(), auth.users, public.usuarios
-
-### Community 256 - "Base de datos: migrations (11)"
-Cohesion: 0.70
-Nodes (4): "eventos_uso", eventos_uso_creado_en_idx, eventos_uso_empresa_id_creado_en_idx, eventos_uso_usuario_id_creado_en_idx
-
-### Community 257 - "Web: package.json (4)"
-Cohesion: 0.40
-Nodes (5): scripts, build, dev, lint, start
-
-### Community 258 - "Supabase viejo: 064_notificaciones"
-Cohesion: 0.40
-Nodes (4): public.tickets, public.contar_notificaciones(), public.lotes, public.pedidos
-
-### Community 262 - "Supabase viejo: 045_importar_venta_variante"
-Cohesion: 0.40
-Nodes (4): public.importar_venta(), public.clientes, public.producto_variantes, public.productos
-
-### Community 263 - "Supabase viejo: 048_insights_combos"
-Cohesion: 0.40
-Nodes (4): public.insights_combos(), productos, ventas, ventas_items
-
-### Community 264 - "Supabase viejo: 049_combos_3"
-Cohesion: 0.40
-Nodes (4): public.insights_combos_3(), productos, ventas, ventas_items
-
-### Community 265 - "Supabase viejo: 072_analytics_periodo_productos"
-Cohesion: 0.40
-Nodes (4): public.analytics_periodo(), public.productos, public.ventas, public.ventas_items
-
-### Community 266 - "Base de datos: migrations (12)"
-Cohesion: 0.83
-Nodes (3): "premios_referidos", premios_referidos_empresa_referente_id_estado_idx, premios_referidos_empresa_referida_id_key
-
-### Community 270 - "Supabase viejo: 005_banner_y_prueba_faltante"
+### Community 246 - "database.module.ts"
 Cohesion: 0.50
-Nodes (3): public.mi_suscripcion_activa(), public.planes, public.suscripciones
+Nodes (3): DatabaseModule, Global, Module
 
-### Community 272 - "Supabase viejo: 021_importar_ventas"
+### Community 249 - "proxy.ts"
 Cohesion: 0.50
-Nodes (3): public.importar_venta(), public.clientes, public.productos
+Nodes (3): API, config, isPublicRoute
 
-### Community 273 - "Supabase viejo: 036_variantes_compras_dimensione"
-Cohesion: 0.50
-Nodes (3): public.confirmar_compra(), public.producto_variantes, public.proveedores
-
-### Community 276 - "Supabase viejo: 063_fix_anulacion_stock"
-Cohesion: 0.50
-Nodes (3): public.anular_venta(), public.ventas, public.ventas_items
-
-### Community 277 - "Supabase viejo: 065_segmentos_clientes"
-Cohesion: 0.50
-Nodes (3): public.segmentos_clientes(), public.clientes, public.ventas
-
-### Community 278 - "Supabase viejo: 066_difusiones"
-Cohesion: 0.50
-Nodes (3): public.difusiones, public.empresas, public.usuarios
-
-### Community 279 - "General: vercel.json"
-Cohesion: 0.50
-Nodes (3): headers, installCommand, rewrites
-
-## Ambiguous Edges - Review These
-- `favicon.svg (Vite purple lightning logo)` → `PWA icon 192px (white 'A' on indigo)`  [AMBIGUOUS]
-  public/favicon.svg · relation: conceptually_related_to
+### Community 251 - "CotizacionesModule"
+Cohesion: 0.67
+Nodes (3): CotizacionesModule, Global, Module
 
 ## Knowledge Gaps
-- **1286 isolated node(s):** `ItemImportCompra`, `ItemImportVenta`, `ClienteInput`, `EtiquetaCliente`, `ItemOcInput` (+1281 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2496 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **101 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **1467 isolated node(s):** `$schema`, `collection`, `sourceRoot`, `deleteOutDir`, `$schema` (+1462 more)
+  These have ≤1 connection - possible missing edges or undocumented components.
+- **57 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **What is the exact relationship between `favicon.svg (Vite purple lightning logo)` and `PWA icon 192px (white 'A' on indigo)`?**
-  _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **Why does `@nestjs/common` connect `API: tienda (2)` to `API: inventario (5)`, `API: tienda`, `API común: auth`, `API: clientes`, `API: soporte`, `API: tienda (10)`, `API: ventas`, `API: analytics`, `API: compras`, `API: devoluciones (2)`, `API: contabilidad`, `API: alianzas`, `API: analytics (2)`, `API: proveedores`, `API: ubicaciones`, `API: alianzas (2)`, `API común: auditoria`, `API: contabilidad (2)`, `API común: cache`, `API: admin-saas`, `API: analytics (3)`, `API: contabilidad (3)`, `API: alianzas (3)`, `API: productos`, `API: alianzas (4)`, `API: productos (2)`, `API: productos (3)`, `API: import-export`, `General: apps (9)`, `API: compras (2)`, `API: productos (5)`, `API: contabilidad (4)`, `API: planes`, `API: configuracion`, `API: planes (5)`, `API: cuenta-corriente`, `API: inventario`, `API: uso`, `API: devoluciones (5)`, `API: pedidos`, `API: tienda (4)`, `API: bajas`, `API: analytics (4)`, `API: listas-precios`, `API: tienda (6)`, `API: productos (6)`, `API: auditoria`, `API: inventario (2)`, `API: contabilidad (6)`, `API: inventario (3)`, `API: contabilidad (7)`, `API: notificaciones`, `API: produccion`, `General: apps`, `API: pedidos (3)`, `API: import-export (2)`, `API: tienda (8)`, `API: informes (4)`?**
-  _High betweenness centrality (0.341) - this node is a cross-community bridge._
-- **Why does `react-router-dom` connect `App vieja (Vite): components` to `App vieja (Vite): lib`, `App vieja (Vite): lib (9)`, `App vieja (Vite): lib (2)`, `App vieja (Vite): lib (10)`, `App vieja (Vite): lib (16)`, `App vieja (Vite): lib (3)`, `App vieja (Vite): lib (4)`, `App vieja (Vite): App`, `App vieja (Vite): lib (5)`, `App vieja (Vite): lib (7)`, `General: package.json`, `App vieja (Vite): components (2)`, `App vieja (Vite): lib (8)`, `App vieja (Vite): lib (13)`, `App vieja (Vite): lib (14)`?**
-  _High betweenness centrality (0.092) - this node is a cross-community bridge._
-- **Why does `@supabase/supabase-js` connect `App vieja (Vite): lib (2)` to `App vieja (Vite): lib`, `App vieja (Vite): components`, `App vieja (Vite): lib (3)`, `App vieja (Vite): lib (4)`, `App vieja (Vite): lib (5)`, `App vieja (Vite): lib (6)`, `App vieja (Vite): lib (7)`, `App vieja (Vite): lib (8)`, `App vieja (Vite): lib (9)`, `App vieja (Vite): lib (10)`, `App vieja (Vite): lib (11)`, `App vieja (Vite): lib (12)`, `App vieja (Vite): lib (13)`, `App vieja (Vite): lib (14)`, `App vieja (Vite): lib (16)`, `App vieja (Vite): lib (17)`, `General: package.json`, `App vieja (Vite): lib (18)`, `Scripts: auditoria (3)`?**
-  _High betweenness centrality (0.078) - this node is a cross-community bridge._
-- **What connects `ItemImportCompra`, `ItemImportVenta`, `ClienteInput` to the rest of the system?**
-  _1286 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Web: analytics` be split into smaller, more focused modules?**
-  _Cohesion score 0.029409300377042313 - nodes in this community are weakly interconnected._
-- **Should `App vieja (Vite): lib` be split into smaller, more focused modules?**
-  _Cohesion score 0.03602848764139087 - nodes in this community are weakly interconnected._
+- **Why does `n()` connect `uso.service.ts` to `formatoNumero`, `formatoPesos`?**
+  _High betweenness centrality (0.174) - this node is a cross-community bridge._
+- **Why does `PrismaService` connect `PrismaService` to `arca.util.ts`, `rol.types.ts`, `prisma-clientes.repository.ts`, `documentos.service.ts`, `CurrentUser`, `envios.service.ts`, `prisma-ticket.repository.ts`, `precios-plan.service.ts`, `archivo.controller.ts`, `prisma-ventas.repository.ts`, `Result`, `analytics.util.ts`, `mp-tienda.service.ts`, `mercadopago.service.ts`, `public.decorator.ts`, `tienda-admin.service.ts`, `prisma-estados-contables.repository.ts`, `AlianzasAdminService`, `diaAR`, `proveedores.service.ts`, `registro.service.ts`, `prisma.service.ts`, `prisma-ordenes-compra.repository.ts`, `dashboard.service.ts`, `admin-saas.service.ts`, `analytics.module.ts`, `contabilidad.module.ts`, `categorias.service.ts`, `variantes.module.ts`, `ordenes-trabajo.service.ts`, `prisma-variantes.repository.ts`, `import-export.module.ts`, `objetivos.service.ts`, `productos.module.ts`, `usuarios.module.ts`, `fechaHoyAR`, `AccesoCuentaService`, `presupuestos.service.ts`, `configuracion.controller.ts`, `cuenta-corriente.service.ts`, `prisma-lotes.repository.ts`, `uso.service.ts`, `vencimientos.service.ts`, `pedidos.repository.ts`, `tienda.module.ts`, `bajas.service.ts`, `CotizacionesService`, `monotributo.service.ts`, `informes.util.ts`, `agenda-online.service.ts`, `alianzas.util.ts`, `ListasPreciosService`, `TiendaService`, `categorizar-productos.ts`, `AuditoriaService`, `compras.module.ts`, `libro-diario.service.ts`, `inventario.module.ts`, `notificaciones.module.ts`, `produccion.service.ts`, `usuarios.repository.ts`, `exportar-datos.repository.ts`, `cuentas-tienda.ts`, `abonos.service.ts`, `AgendaService`, `comisiones.service.ts`, `kardex.service.ts`, `movimientos-generales.service.ts`, `TiendaRepository`, `prisma-devoluciones.repository.ts`, `AlmacenArchivosService`, `CacheLecturasService`, `esViolacionUnica`, `contexto-auditoria.ts`, `precios-masivos.service.ts`, `alianzas.module.ts`, `PrismaMovimientosRepository`, `bajas.module.ts`, `VentasService`, `ArmadoresComprasPedidos`, `Env`, `database.module.ts`?**
+  _High betweenness centrality (0.159) - this node is a cross-community bridge._
+- **Why does `registrar()` connect `formatoPesos` to `uso.service.ts`?**
+  _High betweenness centrality (0.124) - this node is a cross-community bridge._
+- **What connects `$schema`, `collection`, `sourceRoot` to the rest of the system?**
+  _1467 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `formatoNumero` be split into smaller, more focused modules?**
+  _Cohesion score 0.026204564666103127 - nodes in this community are weakly interconnected._
+- **Should `arca.util.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.05568039950062422 - nodes in this community are weakly interconnected._
+- **Should `formato.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.028690228690228692 - nodes in this community are weakly interconnected._
