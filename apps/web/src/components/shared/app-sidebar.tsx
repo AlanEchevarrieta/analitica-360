@@ -171,7 +171,7 @@ export function AppSidebar() {
                   <span className="flex items-center gap-1.5 font-medium">
                     <span>Copilot IA</span>
                     <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-400 border border-emerald-500/20">
-                      GPT-6
+                      IA
                     </span>
                   </span>
                 </SidebarMenuButton>

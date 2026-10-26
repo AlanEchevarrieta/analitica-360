@@ -24,13 +24,22 @@ export function marcarTourCompletado(): void {
  * Pasos del tour interactivo de Analítica 360 guiados por Driver.js.
  */
 export function obtenerPasosTour(): DriveStep[] {
-  const pasos: DriveStep[] = [
+  const pasosTodos: DriveStep[] = [
     {
-      element: "#tour-inicio",
+      // Paso 1: Bienvenida centrada (sin element requerido, aparece siempre como modal)
       popover: {
         title: "🚀 Bienvenido a Analítica 360",
         description:
-          "Tu centro de operaciones financieras y comerciales en tiempo real. Desde acá tenés un panorama general de tu facturación, ventas del día, productos más vendidos y alertas preventivas.",
+          "Te preparamos una breve guía de 1 minuto para que conozcas las funciones clave de tu nuevo sistema comercial, contable y financiero.",
+        popoverClass: "analitica-tour-popover",
+      },
+    },
+    {
+      element: "#tour-inicio",
+      popover: {
+        title: "🏠 Panel de Inicio",
+        description:
+          "Tu centro de operaciones en tiempo real: facturación del día, compras, punto de equilibrio, metas y resumen de productos líderes.",
         side: "right",
         align: "start",
         popoverClass: "analitica-tour-popover",
@@ -39,9 +48,9 @@ export function obtenerPasosTour(): DriveStep[] {
     {
       element: "#tour-copilot",
       popover: {
-        title: "✨ Copilot IA (GPT-6 Luna + Data Lake)",
+        title: "✨ Copilot IA (Analítica 360 Inteligencia de Negocios)",
         description:
-          "Tu Director Financiero (CFO) inteligente. Analiza correlaciones invisibles al ojo humano y a los dashboards: combinaciones de productos (combos), clientes en riesgo de abandono y fugas silenciosas de margen en cuotas.",
+          "Tu CFO y consultor inteligente. Analiza en tiempo real correlaciones no visibles en dashboards: afinidad de canasta (combos de venta cruzada), clientes en riesgo de abandono y fugas de rentabilidad en cuotas.",
         side: "right",
         align: "start",
         popoverClass: "analitica-tour-popover",
@@ -52,7 +61,7 @@ export function obtenerPasosTour(): DriveStep[] {
       popover: {
         title: "💳 Ventas y Caja Rápida",
         description:
-          "Cobrá y facturá en segundos desde cualquier dispositivo. Soporta múltiples formas de pago, recargos por cuotas calculados automáticamente, señas y ventas en cuenta corriente con seguimiento de cobro.",
+          "Cobrá y emití comprobantes en segundos. Soporta múltiples formas de pago, recargos automáticos por cuotas, señas y ventas en cuenta corriente con seguimiento de saldos.",
         side: "right",
         align: "start",
         popoverClass: "analitica-tour-popover",
@@ -63,7 +72,7 @@ export function obtenerPasosTour(): DriveStep[] {
       popover: {
         title: "📦 Catálogo, Precios y Stock",
         description:
-          "Mantené al día tu inventario, múltiples listas de precios y costos de reposición. Podés importar o actualizar tus productos de forma masiva desde plantillas Excel en segundos.",
+          "Control de inventario en tiempo real, múltiples listas de precios y costos de reposición. Podés actualizar tus productos de forma masiva desde plantillas Excel en segundos.",
         side: "right",
         align: "start",
         popoverClass: "analitica-tour-popover",
@@ -74,7 +83,7 @@ export function obtenerPasosTour(): DriveStep[] {
       popover: {
         title: "📊 Analytics & Rentabilidad Real",
         description:
-          "Conocé con precisión tu punto de equilibrio, el margen bruto real por producto y la evolución intermensual de tu negocio para tomar decisiones con números concretos.",
+          "Conocé con precisión tu margen bruto real, punto de equilibrio operativo y evolución de ventas para tomar decisiones estratégicas con números concretos.",
         side: "right",
         align: "start",
         popoverClass: "analitica-tour-popover",
@@ -96,7 +105,7 @@ export function obtenerPasosTour(): DriveStep[] {
       popover: {
         title: "⚙️ Configuración, Medios de Pago y Equipo",
         description:
-          "Configurá tus datos fiscales (Monotributo/IVA), coeficientes de cuotas e invitá a tus colaboradores con permisos adaptados a sus funciones.",
+          "Configurá tus datos fiscales (Monotributo/IVA), coeficientes de tarjetas e invitá a tus colaboradores con permisos específicos para sus puestos.",
         side: "right",
         align: "start",
         popoverClass: "analitica-tour-popover",
@@ -104,15 +113,16 @@ export function obtenerPasosTour(): DriveStep[] {
     },
   ];
 
-  // Filtramos solo los elementos que estén presentes en el DOM actual
+  // Si estamos en navegador, filtramos pasos que requieran un elemento que no exista en el DOM
   if (typeof document !== "undefined") {
-    return pasos.filter((p) => {
-      if (!p.element || typeof p.element !== "string") return true;
-      return Boolean(document.querySelector(p.element));
+    return pasosTodos.filter((p) => {
+      if (!p.element) return true;
+      const el = typeof p.element === "string" ? document.querySelector(p.element) : p.element;
+      return Boolean(el);
     });
   }
 
-  return pasos;
+  return pasosTodos;
 }
 
 /**
@@ -140,10 +150,16 @@ export function iniciarTourAnalitica360(forzar = false): void {
     steps: pasos,
     onDestroyStarted: () => {
       marcarTourCompletado();
-      driverObj.destroy();
     },
   };
 
   const driverObj = driver(config);
   driverObj.drive();
+}
+
+// Helper global accesible desde la consola del navegador para debug rápido
+if (typeof window !== "undefined") {
+  (window as unknown as { iniciarTour?: (forzar?: boolean) => void }).iniciarTour = (forzar = true) => {
+    iniciarTourAnalitica360(forzar);
+  };
 }

@@ -24,13 +24,18 @@ export function BotonTour() {
 
   return (
     <Button
+      type="button"
       variant="outline"
       size="sm"
-      onClick={() => iniciarTourAnalitica360(true)}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        iniciarTourAnalitica360(true);
+      }}
       title="Iniciar tour interactivo de Analítica 360"
-      className="gap-1.5 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-400 font-medium text-xs transition-colors shadow-sm"
+      className="gap-1.5 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-400 font-medium text-xs transition-colors shadow-sm cursor-pointer"
     >
-      <Compass className="size-3.5 text-emerald-400 animate-spin-slow" />
+      <Compass className="size-3.5 text-emerald-400" />
       <span className="hidden sm:inline">Guía rápida</span>
     </Button>
   );

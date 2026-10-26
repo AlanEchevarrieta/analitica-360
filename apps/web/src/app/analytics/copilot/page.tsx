@@ -3,7 +3,7 @@ import { CopilotChatView } from '@/features/copilot/components/copilot-chat-view
 
 export const metadata: Metadata = {
   title: 'Copilot IA · Analítica 360',
-  description: 'Asistente de inteligencia artificial y análisis estratégico con GPT-6 Luna',
+  description: 'Asistente de inteligencia artificial y análisis estratégico para tu negocio',
 };
 
 export default function CopilotPage() {
@@ -17,7 +17,7 @@ export default function CopilotPage() {
           <span>Analítica Copilot</span>
         </h1>
         <p className="text-sm text-muted-foreground">
-          Consultá tus métricas, diagnosticá rentabilidad y proyectá ventas con GPT-6 Luna.
+          Consultá tus métricas, diagnosticá rentabilidad y proyectá ventas con Analítica IA.
         </p>
       </div>
 

@@ -59,7 +59,7 @@ export function InicioDashboard({ debajoDeCifras }: { debajoDeCifras?: React.Rea
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="font-semibold text-sm text-zinc-100">Analítica Copilot (GPT-6 Luna)</h4>
+                <h4 className="font-semibold text-sm text-zinc-100">Analítica Copilot (Inteligencia de Negocios)</h4>
                 <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">
                   IA en vivo
                 </span>

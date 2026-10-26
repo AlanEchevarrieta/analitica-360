@@ -115,4 +115,15 @@ describe('CopilotIaService', () => {
     expect(sugerencias.some((s) => s.includes('ventas con saldo a cobrar'))).toBe(true);
     expect(sugerencias.some((s) => s.includes('combo'))).toBe(true);
   });
+
+  it('declina consultas que no pertenecen al ámbito de Analítica 360', async () => {
+    const service = new CopilotIaService(mockPrisma as any, mockLakeService as any);
+    const resultado = await service.procesarMensaje('empresa-123', {
+      mensaje: 'Dame una receta para cocinar pastas caseras',
+    });
+
+    expect(resultado.isSuccess).toBe(true);
+    expect(resultado.value.respuesta).toContain('exclusivamente configurada para asistirte en la gestión comercial');
+    expect(resultado.value.modelo).toBe('analitica-ia');
+  });
 });

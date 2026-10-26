@@ -11,7 +11,7 @@ export function useCopilotChat() {
     {
       rol: 'assistant',
       contenido:
-        '👋 ¡Hola! Soy **Analítica Copilot** (impulsado por GPT-6 Luna). Estoy conectado a los datos en vivo de tu negocio para ayudarte a optimizar ventas, costos y stock. ¿En qué te puedo ayudar hoy?',
+        '👋 ¡Hola! Soy **Analítica Copilot**, la inteligencia de negocios de Analítica 360. Estoy conectada a los datos en vivo de tu empresa para ayudarte a optimizar ventas, costos, rentabilidad y stock. ¿En qué te puedo ayudar hoy?',
       fecha: new Date().toISOString(),
     },
   ]);
