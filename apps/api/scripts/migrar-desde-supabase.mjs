@@ -17,6 +17,8 @@ import pg from 'pg';
 const SUPABASE_URL = process.env.SUPABASE_URL?.replace(/\/+$/, '');
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESET = process.argv.includes('--reset');
+const CONTINUAR = process.argv.includes('--continuar') || process.argv.includes('--incremental');
+const UPSERT = process.argv.includes('--upsert');
 const PAGINA = 1000; // máximo por request de PostgREST en Supabase
 const LOTE_INSERT = 500;
 
@@ -109,16 +111,26 @@ async function leerSupabase(tabla, orden) {
   }
 }
 
-async function insertar(tabla, columnasLocales, filas) {
+async function insertar(tabla, columnasLocales, pk, filas) {
   // Solo las columnas que vienen del legacy: las nuevas (ej. usa_variantes)
   // quedan fuera del INSERT para que apliquen su DEFAULT en vez de NULL.
   const presentes = new Set(filas.flatMap((f) => Object.keys(f)));
   const columnas = columnasLocales.filter((c) => presentes.has(c));
   if (columnas.length === 0) return { ok: 0, fallidas: [] };
   const lista = columnas.map((c) => `"${c}"`).join(', ');
+
+  let conflicto = 'ON CONFLICT DO NOTHING';
+  if (UPSERT && pk && columnas.includes(pk)) {
+    const colsUpdate = columnas.filter((c) => c !== pk);
+    if (colsUpdate.length > 0) {
+      const setClause = colsUpdate.map((c) => `"${c}" = EXCLUDED."${c}"`).join(', ');
+      conflicto = `ON CONFLICT ("${pk}") DO UPDATE SET ${setClause}`;
+    }
+  }
+
   const sql = `INSERT INTO "${tabla}" (${lista})
     SELECT ${lista} FROM json_populate_recordset(NULL::"${tabla}", $1::json)
-    ON CONFLICT DO NOTHING`;
+    ${conflicto}`;
   const proyectar = (f) => Object.fromEntries(columnas.filter((c) => c in f).map((c) => [c, f[c]]));
   let ok = 0;
   const fallidas = [];
@@ -147,8 +159,11 @@ async function main() {
   const tablas = await ordenPorDependencias([...columnas.keys()]);
 
   const { rows: [{ n }] } = await db.query('SELECT count(*)::int AS n FROM empresas');
-  if (n > 0 && !RESET) {
-    console.error(`La base local ya tiene ${n} empresas. Usá --reset para vaciarla y migrar de nuevo.`);
+  if (n > 0 && !RESET && !CONTINUAR && !UPSERT) {
+    console.error(`La base local ya tiene ${n} empresas.`);
+    console.error(`- Usá --continuar para incorporar registros nuevos sin tocar lo existente.`);
+    console.error(`- Usá --upsert para incorporar nuevos y actualizar registros modificados en Supabase.`);
+    console.error(`- Usá --reset para vaciar la base y volver a migrar desde cero.`);
     process.exit(1);
   }
   if (RESET) {
@@ -167,7 +182,7 @@ async function main() {
     const transformar = TRANSFORMAR[tabla] ?? ((f) => f);
     const aCopiar = filas.map(transformar).filter(Boolean);
     const omitidas = filas.length - aCopiar.length;
-    const { ok, fallidas } = await insertar(tabla, columnas.get(tabla), aCopiar);
+    const { ok, fallidas } = await insertar(tabla, columnas.get(tabla), pks.get(tabla), aCopiar);
     const notas = [];
     if (omitidas) notas.push(`${omitidas} omitidas: ${MOTIVO_OMISION[tabla] ?? 'transformación'}`);
     if (fallidas.length) notas.push(`${fallidas.length} con error (ej: ${fallidas[0].error})`);
