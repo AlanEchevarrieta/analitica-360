@@ -19,15 +19,15 @@ export default async function DashboardLayout({ children }: LayoutProps<"/">) {
       <RastreoUso />
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 print:hidden">
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-3 sm:px-4 print:hidden max-w-full overflow-x-hidden">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />
-          <div className="ml-auto flex items-center gap-2.5">
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5 min-w-0">
             <BotonTour />
             <EmpresaSwitcher />
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4">
+        <div className="flex flex-1 flex-col gap-4 p-3 sm:p-4 min-w-0 max-w-full overflow-x-hidden">
           <AvisoCuenta />
           <GuardaDeRuta>{children}</GuardaDeRuta>
         </div>

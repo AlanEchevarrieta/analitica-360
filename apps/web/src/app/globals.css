@@ -6,6 +6,7 @@
 @import "../styles/consola.css";
 @import "../styles/tour.css";
 @import "../styles/guias.css";
+@import "../styles/copilot-futuristic.css";
 
 @custom-variant dark (&:is(.dark *));
 

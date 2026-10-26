@@ -10,13 +10,20 @@ import { SoloCliente } from "./solo-cliente";
  */
 export function EmpresaSwitcher() {
   return (
-    <div id="tour-empresa" className="flex items-center">
-      <SoloCliente reserva={<span className="block h-8 w-40 rounded-md bg-muted/50" aria-hidden />}>
+    <div id="tour-empresa" className="flex items-center min-w-0 max-w-[120px] sm:max-w-[180px] md:max-w-none">
+      <SoloCliente reserva={<span className="block h-8 w-20 sm:w-36 rounded-md bg-muted/50" aria-hidden />}>
         <OrganizationSwitcher
           hidePersonal
           afterSelectOrganizationUrl="/inicio"
           // Un negocio nuevo se crea con el registro (prueba gratis), no desde acá.
-          appearance={{ elements: { organizationSwitcherPopoverActionButton__createOrganization: { display: "none" } } }}
+          appearance={{
+            elements: {
+              organizationSwitcherPopoverActionButton__createOrganization: { display: "none" },
+              organizationSwitcherTrigger: { maxWidth: "100%", overflow: "hidden" },
+              organizationPreview: { maxWidth: "100%", overflow: "hidden" },
+              organizationPreviewTextContainer: { maxWidth: "80px", overflow: "hidden", textOverflow: "ellipsis" },
+            },
+          }}
         />
       </SoloCliente>
     </div>

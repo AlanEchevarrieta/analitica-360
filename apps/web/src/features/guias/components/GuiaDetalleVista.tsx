@@ -132,9 +132,9 @@ export function GuiaDetalleVista({
       </div>
 
       {/* Contenedor Principal: 2 Columnas (Artículo + Sidebar de Navegación) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start min-w-0 max-w-full">
         {/* Columna Principal: Documento y Contenido */}
-        <article className="lg:col-span-8 xl:col-span-9 space-y-6">
+        <article className="lg:col-span-8 xl:col-span-9 space-y-6 min-w-0 max-w-full overflow-hidden">
           {/* Encabezado del Manual */}
           <div className="rounded-2xl border border-border/70 bg-card p-6 sm:p-8 space-y-4 shadow-xs">
             <div className="flex flex-wrap items-center gap-2.5">
@@ -175,7 +175,7 @@ export function GuiaDetalleVista({
           </div>
 
           {/* Cuerpo Markdown procesado con estilos .guia-prose */}
-          <div className="rounded-2xl border border-border/70 bg-card p-6 sm:p-10 shadow-xs overflow-hidden">
+          <div className="rounded-2xl border border-border/70 bg-card p-4 sm:p-8 md:p-10 shadow-xs overflow-hidden min-w-0 max-w-full">
             <div
               className="guia-prose max-w-none"
               dangerouslySetInnerHTML={{ __html: htmlContenido }}

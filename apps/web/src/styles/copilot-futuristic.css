@@ -1,0 +1,126 @@
+/* Estilos y animaciones futuristas para Analítica Copilot IA */
+
+@keyframes neural-glow {
+  0%, 100% {
+    box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.15), 0 0 10px -2px rgba(6, 182, 212, 0.1);
+    border-color: rgba(99, 102, 241, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 35px -3px rgba(99, 102, 241, 0.3), 0 0 18px -2px rgba(6, 182, 212, 0.2);
+    border-color: rgba(99, 102, 241, 0.5);
+  }
+}
+
+@keyframes cyber-scanline {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes bubble-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes neural-node-pulse {
+  0%, 100% {
+    transform: scale(0.85);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.8);
+  }
+}
+
+@keyframes rotating-halo {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Clases utilitarias de Copilot IA */
+.copilot-container {
+  animation: neural-glow 6s ease-in-out infinite;
+  background: var(--brand-card-bg);
+  backdrop-filter: blur(20px);
+}
+
+.copilot-bubble-enter {
+  animation: bubble-slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.copilot-scanline-bar {
+  position: relative;
+  overflow: hidden;
+}
+
+.copilot-scanline-bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(99, 102, 241, 0.4) 50%,
+    transparent 100%
+  );
+  animation: cyber-scanline 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.copilot-node-1 {
+  animation: neural-node-pulse 1.2s ease-in-out infinite;
+}
+
+.copilot-node-2 {
+  animation: neural-node-pulse 1.2s ease-in-out 0.2s infinite;
+}
+
+.copilot-node-3 {
+  animation: neural-node-pulse 1.2s ease-in-out 0.4s infinite;
+}
+
+.copilot-halo-badge {
+  position: relative;
+  overflow: hidden;
+}
+
+.copilot-halo-badge::before {
+  content: "";
+  position: absolute;
+  inset: -150%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 300deg,
+    rgba(99, 102, 241, 0.7) 360deg
+  );
+  animation: rotating-halo 4s linear infinite;
+}
+
+/* Efecto de cristal y borde activo en el formulario del chat */
+.copilot-input-box {
+  transition: all 0.25s ease;
+}
+
+.copilot-input-box:focus-within {
+  border-color: rgba(99, 102, 241, 0.6) !important;
+  box-shadow: 0 0 20px -3px rgba(99, 102, 241, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
