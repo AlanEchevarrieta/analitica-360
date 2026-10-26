@@ -86,8 +86,7 @@ export class CopilotIaService {
 
       // 3. Ejecutar inferencia con OpenAI o LLM si está disponible la clave, o motor heurístico experto
       const apiKey = process.env.OPENAI_API_KEY || process.env.COPILOT_API_KEY;
-      const defaultModel = process.env.OPENAI_API_KEY && !process.env.COPILOT_API_KEY ? 'gpt-4o-mini' : 'gpt-6-luna';
-      const modelo = process.env.COPILOT_MODEL || defaultModel;
+      const modelo = process.env.COPILOT_MODEL || 'gpt-6-luna';
 
       let respuestaTexto: string;
       let proveedor: 'openai' | 'heuristico' = 'heuristico';
@@ -367,8 +366,13 @@ ${JSON.stringify(metricas, null, 2)}
         { role: 'user', content: input.mensaje },
       ];
 
+      const apiUrl = process.env.COPILOT_API_URL
+        || (apiKey.startsWith('sk-or-') ? 'https://openrouter.ai/api/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions');
+
+      const modelId = apiUrl.includes('openrouter.ai') && modelo === 'gpt-6-luna' ? 'openai/gpt-6-luna' : modelo;
+
       const payload: Record<string, unknown> = {
-        model: modelo,
+        model: modelId,
         messages,
         max_completion_tokens: 1000,
       };
@@ -378,13 +382,18 @@ ${JSON.stringify(metricas, null, 2)}
         payload.temperature = 0.3;
       }
 
-      const apiUrl = process.env.COPILOT_API_URL || 'https://api.openai.com/v1/chat/completions';
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      };
+      if (apiUrl.includes('openrouter.ai')) {
+        headers['HTTP-Referer'] = 'https://analitica360.app';
+        headers['X-Title'] = 'Analitica 360 Copilot';
+      }
+
       let res = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
+        headers,
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(25000),
       });
