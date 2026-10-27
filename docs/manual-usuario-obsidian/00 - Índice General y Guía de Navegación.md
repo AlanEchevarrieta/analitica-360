@@ -35,6 +35,10 @@ aliases:
 > - Cada pantalla cuenta con un botón **"Paso a paso (Driver.js)"** en el encabezado superior que te guía visualmente paso por paso en tiempo real.
 > - Podés iniciar el tour general o el tour específico de cada módulo (Ventas, Stock, Clientes, Facturación ARCA, etc.) en cualquier momento.
 
+> [!tip] 📱 Experiencia Móvil y Asistente Flotante
+> - **Menú lateral en celulares:** El menú se despliega con fondo sólido de alta opacidad y oscurecimiento de fondo, garantizando máxima legibilidad sin transparencias sobre el contenido de la pantalla.
+> - **Burbuja Inteligente de Copilot IA:** Podés arrastrar la burbuja flotante de IA con el dedo a cualquier parte de la pantalla si necesitás despejar botones o formularios mientras operás en dispositivos móviles.
+
 ---
 
 ## 🗺️ Mapa de la Bóveda y Módulos del Sistema
@@ -58,6 +62,7 @@ graph TD
     C --> C4["[[08 - Agenda de Turnos y Reservas Online]]"]
     C --> C5["[[09 - Abonos Periódicos y Membresías Recurrentes]]"]
     C --> C6["[[10 - Órdenes de Trabajo y Servicio Técnico]]"]
+    C --> C7["[[27 - Centro de Cobros y Pasarelas de Pago (Mercado Pago, Ualá y Stripe)]]"]
 
     D --> D1["[[11 - Catálogo de Productos, Servicios y Variantes]]"]
     D --> D2["[[12 - Control de Inventario, Kardex y Lotes]]"]
@@ -106,6 +111,8 @@ graph TD
    - Gestión de suscripciones mensuales, generación masiva de cuotas y seguimiento de cobranza.
 10. **[[10 - Órdenes de Trabajo y Servicio Técnico]]**
     - Recepción de equipos, diagnóstico de falla, asignación de repuestos, estados de orden y entrega con cobro.
+11. **[[27 - Centro de Cobros y Pasarelas de Pago (Mercado Pago, Ualá y Stripe)]]**
+    - Panel unificado de cobros digitales, generación instantánea de links y QR para WhatsApp o mostrador, configuración de pasarelas y auditoría de comisiones.
 
 ### 📦 3. Catálogo, Stock y Compras
 11. **[[11 - Catálogo de Productos, Servicios y Variantes]]**

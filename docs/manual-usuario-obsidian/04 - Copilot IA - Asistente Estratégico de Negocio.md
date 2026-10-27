@@ -46,9 +46,10 @@ graph TD
 
 ## 📍 Flujo de Navegación
 
-Para abrir el asistente inteligente:
-1. En el menú lateral izquierdo, hacé clic en **"Copilot IA"** (destacado con brillo esmeralda ✨).
-2. También podés ingresar directamente desde el banner del **Dashboard de Inicio** presionando *"Preguntar a la IA →"*.
+Podés acceder al asistente inteligente desde tres vías:
+1. **Pantalla Principal (/ia):** En el menú lateral izquierdo, hacé clic en **"Copilot IA"** (destacado con brillo esmeralda ✨).
+2. **Dashboard de Inicio:** Presioná el botón *"Preguntar a la IA →"* en el banner superior de métricas.
+3. **Burbuja Flotante Arrastrable (Widget Global):** Presente en la esquina inferior de cualquier pantalla de la plataforma. Hacé clic sobre la bolita o presioná el atajo de teclado `⌘ + J` (o `Ctrl + J`) para abrir el chat emergente sin abandonar tu tarea actual.
 
 ---
 
@@ -56,6 +57,8 @@ Para abrir el asistente inteligente:
 
 | Elemento Visual | Tipo | Descripción | Ejemplo de Uso |
 | :--- | :--- | :--- | :--- |
+| **Burbuja Flotante Arrastrable** | Botón Flotante | Botón circular con brillo ✨ disponible en toda la app. En mobile se compacta a 44px y podés arrastrarlo a cualquier punto de la pantalla con el dedo para que no tape botones. | Mover la burbuja a una esquina mientras cobrás en el POS. |
+| **Ventana Modal Flotante** | Chat Emergente | Ventana superpuesta de conversación rápida sin recargar la página. | Despejar una duda rápida de stock mientras cargás un pedido. |
 | **Banner KPI En Vivo** | Cinta Superior | Muestra cifras consolidadas en tiempo real: Facturación mes, Margen %, Tickets promedio y Saldo por cobrar. | Validar rápidamente los datos sobre los que razona la IA. |
 | **Botón "📊 Tópicos"** | Botón / Selector | Despliega una grilla con preguntas frecuentes prediseñadas organizadas por categoría de negocio. | Si no sabés qué preguntar, tocá un tópico con un solo clic. |
 | **Caja de Texto (Prompt)** | Campo de Escritura | Permite formular cualquier consulta libremente (texto abierto). | *"¿Cuáles fueron los 3 productos menos vendidos del último trimestre?"* |
@@ -120,9 +123,10 @@ Para abrir el asistente inteligente:
 <summary>🔍 <b>Ficha Técnica y Trazabilidad (Para Equipos de Soporte y QA)</b></summary>
 
 ### 🖥️ Frontend (Interfaz de Usuario)
-- **Componentes:** `apps/web/src/features/copilot/components/copilot-chat-view.tsx`, `copilot-kpi-banner.tsx`, `copilot-topics-grid.tsx`
-- **Ruta de Navegación (URL):** `/ia`
+- **Componentes:** `apps/web/src/features/copilot/components/copilot-chat-view.tsx`, `copilot-floating-widget.tsx`, `copilot-kpi-banner.tsx`, `copilot-topics-grid.tsx`
+- **Ruta de Navegación (URL):** `/ia` (o modal emergente con `⌘J` / `Ctrl+J`)
 - **Hook de Chat:** `useCopilotChat()` en `apps/web/src/features/copilot/hooks/use-copilot-chat.ts`
+- **Mecanismo Móvil:** Arrastre táctil mediante *Pointer Events* (`onPointerDown`, `onPointerMove`, `onPointerUp`) con detección de desplazamiento > 5px (`hasDragged`), viewport clamping y reducción a 44px (`h-11 w-11`).
 
 ### ⚙️ Backend (Servicio y API)
 - **Controlador:** `CopilotIaController` en `apps/api/src/modules/copilot-ia/copilot-ia.controller.ts`

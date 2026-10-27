@@ -11,6 +11,7 @@ import {
   BarChart3,
   BookOpen,
   CalendarDays,
+  CreditCard,
   Repeat,
   Target,
   ClipboardList,
@@ -104,6 +105,7 @@ export function AppSidebar() {
       titulo: "Ventas",
       items: [
         { href: "/ventas", label: "Ventas", icon: Wallet, modulo: "ventas" },
+        { href: "/cobros", label: "Cobros", icon: CreditCard, modulo: "ventas" },
         { href: "/clientes", label: "Clientes", icon: Users, modulo: "clientes" },
         { href: "/pedidos", label: "Pedidos", icon: Truck, modulo: "pedidos", para: ["productos", "produccion"] },
         { href: "/agenda", label: "Agenda", icon: CalendarDays, modulo: "ventas", funcion: "agenda", para: ["servicios"], badge: nuevasOnline },

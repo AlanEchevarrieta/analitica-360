@@ -54,6 +54,11 @@ graph TD
 > [!TIP]
 > **Tour Interactivo Guiado (Driver.js)**: Al ingresar al sistema por primera vez, se iniciará automáticamente una **Guía Rápida interactiva** que resalta los elementos clave de la pantalla (Inicio, Copilot IA, Ventas, Catálogo, Analytics y Switcher de Empresa). Si deseás volver a verla en cualquier momento, podés presionar el botón **"Guía rápida"** (ícono de brújula) ubicado en la barra superior de la aplicación.
 
+> [!TIP] 📱 Navegación Móvil Adaptativa
+> - **Menú lateral en celulares:** Al utilizar la plataforma desde un smartphone o tablet, el menú de navegación se abre con el botón de hamburguesa (☰) y se muestra sobre un panel lateral con fondo sólido y oscurecimiento de fondo (backdrop), brindando máxima claridad y evitando cualquier transparencia sobre la pantalla.
+> - **Copilot flotante en móviles:** La burbuja de inteligencia artificial se adapta a un tamaño compacto de 44 px y puede arrastrarse con el dedo a cualquier parte de la pantalla para no obstaculizar botones ni formularios.
+
+
 ---
 
 ## 📋 Guía Visual de Campos e Interacciones

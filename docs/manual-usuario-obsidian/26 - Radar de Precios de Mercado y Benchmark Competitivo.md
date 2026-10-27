@@ -117,11 +117,18 @@ graph TD
 <summary>🔍 <b>Ficha Técnica y Trazabilidad (Soporte / Devs)</b></summary>
 
 - **Módulo Backend:** `apps/api/src/modules/radar-precios/` (`RadarPreciosService`, `RadarPreciosController`).
-- **Endpoints:**
+- **Endpoints de la API Interna:**
   - `GET /radar-precios/comparativas`: devuelve los últimos benchmarks guardados en el Data Lake.
   - `POST /radar-precios/escanear/:id`: escaneo puntual por ID de producto.
   - `POST /radar-precios/escanear-lote`: escaneo masivo de catálogo.
   - `POST /radar-precios/alinear/:id`: actualiza precio y emite evento en Lake.
+- **Integración con Mercado Libre API:**
+  - **Autenticación:** OAuth `client_credentials` con renovación automática en cache (`MERCADOLIBRE_CLIENT_ID`, `MERCADOLIBRE_CLIENT_SECRET`).
+  - **Catálogo por Barcode:** `GET /products/search?status=active&site_id=MLA&product_identifier={barcode}`.
+  - **Catálogo por Texto:** `GET /products/search?status=active&site_id=MLA&q={query}&limit=2`.
+  - **Publicaciones Activas:** `GET /products/{productId}/items` (precios reales en ARS, condición y links canónicos a artículos).
+- **Herramienta de Diagnóstico / Banco de Pruebas:**
+  - Comando CLI: `pnpm probar:scraper` (ejecuta `scripts/probar-scraper.mjs` para verificar credenciales OAuth, status de endpoints y parsing de microdatos).
 - **Evento en Data Lakehouse:** `lake_eventos` con `tipoEvento = 'benchmark_precio_mercado'`.
 - **Feature Store IA:** `copilot_insights_cache` con categoría `oportunidad_margen` y `desfasaje_competitivo`.
 - **Componentes Frontend:** `RadarPreciosVista.tsx`, hook `use-radar-precios.ts`, ruta `/productos/radar`.

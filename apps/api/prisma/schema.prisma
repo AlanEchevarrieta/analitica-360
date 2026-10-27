@@ -133,6 +133,8 @@ model Empresa {
   cuentasTienda        CuentaTienda[]
   lakeEventos          LakeEvento[]
   copilotInsightsCache CopilotInsightCache[]
+  pasarelasConfig      EmpresaPasarelaConfig[]
+  pasarelaTransacciones PasarelaTransaccion[]
 
   @@unique([camaraId, ordenCamara])
   @@map("empresas")
@@ -2434,3 +2436,66 @@ model CopilotInsightCache {
   @@index([empresaId, categoria, prioridad], map: "idx_insights_empresa")
   @@map("copilot_insights_cache")
 }
+
+// ==== Pasarelas de Pago Unificadas (Mercado Pago, Ualá Bis, Stripe) ====
+
+model EmpresaPasarelaConfig {
+  id            String   @id @default(uuid()) @db.Uuid
+  empresaId     String   @map("empresa_id") @db.Uuid
+  /// mercadopago | uala | stripe
+  proveedor     String   @db.VarChar(20)
+  habilitado    Boolean  @default(true)
+  /// Credenciales cifradas con AES-256-GCM (CLAVE_CIFRADO)
+  credenciales  String
+  publicKey     String?  @map("public_key")
+  webhookSecret String?  @map("webhook_secret")
+
+  // Canales donde la empresa activa esta pasarela
+  usoTienda     Boolean  @default(true) @map("uso_tienda")
+  usoPos        Boolean  @default(true) @map("uso_pos")
+  usoCuentas    Boolean  @default(true) @map("uso_cuentas")
+  usoTurnos     Boolean  @default(true) @map("uso_turnos")
+
+  conectadoEn   DateTime @default(now()) @map("conectado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, proveedor])
+  @@map("empresa_pasarelas_config")
+}
+
+model PasarelaTransaccion {
+  id               String    @id @default(uuid()) @db.Uuid
+  empresaId        String    @map("empresa_id") @db.Uuid
+  /// mercadopago | uala | stripe
+  proveedor        String    @db.VarChar(20)
+  /// pedido_tienda | venta_pos | cobro_cuenta_corriente | reserva_turno | abono | link_rapido
+  origenTipo       String    @map("origen_tipo") @db.VarChar(30)
+  origenId         String?   @map("origen_id") @db.Uuid
+  /// Identificador externo devuelto por la pasarela (preference_id, order_id, session_id, etc.)
+  idExterno        String?   @map("id_externo")
+  urlPago          String?   @map("url_pago")
+  qrData           String?   @map("qr_data")
+  moneda           String    @default("ARS") @db.VarChar(3)
+  montoBruto       Decimal   @map("monto_bruto") @db.Decimal(12, 2)
+  comisionEstimada Decimal   @default(0) @map("comision_estimada") @db.Decimal(12, 2)
+  montoNeto        Decimal?  @map("monto_neto") @db.Decimal(12, 2)
+  /// pendiente | aprobado | rechazado | expirado | reembolsado
+  estado           String    @default("pendiente") @db.VarChar(20)
+  clienteNombre    String?   @map("cliente_nombre")
+  clienteEmail     String?   @map("cliente_email")
+  concepto         String?
+  metadata         Json?
+  expiraEn         DateTime? @map("expira_en")
+  pagadoEn         DateTime? @map("pagado_en")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  empresa          Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, origenTipo, origenId])
+  @@index([proveedor, idExterno])
+  @@map("pasarela_transacciones")
+}
+
