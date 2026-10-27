@@ -13,6 +13,8 @@ import type {
 @Injectable()
 export class RadarPreciosService {
   private readonly logger = new Logger(RadarPreciosService.name);
+  private cachedMlToken: string | null = null;
+  private mlTokenExpiresAt = 0;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -20,11 +22,65 @@ export class RadarPreciosService {
   ) {}
 
   /**
+   * Obtiene o renueva automáticamente el token de acceso OAuth de Mercado Libre usando client_credentials.
+   */
+  async obtenerAccessTokenMercadoLibre(): Promise<string | null> {
+    const envToken = process.env.MERCADOLIBRE_ACCESS_TOKEN || process.env.ML_ACCESS_TOKEN;
+    const clientId = process.env.MERCADOLIBRE_CLIENT_ID || process.env.ML_CLIENT_ID;
+    const clientSecret = process.env.MERCADOLIBRE_CLIENT_SECRET || process.env.ML_CLIENT_SECRET;
+
+    // Si no hay Client ID / Secret configurados, usamos el token estático de las env vars
+    if (!clientId || !clientSecret) {
+      return envToken ?? null;
+    }
+
+    const ahora = Date.now();
+    // Reutilizamos el token en cache si tiene al menos 5 minutos de validez restante
+    if (this.cachedMlToken && ahora < this.mlTokenExpiresAt - 5 * 60 * 1000) {
+      return this.cachedMlToken;
+    }
+
+    try {
+      const res = await fetch('https://api.mercadolibre.com/oauth/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Accept: 'application/json',
+        },
+        body: new URLSearchParams({
+          grant_type: 'client_credentials',
+          client_id: clientId.trim(),
+          client_secret: clientSecret.trim(),
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        if (data.access_token) {
+          this.cachedMlToken = data.access_token;
+          const expiresIn = (Number(data.expires_in) || 21600) * 1000;
+          this.mlTokenExpiresAt = ahora + expiresIn;
+          this.logger.log('Access token de Mercado Libre renovado exitosamente vía OAuth.');
+          return this.cachedMlToken;
+        }
+      } else {
+        const errBody = await res.text();
+        this.logger.warn(`Mercado Libre OAuth rechazó renovación: ${res.status} - ${errBody}`);
+      }
+    } catch (err: any) {
+      this.logger.warn(`Error de red renovando token de Mercado Libre: ${err?.message}`);
+    }
+
+    return envToken ?? null;
+  }
+
+  /**
    * Búsqueda pública en la API de catálogo de MercadoLibre (MLA - Argentina).
    */
   async buscarEnMercadoLibre(query: string, barcode?: string | null): Promise<ItemMercadoScrapeado[]> {
     const items: ItemMercadoScrapeado[] = [];
-    const mlToken = process.env.MERCADOLIBRE_ACCESS_TOKEN || process.env.ML_ACCESS_TOKEN;
+    const mlToken = await this.obtenerAccessTokenMercadoLibre();
     const reqHeaders: Record<string, string> = {
       'User-Agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
