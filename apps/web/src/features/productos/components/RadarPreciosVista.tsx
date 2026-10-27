@@ -268,7 +268,7 @@ export function RadarPreciosVista() {
                     <TableHead className="text-right">Tu Precio</TableHead>
                     <TableHead className="text-center">Rango de Mercado (Mín / Mediana / Máx)</TableHead>
                     <TableHead className="text-center">Brecha vs Mercado</TableHead>
-                    <TableHead>Referencias Detectadas</TableHead>
+                    <TableHead>Mercado Libre y Referencias</TableHead>
                     <TableHead className="text-right">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -278,6 +278,12 @@ export function RadarPreciosVista() {
                     const esBarato = item.metricas.estadoCompetitivo === "barato_margen_recuperable";
                     const esCaro = item.metricas.estadoCompetitivo === "caro_fuera_de_mercado";
                     const esAlineado = item.metricas.estadoCompetitivo === "alineado";
+                    const tieneMuestra = item.metricas.muestraFiltrada > 0;
+                    const queryLimpia = (item.nombre || item.codigoBarra || "").replace(/[#,/\\_()\-]/g, " ").replace(/\s+/g, " ").trim();
+                    const urlML =
+                      item.urlBusquedaMercado ||
+                      item.metricas.items.find((i) => i.url)?.url ||
+                      `https://listado.mercadolibre.com.ar/${encodeURIComponent(queryLimpia.replace(/\s+/g, "-"))}`;
 
                     return (
                       <TableRow key={item.productoId} className="group hover:bg-muted/40 transition-colors">
@@ -303,69 +309,107 @@ export function RadarPreciosVista() {
                         </TableCell>
 
                         <TableCell className="text-center min-w-[220px]">
-                          <div className="flex items-center justify-between text-xs font-mono text-muted-foreground px-1">
-                            <span>{formatoPesos(item.metricas.precioMinimo)}</span>
-                            <span className="font-bold text-foreground bg-muted/80 px-2 py-0.5 rounded">
-                              {formatoPesos(item.metricas.precioMediana)}
-                            </span>
-                            <span>{formatoPesos(item.metricas.precioMaximo)}</span>
-                          </div>
-                          {/* Barra visual de rango */}
-                          <div className="relative mt-2 h-2 w-full rounded-full bg-muted overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${
-                                esBarato ? "bg-amber-400" : esCaro ? "bg-rose-500" : "bg-emerald-500"
-                              }`}
-                              style={{ width: "100%" }}
-                            />
-                          </div>
-                          <div className="text-[10px] text-muted-foreground mt-1">
-                            Basado en {item.metricas.muestraFiltrada} publicaciones verificadas
-                          </div>
+                          {tieneMuestra ? (
+                            <>
+                              <div className="flex items-center justify-between text-xs font-mono text-muted-foreground px-1">
+                                <span>{formatoPesos(item.metricas.precioMinimo)}</span>
+                                <span className="font-bold text-foreground bg-muted/80 px-2 py-0.5 rounded">
+                                  {formatoPesos(item.metricas.precioMediana)}
+                                </span>
+                                <span>{formatoPesos(item.metricas.precioMaximo)}</span>
+                              </div>
+                              {/* Barra visual de rango */}
+                              <div className="relative mt-2 h-2 w-full rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    esBarato ? "bg-amber-400" : esCaro ? "bg-rose-500" : "bg-emerald-500"
+                                  }`}
+                                  style={{ width: "100%" }}
+                                />
+                              </div>
+                              <div className="text-[10px] text-muted-foreground mt-1">
+                                Basado en {item.metricas.muestraFiltrada} publicaciones verificadas
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center py-1 text-center">
+                              <span className="text-xs font-medium text-muted-foreground">Sin muestra en API</span>
+                              <div className="text-[10px] text-muted-foreground mt-0.5">
+                                Cotejar con enlace directo
+                              </div>
+                            </div>
+                          )}
                         </TableCell>
 
                         <TableCell className="text-center">
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                              esBarato
-                                ? "border border-amber-500/30 bg-amber-500/10 text-amber-400"
-                                : esCaro
-                                ? "border border-rose-500/30 bg-rose-500/10 text-rose-400"
-                                : "border border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                            }`}
-                          >
-                            {esBarato && <TrendingDown className="h-3.5 w-3.5" />}
-                            {esCaro && <TrendingUp className="h-3.5 w-3.5" />}
-                            {esAlineado && <CheckCircle2 className="h-3.5 w-3.5" />}
-                            {brecha > 0 ? `+${brecha}%` : `${brecha}%`}
-                          </span>
-                          <div className="text-[10px] text-muted-foreground mt-0.5">
-                            {esBarato
-                              ? "Margen recuperable"
-                              : esCaro
-                              ? "Riesgo de venta"
-                              : "Competitivo"}
-                          </div>
+                          {tieneMuestra ? (
+                            <>
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                  esBarato
+                                    ? "border border-amber-500/30 bg-amber-500/10 text-amber-400"
+                                    : esCaro
+                                    ? "border border-rose-500/30 bg-rose-500/10 text-rose-400"
+                                    : "border border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                                }`}
+                              >
+                                {esBarato && <TrendingDown className="h-3.5 w-3.5" />}
+                                {esCaro && <TrendingUp className="h-3.5 w-3.5" />}
+                                {esAlineado && <CheckCircle2 className="h-3.5 w-3.5" />}
+                                {brecha > 0 ? `+${brecha}%` : `${brecha}%`}
+                              </span>
+                              <div className="text-[10px] text-muted-foreground mt-0.5">
+                                {esBarato
+                                  ? "Margen recuperable"
+                                  : esCaro
+                                  ? "Riesgo de venta"
+                                  : "Competitivo"}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/50 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                                0%
+                              </span>
+                              <div className="text-[10px] text-muted-foreground mt-0.5">Sin desfasaje verificado</div>
+                            </div>
+                          )}
                         </TableCell>
 
-                        <TableCell className="max-w-[240px]">
-                          <div className="flex flex-col gap-1">
-                            {item.metricas.items.slice(0, 2).map((ref, idx) => (
-                              <a
-                                key={idx}
-                                href={ref.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="group/link flex items-center justify-between text-xs text-muted-foreground hover:text-emerald-400 transition-colors truncate"
-                                title={`${ref.titulo} - ${formatoPesos(ref.precio)}`}
-                              >
-                                <span className="truncate max-w-[170px]">{ref.titulo}</span>
-                                <span className="font-mono text-[11px] font-semibold text-foreground ml-1">
-                                  {formatoPesos(ref.precio)}
-                                </span>
-                                <ExternalLink className="h-3 w-3 ml-1 opacity-0 group-hover/link:opacity-100 transition-opacity" />
-                              </a>
-                            ))}
+                        <TableCell className="max-w-[260px]">
+                          <div className="flex flex-col gap-1.5">
+                            {/* Botón directo a Mercado Libre */}
+                            <a
+                              href={urlML}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 hover:text-amber-200 transition-colors w-fit shadow-2xs"
+                              title={`Abrir búsqueda de "${item.nombre}" en MercadoLibre`}
+                            >
+                              <span>Ver en MercadoLibre</span>
+                              <ExternalLink className="h-3 w-3 shrink-0" />
+                            </a>
+
+                            {/* Publicaciones individuales con precio */}
+                            {item.metricas.items
+                              .filter((ref) => ref.precio > 0)
+                              .slice(0, 2)
+                              .map((ref, idx) => (
+                                <a
+                                  key={idx}
+                                  href={ref.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="group/link flex items-center justify-between text-xs text-muted-foreground hover:text-emerald-400 transition-colors truncate"
+                                  title={`${ref.titulo} - ${formatoPesos(ref.precio)}`}
+                                >
+                                  <span className="truncate max-w-[170px]">{ref.titulo}</span>
+                                  <span className="font-mono text-[11px] font-semibold text-foreground ml-1">
+                                    {formatoPesos(ref.precio)}
+                                  </span>
+                                  <ExternalLink className="h-3 w-3 ml-1 opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                                </a>
+                              ))}
                           </div>
                         </TableCell>
 
@@ -394,7 +438,16 @@ export function RadarPreciosVista() {
                               className={`h-8 text-xs font-semibold ${
                                 esBarato ? "bg-amber-600 hover:bg-amber-500 text-white" : ""
                               }`}
-                              disabled={alineandoId === item.productoId || item.precioLocal === item.metricas.precioMediana}
+                              disabled={
+                                alineandoId === item.productoId ||
+                                !tieneMuestra ||
+                                item.precioLocal === item.metricas.precioMediana
+                              }
+                              title={
+                                !tieneMuestra
+                                  ? "Requiere publicaciones verificadas en API para alinear"
+                                  : undefined
+                              }
                               onClick={() => handleAlinear(item)}
                             >
                               {alineandoId === item.productoId ? (

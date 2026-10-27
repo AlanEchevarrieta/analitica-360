@@ -321,6 +321,15 @@ export class RadarPreciosService {
   }
 
   /**
+   * Genera el enlace canónico directo a la búsqueda en MercadoLibre Argentina.
+   */
+  generarUrlBusquedaMercadoLibre(nombre?: string | null, barcode?: string | null): string {
+    const q = (nombre || barcode || '').replace(/[#,/\\_()\-]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!q) return 'https://www.mercadolibre.com.ar';
+    return `https://listado.mercadolibre.com.ar/${encodeURIComponent(q.replace(/\s+/g, '-'))}`;
+  }
+
+  /**
    * Escanea un producto puntual por ID, calcula su benchmark y lo ingesta en el Lakehouse.
    */
   async escanearProducto(empresaId: string, productoId: string): Promise<ResultadoBenchmarkProducto> {
@@ -334,12 +343,25 @@ export class RadarPreciosService {
 
     const precioLocal = Number(producto.precioVenta ?? 0);
     const costoLocal = producto.costo ? Number(producto.costo) : null;
+    const urlBusquedaMercado = this.generarUrlBusquedaMercadoLibre(producto.nombre, producto.codigoBarra);
 
     // Buscamos publicaciones en MercadoLibre y fuentes públicas
     const itemsScrapeados = await this.buscarEnMercadoLibre(producto.nombre, producto.codigoBarra);
 
     // Filtro IQR y métricas
     const metricas = this.calcularMetricasConFiltroIQR(precioLocal, itemsScrapeados);
+
+    // Si no quedaron items de referencia o la muestra filtrada es 0, aseguramos el link directo
+    if (metricas.items.length === 0) {
+      metricas.items.push({
+        titulo: `Ver publicaciones de "${producto.nombre}" en MercadoLibre`,
+        precio: 0,
+        moneda: 'ARS',
+        vendedor: 'MercadoLibre',
+        url: urlBusquedaMercado,
+        fuente: 'mercadolibre',
+      });
+    }
 
     const resultado: ResultadoBenchmarkProducto = {
       productoId: producto.id,
@@ -351,6 +373,7 @@ export class RadarPreciosService {
       metricas,
       fechaEscaneo: new Date().toISOString(),
       fuentePrincipal: 'mercadolibre',
+      urlBusquedaMercado,
     };
 
     // Ingestamos el evento inmutable en el Lakehouse
@@ -424,6 +447,9 @@ export class RadarPreciosService {
 
       const payload = ev.payload as unknown as ResultadoBenchmarkProducto;
       if (payload && payload.productoId) {
+        if (!payload.urlBusquedaMercado) {
+          payload.urlBusquedaMercado = this.generarUrlBusquedaMercadoLibre(payload.nombre, payload.codigoBarra);
+        }
         mapaPorProducto.set(prodId, payload);
       }
     }
@@ -433,7 +459,7 @@ export class RadarPreciosService {
     if (ids.length > 0) {
       const prodsActuales = await this.prisma.producto.findMany({
         where: { id: { in: ids }, empresaId },
-        select: { id: true, precioVenta: true, nombre: true, costo: true },
+        select: { id: true, precioVenta: true, nombre: true, costo: true, codigoBarra: true },
       });
 
       for (const p of prodsActuales) {
@@ -442,8 +468,12 @@ export class RadarPreciosService {
           const precioActual = Number(p.precioVenta ?? 0);
           item.precioLocal = precioActual;
           item.costoLocal = p.costo ? Number(p.costo) : null;
-          // Recalculamos brecha con la mediana existente
-          if (item.metricas.precioMediana > 0 && precioActual > 0) {
+          if (!item.urlBusquedaMercado) {
+            item.urlBusquedaMercado = this.generarUrlBusquedaMercadoLibre(p.nombre, p.codigoBarra ?? item.codigoBarra);
+          }
+
+          // Solo recalculamos brecha si realmente tenemos publicaciones verificadas (>0)
+          if (item.metricas.muestraFiltrada > 0 && item.metricas.precioMediana > 0 && precioActual > 0) {
             item.metricas.brechaPorcentaje =
               Math.round(((precioActual - item.metricas.precioMediana) / item.metricas.precioMediana) * 1000) / 10;
             if (item.metricas.brechaPorcentaje < -8) {
@@ -453,6 +483,29 @@ export class RadarPreciosService {
             } else {
               item.metricas.estadoCompetitivo = 'alineado';
             }
+          } else {
+            // Sin muestra verificada en API, evitamos brechas ficticias
+            item.metricas.muestraFiltrada = 0;
+            item.metricas.brechaPorcentaje = 0;
+            item.metricas.estadoCompetitivo = 'alineado';
+            item.metricas.precioMinimo = precioActual;
+            item.metricas.precioMediana = precioActual;
+            item.metricas.precioPromedio = precioActual;
+            item.metricas.precioMaximo = precioActual;
+          }
+
+          // Aseguramos que siempre existan items de referencia con enlace
+          if ((!item.metricas.items || item.metricas.items.length === 0) && item.urlBusquedaMercado) {
+            item.metricas.items = [
+              {
+                titulo: `Ver publicaciones de "${p.nombre}" en MercadoLibre`,
+                precio: 0,
+                moneda: 'ARS',
+                vendedor: 'MercadoLibre',
+                url: item.urlBusquedaMercado,
+                fuente: 'mercadolibre',
+              },
+            ];
           }
         }
       }

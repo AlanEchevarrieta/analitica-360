@@ -39,6 +39,7 @@ export interface ResultadoBenchmarkProducto {
   metricas: MetricasMercado;
   fechaEscaneo: string;
   fuentePrincipal: string;
+  urlBusquedaMercado?: string;
 }
 
 export function useComparativasRadar() {
