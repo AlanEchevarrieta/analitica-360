@@ -13,7 +13,8 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "auditar": "node scripts/auditoria/auditar.mjs"
+    "auditar": "node scripts/auditoria/auditar.mjs",
+    "probar:scraper": "node scripts/probar-scraper.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

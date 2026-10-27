@@ -47,3 +47,4 @@ backups/
 
 # Resultados de pnpm auditar (pueden tener datos de clientes)
 .auditorias/
+scripts/

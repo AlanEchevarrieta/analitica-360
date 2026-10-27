@@ -90,8 +90,80 @@ export class RadarPreciosService {
       reqHeaders['Authorization'] = `Bearer ${mlToken}`;
     }
 
-    // 1. Si hay código de barras, intentamos primero búsqueda por barcode
-    if (barcode && barcode.trim().length >= 8) {
+    // 1. Si tenemos token OAuth, utilizamos primero la API moderna de Catálogo de Mercado Libre (/products/search y /products/{id}/items)
+    if (mlToken) {
+      let catalogProducts: Array<{ id: string; name: string }> = [];
+
+      // 1a. Búsqueda de producto por código de barras (GTIN/EAN)
+      if (barcode && barcode.trim().length >= 8) {
+        try {
+          const urlBarcodeCatalog = `https://api.mercadolibre.com/products/search?status=active&site_id=MLA&product_identifier=${encodeURIComponent(barcode.trim())}`;
+          const res = await fetch(urlBarcodeCatalog, { headers: reqHeaders, signal: AbortSignal.timeout(6000) });
+          if (res.ok) {
+            const data = (await res.json()) as any;
+            if (Array.isArray(data.results) && data.results.length > 0) {
+              catalogProducts = data.results.slice(0, 2);
+            }
+          }
+        } catch (err: any) {
+          this.logger.warn(`Error buscando producto por barcode [${barcode}] en catálogo ML: ${err?.message}`);
+        }
+      }
+
+      // 1b. Si no encontramos por barcode, buscamos producto por texto
+      if (catalogProducts.length === 0 && query && query.trim().length >= 2) {
+        try {
+          const queryLimpia = query.replace(/[#,/\\_-]/g, ' ').replace(/\s+/g, ' ').trim();
+          const urlQueryCatalog = `https://api.mercadolibre.com/products/search?status=active&site_id=MLA&q=${encodeURIComponent(queryLimpia)}&limit=2`;
+          const res = await fetch(urlQueryCatalog, { headers: reqHeaders, signal: AbortSignal.timeout(6000) });
+          if (res.ok) {
+            const data = (await res.json()) as any;
+            if (Array.isArray(data.results) && data.results.length > 0) {
+              catalogProducts = data.results.slice(0, 2);
+            }
+          }
+        } catch (err: any) {
+          this.logger.warn(`Error buscando producto por texto [${query}] en catálogo ML: ${err?.message}`);
+        }
+      }
+
+      // 1c. Para cada producto de catálogo encontrado, obtenemos sus publicaciones e items en venta con precios reales
+      for (const prod of catalogProducts) {
+        try {
+          const urlItems = `https://api.mercadolibre.com/products/${prod.id}/items`;
+          const res = await fetch(urlItems, { headers: reqHeaders, signal: AbortSignal.timeout(6000) });
+          if (res.ok) {
+            const data = (await res.json()) as any;
+            if (Array.isArray(data.results)) {
+              for (const r of data.results) {
+                if (typeof r.price === 'number' && r.price > 0) {
+                  const permalink = r.item_id
+                    ? `https://articulo.mercadolibre.com.ar/${r.item_id.replace(/^MLA/, 'MLA-')}`
+                    : `https://www.mercadolibre.com.ar/p/${prod.id}`;
+                  if (!items.some((it) => it.url === permalink)) {
+                    items.push({
+                      titulo: prod.name,
+                      precio: Number(r.price),
+                      moneda: r.currency_id ?? 'ARS',
+                      vendedor: r.seller_id ? `Vendedor ML #${r.seller_id}` : 'MercadoLibre Seller',
+                      url: permalink,
+                      fuente: 'mercadolibre',
+                      condicion: r.condition,
+                      stock: 1,
+                    });
+                  }
+                }
+              }
+            }
+          }
+        } catch (err: any) {
+          this.logger.warn(`Error obteniendo items para producto [${prod.id}] en ML: ${err?.message}`);
+        }
+      }
+    }
+
+    // 2. Si la API de Catálogo no arrojó items, intentamos como fallback la búsqueda de listings (MLA/search)
+    if (items.length < 3 && barcode && barcode.trim().length >= 8) {
       try {
         const urlBarcode = `https://api.mercadolibre.com/sites/MLA/search?barcode=${encodeURIComponent(barcode.trim())}&limit=20`;
         const res = await fetch(urlBarcode, {
@@ -121,11 +193,10 @@ export class RadarPreciosService {
           }
         }
       } catch (err: any) {
-        this.logger.warn(`Error buscando por barcode [${barcode}] en ML: ${err?.message}`);
+        this.logger.warn(`Error buscando por barcode [${barcode}] en ML fallback: ${err?.message}`);
       }
     }
 
-    // 2. Si no hubo resultados por barcode o no hay barcode, buscamos por query de texto
     if (items.length < 3 && query && query.trim().length >= 2) {
       try {
         const queryLimpia = query
@@ -143,7 +214,6 @@ export class RadarPreciosService {
           if (Array.isArray(data.results)) {
             for (const r of data.results) {
               if (typeof r.price === 'number' && r.price > 0) {
-                // Evitamos duplicar por permalink si ya existía
                 if (!items.some((it) => it.url === r.permalink)) {
                   items.push({
                     titulo: r.title,
@@ -163,7 +233,7 @@ export class RadarPreciosService {
           }
         }
       } catch (err: any) {
-        this.logger.warn(`Error buscando por texto [${query}] en ML: ${err?.message}`);
+        this.logger.warn(`Error buscando por texto [${query}] en ML fallback: ${err?.message}`);
       }
     }
 
