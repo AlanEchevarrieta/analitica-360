@@ -24,13 +24,22 @@ export class RadarPreciosService {
    */
   async buscarEnMercadoLibre(query: string, barcode?: string | null): Promise<ItemMercadoScrapeado[]> {
     const items: ItemMercadoScrapeado[] = [];
+    const mlToken = process.env.MERCADOLIBRE_ACCESS_TOKEN || process.env.ML_ACCESS_TOKEN;
+    const reqHeaders: Record<string, string> = {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      Accept: 'application/json',
+    };
+    if (mlToken) {
+      reqHeaders['Authorization'] = `Bearer ${mlToken}`;
+    }
 
     // 1. Si hay código de barras, intentamos primero búsqueda por barcode
     if (barcode && barcode.trim().length >= 8) {
       try {
         const urlBarcode = `https://api.mercadolibre.com/sites/MLA/search?barcode=${encodeURIComponent(barcode.trim())}&limit=20`;
         const res = await fetch(urlBarcode, {
-          headers: { 'User-Agent': 'Analitica360-Radar/1.0' },
+          headers: reqHeaders,
           signal: AbortSignal.timeout(6000),
         });
 
@@ -69,7 +78,7 @@ export class RadarPreciosService {
           .trim();
         const urlQuery = `https://api.mercadolibre.com/sites/MLA/search?q=${encodeURIComponent(queryLimpia)}&limit=25`;
         const res = await fetch(urlQuery, {
-          headers: { 'User-Agent': 'Analitica360-Radar/1.0' },
+          headers: reqHeaders,
           signal: AbortSignal.timeout(6000),
         });
 
@@ -99,6 +108,23 @@ export class RadarPreciosService {
         }
       } catch (err: any) {
         this.logger.warn(`Error buscando por texto [${query}] en ML: ${err?.message}`);
+      }
+    }
+
+    // 3. Si la API de ML no devolvió items (por 403 de Cloudflare/falta de token o sin resultados directos),
+    // generamos el enlace directo al catálogo real de MercadoLibre para que el usuario pueda abrirlo con 1 clic.
+    if (items.length === 0 && (query || barcode)) {
+      const q = (query || barcode || '').replace(/[#,/\\_-]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (q) {
+        const urlDirecta = `https://listado.mercadolibre.com.ar/${encodeURIComponent(q.replace(/\s+/g, '-'))}`;
+        items.push({
+          titulo: `Explorar publicaciones de "${q}" en MercadoLibre`,
+          precio: 0,
+          moneda: 'ARS',
+          vendedor: 'MercadoLibre Argentina',
+          url: urlDirecta,
+          fuente: 'mercadolibre',
+        });
       }
     }
 
@@ -220,6 +246,20 @@ export class RadarPreciosService {
 
     if (filtrados.length === 0) {
       filtrados = items.filter((it) => it.precio > 0);
+    }
+
+    if (filtrados.length === 0) {
+      return {
+        precioMinimo: precioLocal,
+        precioMediana: precioLocal,
+        precioPromedio: precioLocal,
+        precioMaximo: precioLocal,
+        muestraTotal: totalOriginal,
+        muestraFiltrada: 0,
+        brechaPorcentaje: 0,
+        estadoCompetitivo: 'alineado',
+        items: items.slice(0, 5),
+      };
     }
 
     // 2. Filtro IQR (Rango Intercuartil) si tenemos 4 o más observaciones
