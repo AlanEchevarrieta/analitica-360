@@ -24,6 +24,7 @@ import { InformesConfig } from "./InformesConfig";
 import { FacturaElectronicaConfig } from "@/features/facturacion/FacturaElectronicaConfig";
 import { EnviosConfig } from "@/features/envios/EnviosConfig";
 import { MercadoPagoTiendaConfig } from "@/features/mercadopago-tienda/MercadoPagoTiendaConfig";
+import { WidgetWebConfig } from "./WidgetWebConfig";
 import { BorrarCuentaConfig } from "./BorrarCuentaConfig";
 import { CandadoPlan, MejorarPlan } from "@/components/shared/mejorar-plan";
 import { usePlan } from "@/hooks/use-plan";
@@ -63,6 +64,7 @@ const GRUPOS: { titulo: string; opciones: Opcion[] }[] = [
     titulo: "Tienda online",
     opciones: [
       { clave: "tienda", icono: "🛍️", titulo: "Tienda online", subtitulo: "Tu catálogo en internet: marca, contacto y datos para cobrar", panel: () => <TiendaOnlineConfig />, funcion: "tienda" },
+      { clave: "widget", icono: "🔌", titulo: "Integrar en mi web", subtitulo: "Widget de turnos, compras y SDK para tu WordPress, Wix o SPA", panel: () => <WidgetWebConfig /> },
       { clave: "cupones", icono: "🎟️", titulo: "Cupones de la tienda", subtitulo: "Códigos de descuento para el checkout (ej. ACACIA10)", panel: () => <CuponesTiendaConfig />, funcion: "tienda" },
       { clave: "mercadopago", icono: "💳", titulo: "Cobros con Mercado Pago", subtitulo: "Que tus clientes paguen la tienda con tarjeta o dinero en cuenta", panel: () => <MercadoPagoTiendaConfig />, funcion: "tienda" },
       { clave: "envios", icono: "🚚", titulo: "Envíos", subtitulo: "Correo Argentino, Andreani y más con Zipnova: cotizar, etiqueta y seguimiento", panel: () => <EnviosConfig />, funcion: "pedidos" },

@@ -6,10 +6,15 @@ import { PasarelasCoordinadorService } from './pasarelas-coordinador.service.js'
 import {
   PasarelasController,
   PasarelasWebhookController,
+  WebhookDinamicoController,
 } from './pasarelas.controller.js';
 
 @Module({
-  controllers: [PasarelasController, PasarelasWebhookController],
+  controllers: [
+    PasarelasController,
+    PasarelasWebhookController,
+    WebhookDinamicoController,
+  ],
   providers: [
     MercadoPagoAdapter,
     UalaAdapter,

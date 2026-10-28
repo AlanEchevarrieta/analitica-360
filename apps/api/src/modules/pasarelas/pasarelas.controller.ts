@@ -91,7 +91,77 @@ export class PasarelasWebhookController {
     @Param('proveedor') proveedor: ProveedorPasarela,
     @Body() payload: unknown,
     @Headers() headers: Record<string, string | string[] | undefined>,
+    @Query() query: Record<string, string | string[] | undefined>,
   ) {
-    return this.coordinador.procesarWebhook(proveedor, payload, headers);
+    return this.coordinador.procesarWebhook({
+      proveedor,
+      payload,
+      headers,
+      query,
+    });
+  }
+
+  @Post(':negocio/:proveedor')
+  @HttpCode(200)
+  async recibirWebhookNegocio(
+    @Param('negocio') negocio: string,
+    @Param('proveedor') proveedor: ProveedorPasarela,
+    @Body() payload: unknown,
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Query() query: Record<string, string | string[] | undefined>,
+  ) {
+    return this.coordinador.procesarWebhook({
+      negocio,
+      proveedor,
+      payload,
+      headers,
+      query,
+    });
+  }
+}
+
+/** Controlador simplificado directo /webhook/:negocio y /webhook/:negocio/:proveedor */
+@Controller('webhook')
+@Public()
+export class WebhookDinamicoController {
+  constructor(private readonly coordinador: PasarelasCoordinadorService) {}
+
+  @Post(':negocio/:proveedor')
+  @HttpCode(200)
+  async recibirWebhook(
+    @Param('negocio') negocio: string,
+    @Param('proveedor') proveedor: ProveedorPasarela,
+    @Body() payload: unknown,
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Query() query: Record<string, string | string[] | undefined>,
+  ) {
+    return this.coordinador.procesarWebhook({
+      negocio,
+      proveedor,
+      payload,
+      headers,
+      query,
+    });
+  }
+
+  @Post(':negocio')
+  @HttpCode(200)
+  async recibirWebhookPorDefecto(
+    @Param('negocio') negocio: string,
+    @Body() payload: unknown,
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Query() query: Record<string, string | string[] | undefined>,
+  ) {
+    // Si viene x-signature asumimos mercadopago, o si viene stripe-signature asumimos stripe
+    const proveedor: ProveedorPasarela =
+      headers['stripe-signature'] ? 'stripe' : 'mercadopago';
+
+    return this.coordinador.procesarWebhook({
+      negocio,
+      proveedor,
+      payload,
+      headers,
+      query,
+    });
   }
 }

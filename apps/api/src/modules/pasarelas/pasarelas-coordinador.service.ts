@@ -151,6 +151,21 @@ export class PasarelasCoordinadorService {
       throw new Error('Error al descifrar credenciales de la pasarela');
     }
 
+    const tiendaConfig = await this.prisma.tiendaConfig.findUnique({
+      where: { empresaId },
+      select: { subdominio: true },
+    });
+    const empresa = !tiendaConfig
+      ? await this.prisma.empresa.findUnique({
+          where: { id: empresaId },
+          select: { nombre: true },
+        })
+      : null;
+
+    const negocioSlug =
+      tiendaConfig?.subdominio ||
+      (empresa?.nombre ? this.slugify(empresa.nombre) : undefined);
+
     const adapter = this.getAdapter(dto.proveedor);
     const resultado = await adapter.crearCobro(
       credenciales,
@@ -163,6 +178,7 @@ export class PasarelasCoordinadorService {
         origenTipo: dto.origenTipo || 'link_rapido',
         origenId: dto.origenId,
         urlVuelta: dto.urlVuelta,
+        negocioSlug,
       },
       this.apiUrlPublica,
     );
@@ -331,41 +347,131 @@ export class PasarelasCoordinadorService {
     };
   }
 
-  /** Procesa webhooks entrantes de cualquier pasarela con comprobación de idempotencia. */
+  /** Función auxiliar para transformar nombres de comercio a slugs seguros. */
+  private slugify(texto: string): string {
+    return texto
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  /** Resuelve el ID de empresa a partir del subdominio de tienda, nombre slugificado o UUID. */
+  async resolverEmpresaId(negocio: string): Promise<string | null> {
+    if (!negocio) return null;
+    const negocioNorm = negocio.trim().toLowerCase();
+
+    // 1. Subdominio de tienda online
+    const tienda = await this.prisma.tiendaConfig.findUnique({
+      where: { subdominio: negocioNorm },
+      select: { empresaId: true },
+    });
+    if (tienda) return tienda.empresaId;
+
+    // 2. Si es UUID directo
+    const esUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(negocioNorm);
+    if (esUuid) {
+      const emp = await this.prisma.empresa.findUnique({
+        where: { id: negocioNorm },
+        select: { id: true },
+      });
+      if (emp) return emp.id;
+    }
+
+    // 3. Coincidencia con slug de nombre de empresa
+    const empresas = await this.prisma.empresa.findMany({
+      select: { id: true, nombre: true },
+    });
+    const buscado = this.slugify(negocioNorm);
+    const empMatch = empresas.find((e) => this.slugify(e.nombre) === buscado);
+    return empMatch ? empMatch.id : null;
+  }
+
+  /** Procesa webhooks entrantes con comprobación de idempotencia, resolución multi-tenant y reglas HMAC. */
   async procesarWebhook(
-    proveedor: ProveedorPasarela,
-    payload: unknown,
-    headers: Record<string, string | string[] | undefined>,
+    opcionesOProveedor:
+      | ProveedorPasarela
+      | {
+          negocio?: string;
+          proveedor: ProveedorPasarela;
+          payload: unknown;
+          headers: Record<string, string | string[] | undefined>;
+          query?: Record<string, string | string[] | undefined>;
+        },
+    payloadArg?: unknown,
+    headersArg?: Record<string, string | string[] | undefined>,
+    queryArg?: Record<string, string | string[] | undefined>,
   ) {
+    let negocio: string | undefined;
+    let proveedor: ProveedorPasarela;
+    let payload: unknown;
+    let headers: Record<string, string | string[] | undefined>;
+    let query: Record<string, string | string[] | undefined> | undefined;
+
+    if (typeof opcionesOProveedor === 'string') {
+      proveedor = opcionesOProveedor;
+      payload = payloadArg;
+      headers = headersArg ?? {};
+      query = queryArg;
+    } else {
+      negocio = opcionesOProveedor.negocio;
+      proveedor = opcionesOProveedor.proveedor;
+      payload = opcionesOProveedor.payload;
+      headers = opcionesOProveedor.headers;
+      query = opcionesOProveedor.query;
+    }
+
     const adapter = this.getAdapter(proveedor);
 
-    // Buscamos la transacción por idExterno si viene en el payload
+    // Si viene la ruta dinámica con el negocio, resolvemos la empresa directamente
+    let empresaId: string | null = null;
+    if (negocio) {
+      empresaId = await this.resolverEmpresaId(negocio);
+      if (!empresaId) {
+        this.logger.warn(`Webhook dinámico: negocio '${negocio}' no encontrado`);
+        return { ok: false, error: `Negocio '${negocio}' no encontrado en el sistema` };
+      }
+    }
+
+    // Extraemos posible ID de recurso para buscar transacción existente
     const p = payload as Record<string, unknown> | undefined;
+    const queryDataId = Array.isArray(query?.['data.id'])
+      ? query?.['data.id'][0]
+      : (query?.['data.id'] as string | undefined);
+    const queryId = Array.isArray(query?.id) ? query?.id[0] : (query?.id as string | undefined);
+
     const idExternoTentativo =
-      (p?.data as { id?: string })?.id ||
-      (p?.order_id as string) ||
-      (p?.id as string);
+      queryDataId ||
+      queryId ||
+      (p?.data as { id?: string | number })?.id ||
+      (p?.order_id as string | number) ||
+      (p?.id as string | number);
 
     let transaccion = idExternoTentativo
       ? await this.prisma.pasarelaTransaccion.findFirst({
-          where: { proveedor, idExterno: String(idExternoTentativo) },
+          where: {
+            proveedor,
+            idExterno: String(idExternoTentativo),
+            ...(empresaId ? { empresaId } : {}),
+          },
         })
       : null;
 
-    if (!transaccion && idExternoTentativo) {
-      this.logger.warn(`Webhook ${proveedor}: transacción con idExterno ${idExternoTentativo} no encontrada`);
-      return { ok: true, mensaje: 'Ignorado: transacción no registrada' };
-    }
-
-    // Si ya está aprobada, respondemos de forma idempotente sin re-ejecutar efectos
+    // Si la transacción ya está aprobada, respondemos de forma idempotente sin re-ejecutar efectos
     if (transaccion && transaccion.estado === 'aprobado') {
       return { ok: true, mensaje: 'Transacción ya procesada previamente (idempotente)' };
     }
 
-    // Buscamos la configuración de la empresa para tener sus credenciales
-    const config = transaccion
+    // Si no teníamos empresaId pero encontramos la transacción, usamos su empresaId
+    if (!empresaId && transaccion) {
+      empresaId = transaccion.empresaId;
+    }
+
+    // Buscamos la configuración de pasarela de la empresa para tener sus credenciales y webhookSecret
+    const config = empresaId
       ? await this.prisma.empresaPasarelaConfig.findUnique({
-          where: { empresaId_proveedor: { empresaId: transaccion.empresaId, proveedor } },
+          where: { empresaId_proveedor: { empresaId, proveedor } },
         })
       : null;
 
@@ -383,20 +489,25 @@ export class PasarelasCoordinadorService {
       }
     }
 
-    const resultado = await adapter.procesarWebhook(credenciales, webhookSecret, payload, headers);
+    const resultado = await adapter.procesarWebhook(credenciales, webhookSecret, payload, headers, query);
 
     if (!resultado.reconocido || !resultado.idExterno) {
-      return { ok: false, error: resultado.error || 'Evento no reconocido' };
+      return { ok: false, error: resultado.error || 'Evento no reconocido o firma inválida' };
     }
 
     if (!transaccion) {
       transaccion = await this.prisma.pasarelaTransaccion.findFirst({
-        where: { proveedor, idExterno: resultado.idExterno },
+        where: {
+          proveedor,
+          idExterno: resultado.idExterno,
+          ...(empresaId ? { empresaId } : {}),
+        },
       });
     }
 
     if (!transaccion) {
-      return { ok: true, mensaje: 'Transacción no encontrada' };
+      this.logger.warn(`Webhook ${proveedor}: transacción con idExterno ${resultado.idExterno} no registrada en la BD`);
+      return { ok: true, mensaje: 'Evento procesado pero transacción no encontrada' };
     }
 
     if (resultado.estadoNuevo && transaccion.estado !== resultado.estadoNuevo) {

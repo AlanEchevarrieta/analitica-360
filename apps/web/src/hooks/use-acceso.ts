@@ -18,6 +18,7 @@ export type AccionClave =
   | "gestionar_clientes";
 
 interface MiAcceso {
+  empresaId?: string;
   rol: string;
   modulos: ModuloClave[];
   acciones: AccionClave[];
@@ -40,6 +41,7 @@ export function useAcceso() {
     staleTime: 5 * 60_000,
   });
   return {
+    empresaId: data?.empresaId || orgId || "",
     cargado: Boolean(data) || rol === "dueno",
     puede: (modulo: ModuloClave) => (data ? data.modulos.includes(modulo) || (modulo === "soporte") : tieneModulo(rol, modulo)),
     puedeHacer: (accion: AccionClave) => (data ? data.acciones.includes(accion) : rol === "dueno"),

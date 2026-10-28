@@ -43,48 +43,7 @@ export function Header({ categorias, conSesion }: { categorias: CategoriaTienda[
           <span className="truncate">{sitio.nombre}</span>
         </Link>
 
-        <nav className="hidden items-center gap-6 md:flex">
-          <Link href="/" className={link}>
-            Inicio
-          </Link>
-          {/* Productos con sus categorías al pasar el mouse (o con Tab). */}
-          <div className="relative" onMouseLeave={() => setProductos(false)}>
-            <Link
-              href="/productos"
-              onMouseEnter={() => setProductos(true)}
-              onFocus={() => setProductos(true)}
-              aria-expanded={productos}
-              aria-haspopup="true"
-              className={link}
-            >
-              Productos ▾
-            </Link>
-            {productos && categorias.length > 0 ? (
-              <div className="absolute -left-4 top-full pt-3">
-                <ul className="w-64 overflow-hidden rounded-2xl border border-[var(--marca-oscuro)]/10 bg-white py-2 shadow-lg">
-                  {categorias.map((c) => (
-                    <li key={c.id}>
-                      <Link href={`/productos?cat=${c.id}`} className="flex items-baseline justify-between px-4 py-2 text-sm hover:bg-[var(--marca)]/10">
-                        {c.label}
-                        <span className="text-xs text-[var(--tinta)]/45">{c.cantidad}</span>
-                      </Link>
-                    </li>
-                  ))}
-                  <li className="mt-1 border-t border-[var(--marca-oscuro)]/10 pt-1">
-                    <Link href="/productos" className="block px-4 py-2 text-sm font-medium text-[var(--marca)] hover:bg-[var(--marca)]/10">
-                      Ver todos →
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            ) : null}
-          </div>
-          {nav.map((item) => (
-            <Link key={item.href} href={item.href} className={link}>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        {/* Navegación eliminada: header limpio solo con logo */}
 
         <div className="flex items-center gap-1">
           <button
@@ -99,9 +58,6 @@ export function Header({ categorias, conSesion }: { categorias: CategoriaTienda[
           >
             <LupaIcon />
           </button>
-          <Link href={conSesion ? "/mi-cuenta" : "/ingresar"} className={icono} aria-label={conSesion ? "Mi cuenta" : "Ingresar"} title={conSesion ? "Mi cuenta" : "Ingresar"}>
-            <PersonaIcon />
-          </Link>
           <button type="button" onClick={abrir} className={`relative ${icono}`} aria-label={`Abrir carrito (${totalItems} productos)`}>
             <CartIcon />
             {totalItems > 0 ? (
@@ -152,21 +108,9 @@ export function Header({ categorias, conSesion }: { categorias: CategoriaTienda[
               {item.label}
             </Link>
           ))}
-          <Link href={conSesion ? "/mi-cuenta" : "/ingresar"} className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-[var(--marca-oscuro)]/10">
-            {conSesion ? "Mi cuenta" : "Ingresar"}
-          </Link>
         </nav>
       ) : null}
     </header>
-  );
-}
-
-function PersonaIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="8" r="3.6" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M4.5 20c1.2-3.6 4.1-5.4 7.5-5.4s6.3 1.8 7.5 5.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
   );
 }
 

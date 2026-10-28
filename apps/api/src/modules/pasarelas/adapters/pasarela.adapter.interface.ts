@@ -16,12 +16,12 @@ export interface PasarelaAdapter {
     webhookUrlBase: string,
   ): Promise<CobroGeneradoResult>;
 
-  /** Procesa e interpreta el webhook recibido de la pasarela. */
   procesarWebhook(
     credenciales: Record<string, string>,
     webhookSecret: string | null,
     payload: unknown,
     headers: Record<string, string | string[] | undefined>,
+    query?: Record<string, string | string[] | undefined>,
   ): Promise<WebhookEventoResult>;
 
   /** Consulta el estado actual de un cobro específico en la pasarela. */

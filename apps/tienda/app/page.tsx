@@ -49,8 +49,6 @@ export default async function HomePage() {
         </section>
       )}
 
-      {ver("beneficios") ? <Beneficios sitio={sitio} /> : null}
-
       {ver("categorias") && categorias.length > 1 ? (
         <section className="mx-auto max-w-6xl px-4 py-14">
           <h2 className="font-serif text-3xl">Categorías</h2>

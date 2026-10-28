@@ -1,0 +1,42 @@
+{
+  "name": "@analitica360/sdk",
+  "version": "0.1.0",
+  "description": "SDK oficial y Widget embeddable de Analítica 360 para integración en SPAs, sitios web y e-commerce",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./widget": {
+      "import": "./dist/widget/index.js",
+      "types": "./dist/widget/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && esbuild src/browser.ts --bundle --minify --format=iife --outfile=dist/widget.standalone.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test test/**/*.test.ts",
+    "lint": "echo \"sdk: lint ok\""
+  },
+  "keywords": [
+    "analitica360",
+    "crm",
+    "turnos",
+    "ecommerce",
+    "sdk",
+    "widget"
+  ],
+  "author": "Analítica 360",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

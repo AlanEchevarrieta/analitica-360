@@ -21,6 +21,7 @@ export interface CrearCobroInput {
   metadata?: Record<string, unknown>;
   expiraMinutos?: number;
   urlVuelta?: string;
+  negocioSlug?: string;
 }
 
 export interface CobroGeneradoResult {

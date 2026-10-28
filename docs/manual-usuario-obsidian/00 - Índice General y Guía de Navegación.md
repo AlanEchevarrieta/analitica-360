@@ -151,6 +151,8 @@ graph TD
     - Enlace personal de recomendación, créditos acumulados y descuentos en la cuota de abono.
 25. **[[25 - Glosario de Términos y Preguntas Frecuentes]]**
     - Definición de siglas y conceptos clave (CAE, SKU, BOM, Kardex, etc.) y resolución rápida de dudas.
+28. **[[28 - Integraciones API, SDK y Widgets para Sitios Externos]]**
+    - Conexión de sitios web existentes, WordPress, Wix o SPAs a medida con el widget de turnos embebible y el SDK TypeScript oficial.
 
 ---
 

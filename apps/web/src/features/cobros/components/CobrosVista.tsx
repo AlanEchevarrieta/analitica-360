@@ -72,6 +72,7 @@ export function CobrosVista() {
 
   // Estados de formularios de configuración
   const [mpToken, setMpToken] = useState("");
+  const [mpWebhookSecret, setMpWebhookSecret] = useState("");
   const [ualaUser, setUalaUser] = useState("");
   const [ualaClientId, setUalaClientId] = useState("");
   const [ualaClientSecret, setUalaClientSecret] = useState("");
@@ -722,6 +723,51 @@ export function CobrosVista() {
                 />
               </div>
 
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="mpWebhookSecret" className="text-xs font-medium">Firma Secreta Webhook (HMAC-SHA256)</Label>
+                  <span className="text-[10px] text-muted-foreground font-mono">x-signature</span>
+                </div>
+                <Input
+                  id="mpWebhookSecret"
+                  type="password"
+                  placeholder="Secret key obtenida en Developers > Webhooks"
+                  value={mpWebhookSecret}
+                  onChange={(e) => setMpWebhookSecret(e.target.value)}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Validación estricta de firma HMAC contra falsificaciones y replay attacks (tolerancia de 5 min).
+                </p>
+              </div>
+
+              {/* URL dinámica del webhook para configurar en Mercado Pago Developers */}
+              <div className="rounded-lg border border-dashed border-border/80 p-2.5 bg-muted/30 flex flex-col gap-1.5">
+                <span className="text-[11px] font-medium text-foreground">URL de Webhook Dinámico por Comercio:</span>
+                <div className="flex items-center gap-1.5">
+                  <code className="text-[11px] bg-background px-2 py-1 rounded border flex-1 truncate font-mono text-muted-foreground">
+                    {typeof window !== "undefined"
+                      ? `${window.location.origin.replace(":4001", ":3001")}/pasarelas/webhook/[tu-negocio]/mercadopago`
+                      : "/pasarelas/webhook/[tu-negocio]/mercadopago"}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 shrink-0"
+                    type="button"
+                    onClick={() => {
+                      const url = `${window.location.origin.replace(":4001", ":3001")}/pasarelas/webhook/[tu-negocio]/mercadopago`;
+                      navigator.clipboard.writeText(url);
+                      toast.success("URL de webhook copiada");
+                    }}
+                  >
+                    <Copy className="size-3.5" />
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  Pegá esta URL en Mercado Pago Developers &gt; Webhooks. Reemplazá <code className="font-semibold text-foreground">[tu-negocio]</code> por el subdominio o nombre de tu empresa (ej: <code className="font-mono text-primary">/webhook/acacia/mercadopago</code>).
+                </p>
+              </div>
+
               <div className="rounded-lg bg-muted/50 p-2.5 text-muted-foreground">
                 <p className="font-medium text-foreground">Comisión estándar:</p>
                 <p>~4.4% + IVA (acreditación instantánea).</p>
@@ -737,11 +783,13 @@ export function CobrosVista() {
                       {
                         proveedor: "mercadopago",
                         credenciales: { accessToken: mpToken },
+                        webhookSecret: mpWebhookSecret.trim() || undefined,
                       },
                       {
                         onSuccess: () => {
-                          toast.success("Mercado Pago configurado correctamente");
+                          toast.success("Mercado Pago configurado correctamente con validación HMAC");
                           setMpToken("");
+                          setMpWebhookSecret("");
                         },
                       }
                     )

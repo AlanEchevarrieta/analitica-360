@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import type {
   CobroGeneradoResult,
@@ -21,6 +22,10 @@ export class MercadoPagoAdapter implements PasarelaAdapter {
     const accessToken = credenciales.accessToken;
     if (!accessToken) throw new Error('Falta el accessToken de Mercado Pago');
 
+    const notificationUrl = input.negocioSlug
+      ? `${webhookUrlBase}/pasarelas/webhook/${encodeURIComponent(input.negocioSlug)}/mercadopago`
+      : `${webhookUrlBase}/pasarelas/webhook/mercadopago`;
+
     const body = {
       items: [
         {
@@ -36,7 +41,7 @@ export class MercadoPagoAdapter implements PasarelaAdapter {
         email: input.clienteEmail || 'cliente@analitica360.com',
       },
       external_reference: input.origenId || `ref_${Date.now()}`,
-      notification_url: `${webhookUrlBase}/pasarelas/webhook/mercadopago`,
+      notification_url: notificationUrl,
       back_urls: input.urlVuelta
         ? {
             success: input.urlVuelta,
@@ -114,17 +119,115 @@ export class MercadoPagoAdapter implements PasarelaAdapter {
     };
   }
 
+  /**
+   * Valida la firma criptográfica HMAC-SHA256 (x-signature) enviada por Mercado Pago.
+   * Template del manifiesto: id:[data.id];request-id:[x-request-id];ts:[ts];
+   */
+  validarFirmaHmac(
+    webhookSecret: string,
+    xSignature: string,
+    xRequestId: string,
+    dataId: string,
+  ): { valida: boolean; error?: string } {
+    if (!xSignature || !xRequestId || !dataId) {
+      return {
+        valida: false,
+        error: 'Faltan encabezados requeridos (x-signature o x-request-id) o el identificador del evento',
+      };
+    }
+
+    // Extraer ts y v1
+    const partes = xSignature.split(',');
+    let ts: string | undefined;
+    let v1: string | undefined;
+
+    for (const p of partes) {
+      const [k, ...vParts] = p.trim().split('=');
+      const v = vParts.join('=');
+      if (k === 'ts') ts = v;
+      if (k === 'v1') v1 = v;
+    }
+
+    if (!ts || !v1) {
+      return { valida: false, error: 'Formato de x-signature inválido (debe contener ts y v1)' };
+    }
+
+    // Regla de seguridad: Ventana de tolerancia anti-repetición (Replay attack: 5 minutos / 300 segundos)
+    const timestamp = parseInt(ts, 10);
+    const ahoraSegundos = Math.floor(Date.now() / 1000);
+    if (isNaN(timestamp) || Math.abs(ahoraSegundos - timestamp) > 300) {
+      return {
+        valida: false,
+        error: 'Timestamp de firma expirado o fuera de la ventana de tolerancia (posible replay attack)',
+      };
+    }
+
+    // Manifiesto estándar de Mercado Pago: id:[data.id];request-id:[x-request-id];ts:[ts];
+    const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+    const hmacEsperado = createHmac('sha256', webhookSecret).update(manifest).digest('hex');
+
+    // Comparación en tiempo constante para mitigar ataques de canal lateral (timing attacks)
+    const hmacEsperadoBuf = Buffer.from(hmacEsperado, 'utf8');
+    const v1Buf = Buffer.from(v1, 'utf8');
+
+    if (hmacEsperadoBuf.length !== v1Buf.length || !timingSafeEqual(hmacEsperadoBuf, v1Buf)) {
+      return { valida: false, error: 'Firma HMAC-SHA256 no coincide con el secret configurado' };
+    }
+
+    return { valida: true };
+  }
+
   async procesarWebhook(
     credenciales: Record<string, string>,
-    _webhookSecret: string | null,
+    webhookSecret: string | null,
     payload: unknown,
-    _headers: Record<string, string | string[] | undefined>,
+    headers: Record<string, string | string[] | undefined>,
+    query?: Record<string, string | string[] | undefined>,
   ): Promise<WebhookEventoResult> {
     const p = payload as Record<string, unknown> | undefined;
-    const paymentId = (p?.data as { id?: string })?.id || (p?.id as string);
+
+    // El ID del recurso en Mercado Pago puede venir en query (?data.id=... o ?id=...) o en body
+    const queryDataId = Array.isArray(query?.['data.id'])
+      ? query?.['data.id'][0]
+      : (query?.['data.id'] as string | undefined);
+    const queryId = Array.isArray(query?.id) ? query?.id[0] : (query?.id as string | undefined);
+
+    const paymentId =
+      queryDataId ||
+      queryId ||
+      (p?.data as { id?: string | number })?.id ||
+      (p?.id as string | number);
 
     if (!paymentId) {
-      return { reconocido: false, proveedor: this.proveedor };
+      return { reconocido: false, proveedor: this.proveedor, error: 'No se encontró ID de pago en payload ni query' };
+    }
+
+    // 🔒 REGLAS ESTRICTAS DE SEGURIDAD HMAC:
+    // Si la empresa tiene configurado webhookSecret en la BD, exigimos y validamos la firma digital
+    if (webhookSecret) {
+      const xSignature = (headers['x-signature'] || headers['X-Signature']) as string | undefined;
+      const xRequestId = (headers['x-request-id'] || headers['X-Request-Id']) as string | undefined;
+
+      const validacion = this.validarFirmaHmac(
+        webhookSecret,
+        xSignature || '',
+        xRequestId || '',
+        String(paymentId),
+      );
+
+      if (!validacion.valida) {
+        this.logger.warn(`Webhook Mercado Pago descartado por fallo HMAC: ${validacion.error}`);
+        return {
+          reconocido: false,
+          proveedor: this.proveedor,
+          error: `Firma HMAC inválida: ${validacion.error}`,
+        };
+      }
+      this.logger.log(`Webhook Mercado Pago verificado exitosamente mediante HMAC-SHA256 para pago ${paymentId}`);
+    } else {
+      this.logger.warn(
+        `Webhook Mercado Pago recibido sin webhookSecret configurado. Se verificará autenticidad consultando la API de MP directamente con Access Token.`,
+      );
     }
 
     try {

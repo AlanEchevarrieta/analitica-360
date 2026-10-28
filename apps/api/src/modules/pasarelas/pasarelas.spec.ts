@@ -10,6 +10,42 @@ describe('Pasarelas Adapters - Pruebas Unitarias', () => {
     expect(adapter.proveedor).toBe('mercadopago');
   });
 
+  it('Mercado Pago valida firmas de webhook HMAC-SHA256 con manifiesto oficial y rechaza firmas inválidas o expiradas', () => {
+    const adapter = new MercadoPagoAdapter();
+    const webhookSecret = 'mp_secret_key_prod_test_987654';
+    const dataId = '1234567890';
+    const xRequestId = '550e8400-e29b-41d4-a716-446655440000';
+    const ahora = Math.floor(Date.now() / 1000);
+
+    // 1. Firma válida
+    const manifest = `id:${dataId};request-id:${xRequestId};ts:${ahora};`;
+    const v1Valido = createHmac('sha256', webhookSecret).update(manifest).digest('hex');
+    const xSignatureValido = `ts=${ahora},v1=${v1Valido}`;
+
+    const resValido = adapter.validarFirmaHmac(webhookSecret, xSignatureValido, xRequestId, dataId);
+    expect(resValido.valida).toBe(true);
+
+    // 2. Firma manipulada / adulterada
+    const xSignatureTrucho = `ts=${ahora},v1=0000000000000000000000000000000000000000000000000000000000000000`;
+    const resTrucho = adapter.validarFirmaHmac(webhookSecret, xSignatureTrucho, xRequestId, dataId);
+    expect(resTrucho.valida).toBe(false);
+    expect(resTrucho.error).toContain('Firma HMAC-SHA256 no coincide');
+
+    // 3. Ataque de repetición (Replay Attack con timestamp viejo > 5 minutos)
+    const timestampViejo = ahora - 400; // 400 segundos atrás
+    const manifestViejo = `id:${dataId};request-id:${xRequestId};ts:${timestampViejo};`;
+    const v1Viejo = createHmac('sha256', webhookSecret).update(manifestViejo).digest('hex');
+    const xSignatureViejo = `ts=${timestampViejo},v1=${v1Viejo}`;
+
+    const resViejo = adapter.validarFirmaHmac(webhookSecret, xSignatureViejo, xRequestId, dataId);
+    expect(resViejo.valida).toBe(false);
+    expect(resViejo.error).toContain('expirado o fuera de la ventana de tolerancia');
+
+    // 4. Encabezados faltantes
+    const resSinFirma = adapter.validarFirmaHmac(webhookSecret, '', xRequestId, dataId);
+    expect(resSinFirma.valida).toBe(false);
+  });
+
   it('Ualá Bis calcula comisiones competitivas (~3.5% + IVA)', async () => {
     const adapter = new UalaAdapter();
     expect(adapter.proveedor).toBe('uala');

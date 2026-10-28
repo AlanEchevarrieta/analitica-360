@@ -13,6 +13,7 @@ export class MiAccesoController {
   @Get('yo')
   yo(@CurrentUser() usuario: UsuarioContext) {
     return {
+      empresaId: usuario.empresaId,
       rol: usuario.rol,
       modulos: MODULOS.filter((m) => tieneModulo(usuario.rol, m, usuario.acceso)),
       acciones: ACCIONES.filter((a) => tieneAccion(usuario.rol, a, usuario.acceso)),

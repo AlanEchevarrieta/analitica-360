@@ -18,5 +18,11 @@ describe('AppController', () => {
     it('should return "Hello World!"', () => {
       expect(appController.getHello()).toBe('Hello World!');
     });
+
+    it('should return widget javascript string', () => {
+      const widget = appController.getWidget();
+      expect(typeof widget).toBe('string');
+      expect(widget.length).toBeGreaterThan(0);
+    });
   });
 });
