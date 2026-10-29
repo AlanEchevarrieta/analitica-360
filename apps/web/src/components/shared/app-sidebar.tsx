@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { CandadoPlan } from "@/components/shared/mejorar-plan";
 import { usePlan } from "@/hooks/use-plan";
@@ -45,6 +46,7 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { SelectorTema } from "@/components/shared/selector-tema";
 import type { ModuloClave } from "@/lib/rol";
@@ -84,6 +86,15 @@ interface Grupo {
  */
 export function AppSidebar() {
   const pathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  // En pantallas chicas, al navegar a una ruta cerramos la barra lateral si quedó abierta.
+  useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [pathname, isMobile, setOpenMobile]);
+
   const { organization } = useOrganization();
   const { data: ticketsNoLeidos } = useTicketsNoLeidos();
   // Consola del dueño del producto: solo si la API confirma que es administrador.
