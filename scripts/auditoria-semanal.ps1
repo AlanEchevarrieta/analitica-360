@@ -46,4 +46,7 @@ try {
 cmd /c "pnpm auditar >> `"$log`" 2>&1"
 $codigo = $LASTEXITCODE
 Anotar "Termino la auditoria (codigo $codigo). El informe esta en Obsidian: Auditorias."
+
+# Con el informe listo, Claude escribe el resumen semanal y pasa lo rojo a Pendientes.
+& (Join-Path $PSScriptRoot 'cerebro-semanal.ps1')
 exit $codigo
