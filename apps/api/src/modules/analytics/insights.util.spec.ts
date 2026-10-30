@@ -5,6 +5,7 @@ import {
   calcularSalud,
   etiquetaCombo,
   inicioMesHace,
+  medirPrecision,
   mesAnteriorDe,
   preciosOptimos,
   type FilaElasticidad,
@@ -213,5 +214,34 @@ describe('armarForecast (semanal)', () => {
   it('una semana estable da tendencia neutra', () => {
     const serie = ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24'].map((d) => dia(d, 1000));
     expect(armarForecast(serie, 'semana', 60, '2026-09-29')!.tendencia).toBe('neutra');
+  });
+
+  it('compara lo pronosticado con lo real en las semanas cerradas', () => {
+    // 6 semanas que suben de a 100; la 6.ª (07/09) vendió 1000 en vez de los 600 esperables.
+    const lunes = ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31', '2026-09-07'];
+    const serie = lunes.map((d, i) => dia(d, i === 5 ? 1000 : 100 * (i + 1)));
+    const f = armarForecast(serie, 'semana', 60, '2026-09-15')!;
+    // Con menos de 4 semanas previas no hay pronóstico para comparar.
+    expect(f.puntos.slice(0, 4).every((p) => p.pronosticado == null)).toBe(true);
+    expect(f.puntos[4].pronosticado).toBeCloseTo(500);
+    expect(f.puntos[5].pronosticado).toBeCloseTo(600);
+    expect(f.precision).toMatchObject({ periodos: 2, ultimo: { clave: '2026-09-07', real: 1000, pronosticado: expect.closeTo(600), diferencia: expect.closeTo(-400) } });
+    expect(f.precision!.ultimo.diferenciaPct).toBeCloseTo(-40);
+    // Error total: |500-500| + |600-1000| = 400 sobre 1500 vendidos.
+    expect(f.precision!.errorPct).toBeCloseTo(26.67, 1);
+    expect(f.precision!.sesgoPct).toBeCloseTo(-26.67, 1);
+  });
+
+  it('muestra lo vendido en la semana en curso junto a lo proyectado', () => {
+    const serie = [...['2026-08-03', '2026-08-10', '2026-08-17'].map((d) => dia(d, 1000)), dia('2026-08-25', 300)];
+    const f = armarForecast(serie, 'semana', 60, '2026-08-26')!;
+    expect(f.enCurso).toEqual({ clave: '2026-08-24', real: 300, pronosticado: expect.closeTo(1000) });
+    expect(f.puntos.find((p) => p.clave === '2026-08-24')!.realEnCurso).toBe(300);
+  });
+});
+
+describe('medirPrecision', () => {
+  it('sin pares real-pronosticado devuelve null', () => {
+    expect(medirPrecision([{ clave: '2026-09-01', historico: 100, proyeccion: null, pronosticado: null, realEnCurso: null }])).toBeNull();
   });
 });
