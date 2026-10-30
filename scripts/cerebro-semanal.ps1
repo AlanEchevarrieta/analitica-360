@@ -20,6 +20,8 @@ $hoy = Get-Date -Format 'yyyy-MM-dd'
 $pedido = "Hoy es $hoy. Lee scripts/cerebro-semanal.md y segui esas instrucciones al pie de la letra."
 
 Anotar 'Empieza el agente de los lunes (resumen semanal en Obsidian).'
+# Bajar lo de GitHub (sin tocar las ramas locales): el hermano de Alan sube a main desde su compu.
+git fetch --all --quiet 2>&1 | Out-File -FilePath $log -Append -Encoding utf8
 # Solo puede leer y escribir archivos y mirar git; nada de push, Docker ni borrar.
 $herramientas = 'Read,Write,Edit,Glob,Grep,Bash(git log:*),Bash(git status:*),Bash(git branch:*),Bash(ls:*)'
 $salida = & $claude -p $pedido --add-dir "$vault" --permission-mode acceptEdits --allowedTools $herramientas 2>&1

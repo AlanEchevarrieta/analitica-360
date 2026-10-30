@@ -6,7 +6,7 @@ Seguí las reglas de `.claude/agents/escriba-cerebro.md` (español simple, sin i
 
 ## Qué hacer
 1. **Resumen de la semana que terminó ayer** en `Semanas/<fecha del lunes de hoy>.md`, con la plantilla `Plantillas/Plantilla resumen semanal.md` y el mismo estilo que el resumen anterior. Si ya existe, no lo pises: completalo.
-   - "Lo logrado": de las bitácoras de esa semana y de `git log --all --since=<lunes pasado> --until=<hoy>` en el código.
+   - "Lo logrado": de las bitácoras de esa semana y de `git log --all --since=<lunes pasado> --until=<hoy>` en el código (incluye `origin/main`, donde sube el hermano de Alan; el script ya bajó lo de GitHub). Separá lo de cada uno por autor.
    - "Trabado": de `Pendientes.md`, con quién lo destraba y desde cuándo.
    - Si en la semana no hubo bitácoras ni commits, decilo así: "Semana sin sesiones de trabajo".
 2. **Auditoría de hoy:** leé el informe más nuevo de `Auditorías/` (lo acaba de escribir `pnpm auditar`). En el resumen poné el resultado y el enlace. Pasá a `Pendientes.md` lo rojo **nuevo** con su responsable (código y dependencias → Claude; cuentas y servidor → Hermano de Alan; datos de Acacia, trámites y AAIP → Alan). No dupliques lo que ya está: actualizalo.
