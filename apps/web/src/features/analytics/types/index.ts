@@ -52,6 +52,22 @@ export interface Gasto {
   tipoCosto: "fijo" | "variable";
 }
 
+export interface InsightForecast {
+  /** `pronosticado`: lo que decía el pronóstico de ese período con los datos de antes. `realEnCurso`: lo vendido en el período que corre. */
+  puntos: { clave: string; historico: number | null; proyeccion: number | null; pronosticado: number | null; realEnCurso: number | null }[];
+  totalProyeccion: number;
+  tendencia: "positiva" | "negativa" | "neutra";
+  etiquetaProyeccion: string;
+  precision: {
+    periodos: number;
+    errorPromedio: number;
+    errorPct: number;
+    sesgoPct: number;
+    ultimo: { clave: string; real: number; pronosticado: number; diferencia: number; diferenciaPct: number | null };
+  } | null;
+  enCurso: { clave: string; real: number; pronosticado: number } | null;
+}
+
 export interface Insights {
   salud: { ejes: { eje: string; valor: number }[]; score: number; etiqueta: string; bullets: string[] } | null;
   elasticidades: {
@@ -65,12 +81,7 @@ export interface Insights {
     badge: "inelastica" | "moderada" | "elastica" | "otros_factores";
     recomendacion: string;
   }[];
-  forecast: {
-    puntos: { clave: string; historico: number | null; proyeccion: number | null }[];
-    totalProyeccion: number;
-    tendencia: "positiva" | "negativa" | "neutra";
-    etiquetaProyeccion: string;
-  } | null;
+  forecast: InsightForecast | null;
   variantes: {
     hayVentas: boolean;
     porAtributo: { atributo: string; valores: { name: string; unidades: number; pct: number }[] }[];

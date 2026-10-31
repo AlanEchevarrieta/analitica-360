@@ -93,6 +93,22 @@ export interface PuntoForecast {
   clave: string;
   historico: number | null;
   proyeccion: number | null;
+  /** Lo que el pronóstico decía de ese período con los datos de antes (prueba hacia atrás). */
+  pronosticado: number | null;
+  /** Período en curso: lo vendido hasta hoy (incompleto). */
+  realEnCurso: number | null;
+}
+
+/** Cuánto le erró el pronóstico a los períodos ya cerrados. */
+export interface PrecisionForecast {
+  periodos: number;
+  /** Error absoluto promedio por período, en plata. */
+  errorPromedio: number;
+  /** Error absoluto total sobre lo vendido (WAPE), en %. No se rompe con períodos en 0. */
+  errorPct: number;
+  /** Positivo: pronosticó de más; negativo: de menos. En % de lo vendido. */
+  sesgoPct: number;
+  ultimo: { clave: string; real: number; pronosticado: number; diferencia: number; diferenciaPct: number | null };
 }
 
 export interface InsightForecast {
@@ -103,6 +119,8 @@ export interface InsightForecast {
   tendencia: 'positiva' | 'negativa' | 'neutra';
   granularidad: GranularidadForecast;
   etiquetaProyeccion: string;
+  precision: PrecisionForecast | null;
+  enCurso: { clave: string; real: number; pronosticado: number } | null;
 }
 
 export interface DistAtributo {
@@ -407,7 +425,9 @@ export function armarForecast(
     agregados = completos;
   }
   // El período en curso (ej. la semana de hoy) está incompleto: no entra en la regresión.
+  let realEnCurso = 0;
   if (hoy && claveDe && agregados.length > 0 && agregados[agregados.length - 1].clave === claveDe(hoy)) {
+    realEnCurso = agregados[agregados.length - 1].total;
     agregados = agregados.slice(0, -1);
   }
   const primero = agregados.findIndex((p) => Number.isFinite(p.total) && p.total !== 0);
@@ -422,11 +442,25 @@ export function armarForecast(
   const linea = ss.linearRegressionLine(reg);
   if (!Number.isFinite(reg.m) || !Number.isFinite(reg.b)) return null;
 
+  // Prueba hacia atrás: para cada período ya cerrado, el mismo modelo con solo
+  // los datos de antes (misma ventana máxima). Así se ve cuánto le viene errando.
+  const inicioReg = puntos.length - puntosReg.length;
+  const pronosticoDe = (j: number): number | null => {
+    const previos = puntos.slice(Math.max(0, j - maxPeriodos), j);
+    if (previos.length < 4) return null;
+    const r = ss.linearRegression(previos.map((p, i) => [i, p.total] as [number, number]));
+    const y = ss.linearRegressionLine(r)(previos.length);
+    return Number.isFinite(y) ? Math.max(0, y) : null;
+  };
+
   const chart: PuntoForecast[] = puntosReg.map((p, i) => ({
     clave: p.clave,
     historico: p.total,
     proyeccion: i === puntosReg.length - 1 ? p.total : null,
+    pronosticado: pronosticoDe(inicioReg + i),
+    realEnCurso: null,
   }));
+  const precision = medirPrecision(chart);
 
   const pasos = granularidad === 'dia' ? 14 : granularidad === 'semana' ? 4 : granularidad === 'mes' ? 3 : 2;
   const stepIso = (clave: string, k: number) => {
@@ -447,7 +481,15 @@ export function armarForecast(
     const x = puntosReg.length - 1 + k;
     const y = Math.max(0, linea(x));
     totalProyeccion += y;
-    chart.push({ clave: stepIso(lastClave, k), historico: null, proyeccion: y });
+    chart.push({ clave: stepIso(lastClave, k), historico: null, proyeccion: y, pronosticado: null, realEnCurso: null });
+  }
+
+  // El primer período proyectado es el que está corriendo: se muestra lo vendido hasta hoy.
+  let enCurso: InsightForecast['enCurso'] = null;
+  const primerFuturo = chart[puntosReg.length];
+  if (hoy && claveDe && primerFuturo && primerFuturo.clave === claveDe(hoy)) {
+    primerFuturo.realEnCurso = realEnCurso;
+    enCurso = { clave: primerFuturo.clave, real: realEnCurso, pronosticado: primerFuturo.proyeccion ?? 0 };
   }
 
   const etiquetaProyeccion =
@@ -463,7 +505,31 @@ export function armarForecast(
   const promedio = puntosReg.reduce((a, p) => a + p.total, 0) / puntosReg.length;
   const relativa = promedio > 0 ? reg.m / promedio : 0;
   const tendencia: InsightForecast['tendencia'] = relativa > 0.02 ? 'positiva' : relativa < -0.02 ? 'negativa' : 'neutra';
-  return { diasHistorial, periodosHistorial: puntosReg.length, puntos: chart, totalProyeccion, tendencia, granularidad, etiquetaProyeccion };
+  return { diasHistorial, periodosHistorial: puntosReg.length, puntos: chart, totalProyeccion, tendencia, granularidad, etiquetaProyeccion, precision, enCurso };
+}
+
+/** Compara lo pronosticado con lo real en los períodos cerrados que tienen las dos cosas. */
+export function medirPrecision(puntos: PuntoForecast[]): PrecisionForecast | null {
+  const pares = puntos.filter((p) => p.historico != null && p.pronosticado != null) as (PuntoForecast & { historico: number; pronosticado: number })[];
+  if (pares.length === 0) return null;
+  const totalReal = pares.reduce((a, p) => a + p.historico, 0);
+  const errorAbs = pares.reduce((a, p) => a + Math.abs(p.pronosticado - p.historico), 0);
+  const sesgo = pares.reduce((a, p) => a + (p.pronosticado - p.historico), 0);
+  const u = pares[pares.length - 1];
+  const diferencia = u.pronosticado - u.historico;
+  return {
+    periodos: pares.length,
+    errorPromedio: errorAbs / pares.length,
+    errorPct: totalReal > 0 ? (errorAbs / totalReal) * 100 : 0,
+    sesgoPct: totalReal > 0 ? (sesgo / totalReal) * 100 : 0,
+    ultimo: {
+      clave: u.clave,
+      real: u.historico,
+      pronosticado: u.pronosticado,
+      diferencia,
+      diferenciaPct: u.historico > 0 ? (diferencia / u.historico) * 100 : null,
+    },
+  };
 }
 
 /** Puerto de preciosOptimos (src/lib/insights.ts). */

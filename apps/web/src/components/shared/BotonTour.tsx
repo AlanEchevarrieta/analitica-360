@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Compass, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   haVistoTour,
@@ -40,7 +40,9 @@ export function BotonTour() {
   const defModulo = TOURS_MODULOS[moduloActual];
 
   useEffect(() => {
-    setMontado(true);
+    startTransition(() => {
+      setMontado(true);
+    });
 
     // Si viene ?tour=1 o ?tour=<modulo> en la URL, ejecutamos el tour automáticamente
     const tourParam = searchParams.get("tour");

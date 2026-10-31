@@ -1,67 +1,67 @@
-# Graph Report - analitica-360  (2026-10-29)
+# Graph Report - analitica-360  (2026-10-31)
 
 ## Corpus Check
-- 1185 files · ~555,596 words
+- 1186 files · ~556,754 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 8578 nodes · 23645 edges · 339 communities (276 shown, 63 thin omitted)
+- 8588 nodes · 23681 edges · 348 communities (291 shown, 57 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 654 edges (avg confidence: 0.79)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `79ee1645`
+- Built from commit: `313a569e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- VentasPeriodo.tsx
+- formato.ts
+- RecetaEditor.tsx
 - ref_react
-- input.tsx
 - ConfiguracionVista.tsx
-- ref_lucide_react
+- buttonVariants
 - UsuarioContext
-- analytics.util.ts
+- prisma.service.ts
 - prisma-estados-contables.repository.ts
-- objetivos.service.ts
+- diaAR
 - TicketController
 - useApiFetch
 - prisma-movimientos.repository.ts
 - mp-tienda.service.ts
-- AbonosListado.tsx
-- gasto.repository.ts
+- formatoFechaHora
+- contabilidad.module.ts
 - Agenda.tsx
-- formatoPesos
+- NuevaVentaForm.tsx
 - abonos.service.ts
 - insights.util.ts
 - prisma-devoluciones.repository.ts
 - contabilidad.service.ts
 - proveedores.service.ts
-- app.module.ts
-- fechaHoyAR
+- ref_node_crypto
+- precios-plan.service.ts
 - dependencies
 - CheckoutForm.tsx
-- Env
+- mercadopago.service.ts
 - documentos.service.ts
-- alianzas.util.ts
+- fechaHoyAR
 - envios.service.ts
-- useRol
+- ArchivoVista.tsx
 - objetivos.ts
-- alianzas-admin.service.ts
+- AlianzasAdminService
 - presupuestos.service.ts
-- usuarios.module.ts
-- CotizacionesService
+- usuarios.repository.ts
+- rendimiento.service.ts
 - prisma-ventas.repository.ts
 - registro.service.ts
 - productos.module.ts
 - rol.types.ts
-- analytics.module.ts
+- inflacion.util.ts
 - compras.module.ts
 - AccesoCuentaService
-- ubicaciones.controller.ts
+- compras.controller.ts
 - obtenerSitio
 - Analitica360Widget
-- pasarelas-coordinador.service.ts
+- PasarelasCoordinadorService
 - prisma-ubicaciones.repository.ts
 - prisma-clientes.repository.ts
 - produccion.service.ts
@@ -70,88 +70,88 @@
 - dependencies
 - cuentas-tienda.ts
 - uso.service.ts
-- productos.ts
-- ventas.controller.ts
+- cotizaciones.service.ts
+- VentasController
 - prisma-variantes.repository.ts
 - API NestJS starter (apps/api)
 - devDependencies
-- TiendaConfigController
-- esViolacionUnica
+- TiendaAdminService
+- categorias.service.ts
 - PedidoFicha.tsx
 - archivo.controller.ts
-- EstiloTienda.tsx
+- TiendaOnlineConfig.tsx
 - RequireModulo
-- combos.service.ts
+- analytics.module.ts
 - movimientos.controller.ts
-- CurrentEmpresa
-- cotizaciones.service.ts
-- PrismaService
-- ordenes-trabajo.service.ts
-- EquilibrioInicio.tsx
+- EmpresaContext
+- Conversor
+- configuracion.controller.ts
+- OrdenesTrabajoService
+- EstadosContablesVista.tsx
 - sidebar.tsx
-- informes.module.ts
+- app.module.ts
 - categorizar-productos.ts
 - DescuentosTiendaService
-- atributos.service.ts
+- variantes.module.ts
 - seguridad.mjs
-- use-clientes.ts
+- InsightsRepository
 - monotributo.service.ts
-- descuentos-admin.ts
+- tienda.module.ts
 - vencimientos.service.ts
 - Especificacion Funcional legacy (pre-reescritura)
 - devDependencies
 - agenda-online.service.ts
 - clientes.controller.ts
 - prisma-productos.repository.ts
-- FichaProducto.tsx
+- formatoARS
 - estados-contables.util.ts
 - AdminBajasController
 - prisma-ordenes-compra.repository.ts
 - informes.util.ts
 - pedidos.repository.ts
 - cuenta/actions.ts
-- OrdenCompraForm.tsx
+- objetivos.service.ts
 - tienda-admin.service.ts
-- CuentasTiendaService
+- CuentasTiendaController
 - bajas.service.ts
 - planes.util.ts
 - arca.util.ts
-- ArmadoresComprasPedidos
-- PasarelaAdapter
+- documentos.module.ts
+- pasarelas-coordinador.service.ts
 - MpTiendaCliente
 - libro-diario.service.ts
-- ProduccionController
+- produccion.controller.ts
 - Especificacion Tecnica Maestra - SaaS Gestion
 - auditoria.util.ts
-- auditoria.service.ts
+- AuditoriaService
 - import-export.module.ts
 - catalogo.ts
 - sdk/package.json
-- PlanesVista.tsx
-- EmpresaContext
+- planes/planes.ts
+- CurrentEmpresa
 - copilot-chat-view.tsx
 - Servicio api (prod)
 - ref_node_path
 - alianzas.dto.ts
 - tienda/public/widget.js
-- .listar
+- DocumentosService
 - web/public/widget.js
 - notificaciones.module.ts
-- OrdenesTrabajoController
+- ordenes-trabajo.controller.ts
 - auditar.mjs
-- contexto-auditoria.ts
+- GastoRepository
 - dia-del-pase.mjs
-- ordenes-trabajo.module.ts
+- SuscripcionService
 - admin-saas.service.ts
 - AgendaService
-- DevolucionesController
+- usuarios.module.ts
 - compilerOptions
 - comisiones.service.ts
 - .guardar
 - TiendaController
 - compilerOptions
 - components.json
-- GuiaDetalleVista.tsx
+- GuiasHub.tsx
 - @analitica360/shared-types
 - Planes.tsx
 - AgendaOnlineService
@@ -161,35 +161,35 @@
 - EstadosContablesService
 - inventario.module.ts
 - .next/**
-- use-paleta.ts
+- AparienciaConfig.tsx
 - 🛒 Ventas, Inventario y Logística
-- .resumen
-- ObjetivosController
+- alianzas.module.ts
+- CurrentUser
 - movimientos-generales.service.ts
 - src/planes.ts
 - prisma-tienda.repository.ts
-- ReservaTurno.tsx
+- ExportarDatosService
 - devDependencies
 - AlmacenArchivosService
 - kardex.service.ts
 - RadarPreciosService
-- carrito.ts
+- productos.ts
 - scripts
-- AdminSaasController
-- ProduccionService
-- DocumentoAcciones.tsx
-- devoluciones.service.ts
-- CuentaCorrienteController
+- Result
+- suscripcion.guard.spec.ts
+- OrdenTrabajoFicha.tsx
+- VentasService
+- RequirePermiso
 - 🔌 Integraciones API, SDK y Widgets para Sitios Web y SPAs Externas
 - comun.mjs
 - PedidosRepository
 - TicketService
 - selector-tema.tsx
-- prisma-admin-clientes.repository.ts
+- GastoController
 - LakeService
-- use-alianzas.ts
+- formatoPesos
 - CacheLecturasService
-- MercadoPagoController
+- UbicacionesService
 - pedidos.controller.ts
 - precios-masivos.service.ts
 - TicketRepository
@@ -201,15 +201,15 @@
 - tasks
 - datos.mjs
 - vista-previa-api.sh
-- Result
+- copilot-ia.controller.ts
 - tienda.controller.ts
-- OrdenesCompraRepository
+- ArchivoService
 - prisma-ticket.repository.ts
 - PrismaTicketRepository
-- OrdenesCompraController
+- productos-import.util.ts
 - costo-promedio.ts
 - (dashboard)/layout.tsx
-- planes/planes.ts
+- use-precios.ts
 - 🛒 Manual de Uso: Punto de Venta (POS), Cobros y Facturación ARCA
 - 🌐 Manual de Uso: Tienda Online y Storefront Multi-Negocio
 - prueba-carga.mjs
@@ -228,22 +228,22 @@
 - 🚚 Manual de Uso: Compras a Proveedores y Recepción de Mercadería
 - traer-ventas-legacy.mjs
 - RadarPreciosController
-- DevolucionesRepository
+- exportar-datos.repository.ts
 - EditorialIcons.tsx
-- inventario.util.ts
+- PreciosVista.tsx
 - web/package.json
 - manifest.json
-- BienvenidaForm
+- MovimientosController
 - 🤖 Manual de Uso: Copilot IA - Asistente Estratégico de Negocio
 - 👥 Manual de Uso: Gestión de Clientes, Cuentas Corrientes y Difusiones
 - 📦 Manual de Uso: Gestión de Pedidos, Picking y Despachos
 - 📦 Manual de Uso: Control de Inventario, Kardex y Lotes
 - 🔨 Manual de Uso: Producción, Fórmulas y Recetas de Fabricación
 - 📈 Manual de Uso: Analytics Comercial, Rentabilidad y Monotributo
-- Maquetas.tsx
+- PrismaSuscripcionRepository
 - app.controller.ts
 - 🎯 Manual de Uso: Radar de Precios de Mercado y Benchmark Competitivo
-- .ejecutar
+- .crear
 - estados-contables.dto.ts
 - AdminAvisosController
 - tsconfig.build.json
@@ -260,14 +260,14 @@
 - 🎁 Manual de Uso: Programa de Referidos (Recomendá y Ganá)
 - prisma-lotes.repository.ts
 - limite-pedidos.guard.ts
-- admin-saas.controller.ts
-- AdminEvolucionMes
-- features/variantes README
+- urlWhatsApp
+- probar-datalake.ts
+- suscripcion.util.ts
 - providers.tsx
 - @nestjs/core
 - @prisma/client
 - simple-statistics
-- AdminSaasService
+- PrismaService
 - zod
 - source-map-support
 - backup-nube.sh
@@ -288,24 +288,24 @@
 - corregir-datos-legacy.mjs
 - vincular-clerk.mjs
 - driver.js
-- TicketFicha
-- ZipnovaFalso
-- MercadoPagoFalso
+- inflacion.controller.ts
+- envios.e2e-spec.ts
+- mercadopago.e2e-spec.ts
 - @hookform/resolvers
 - recorrido-tienda.mjs
-- AdminAccesoController
+- admin-suscripcion.controller.ts
 - lucide-react
-- MpFalso
+- CategoriasService
 - next
 - react
 - levantar-local.ps1
 - react-day-picker
 - react-dom
-- ArcaFalso
+- facturacion.e2e-spec.ts
 - proxy.ts
 - read-excel-file
 - CotizacionesModule
-- BannerTicketHome
+- ProductosRepository
 - clerk/route.ts
 - vista-previa-web.sh
 - tienda/eslint.config.mjs
@@ -332,6 +332,15 @@
 - zod
 - @zxing/browser
 - @zxing/library
+- archivo.module.ts
+- TicketRespuesta
+- UbicacionesRepository
+- esViolacionUnica
+- alianzas.e2e-spec.ts
+- PreciosMasivosVista
+- archivo.e2e-spec.ts
+- suscripcion.e2e-spec.ts
+- DatabaseModule
 
 ## God Nodes (most connected - your core abstractions)
 1. `EmpresaContext` - 357 edges
@@ -368,239 +377,239 @@
 - **Unmodified create-next-app public assets in tienda and web apps** — apps_tienda_public_file, apps_tienda_public_globe, apps_tienda_public_next, apps_tienda_public_vercel, apps_tienda_public_window, apps_web_public_file, apps_web_public_globe, apps_web_public_next, apps_web_public_vercel, apps_web_public_window [INFERRED 0.85]
 - **Resolución multi-negocio de la tienda** — apps_tienda_readme_resolucion_negocio, apps_tienda_readme_tienda_host_forzado, apps_tienda_readme_modulos_tienda_api, apps_tienda_readme_configuracion_tienda_online [INFERRED 0.85]
 
-## Communities (339 total, 63 thin omitted)
+## Communities (348 total, 57 thin omitted)
 
-### Community 0 - "VentasPeriodo.tsx"
-Cohesion: 0.02
-Nodes (168): PeriodoElegido, useRangoFechas(), ChartConfig, ChartContainer(), ChartContext, ChartContextProps, apps_web_src_components_ui_chart_chartlegend, ChartLegendContent() (+160 more)
-
-### Community 1 - "ref_react"
-Cohesion: 0.06
-Nodes (108): CargandoFilas(), ErrorDatos(), SinDatos(), Paginacion(), SelectorPeriodo(), Button(), Card(), CardAction() (+100 more)
-
-### Community 2 - "input.tsx"
+### Community 0 - "formato.ts"
 Cohesion: 0.04
-Nodes (81): Input(), Label(), CAMARA_VACIA, CamaraForm(), guardar(), encadenar(), TRAMOS_POR_DEFECTO, CamaraDatos (+73 more)
+Nodes (158): CargandoFilas(), ErrorDatos(), SinDatos(), Paginacion(), PeriodoElegido, SelectorPeriodo(), useRangoFechas(), Card() (+150 more)
+
+### Community 1 - "RecetaEditor.tsx"
+Cohesion: 0.06
+Nodes (38): ComponenteReceta, CostoReceta, GuardarReceta, INVALIDAR, LineaOrden, OrdenFila, PreviaOrden, RecetaDetalle (+30 more)
+
+### Community 2 - "ref_react"
+Cohesion: 0.03
+Nodes (151): InputPlata(), Props, significativos(), Button(), Input(), Label(), CAMARA_VACIA, CamaraForm() (+143 more)
 
 ### Community 3 - "ConfiguracionVista.tsx"
 Cohesion: 0.03
-Nodes (95): AppSidebar(), Grupo, Item, CandadoPlan(), MejorarPlan(), novedades(), coincide(), FUNCION_DE_RUTA (+87 more)
+Nodes (100): AppSidebar(), Grupo, Item, CandadoPlan(), MejorarPlan(), novedades(), coincide(), FUNCION_DE_RUTA (+92 more)
 
-### Community 4 - "ref_lucide_react"
+### Community 4 - "buttonVariants"
 Cohesion: 0.04
-Nodes (48): Page(), Page(), Page(), Page(), Page(), Page(), Page(), Page() (+40 more)
+Nodes (54): Page(), Page(), Page(), Page(), Page(), Page(), Page(), Page() (+46 more)
 
 ### Community 5 - "UsuarioContext"
-Cohesion: 0.03
-Nodes (111): ClerkAuthContext, express, Request, UsuarioContext, Rol, RequireAdminApp(), CurrentUser, RequireFuncion() (+103 more)
+Cohesion: 0.04
+Nodes (87): ClerkAuthContext, express, Request, UsuarioContext, Rol, RequireAdminApp(), RequireFuncion(), SIN_EMPRESA_KEY (+79 more)
 
-### Community 6 - "analytics.util.ts"
-Cohesion: 0.10
-Nodes (25): DIAS_ABREV, etiquetaDiaEs(), FECHA_AR, inicioMesIso(), lunesIso(), DASHBOARD_REPOSITORY, DashboardCumple, DashboardDiaSerie (+17 more)
+### Community 6 - "prisma.service.ts"
+Cohesion: 0.11
+Nodes (17): LECTURAS, DIAS_ABREV, etiquetaDiaEs(), FECHA_AR, DashboardDiaSerie, DashboardStockItem, DashboardTopProducto, dineroDevolucionesPorDia() (+9 more)
 
 ### Community 7 - "prisma-estados-contables.repository.ts"
 Cohesion: 0.09
-Nodes (15): CrearMovimientoFinancieroInput, DeudaProveedor, EstadosContablesRepository, MovimientoFinanciero, CompraDato, MontoDia, MovimientoFinancieroDato, SeniaDato (+7 more)
+Nodes (14): CrearMovimientoFinancieroInput, EstadosContablesRepository, MovimientoFinanciero, CompraDato, MontoDia, MovimientoFinancieroDato, SeniaDato, TipoMovimientoFinanciero (+6 more)
 
-### Community 8 - "objetivos.service.ts"
-Cohesion: 0.07
-Nodes (40): sumarDiasIso(), dineroDevolucionesPorDia(), diaAR(), GuardarObjetivoInput, guardarObjetivoSchema, metaPeriodoSchema, texto, ObjetivosProgramador (+32 more)
+### Community 8 - "diaAR"
+Cohesion: 0.12
+Nodes (9): diaAR(), GuardarObjetivoInput, ObjetivosProgramador, Injectable, ObjetivosService, RANGO_SQL(), Injectable, ubicacionDeVenta() (+1 more)
 
 ### Community 9 - "TicketController"
 Cohesion: 0.18
 Nodes (10): TicketController, Body, Controller, Get, HttpCode, Param, Patch, Post (+2 more)
 
 ### Community 10 - "useApiFetch"
-Cohesion: 0.02
-Nodes (122): DIAS, ACCIONES, BitacoraAuditoria(), exportar(), Cambios(), campo(), COLOR, ENTIDADES (+114 more)
+Cohesion: 0.03
+Nodes (101): BajaClientePanel(), fecha(), ReferidosClientePanel(), fecha(), LibroDiarioVista(), exportar(), monto(), CobrosVista() (+93 more)
 
 ### Community 11 - "prisma-movimientos.repository.ts"
-Cohesion: 0.14
-Nodes (12): CrearMovimientoInput, MovimientoKardexRecord, MovimientoRecord, MOVIMIENTOS_REPOSITORY, MovimientosRepository, ResultadoCrearMovimiento, ResultadoTraslado, movimientoBase (+4 more)
+Cohesion: 0.24
+Nodes (8): CrearMovimientoInput, MovimientoKardexRecord, MovimientoRecord, ResultadoCrearMovimiento, ResultadoTraslado, etiquetaCombo(), PrismaMovimientosRepository, Injectable
 
 ### Community 12 - "mp-tienda.service.ts"
-Cohesion: 0.07
-Nodes (31): cifrar(), clave(), descifrar(), CLAVE, Preferencia, TokensMp, AvisosMpTiendaController, MpTiendaController (+23 more)
+Cohesion: 0.10
+Nodes (19): cifrar(), clave(), descifrar(), CLAVE, Preferencia, TokensMp, Credenciales, MpTiendaService (+11 more)
 
-### Community 13 - "AbonosListado.tsx"
-Cohesion: 0.08
-Nodes (37): InputPlata(), Props, significativos(), Sheet(), SheetContent(), SheetHeader(), SheetTitle(), AbonoFicha() (+29 more)
+### Community 13 - "formatoFechaHora"
+Cohesion: 0.05
+Nodes (49): DIAS, ACCIONES, BitacoraAuditoria(), exportar(), Cambios(), campo(), COLOR, ENTIDADES (+41 more)
 
-### Community 14 - "gasto.repository.ts"
-Cohesion: 0.08
-Nodes (25): categoriaSchema, CrearGastoDto, crearGastoSchema, fechaIso, frecuenciaSchema, listarGastosQuerySchema, tipoCostoSchema, CategoriaGasto (+17 more)
+### Community 14 - "contabilidad.module.ts"
+Cohesion: 0.12
+Nodes (21): categoriaSchema, crearGastoSchema, fechaIso, frecuenciaSchema, listarGastosQuerySchema, tipoCostoSchema, CategoriaGasto, CATEGORIAS_GASTO (+13 more)
 
 ### Community 15 - "Agenda.tsx"
-Cohesion: 0.08
-Nodes (49): useAbonosDelCliente(), Abierto, Agenda(), lunesDe(), NuevasOnline(), VistaDia(), VistaSemana(), AgendaConfig() (+41 more)
+Cohesion: 0.04
+Nodes (91): Page(), Page(), Skeleton(), AbonoFicha(), CobrarCuota(), Contenido(), hoyAR(), AbonosListado() (+83 more)
 
-### Community 16 - "formatoPesos"
-Cohesion: 0.02
-Nodes (141): Page(), guardar(), CATEGORIAS, TopesMonotributo(), Vigencia, useTurno(), fecha(), LibroDiarioVista() (+133 more)
+### Community 16 - "NuevaVentaForm.tsx"
+Cohesion: 0.03
+Nodes (80): Page(), Page(), ClienteFichaVista(), ClienteForm(), ClientesListado(), fecha(), SegmentosDifusion(), Cliente (+72 more)
 
 ### Community 17 - "abonos.service.ts"
 Cohesion: 0.10
-Nodes (21): AbonosModule, Module, AbonosService, dia(), fecha(), Injectable, diaMes(), DIAS_AVISO (+13 more)
+Nodes (21): Query, AbonosService, dia(), fecha(), PlanAbonoInput, Injectable, diaMes(), DIAS_AVISO (+13 more)
 
 ### Community 18 - "insights.util.ts"
-Cohesion: 0.06
-Nodes (45): inicioAnioIso(), INSIGHTS_REPOSITORY, InsightsRepository, InsightsService, Injectable, VACIO, agregarPorClave(), armarForecast() (+37 more)
+Cohesion: 0.11
+Nodes (37): inicioAnioIso(), inicioMesIso(), lunesIso(), sumarDiasIso(), VACIO, agregarPorClave(), armarForecast(), armarVariantes() (+29 more)
 
 ### Community 19 - "prisma-devoluciones.repository.ts"
-Cohesion: 0.12
-Nodes (20): DevolucionFicha, DevolucionItemRecord, DevolucionRecord, EstadoDevolucion, FiltrosDevoluciones, ItemDevolucionInput, MovimientoDevolucionRecord, RegistrarDevolucionInput (+12 more)
+Cohesion: 0.05
+Nodes (45): DevolucionesController, Body, Controller, Get, Param, Post, Query, BuscarVentasQuery (+37 more)
 
 ### Community 20 - "contabilidad.service.ts"
-Cohesion: 0.10
-Nodes (33): CONTABILIDAD_REPOSITORY, ContabilidadRepository, ValorStock, ContabilidadRespuesta, ContabilidadService, Inject, Injectable, acumuladoSerie() (+25 more)
+Cohesion: 0.20
+Nodes (23): ValorStock, ContabilidadRespuesta, acumuladoSerie(), Equilibrio, equilibrioDelMes(), expandirRecurrentes(), GastoParaContabilidad, mesesAtras() (+15 more)
 
 ### Community 21 - "proveedores.service.ts"
 Cohesion: 0.07
 Nodes (32): PrismaProveedoresRepository, soloDigitos(), Injectable, ProveedoresController, Body, Controller, Get, Param (+24 more)
 
-### Community 22 - "app.module.ts"
-Cohesion: 0.07
-Nodes (29): AppModule, Module, AuthModule, Module, ConfiguracionModule, Module, ProduccionModule, Module (+21 more)
+### Community 22 - "ref_node_crypto"
+Cohesion: 0.10
+Nodes (11): DatosUsuarioClerk, HOY, hoy, HOY, suscripcionActiva(), MpFalso, hoy, sufijo (+3 more)
 
-### Community 23 - "fechaHoyAR"
+### Community 23 - "precios-plan.service.ts"
 Cohesion: 0.09
-Nodes (31): fechaHoyAR(), PLANES_PAGOS, AdminPreciosController, PreciosPublicosController, Body, Controller, Delete, Get (+23 more)
+Nodes (28): PLANES_PAGOS, PlanPagoId, PreciosPublicosController, Controller, Delete, Get, Param, PreciosPlanProgramador (+20 more)
 
 ### Community 24 - "dependencies"
 Cohesion: 0.10
 Nodes (21): @analitica360/shared-types, dependencies, @analitica360/shared-types, @base-ui/react, date-fns, marked, next-themes, react-hook-form (+13 more)
 
 ### Community 25 - "CheckoutForm.tsx"
-Cohesion: 0.11
-Nodes (30): FormaPago, OpcionEnvio, WhatsAppFlotante(), AvisoMinimo(), useFaltaMinimo(), CarritoDrawer(), CheckoutForm(), aplicarCupon() (+22 more)
+Cohesion: 0.15
+Nodes (14): codigo(), FormaPago, OpcionEnvio, CheckoutForm(), aplicarCupon(), onSubmit(), CuentaCheckout, fechaCorta() (+6 more)
 
-### Community 26 - "Env"
-Cohesion: 0.06
-Nodes (22): Env, envSchema, obligatorias, validateEnv(), AuthorizedPayment, MercadoPagoCliente, Preapproval, Injectable (+14 more)
+### Community 26 - "mercadopago.service.ts"
+Cohesion: 0.07
+Nodes (20): AuthorizedPayment, MercadoPagoCliente, Preapproval, Injectable, MercadoPagoWebhookController, Body, Controller, Headers (+12 more)
 
 ### Community 27 - "documentos.service.ts"
-Cohesion: 0.08
-Nodes (28): cuitConGuiones(), DatosDocumentoPdf, dmy(), NegocioDoc, pdfDocumento(), ArmadorDocumento, dmy(), DocumentoArmado (+20 more)
+Cohesion: 0.17
+Nodes (20): cuitConGuiones(), DatosDocumentoPdf, dmy(), NegocioDoc, pdfDocumento(), ArmadorDocumento, DocumentoArmado, texto() (+12 more)
 
-### Community 28 - "alianzas.util.ts"
-Cohesion: 0.05
-Nodes (63): AlianzasController, Controller, Get, Query, Req, ajustePorDevolucion(), asignarOrdenes(), Beneficios (+55 more)
+### Community 28 - "fechaHoyAR"
+Cohesion: 0.06
+Nodes (64): ClienteCamara, fecha(), num(), ajustePorDevolucion(), asignarOrdenes(), Beneficios, beneficiosDelCupon(), centavos() (+56 more)
 
 ### Community 29 - "envios.service.ts"
 Cohesion: 0.08
-Nodes (26): DestinoEnvio, EnviosService, OpcionGuardada, ProductoACotizar, Injectable, codigoOpcion(), CON_TRANSPORTISTA, entre() (+18 more)
+Nodes (25): DestinoEnvio, EnviosService, ProductoACotizar, Injectable, codigoOpcion(), CON_TRANSPORTISTA, entre(), ENTREGADO (+17 more)
 
-### Community 30 - "useRol"
-Cohesion: 0.08
-Nodes (47): ArchivoVista(), DocumentosAdjuntos(), dia(), Fila(), ListaDocumentos(), Vencimiento(), PorVencerCard(), SubirDocumento() (+39 more)
+### Community 30 - "ArchivoVista.tsx"
+Cohesion: 0.10
+Nodes (32): ArchivoVista(), DocumentosAdjuntos(), dia(), Fila(), ListaDocumentos(), Vencimiento(), PorVencerCard(), SubirDocumento() (+24 more)
 
 ### Community 31 - "objetivos.ts"
-Cohesion: 0.11
-Nodes (42): AvisosObjetivos(), hoyAR(), MetasPorPeriodo(), Alcance, ObjetivoForm(), ObjetivosInicio(), Filtro, GRUPOS (+34 more)
+Cohesion: 0.09
+Nodes (44): leerOculto(), PrimerosPasos(), sinSuscripcion(), AvisosObjetivos(), hoyAR(), MetasPorPeriodo(), Alcance, ObjetivoForm() (+36 more)
 
-### Community 32 - "alianzas-admin.service.ts"
-Cohesion: 0.08
-Nodes (27): AlianzasAdminController, Body, Controller, Get, HttpCode, Param, Patch, Post (+19 more)
+### Community 32 - "AlianzasAdminService"
+Cohesion: 0.09
+Nodes (16): AlianzasAdminController, Body, Controller, Get, HttpCode, Param, Patch, Post (+8 more)
 
 ### Community 33 - "presupuestos.service.ts"
 Cohesion: 0.13
 Nodes (14): MonedaPresupuesto, ConItems, EstadoPresupuesto, estadoVisible(), fecha(), ItemPresupuestoInput, PresupuestosService, sumarDias() (+6 more)
 
-### Community 34 - "usuarios.module.ts"
-Cohesion: 0.07
-Nodes (28): AccesoColaborador, RolCrudo, Inject, ClerkKnownWebhookEvent, ClerkOrganizationCreatedEvent, ClerkOrganizationMembershipDeletedEvent, ClerkOrganizationMembershipEvent, ClerkWebhookEvent (+20 more)
+### Community 34 - "usuarios.repository.ts"
+Cohesion: 0.12
+Nodes (11): AccesoColaborador, RolCrudo, Inject, PrismaUsuariosRepository, Injectable, EmpresaRecord, UpsertEmpresaInput, UpsertUsuarioInput (+3 more)
 
-### Community 35 - "CotizacionesService"
-Cohesion: 0.10
-Nodes (12): Inject, Inject, RendimientoService, Injectable, FilaRendimiento, FilaVentas, periodoAnterior(), r1() (+4 more)
+### Community 35 - "rendimiento.service.ts"
+Cohesion: 0.24
+Nodes (7): RendimientoService, Injectable, FilaRendimiento, FilaVentas, periodoAnterior(), r1(), rendimiento()
 
 ### Community 36 - "prisma-ventas.repository.ts"
-Cohesion: 0.06
-Nodes (29): calcularTotal(), CON_ITEMS_Y_USUARIO, PrismaVentasRepository, Injectable, VentaConItemsNombre, ConfiguracionVenta, ConfirmarVentaInput, EstadoCobro (+21 more)
+Cohesion: 0.08
+Nodes (26): calcularTotal(), CON_ITEMS_Y_USUARIO, PrismaVentasRepository, Injectable, VentaConItemsNombre, CobrarSaldoVentaInput, ListarVentasQuery, ConfiguracionVenta (+18 more)
 
 ### Community 37 - "registro.service.ts"
 Cohesion: 0.07
-Nodes (34): AlianzasModule, Module, diasDePrueba(), HistorialPrueba, puedeUsarPruebaDelCupon(), validarCupon(), CuponesService, CuponVerificado (+26 more)
+Nodes (32): AlianzasController, Controller, Get, Query, Req, HistorialPrueba, CuponesService, CuponVerificado (+24 more)
 
 ### Community 38 - "productos.module.ts"
-Cohesion: 0.08
-Nodes (23): Query, CodigoBarraProductoInput, codigoBarraProductoSchema, DimensionesProductoInput, dimensionesProductoSchema, estadoProductoSchema, GuardarProductoInput, guardarProductoSchema (+15 more)
+Cohesion: 0.11
+Nodes (19): CodigoBarraProductoInput, codigoBarraProductoSchema, DimensionesProductoInput, dimensionesProductoSchema, estadoProductoSchema, GuardarProductoInput, guardarProductoSchema, ListarProductosQuery (+11 more)
 
 ### Community 39 - "rol.types.ts"
-Cohesion: 0.05
-Nodes (49): accesoDesde(), AccionClave, ACCIONES, ACCIONES_CONTADOR, ACCIONES_INICIALES, ModuloClave, MODULOS, MODULOS_CONTADOR (+41 more)
+Cohesion: 0.06
+Nodes (41): accesoDesde(), AccionClave, ACCIONES, ACCIONES_CONTADOR, ACCIONES_INICIALES, ModuloClave, MODULOS, MODULOS_CONTADOR (+33 more)
 
-### Community 40 - "analytics.module.ts"
-Cohesion: 0.08
-Nodes (33): BcraInflacionClient, FilaBcra, filasBcra(), sumarDiasCapped(), trozosAnio(), Injectable, InflacionController, Controller (+25 more)
+### Community 40 - "inflacion.util.ts"
+Cohesion: 0.09
+Nodes (29): BcraInflacionClient, FilaBcra, filasBcra(), sumarDiasCapped(), trozosAnio(), Injectable, INFLACION_REPOSITORY, InflacionRepository (+21 more)
 
 ### Community 41 - "compras.module.ts"
-Cohesion: 0.10
-Nodes (19): ConfirmarCompraInput, ComprasModule, Module, CompraFicha, CompraItemInput, CompraRecord, COMPRAS_REPOSITORY, ComprasRepository (+11 more)
+Cohesion: 0.09
+Nodes (22): Get, Param, Query, ListarComprasQuery, ComprasModule, Module, CompraFicha, CompraItemInput (+14 more)
 
 ### Community 42 - "AccesoCuentaService"
-Cohesion: 0.04
-Nodes (56): ACTIVO, codigo(), GRACIA, PLAN_VENCIDO, PRUEBA_VENCIDA, SuscripcionGuard, Injectable, AccesoCuentaService (+48 more)
+Cohesion: 0.13
+Nodes (13): AccesoCuentaService, PlanEmpresa, Inject, Injectable, PlanId, PLANES_QUE_ACTUALIZAN_EMPRESA, EstadoSuscripcion, FilaAdminSuscripcion (+5 more)
 
-### Community 43 - "ubicaciones.controller.ts"
+### Community 43 - "compras.controller.ts"
 Cohesion: 0.06
-Nodes (30): booleanQuery(), ComprasController, Body, Controller, Param, Post, AnularCompraInput, anularCompraSchema (+22 more)
+Nodes (30): booleanQuery(), ComprasController, Body, Controller, Post, AnularCompraInput, anularCompraSchema, ConfirmarCompraInput (+22 more)
 
 ### Community 44 - "obtenerSitio"
-Cohesion: 0.25
-Nodes (21): cotizarEnvio(), crearPedidoTienda(), pagarConMercadoPago(), ResultadoPedido, validarCupon(), aceptaMercadoPago(), CheckoutPage(), dynamic (+13 more)
+Cohesion: 0.12
+Nodes (42): cotizarEnvio(), crearPedidoTienda(), pagarConMercadoPago(), ResultadoPedido, validarCupon(), aceptaMercadoPago(), CheckoutPage(), dynamic (+34 more)
 
 ### Community 45 - "Analitica360Widget"
 Cohesion: 0.07
-Nodes (32): Window, Analitica360Client, obtenerBaseUrlPorDefecto(), Analitica360Error, ValidationIssue, AgendaOpcionesActiva, AgendaOpcionesInactiva, AgendaOpcionesResponse (+24 more)
+Nodes (31): Window, Analitica360Client, obtenerBaseUrlPorDefecto(), Analitica360Error, ValidationIssue, AgendaOpcionesActiva, AgendaOpcionesInactiva, AgendaOpcionesResponse (+23 more)
 
-### Community 46 - "pasarelas-coordinador.service.ts"
-Cohesion: 0.10
-Nodes (21): ConfigurarPasarelaDto, CrearCobroRapidoDto, PasarelasController, PasarelasWebhookController, Body, Controller, Delete, Get (+13 more)
+### Community 46 - "PasarelasCoordinadorService"
+Cohesion: 0.14
+Nodes (11): PasarelasWebhookController, Body, Controller, Headers, HttpCode, Param, Post, Query (+3 more)
 
 ### Community 47 - "prisma-ubicaciones.repository.ts"
-Cohesion: 0.08
-Nodes (23): PrismaUbicacionesRepository, Injectable, Body, Controller, Delete, Param, Patch, Post (+15 more)
+Cohesion: 0.20
+Nodes (10): PrismaUbicacionesRepository, Injectable, Module, UbicacionesModule, GuardarUbicacionInput, ResultadoGuardarUbicacion, TipoUbicacion, UBICACIONES_REPOSITORY (+2 more)
 
 ### Community 48 - "prisma-clientes.repository.ts"
-Cohesion: 0.11
-Nodes (19): AgregarInteraccionInput, ClienteSegmentoRecord, CumpleProximoRecord, DestinatarioDifusion, DifusionRecord, GuardarClienteInput, GuardarDifusionInput, IdSegmento (+11 more)
+Cohesion: 0.08
+Nodes (29): aFechaSolo(), fechaSoloSchema, AgregarInteraccionInput, ClienteFicha, ClienteRecord, CLIENTES_REPOSITORY, ClienteSegmentoRecord, CumpleProximoRecord (+21 more)
 
 ### Community 49 - "produccion.service.ts"
-Cohesion: 0.18
-Nodes (17): salidasConKits(), CrearOrdenInput, GuardarRecetaInput, Tx, clave(), apps_api_src_modules_produccion_produccion_util_claveinsumo, ComponenteCosteado, costoReceta (+9 more)
+Cohesion: 0.11
+Nodes (22): salidasConKits(), CrearOrdenInput, etiqueta(), GuardarRecetaInput, num(), ProduccionService, r2(), Injectable (+14 more)
 
 ### Community 50 - "ordenes-compra.controller.ts"
 Cohesion: 0.12
-Nodes (22): Get, Query, ActualizarEstadoOcInput, actualizarEstadoOcSchema, GuardarOrdenCompraInput, guardarOrdenCompraSchema, itemOcSchema, ListarOrdenesCompraQuery (+14 more)
+Nodes (17): Get, Query, ActualizarEstadoOcInput, actualizarEstadoOcSchema, GuardarOrdenCompraInput, guardarOrdenCompraSchema, itemOcSchema, ListarOrdenesCompraQuery (+9 more)
 
 ### Community 51 - "tienda.service.ts"
 Cohesion: 0.14
-Nodes (18): evaluarCupon(), hoyAR(), MENSAJE_CUPON, MotivoCupon, normalizarCodigo(), pesos(), precioConOferta(), PrecioFinal (+10 more)
+Nodes (19): OpcionGuardada, evaluarCupon(), hoyAR(), MENSAJE_CUPON, MotivoCupon, normalizarCodigo(), pesos(), precioConOferta() (+11 more)
 
 ### Community 52 - "dependencies"
 Cohesion: 0.06
 Nodes (35): dependencies, cheerio, @clerk/backend, dotenv, helmet, @nestjs/common, @nestjs/config, @nestjs/platform-express (+27 more)
 
 ### Community 53 - "cuentas-tienda.ts"
-Cohesion: 0.18
-Nodes (18): DURACION_CODIGO_MS, DURACION_SESION_MS, ESPERA_ENTRE_CODIGOS_MS, generarCodigo(), generarToken(), hashCodigo(), hashToken(), MAX_CODIGOS_POR_HORA (+10 more)
+Cohesion: 0.12
+Nodes (20): DURACION_CODIGO_MS, DURACION_SESION_MS, ESPERA_ENTRE_CODIGOS_MS, generarCodigo(), generarToken(), hashCodigo(), hashToken(), MAX_CODIGOS_POR_HORA (+12 more)
 
 ### Community 54 - "uso.service.ts"
-Cohesion: 0.13
-Nodes (15): Get, Param, Query, EventosUsoDto, eventosUsoSchema, UsoQuery, usoQuerySchema, n() (+7 more)
+Cohesion: 0.12
+Nodes (18): Controller, Get, Param, Query, UsoAdminController, UsoController, EventosUsoDto, eventosUsoSchema (+10 more)
 
-### Community 55 - "productos.ts"
-Cohesion: 0.15
-Nodes (18): GET(), dynamic, HomePage(), dynamic, generateMetadata(), ProductoPage(), attrs(), CategoriaId (+10 more)
+### Community 55 - "cotizaciones.service.ts"
+Cohesion: 0.09
+Nodes (22): DASHBOARD_REPOSITORY, DashboardCumple, DashboardHoy, DashboardInicio, DashboardInicioBase, DashboardRepository, DashboardService, baseInicio (+14 more)
 
-### Community 56 - "ventas.controller.ts"
-Cohesion: 0.13
-Nodes (16): Body, Controller, Get, Param, Post, Query, VentasController, AnularVentaInput (+8 more)
+### Community 56 - "VentasController"
+Cohesion: 0.21
+Nodes (8): Body, Controller, Get, Param, Post, Query, VentasController, AnularVentaInput
 
 ### Community 57 - "prisma-variantes.repository.ts"
-Cohesion: 0.09
-Nodes (24): PrismaVariantesRepository, stockSinVariantePorUbicacion(), Injectable, repartirPorUbicacion(), Tramo, Module, VariantesModule, GuardarVarianteInput (+16 more)
+Cohesion: 0.08
+Nodes (23): PrismaVariantesRepository, stockSinVariantePorUbicacion(), Injectable, repartirPorUbicacion(), Tramo, SkuRepository, GuardarVarianteInput, RepartoStock (+15 more)
 
 ### Community 58 - "API NestJS starter (apps/api)"
 Cohesion: 0.11
@@ -610,65 +619,65 @@ Nodes (37): CI Workflow (Analítica 360), GitHub Container Registry (ghcr.io), J
 Cohesion: 0.06
 Nodes (35): devDependencies, @nestjs/cli, @nestjs/mau, @nestjs/schematics, @nestjs/testing, oxlint, prettier, prisma (+27 more)
 
-### Community 60 - "TiendaConfigController"
-Cohesion: 0.13
-Nodes (14): ProductoFotosController, TiendaConfigController, TiendaSitioController, Body, Controller, Delete, Get, Param (+6 more)
+### Community 60 - "TiendaAdminService"
+Cohesion: 0.14
+Nodes (4): Query, conMontos(), TiendaAdminService, Injectable
 
-### Community 61 - "esViolacionUnica"
-Cohesion: 0.11
-Nodes (15): esViolacionUnica(), GuardarCategoriaInput, ActualizarCategoriaInput, CategoriaRecord, CATEGORIAS_REPOSITORY, CategoriasRepository, CrearCategoriaInput, ResultadoGuardarCategoria (+7 more)
+### Community 61 - "categorias.service.ts"
+Cohesion: 0.16
+Nodes (9): ActualizarCategoriaInput, CategoriaRecord, CATEGORIAS_REPOSITORY, CategoriasRepository, CrearCategoriaInput, ResultadoGuardarCategoria, categoriaBase, PrismaCategoriasRepository (+1 more)
 
 ### Community 62 - "PedidoFicha.tsx"
-Cohesion: 0.09
-Nodes (34): InventarioPedidosConfig(), EstadoPedidoBadge(), NOMBRE_PAGO, PedidoFichaVista(), whatsapp(), PedidosListado(), PickingPedido(), escaneado() (+26 more)
+Cohesion: 0.11
+Nodes (28): Page(), EstadoPedidoBadge(), NOMBRE_PAGO, PagoBadge(), PedidoFichaVista(), whatsapp(), PedidosListado(), PickingPedido() (+20 more)
 
 ### Community 63 - "archivo.controller.ts"
-Cohesion: 0.09
-Nodes (27): Archivo, datosSchema, fecha, filtroSchema, subida, ArchivoModule, Module, ArchivoProgramador (+19 more)
+Cohesion: 0.17
+Nodes (19): Archivo, datosSchema, fecha, filtroSchema, subida, DatosArchivo, NOMBRE_CATEGORIA, avisoQueToca() (+11 more)
 
-### Community 64 - "EstiloTienda.tsx"
+### Community 64 - "TiendaOnlineConfig.tsx"
 Cohesion: 0.10
-Nodes (27): Bordes, cormorant, Fondo, FONDOS, FormaFoto, FORMAS_FOTO, montserrat, nunito (+19 more)
+Nodes (34): Bordes, cormorant, Fondo, FONDOS, FormaFoto, FORMAS_FOTO, montserrat, nunito (+26 more)
 
 ### Community 65 - "RequireModulo"
-Cohesion: 0.04
-Nodes (63): CACHE_LECTURA_KEY, CacheLectura(), Entrada, LECTURAS, RequireModulo(), InsightsCombosController, Controller, Get (+55 more)
+Cohesion: 0.05
+Nodes (52): CACHE_LECTURA_KEY, CacheLectura(), Entrada, LECTURAS, RequireModulo(), InsightsCombosController, Controller, Get (+44 more)
 
-### Community 66 - "combos.service.ts"
-Cohesion: 0.16
+### Community 66 - "analytics.module.ts"
+Cohesion: 0.17
 Nodes (10): InsightCombo2, InsightCombo3, INSIGHTS_COMBOS_REPOSITORY, InsightsCombosRepository, InsightsCombosService, Inject, Injectable, numOrNull() (+2 more)
 
 ### Community 67 - "movimientos.controller.ts"
-Cohesion: 0.07
-Nodes (37): CrearLoteInput, crearLoteSchema, DisponiblesQuery, disponiblesQuerySchema, fechaIso, KardexQuery, kardexQuerySchema, KardexValorizadoQuery (+29 more)
-
-### Community 68 - "CurrentEmpresa"
-Cohesion: 0.03
-Nodes (86): CurrentEmpresa, Roles(), AgendaController, configSchema, fecha, fechaHora, libresSchema, rangoSchema (+78 more)
-
-### Community 69 - "cotizaciones.service.ts"
-Cohesion: 0.06
-Nodes (37): DineroDevolucionProducto, sumarDinero(), ANALYTICS_PERIODO_REPOSITORY, AnalyticsEvolucionPunto, AnalyticsFormaPago, AnalyticsPeriodoBase, AnalyticsPeriodoProducto, AnalyticsPeriodoRepository (+29 more)
-
-### Community 70 - "PrismaService"
 Cohesion: 0.09
-Nodes (19): LECTURAS, PrismaService, Injectable, Inject, ACTIVIDADES, ActualizarConfiguracionInput, actualizarConfiguracionSchema, MEDIOS_PAGO_CONFIG (+11 more)
+Nodes (26): crearLoteSchema, disponiblesQuerySchema, fechaIso, KardexQuery, kardexQuerySchema, KardexValorizadoQuery, kardexValorizadoQuerySchema, lineaTrasladoSchema (+18 more)
 
-### Community 71 - "ordenes-trabajo.service.ts"
-Cohesion: 0.13
-Nodes (16): Db, EntregaInput, fecha(), ItemOtInput, numeroOt(), OrdenesTrabajoService, r2(), Injectable (+8 more)
+### Community 68 - "EmpresaContext"
+Cohesion: 0.03
+Nodes (72): EmpresaContext, Roles(), AgendaController, configSchema, fecha, fechaHora, libresSchema, rangoSchema (+64 more)
 
-### Community 72 - "EquilibrioInicio.tsx"
-Cohesion: 0.07
-Nodes (31): DolarHoy, NOMBRE_DOLAR, SelectorMoneda(), CATEGORIAS_GASTO, GananciaProducto, PeriodoRespuesta, useGananciaProductos(), Equilibrio (+23 more)
+### Community 69 - "Conversor"
+Cohesion: 0.08
+Nodes (28): dineroDevoluciones(), ANALYTICS_PERIODO_REPOSITORY, AnalyticsEvolucionPunto, AnalyticsFormaPago, AnalyticsPeriodoBase, AnalyticsPeriodoProducto, AnalyticsPeriodoRepository, AnalyticsTopProducto (+20 more)
+
+### Community 70 - "configuracion.controller.ts"
+Cohesion: 0.12
+Nodes (21): ConfiguracionController, MOTIVO, Controller, Inject, ACTIVIDADES, ActualizarConfiguracionInput, actualizarConfiguracionSchema, MEDIOS_PAGO_CONFIG (+13 more)
+
+### Community 71 - "OrdenesTrabajoService"
+Cohesion: 0.23
+Nodes (6): fecha(), numeroOt(), OrdenesTrabajoService, r2(), Injectable, abierta()
+
+### Community 72 - "EstadosContablesVista.tsx"
+Cohesion: 0.04
+Nodes (73): DolarHoy, NOMBRE_DOLAR, SelectorMoneda(), BalanceCard(), CONCEPTOS_CAJA, EstadosContablesVista(), EvolucionCard(), fechaCorta() (+65 more)
 
 ### Community 73 - "sidebar.tsx"
-Cohesion: 0.09
-Nodes (20): SheetDescription(), Sidebar(), SidebarContent(), SidebarContext, SidebarContextProps, SidebarFooter(), SidebarGroup(), SidebarGroupLabel() (+12 more)
+Cohesion: 0.07
+Nodes (24): Sheet(), SheetContent(), SheetDescription(), SheetHeader(), SheetTitle(), Sidebar(), SidebarContent(), SidebarContext (+16 more)
 
-### Community 74 - "informes.module.ts"
-Cohesion: 0.09
-Nodes (19): ArchivosModule, Global, Module, AnalyticsModule, Module, BajasModule, Module, ContabilidadModule (+11 more)
+### Community 74 - "app.module.ts"
+Cohesion: 0.06
+Nodes (39): AppModule, Module, ArchivosModule, Global, Module, AbonosModule, Module, AlianzasModule (+31 more)
 
 ### Community 75 - "categorizar-productos.ts"
 Cohesion: 0.13
@@ -678,149 +687,153 @@ Nodes (15): aplicar, args, crear, ctx, pedidos, prisma, PrismaSkuRepository, Inj
 Cohesion: 0.27
 Nodes (4): aFecha(), DescuentosTiendaService, iso(), Injectable
 
-### Community 77 - "atributos.service.ts"
-Cohesion: 0.11
-Nodes (12): GuardarAtributoInput, AtributoRecord, ATRIBUTOS_REPOSITORY, AtributosRepository, GuardarAtributoInput, AtributosService, atributoBase, Inject (+4 more)
+### Community 77 - "variantes.module.ts"
+Cohesion: 0.08
+Nodes (23): AtributosController, Body, Controller, Delete, Get, Param, Patch, Post (+15 more)
 
 ### Community 78 - "seguridad.mjs"
 Cohesion: 0.19
 Nodes (26): simulacroBackup(), carga(), env(), NIVELES, sesionClerk(), aceptado(), API, control() (+18 more)
 
-### Community 79 - "use-clientes.ts"
-Cohesion: 0.09
-Nodes (30): ClienteFichaVista(), ClienteForm(), ClientesListado(), fecha(), SegmentosDifusion(), Cliente, ClienteFicha, ClienteSegmento (+22 more)
+### Community 79 - "InsightsRepository"
+Cohesion: 0.08
+Nodes (14): INSIGHTS_REPOSITORY, InsightsRepository, InsightsService, Inject, Injectable, HistorialPrecio, InsightProducto, ItemInsight (+6 more)
 
 ### Community 80 - "monotributo.service.ts"
 Cohesion: 0.11
 Nodes (19): AdminMonotributoController, Body, Controller, Get, HttpCode, Put, inicioDia(), MonotributoRespuesta (+11 more)
 
-### Community 81 - "descuentos-admin.ts"
-Cohesion: 0.07
-Nodes (25): AvisosZipnovaController, EnviosController, PedidoEnvioController, Body, Controller, Delete, Get, HttpCode (+17 more)
+### Community 81 - "tienda.module.ts"
+Cohesion: 0.05
+Nodes (35): Public(), AvisosZipnovaController, EnviosController, PedidoEnvioController, Body, Controller, Delete, Get (+27 more)
 
 ### Community 82 - "vencimientos.service.ts"
 Cohesion: 0.13
 Nodes (16): Controller, Get, VencimientosController, Module, VencimientosModule, Injectable, VencimientosProgramador, Injectable (+8 more)
 
 ### Community 83 - "Especificacion Funcional legacy (pre-reescritura)"
-Cohesion: 0.11
-Nodes (29): RPC analytics_periodo, CU-001 Registrar venta con sena, CU-003 Invitar colaborador contador, CU-004 Compra con OCR y costos extra, Especificacion Funcional legacy (pre-reescritura), Fase 3 diseno del schema Prisma, Fase 8 QA del plan de reescritura, GateModulos: gate de modulos por plan (+21 more)
+Cohesion: 0.10
+Nodes (31): RPC analytics_periodo, CU-001 Registrar venta con sena, CU-002 Traslado masivo de inventario, CU-003 Invitar colaborador contador, CU-004 Compra con OCR y costos extra, Especificacion Funcional legacy (pre-reescritura), Fase 3 diseno del schema Prisma, Fase 8 QA del plan de reescritura (+23 more)
 
 ### Community 84 - "devDependencies"
 Cohesion: 0.12
 Nodes (17): devDependencies, eslint, eslint-config-next, tailwindcss, @tailwindcss/postcss, @types/node, @types/react, @types/react-dom (+9 more)
 
 ### Community 85 - "agenda-online.service.ts"
-Cohesion: 0.15
-Nodes (24): AgendaModule, Module, POR_DEFECTO, Db, aHoraAR(), cuandoTexto(), dentroDelHorario(), desdeHoraAR() (+16 more)
+Cohesion: 0.16
+Nodes (23): AgendaModule, Module, POR_DEFECTO, Db, aHoraAR(), cuandoTexto(), dentroDelHorario(), DIAS (+15 more)
 
 ### Community 86 - "clientes.controller.ts"
-Cohesion: 0.03
-Nodes (50): fechaSoloSchema, ClientesController, Body, Controller, Get, Param, Patch, Post (+42 more)
+Cohesion: 0.05
+Nodes (31): ClientesController, Body, Controller, Get, Param, Patch, Post, Query (+23 more)
 
 ### Community 87 - "prisma-productos.repository.ts"
-Cohesion: 0.10
+Cohesion: 0.13
 Nodes (16): PrismaProductosRepository, ProductoConCategoria, Injectable, DimensionesProducto, GuardarProductoInput, ListaProductos, ModoPrecio, ProductoListado (+8 more)
 
-### Community 88 - "FichaProducto.tsx"
-Cohesion: 0.20
-Nodes (12): alternarFavorito(), Precio(), ProductCard(), FotoProducto(), BotonFavorito(), Contexto, Favoritos, FavoritosProvider() (+4 more)
+### Community 88 - "formatoARS"
+Cohesion: 0.15
+Nodes (18): alternarFavorito(), dynamic, generateMetadata(), ProductoPage(), FichaProducto(), Precio(), ProductCard(), FotoProducto() (+10 more)
 
 ### Community 89 - "estados-contables.util.ts"
-Cohesion: 0.16
-Nodes (33): CRITERIOS, EstadosContablesRespuesta, Actividad, ACTIVIDAD_DE, amortizacionAcumulada(), aportesYRetirosAl(), Balance, balanceAl() (+25 more)
+Cohesion: 0.14
+Nodes (35): DeudaProveedor, ESTADOS_CONTABLES_REPOSITORY, CRITERIOS, EstadosContablesRespuesta, Actividad, ACTIVIDAD_DE, amortizacionAcumulada(), aportesYRetirosAl() (+27 more)
 
 ### Community 90 - "AdminBajasController"
-Cohesion: 0.18
-Nodes (9): AdminBajasController, BajasController, Body, Controller, Delete, Get, HttpCode, Param (+1 more)
+Cohesion: 0.17
+Nodes (8): AdminBajasController, Body, Controller, Delete, Get, HttpCode, Param, Post
 
 ### Community 91 - "prisma-ordenes-compra.repository.ts"
-Cohesion: 0.15
-Nodes (17): EstadoOc, ESTADOS_EDITABLES, GuardarOrdenCompraInput, ItemOcInput, MotivoRechazoOc, OrdenCompraItemRecord, OrdenCompraRecord, ResultadoGuardarOc (+9 more)
+Cohesion: 0.10
+Nodes (24): EstadoOc, ESTADOS_EDITABLES, GuardarOrdenCompraInput, ItemOcInput, MotivoRechazoOc, OrdenCompraFicha, OrdenCompraItemRecord, OrdenCompraRecord (+16 more)
 
 ### Community 92 - "informes.util.ts"
 Cohesion: 0.05
-Nodes (67): cifra(), mensual, mes, semana, semanal, asuntoInforme(), celda(), COLOR_SEMAFORO (+59 more)
+Nodes (69): cifra(), mensual, mes, semana, semanal, PlanGuard, Injectable, asuntoInforme() (+61 more)
 
 ### Community 93 - "pedidos.repository.ts"
-Cohesion: 0.08
-Nodes (29): CrearPedidoInput, EstadoPedido, FiltrosPedidos, ItemPedidoInput, ListaPedidos, MotivoRechazoPedido, OrigenPedido, PedidoItemRecord (+21 more)
+Cohesion: 0.07
+Nodes (33): PedidosModule, Module, CrearPedidoInput, EstadoPedido, FiltrosPedidos, ItemPedidoInput, ListaPedidos, MotivoRechazoPedido (+25 more)
 
 ### Community 94 - "cuenta/actions.ts"
-Cohesion: 0.10
-Nodes (36): abrir(), borrarCuenta(), DatosCuenta, error(), guardarDatos(), ingresarConCodigo(), ingresarConGoogle(), pedirCodigo() (+28 more)
+Cohesion: 0.08
+Nodes (37): abrir(), borrarCuenta(), DatosCuenta, error(), guardarDatos(), ingresarConCodigo(), ingresarConGoogle(), pedirCodigo() (+29 more)
 
-### Community 95 - "OrdenCompraForm.tsx"
-Cohesion: 0.07
-Nodes (28): ComprasListado(), fechaCorta(), COMPRAS_POR_PAGINA, useCompras(), useProveedores(), CompraFila, ConfirmarCompraInput, ListaCompras (+20 more)
+### Community 95 - "objetivos.service.ts"
+Cohesion: 0.12
+Nodes (29): guardarObjetivoSchema, metaPeriodoSchema, texto, Filtro, ObjetivoConAvance, PorDia, sumar(), ACUMULATIVOS (+21 more)
 
 ### Community 96 - "tienda-admin.service.ts"
-Cohesion: 0.08
-Nodes (21): optimizarImagen(), TAMANOS, BORDES, CampoImagen, conMontos(), FONDOS, FORMAS_FOTO, GuardarTienda (+13 more)
+Cohesion: 0.13
+Nodes (18): optimizarImagen(), TAMANOS, BORDES, CampoImagen, FONDOS, FORMAS_FOTO, GuardarTienda, MAX_FOTOS (+10 more)
 
-### Community 97 - "CuentasTiendaService"
-Cohesion: 0.11
-Nodes (15): CuentasTiendaController, CuentasTiendaService, Body, Controller, Delete, Get, Headers, HttpCode (+7 more)
+### Community 97 - "CuentasTiendaController"
+Cohesion: 0.18
+Nodes (13): CuentasTiendaController, Body, Controller, Delete, Get, Headers, HttpCode, Param (+5 more)
 
 ### Community 98 - "bajas.service.ts"
-Cohesion: 0.11
+Cohesion: 0.12
 Nodes (15): sinContextoAuditoria(), BajasProgramador, Injectable, BajasService, condicionColgada(), EstadoBaja, fecha(), Injectable (+7 more)
 
 ### Community 99 - "planes.util.ts"
-Cohesion: 0.12
-Nodes (23): PlanGuard, Injectable, BASICO, CICLOS, clavePlan(), CUOTAS_ANUAL, defPlan(), DESCUENTO_CICLO (+15 more)
+Cohesion: 0.17
+Nodes (21): BASICO, CICLOS, clavePlan(), CUOTAS_ANUAL, defPlan(), DESCUENTO_CICLO, esPlanPago(), Funcion (+13 more)
 
 ### Community 100 - "arca.util.ts"
 Cohesion: 0.06
 Nodes (55): ArcaCliente, pem(), Injectable, firmarCMS(), generarPedidoCertificado(), ArcaModule, Module, Ambiente (+47 more)
 
-### Community 101 - "ArmadoresComprasPedidos"
-Cohesion: 0.31
-Nodes (4): ArmadoresComprasPedidos, conVariante(), Inject, Injectable
+### Community 101 - "documentos.module.ts"
+Cohesion: 0.13
+Nodes (12): ArmadoresComprasPedidos, conVariante(), Inject, Injectable, DocumentosModule, Module, dmy(), TITULO (+4 more)
 
-### Community 102 - "PasarelaAdapter"
-Cohesion: 0.15
-Nodes (12): MercadoPagoAdapter, Injectable, PasarelaAdapter, StripeAdapter, Injectable, Injectable, UalaAdapter, UalaTokenCache (+4 more)
+### Community 102 - "pasarelas-coordinador.service.ts"
+Cohesion: 0.13
+Nodes (19): MercadoPagoAdapter, Injectable, PasarelaAdapter, StripeAdapter, Injectable, Injectable, UalaAdapter, UalaTokenCache (+11 more)
+
+### Community 103 - "MpTiendaCliente"
+Cohesion: 0.14
+Nodes (8): MpTiendaCliente, Injectable, Body, Get, Param, Post, Query, Res
 
 ### Community 104 - "libro-diario.service.ts"
-Cohesion: 0.12
-Nodes (25): ESTADOS_CONTABLES_REPOSITORY, CATEGORIAS, cierresDeMes(), Asiento, asientos(), CobroDato, CompraAsiento, Cuenta (+17 more)
+Cohesion: 0.11
+Nodes (26): CATEGORIAS, cierresDeMes(), LibroDiarioService, Injectable, Asiento, asientos(), CobroDato, CompraAsiento (+18 more)
 
-### Community 105 - "ProduccionController"
-Cohesion: 0.16
-Nodes (11): ProduccionController, puedeVerCostos(), Body, Controller, Delete, Get, HttpCode, Param (+3 more)
+### Community 105 - "produccion.controller.ts"
+Cohesion: 0.12
+Nodes (15): ordenSchema, previewQuery, ProduccionController, puedeVerCostos(), recetaQuery, recetaSchema, Body, Controller (+7 more)
 
 ### Community 106 - "Especificacion Tecnica Maestra - SaaS Gestion"
 Cohesion: 0.11
 Nodes (26): HU-005 Anular venta, RLS con get_empresa_id()/get_rol(), Roles dueno/operador/contador, Stack legacy React+Vite+Supabase sin backend propio, Stock derivado de movimientos, nunca columna fija, Integracion ARCA (ex-AFIP), Borrado logico con deleted_at, Escaneo de codigo de barras y precarga inteligente (+18 more)
 
 ### Community 108 - "auditoria.util.ts"
-Cohesion: 0.15
-Nodes (20): Delegado, empresaDe(), ESCRITURAS, extensionAuditoria(), evento(), accionDeEdicion(), aplicarData(), ConfigEntidad (+12 more)
+Cohesion: 0.10
+Nodes (30): Delegado, empresaDe(), ESCRITURAS, extensionAuditoria(), evento(), AuditoriaInterceptor, Injectable, Accion (+22 more)
 
-### Community 109 - "auditoria.service.ts"
-Cohesion: 0.13
-Nodes (11): AUDITADOS, AuditoriaAdminController, Controller, Get, Query, AuditoriaQuery, AuditoriaModule, Module (+3 more)
+### Community 109 - "AuditoriaService"
+Cohesion: 0.18
+Nodes (7): AuditoriaAdminController, Controller, Get, Query, AuditoriaQuery, AuditoriaService, Injectable
 
 ### Community 110 - "import-export.module.ts"
-Cohesion: 0.06
-Nodes (37): ClientesModule, Module, celdaEsNumero(), claveColumna(), claveNombre(), enteroCelda(), numeroCelda(), pad2() (+29 more)
+Cohesion: 0.14
+Nodes (14): ClientesModule, Module, ImportExportModule, Module, PrismaProductosImportRepository, Injectable, PRODUCTOS_IMPORT_REPOSITORY, ProductosImportRepository (+6 more)
 
 ### Community 111 - "catalogo.ts"
-Cohesion: 0.16
-Nodes (22): dynamic, generateMetadata(), ProductosPage(), Props, ControlesCatalogo(), Migas(), Paginacion(), ProductosCatalogo() (+14 more)
+Cohesion: 0.19
+Nodes (18): GET(), ControlesCatalogo(), Paginacion(), ProductosCatalogo(), coincide(), Consulta, entero(), ItemCatalogo (+10 more)
 
 ### Community 112 - "sdk/package.json"
 Cohesion: 0.06
 Nodes (31): esbuild, author, description, devDependencies, esbuild, exports, ./widget, files (+23 more)
 
-### Community 113 - "PlanesVista.tsx"
-Cohesion: 0.11
-Nodes (21): AvisoCuenta(), diaAnterior(), fechaCorta(), CartelBeneficios(), BotonDebitoAutomatico(), CICLO, EstadoDebitoAutomatico(), useMercadoPago() (+13 more)
+### Community 113 - "planes/planes.ts"
+Cohesion: 0.19
+Nodes (10): def(), ESTADOS_SUSCRIPCION, limite(), MODULOS, PlanDef, PLANES, PLANES_PAGOS, PlanId (+2 more)
 
-### Community 114 - "EmpresaContext"
-Cohesion: 0.05
-Nodes (52): EmpresaContext, RequirePermiso(), AbonosController, Body, Controller, Delete, Get, Param (+44 more)
+### Community 114 - "CurrentEmpresa"
+Cohesion: 0.06
+Nodes (34): CurrentEmpresa, AbonosController, Body, Controller, Delete, Get, Param, Post (+26 more)
 
 ### Community 115 - "copilot-chat-view.tsx"
 Cohesion: 0.15
@@ -835,60 +848,64 @@ Cohesion: 0.12
 Nodes (12): alias, carpeta, clave, claves, csr, cuit, organizacion, CSP (+4 more)
 
 ### Community 118 - "alianzas.dto.ts"
-Cohesion: 0.14
-Nodes (19): aprobarLiquidacionSchema, camaraParcialSchema, camaraSchema, codigoQuerySchema, codigoSchema, cuotasGeneralesSchema, cuponParcialSchema, cuponSchema (+11 more)
+Cohesion: 0.07
+Nodes (35): AdminSaasController, Body, Controller, Get, HttpCode, Param, Post, Query (+27 more)
 
 ### Community 119 - "tienda/public/widget.js"
 Cohesion: 0.15
 Nodes (24): bindEvents(), checkCanGoNext(), close(), constructor(), f(), fetchSlots(), fromResponse(), generateNextDays() (+16 more)
 
-### Community 120 - ".listar"
-Cohesion: 0.50
-Nodes (3): Get, Query, ListarComprasQuery
+### Community 120 - "DocumentosService"
+Cohesion: 0.13
+Nodes (11): DocumentosController, Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors (+3 more)
 
 ### Community 121 - "web/public/widget.js"
 Cohesion: 0.15
 Nodes (24): bindEvents(), checkCanGoNext(), close(), constructor(), f(), fetchSlots(), fromResponse(), generateNextDays() (+16 more)
 
 ### Community 122 - "notificaciones.module.ts"
-Cohesion: 0.16
-Nodes (12): NotificacionesController, Controller, NotificacionesModule, Module, ConteoNotificaciones, NOTIFICACIONES_REPOSITORY, NotificacionesRepository, NotificacionesService (+4 more)
+Cohesion: 0.15
+Nodes (13): NotificacionesController, Controller, Get, NotificacionesModule, Module, ConteoNotificaciones, NOTIFICACIONES_REPOSITORY, NotificacionesRepository (+5 more)
 
-### Community 123 - "OrdenesTrabajoController"
-Cohesion: 0.22
-Nodes (9): OrdenesTrabajoController, Body, Controller, Get, Param, Post, Put, Query (+1 more)
+### Community 123 - "ordenes-trabajo.controller.ts"
+Cohesion: 0.08
+Nodes (27): cancelarSchema, datosBase, desdePresupuestoSchema, entregaSchema, estadoSchema, fecha, item, ordenSchema (+19 more)
 
 ### Community 124 - "auditar.mjs"
 Cohesion: 0.10
 Nodes (20): args, config, controles, destinos, dir, general, inicio, matriz (+12 more)
 
-### Community 125 - "contexto-auditoria.ts"
-Cohesion: 0.21
-Nodes (9): AuditoriaInterceptor, Injectable, Accion, Cambios, almacen, conContextoAuditoria(), ContextoAuditoria, EventoAuditoria (+1 more)
+### Community 125 - "GastoRepository"
+Cohesion: 0.09
+Nodes (12): CONTABILIDAD_REPOSITORY, ContabilidadRepository, ContabilidadService, Inject, Injectable, ItemCogs, VentaConCogs, GastoRepository (+4 more)
 
 ### Community 126 - "dia-del-pase.mjs"
 Cohesion: 0.12
 Nodes (13): APLICAR, aviso(), correr(), db, EMPRESA, informe, inicio, linea() (+5 more)
 
-### Community 127 - "ordenes-trabajo.module.ts"
-Cohesion: 0.20
-Nodes (8): DocumentosModule, Module, OrdenesTrabajoModule, Module, PresupuestosModule, Module, Module, VentasModule
+### Community 127 - "SuscripcionService"
+Cohesion: 0.13
+Nodes (11): AdminSuscripcionController, Body, Controller, Get, HttpCode, Param, Patch, Post (+3 more)
 
 ### Community 128 - "admin-saas.service.ts"
-Cohesion: 0.18
-Nodes (10): AdminSaasModule, Module, ADMIN_SAAS_REPOSITORY, AdminCapacidad, AdminPago, AdminSaasMetrics, AdminSaasRepository, PlanCantidad (+2 more)
+Cohesion: 0.08
+Nodes (27): AdminEmpresaDetalle, AdminEmpresaFila, AdminEvolucionMes, AdminTablaTamano, AlertaEmpresa, alertasEmpresa(), DIAS_SIN_ACTIVIDAD, diasEntre() (+19 more)
 
-### Community 130 - "DevolucionesController"
+### Community 129 - "AgendaService"
+Cohesion: 0.14
+Nodes (3): AgendaService, Injectable, desdeHoraAR()
+
+### Community 130 - "usuarios.module.ts"
 Cohesion: 0.13
-Nodes (14): DevolucionesController, Body, Controller, Get, Param, Post, Query, BuscarVentasQuery (+6 more)
+Nodes (17): ClerkKnownWebhookEvent, ClerkOrganizationCreatedEvent, ClerkOrganizationMembershipDeletedEvent, ClerkOrganizationMembershipEvent, ClerkWebhookEvent, Body, Controller, HttpCode (+9 more)
 
 ### Community 131 - "compilerOptions"
 Cohesion: 0.08
 Nodes (23): compilerOptions, declaration, declarationMap, esModuleInterop, forceConsistentCasingInFileNames, lib, module, moduleResolution (+15 more)
 
 ### Community 132 - "comisiones.service.ts"
-Cohesion: 0.13
-Nodes (13): ComisionesModule, Module, ComisionesService, dia(), diaMes(), fecha(), Injectable, baseDeVenta() (+5 more)
+Cohesion: 0.14
+Nodes (11): ComisionesService, dia(), diaMes(), fecha(), Injectable, baseDeVenta(), ItemComision, liquidar() (+3 more)
 
 ### Community 133 - ".guardar"
 Cohesion: 0.31
@@ -906,21 +923,21 @@ Nodes (21): compilerOptions, allowSyntheticDefaultImports, declaration, emitDeco
 Cohesion: 0.09
 Nodes (21): aliases, components, hooks, lib, ui, utils, iconLibrary, menuAccent (+13 more)
 
-### Community 137 - "GuiaDetalleVista.tsx"
-Cohesion: 0.09
-Nodes (29): metadata, generateMetadata(), GuiaSlugPage(), PageProps, BotonTour(), CATEGORIA_COLOR, GuiaDetalleVista(), GuiaDetalleVistaProps (+21 more)
+### Community 137 - "GuiasHub.tsx"
+Cohesion: 0.10
+Nodes (31): metadata, generateMetadata(), GuiaSlugPage(), PageProps, BotonTour(), CATEGORIA_COLOR, GuiaDetalleVista(), GuiaDetalleVistaProps (+23 more)
 
 ### Community 138 - "@analitica360/shared-types"
-Cohesion: 0.28
-Nodes (20): Fase 5 del plan de reescritura (features web), Patron feature-driven (components/hooks/api/types), features/inventario README, features/lotes README, features/ordenes-compra README, features/pedidos README, features/planes README, features/productos README (+12 more)
+Cohesion: 0.26
+Nodes (22): Fase 5 del plan de reescritura (features web), Patron feature-driven (components/hooks/api/types), features/inventario README, features/lotes README, features/ordenes-compra README, features/pedidos README, features/planes README, features/productos README (+14 more)
 
 ### Community 139 - "Planes.tsx"
-Cohesion: 0.18
-Nodes (15): celda(), DESTACADOS, GrupoComparacion(), MENSAJE_CICLO, PARA_QUIEN, pesos(), Planes(), ahorroAnual() (+7 more)
+Cohesion: 0.16
+Nodes (20): celda(), DESTACADOS, GrupoComparacion(), MENSAJE_CICLO, PARA_QUIEN, pesos(), Planes(), Sitio() (+12 more)
 
 ### Community 141 - "Sitio.tsx"
-Cohesion: 0.16
-Nodes (17): PRECIO_MENSUAL, Encabezado(), ENLACES, Logo(), ICONOS_EXTRAS, ICONOS_SEGURIDAD, Sitio(), DESTACADAS (+9 more)
+Cohesion: 0.13
+Nodes (13): Encabezado(), ENLACES, Logo(), BARRAS, MaquetaDestacada(), MaquetaInicio(), MaquetaVentaCelular(), ICONOS_EXTRAS (+5 more)
 
 ### Community 142 - "recorrido-pantallas.mjs"
 Cohesion: 0.25
@@ -936,50 +953,50 @@ Nodes (3): EstadosContablesService, Inject, Injectable
 
 ### Community 145 - "inventario.module.ts"
 Cohesion: 0.15
-Nodes (11): InventarioModule, Module, fechaHoyAR(), prefijoLoteMes(), LoteRecord, LOTES_REPOSITORY, LotesRepository, LotesService (+3 more)
+Nodes (15): CrearLoteInput, InventarioModule, Module, deltaStockKardex(), estadoLote, fechaHoyAR(), prefijoLoteMes(), signoDeAjuste() (+7 more)
 
 ### Community 146 - ".next/**"
 Cohesion: 0.11
 Nodes (10): metadata, metadata, metadata, metadata, PaginaLegal(), Seccion(), .next/**, !.next/cache/** (+2 more)
 
-### Community 147 - "use-paleta.ts"
-Cohesion: 0.22
-Nodes (13): apps_web_src_app_globals, inter, metadata, RootLayout(), SelectorTema(), leer(), suscribir(), usePaleta() (+5 more)
+### Community 147 - "AparienciaConfig.tsx"
+Cohesion: 0.18
+Nodes (16): apps_web_src_app_globals, inter, metadata, RootLayout(), MuestraPaleta(), SelectorTema(), AparienciaConfig(), opcion() (+8 more)
 
 ### Community 148 - "🛒 Ventas, Inventario y Logística"
 Cohesion: 0.10
 Nodes (20): ARCA (ex-AFIP), BOM (Bill of Materials / Receta Maestra), CAE (Código de Autorización Electrónico), Copilot IA (Analítica IA), EAN-13 / Código de Barras, 🏛️ Facturación y Aspectos Tributarios, Facturas A, B y C, 📊 Gestión, Finanzas y Estrategia (+12 more)
 
-### Community 149 - ".resumen"
-Cohesion: 0.29
-Nodes (4): ReferidosController, Controller, Get, Param
+### Community 149 - "alianzas.module.ts"
+Cohesion: 0.15
+Nodes (14): AdminReferidosController, ReferidosController, Controller, Get, Param, fecha(), ReferidosService, Injectable (+6 more)
 
-### Community 150 - "ObjetivosController"
-Cohesion: 0.13
-Nodes (11): ObjetivosController, Body, Controller, Delete, Get, HttpCode, Param, Patch (+3 more)
+### Community 150 - "CurrentUser"
+Cohesion: 0.05
+Nodes (34): CurrentUser, AdminAccesoController, Controller, Get, MercadoPagoController, Get, Post, ObjetivosController (+26 more)
 
 ### Community 151 - "movimientos-generales.service.ts"
 Cohesion: 0.20
 Nodes (11): etiqueta(), FilaMovimiento, FiltrosMovimientos, MovimientosGeneralesService, Injectable, GrupoMovimiento, GRUPOS_MOVIMIENTO, NOMBRE_TIPO (+3 more)
 
 ### Community 152 - "src/planes.ts"
-Cohesion: 0.15
-Nodes (15): BASICO, CicloFacturacion, clavePlan(), CUOTAS_ANUAL, defPlan(), DESCUENTO_CICLO, Funcion, idPlan() (+7 more)
+Cohesion: 0.14
+Nodes (16): BASICO, CicloFacturacion, clavePlan(), CUOTAS_ANUAL, defPlan(), DESCUENTO_CICLO, Funcion, idPlan() (+8 more)
 
 ### Community 153 - "prisma-tienda.repository.ts"
-Cohesion: 0.08
-Nodes (19): CuponTienda, Oferta, atributosComoTexto(), fecha(), ofertaDe(), PrismaTiendaRepository, Injectable, CondicionesTienda (+11 more)
+Cohesion: 0.09
+Nodes (17): CuponTienda, Oferta, atributosComoTexto(), fecha(), ofertaDe(), PrismaTiendaRepository, Injectable, CondicionesTienda (+9 more)
 
-### Community 154 - "ReservaTurno.tsx"
-Cohesion: 0.12
-Nodes (23): dynamic, metadata, dynamic, metadata, TurnosPage(), CancelarTurno(), BOTON, CAMPO (+15 more)
+### Community 154 - "ExportarDatosService"
+Cohesion: 0.11
+Nodes (6): EXPORTAR_DATOS_REPOSITORY, ExportarDatosRepository, ExportarDatosService, ExportCliente, Inject, Injectable
 
 ### Community 155 - "devDependencies"
 Cohesion: 0.05
 Nodes (36): dependencies, next, react, react-dom, devDependencies, eslint, eslint-config-next, tailwindcss (+28 more)
 
 ### Community 156 - "AlmacenArchivosService"
-Cohesion: 0.22
+Cohesion: 0.23
 Nodes (3): AlmacenArchivosService, Injectable, bootstrap()
 
 ### Community 157 - "kardex.service.ts"
@@ -987,36 +1004,36 @@ Cohesion: 0.15
 Nodes (12): etiqueta(), FilaKardexRespuesta, KardexRespuesta, KardexService, PerdidasRespuesta, Injectable, FilaKardex, kardexValorizado (+4 more)
 
 ### Community 158 - "RadarPreciosService"
-Cohesion: 0.22
-Nodes (8): RadarPreciosService, Injectable, AlinearPrecioInput, EscaneoLoteInput, EstadoCompetitivo, ItemMercadoScrapeado, MetricasMercado, ResultadoBenchmarkProducto
+Cohesion: 0.20
+Nodes (10): RadarPreciosModule, Module, RadarPreciosService, Injectable, AlinearPrecioInput, EscaneoLoteInput, EstadoCompetitivo, ItemMercadoScrapeado (+2 more)
 
-### Community 159 - "carrito.ts"
-Cohesion: 0.14
-Nodes (16): Buscador(), LupaIcon(), Sugerencia, NAV, CarritoContext, CarritoContextValue, CarritoProvider(), escribirItems() (+8 more)
+### Community 159 - "productos.ts"
+Cohesion: 0.09
+Nodes (34): AvisoMinimo(), useFaltaMinimo(), Buscador(), LupaIcon(), Sugerencia, CarritoDrawer(), Header(), NAV (+26 more)
 
 ### Community 160 - "scripts"
 Cohesion: 0.12
 Nodes (17): scripts, build, deploy, dev, format, lint, prebuild, start (+9 more)
 
-### Community 161 - "AdminSaasController"
-Cohesion: 0.18
-Nodes (8): AdminSaasController, Body, Controller, Get, HttpCode, Param, Post, Query
+### Community 161 - "Result"
+Cohesion: 0.17
+Nodes (5): mapDomainErrorToHttp(), unwrapResult(), DomainError, DomainErrorKind, Result
 
-### Community 162 - "ProduccionService"
-Cohesion: 0.21
-Nodes (5): etiqueta(), num(), ProduccionService, r2(), Injectable
+### Community 162 - "suscripcion.guard.spec.ts"
+Cohesion: 0.12
+Nodes (13): EXPORTACION_KEY, PERMITIDO_SIN_SUSCRIPCION_KEY, ACTIVO, GRACIA, PLAN_VENCIDO, PRUEBA_VENCIDA, accesoCuenta, ACTIVO (+5 more)
 
-### Community 163 - "DocumentoAcciones.tsx"
-Cohesion: 0.18
-Nodes (17): DocumentosConfig(), error(), Formulario(), ComprobanteVenta(), DocumentoAcciones(), mensajeError(), puedeCompartirArchivos(), sinSuscripcion() (+9 more)
+### Community 163 - "OrdenTrabajoFicha.tsx"
+Cohesion: 0.08
+Nodes (39): Page(), DocumentoAcciones(), mensajeError(), puedeCompartirArchivos(), sinSuscripcion(), usePuedeCompartirArchivos(), CobroDeVenta, ConfigDocumentos (+31 more)
 
-### Community 164 - "devoluciones.service.ts"
-Cohesion: 0.16
-Nodes (9): DevolucionesModule, Module, DEVOLUCIONES_REPOSITORY, MotivoRechazoDevolucion, DevolucionesService, MOTIVO_MENSAJE, fichaBase, itemBase (+1 more)
+### Community 164 - "VentasService"
+Cohesion: 0.12
+Nodes (6): plata(), ConfirmarVentaInput, Inject, Injectable, Optional, VentasService
 
-### Community 165 - "CuentaCorrienteController"
-Cohesion: 0.25
-Nodes (7): CuentaCorrienteController, Body, Controller, Get, HttpCode, Param, Post
+### Community 165 - "RequirePermiso"
+Cohesion: 0.06
+Nodes (32): RequirePermiso(), CuentaCorrienteController, Body, Controller, Get, HttpCode, Param, Post (+24 more)
 
 ### Community 166 - "🔌 Integraciones API, SDK y Widgets para Sitios Web y SPAs Externas"
 Cohesion: 0.14
@@ -1026,37 +1043,41 @@ Nodes (14): Ejemplo de uso para catálogo y venta de productos:, Ejemplo de uso 
 Cohesion: 0.22
 Nodes (11): ref_node_fs, ref_node_stream, ACEPTADOS, COLOR, ORDEN, POSTGRES, contar(), escribirInforme() (+3 more)
 
+### Community 168 - "PedidosRepository"
+Cohesion: 0.10
+Nodes (4): PedidosRepository, Inject, Inject, Optional
+
 ### Community 169 - "TicketService"
-Cohesion: 0.17
-Nodes (7): SoporteModule, Module, CrearTicketDto, TICKET_REPOSITORY, TicketRespuesta, TicketService, Injectable
+Cohesion: 0.16
+Nodes (7): SoporteModule, Module, CrearTicketDto, BannerTicketHome, TICKET_REPOSITORY, TicketService, Injectable
 
 ### Community 170 - "selector-tema.tsx"
-Cohesion: 0.16
-Nodes (9): MuestraPaleta(), DropdownMenu(), DropdownMenuContent(), DropdownMenuGroup(), DropdownMenuLabel(), DropdownMenuRadioGroup(), DropdownMenuRadioItem(), DropdownMenuSeparator() (+1 more)
+Cohesion: 0.18
+Nodes (8): DropdownMenu(), DropdownMenuContent(), DropdownMenuGroup(), DropdownMenuLabel(), DropdownMenuRadioGroup(), DropdownMenuRadioItem(), DropdownMenuSeparator(), DropdownMenuTrigger()
 
-### Community 171 - "prisma-admin-clientes.repository.ts"
-Cohesion: 0.19
-Nodes (10): AdminEmpresaDetalle, AdminEmpresaFila, AlertaEmpresa, alertasEmpresa(), DIAS_SIN_ACTIVIDAD, diasEntre(), base, aFila() (+2 more)
+### Community 171 - "GastoController"
+Cohesion: 0.13
+Nodes (12): GastoController, Body, Controller, Get, HttpCode, Param, Patch, Post (+4 more)
 
 ### Community 172 - "LakeService"
-Cohesion: 0.09
-Nodes (16): adapter, __dirname, prisma, adapter, __dirname, main(), prisma, LakeService (+8 more)
+Cohesion: 0.14
+Nodes (10): main(), LakeController, Controller, LakeService, Injectable, CategoriaInsight, IngestarEventoInput, InsightOculto (+2 more)
 
-### Community 173 - "use-alianzas.ts"
-Cohesion: 0.04
-Nodes (75): AlianzasVista(), nombreMes(), CamaraFichaVista(), ClientesCamara(), resumenCliente(), CobrarCuota(), CuotasClientePanel(), CuotasVencidasPanel() (+67 more)
+### Community 173 - "formatoPesos"
+Cohesion: 0.03
+Nodes (116): AlianzasVista(), nombreMes(), CamaraFichaVista(), ClientesCamara(), resumenCliente(), CobrarCuota(), CuotasClientePanel(), CuotasVencidasPanel() (+108 more)
 
 ### Community 174 - "CacheLecturasService"
 Cohesion: 0.17
 Nodes (6): CacheLecturasInterceptor, CacheLecturasService, CacheLecturasModule, Global, Module, Injectable
 
-### Community 175 - "MercadoPagoController"
-Cohesion: 0.19
-Nodes (8): MercadoPagoController, Body, Controller, Get, Headers, HttpCode, Post, Query
+### Community 175 - "UbicacionesService"
+Cohesion: 0.16
+Nodes (11): Body, Controller, Delete, Param, Patch, Post, UbicacionesController, GuardarUbicacionInput (+3 more)
 
 ### Community 176 - "pedidos.controller.ts"
-Cohesion: 0.09
-Nodes (19): AsignarPedidoInput, asignarPedidoSchema, CrearPedidoInput, crearPedidoSchema, FechaComprometidaInput, fechaComprometidaSchema, GuardarPreparacionItemInput, guardarPreparacionItemSchema (+11 more)
+Cohesion: 0.08
+Nodes (25): PedidosController, Body, Controller, Get, Param, Patch, Post, Query (+17 more)
 
 ### Community 177 - "precios-masivos.service.ts"
 Cohesion: 0.24
@@ -1094,37 +1115,41 @@ Nodes (9): sqlJson(), textoComoStream(), CHEQUEOS, integridadBitacora(), vencimi
 Cohesion: 0.13
 Nodes (14): API_URL_PUBLICA, APP_URL_PUBLICA, ARCA_CERTIFICADO, ARCA_CLAVE, ARCA_CUIT, CLAVE_CIFRADO, CORS_ORIGINS, DATABASE_URL (+6 more)
 
-### Community 187 - "Result"
-Cohesion: 0.06
-Nodes (24): mapDomainErrorToHttp(), unwrapResult(), DomainError, DomainErrorKind, Result, DatabaseModule, Global, Module (+16 more)
+### Community 187 - "copilot-ia.controller.ts"
+Cohesion: 0.11
+Nodes (14): CopilotIaController, Body, Controller, Get, Post, CopilotIaModule, Module, CopilotIaService (+6 more)
 
 ### Community 188 - "tienda.controller.ts"
 Cohesion: 0.16
 Nodes (14): ReservaOnlineInput, fecha, libresSchema, reservaSchema, CotizarEnvioTiendaInput, cotizarEnvioTiendaSchema, crearPedidoTiendaSchema, itemPedidoTiendaSchema (+6 more)
+
+### Community 189 - "ArchivoService"
+Cohesion: 0.22
+Nodes (4): ArchivoService, dmy(), fecha(), Injectable
 
 ### Community 190 - "prisma-ticket.repository.ts"
 Cohesion: 0.25
 Nodes (6): toFila(), CrearTicketInput, TicketFila, TicketFilaAdmin, formatoNumeroTicket(), tieneRespuestaAdminNoLeida()
 
 ### Community 191 - "PrismaTicketRepository"
-Cohesion: 0.21
-Nodes (5): PrismaTicketRepository, toRespuesta(), Injectable, EstadoTicket, ResultadoTicket
+Cohesion: 0.26
+Nodes (3): PrismaTicketRepository, Injectable, TicketFicha
 
-### Community 192 - "OrdenesCompraController"
-Cohesion: 0.33
-Nodes (6): OrdenesCompraController, Body, Controller, Param, Patch, Post
+### Community 192 - "productos-import.util.ts"
+Cohesion: 0.27
+Nodes (13): celdaEsNumero(), claveColumna(), claveNombre(), enteroCelda(), numeroCelda(), pad2(), parseFechaCelda(), textoCelda() (+5 more)
 
 ### Community 193 - "costo-promedio.ts"
 Cohesion: 0.44
 Nodes (9): agruparEntradas(), aplicarCostoPromedio(), costoPromedioPonderado(), costoUnitarioConAdicionales(), EntradaCosto, redondear(), revertirCostoPromedio(), revertirCostoPromedioEntradas() (+1 more)
 
 ### Community 194 - "(dashboard)/layout.tsx"
-Cohesion: 0.18
-Nodes (11): EmpresaSwitcher(), Evento, nombreDelClic(), RastreoUso(), rutaSinIds(), sesionId(), sinSuscripcion(), SoloCliente() (+3 more)
+Cohesion: 0.15
+Nodes (14): AvisoCuenta(), diaAnterior(), fechaCorta(), EmpresaSwitcher(), Evento, nombreDelClic(), RastreoUso(), rutaSinIds() (+6 more)
 
-### Community 195 - "planes/planes.ts"
-Cohesion: 0.14
-Nodes (19): EstadoMercadoPago, cicloQueMasAhorra(), SelectorCiclo(), Ciclo, CICLOS, def(), ESTADOS_SUSCRIPCION, limite() (+11 more)
+### Community 195 - "use-precios.ts"
+Cohesion: 0.30
+Nodes (10): EstadoMercadoPago, cicloQueMasAhorra(), SelectorCiclo(), Ciclo, CICLOS, PlanPagoId, Beneficios, CuotasEnCurso (+2 more)
 
 ### Community 196 - "🛒 Manual de Uso: Punto de Venta (POS), Cobros y Facturación ARCA"
 Cohesion: 0.14
@@ -1147,12 +1172,12 @@ Cohesion: 0.18
 Nodes (7): APLICAR, costoPromedioPonderado(), costoUnitarioConAdicionales(), db, EMPRESA, redondear(), SUPABASE_URL
 
 ### Community 201 - "tienda/app/layout.tsx"
-Cohesion: 0.20
-Nodes (9): apps_tienda_app_globals, cormorant, generateMetadata(), inter, montserrat, nunito, playfair, AppShell() (+1 more)
+Cohesion: 0.12
+Nodes (19): apps_tienda_app_globals, cormorant, generateMetadata(), inter, montserrat, nunito, playfair, RootLayout() (+11 more)
 
 ### Community 203 - "ticket.repository.ts"
-Cohesion: 0.22
-Nodes (11): cambiarEstadoTicketSchema, categoriaValues, crearTicketSchema, estadoValues, prioridadValues, responderTicketSchema, CATEGORIAS_TICKET, CategoriaTicket (+3 more)
+Cohesion: 0.17
+Nodes (12): cambiarEstadoTicketSchema, categoriaValues, crearTicketSchema, estadoValues, prioridadValues, responderTicketSchema, CATEGORIAS_TICKET, CategoriaTicket (+4 more)
 
 ### Community 204 - "💳 Manual de Uso: Centro de Cobros y Pasarelas de Pago"
 Cohesion: 0.18
@@ -1191,12 +1216,16 @@ Cohesion: 0.17
 Nodes (8): APLICAR, db, DESDE, EMPRESA, fin, HASTA, inicio, SUPABASE_URL
 
 ### Community 213 - "RadarPreciosController"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (6): RadarPreciosController, Body, Controller, Get, Param, Post
 
-### Community 216 - "inventario.util.ts"
-Cohesion: 0.43
-Nodes (6): deltaStockKardex(), estadoLote, signoDeAjuste(), sumarDiasIso(), TipoAjuste, TIPOS_AJUSTE
+### Community 214 - "exportar-datos.repository.ts"
+Cohesion: 0.22
+Nodes (9): ExportCompraCabecera, ExportCompraItem, ExportGasto, ExportMovimientoInventario, ExportProducto, ExportVentaCabecera, ExportVentaItem, PrismaExportarDatosRepository (+1 more)
+
+### Community 216 - "PreciosVista.tsx"
+Cohesion: 0.25
+Nodes (13): conAumento(), dia(), mesCorto(), NuevoAumento(), pesos(), PreciosVista(), Programados(), PlanPago (+5 more)
 
 ### Community 217 - "web/package.json"
 Cohesion: 0.17
@@ -1206,9 +1235,9 @@ Nodes (11): name, packageManager, private, scripts, build, dev, lint, start (+3 
 Cohesion: 0.17
 Nodes (11): background_color, description, display, icons, name, orientation, permissions, short_name (+3 more)
 
-### Community 219 - "BienvenidaForm"
-Cohesion: 0.21
-Nodes (7): BienvenidaForm(), enviar(), validar(), sinCambios(), codigoGuardado(), GuardarCodigoDelLink(), olvidarCodigo()
+### Community 219 - "MovimientosController"
+Cohesion: 0.25
+Nodes (7): MovimientosController, Body, Controller, Get, Param, Post, Query
 
 ### Community 220 - "🤖 Manual de Uso: Copilot IA - Asistente Estratégico de Negocio"
 Cohesion: 0.17
@@ -1234,9 +1263,9 @@ Nodes (12): 1. Editor de Fórmulas y Recetas (BOM), ⚙️ Backend (Servicio y A
 Cohesion: 0.17
 Nodes (12): ⚙️ Backend (Servicio y API), Caso 1: Detección de Productos Más Rentables vs. Menos Rentables, Caso 2: Control Preventivo del Semáforo de Monotributo, Caso 3: Carga de Gastos Fijos (Alquiler, Servicios, Sueldos), 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Indicadores y Paneles, 📈 Manual de Uso: Analytics Comercial, Rentabilidad y Monotributo (+4 more)
 
-### Community 226 - "Maquetas.tsx"
-Cohesion: 0.25
-Nodes (4): BARRAS, MaquetaDestacada(), MaquetaInicio(), MaquetaVentaCelular()
+### Community 226 - "PrismaSuscripcionRepository"
+Cohesion: 0.21
+Nodes (5): hoyAR(), masDias(), PrismaSuscripcionRepository, Injectable, ResultadoAdmin
 
 ### Community 227 - "app.controller.ts"
 Cohesion: 0.27
@@ -1246,9 +1275,9 @@ Nodes (5): AppController, Controller, Get, AppService, Injectable
 Cohesion: 0.25
 Nodes (8): Caso 1: Escanear un Lote y Ajustar Precios con Margen Regalado, Caso 2: Consultar a Copilot IA sobre Precios Desfasados, 📍 Flujo de Navegación, 🗺️ Flujo de Scraping, Limpieza IQR y Data Lakehouse, 📋 Guía Visual de Componentes y Funciones, 🎯 Manual de Uso: Radar de Precios de Mercado y Benchmark Competitivo, 🔄 Paso a Paso: Casos de Uso Frecuentes, ⚠️ Solución de Problemas y Buenas Prácticas
 
-### Community 229 - ".ejecutar"
-Cohesion: 0.29
-Nodes (5): PreciosMasivosController, Body, Controller, HttpCode, Post
+### Community 229 - ".crear"
+Cohesion: 0.23
+Nodes (8): DisponiblesQuery, LotesController, Body, Controller, Get, Param, Post, Query
 
 ### Community 230 - "estados-contables.dto.ts"
 Cohesion: 0.33
@@ -1263,8 +1292,8 @@ Cohesion: 0.17
 Nodes (11): compilerOptions, rootDir, exclude, extends, include, dist, node_modules, src (+3 more)
 
 ### Community 233 - "opengraph-image.tsx"
-Cohesion: 0.20
-Nodes (7): alt, BARRAS, contentType, FUENTES, NEGRITA, SEMI, size
+Cohesion: 0.18
+Nodes (8): alt, BARRAS, contentType, FUENTES, NEGRITA, SEMI, size, DIAS_PRUEBA
 
 ### Community 234 - "medir-pantallas.mjs"
 Cohesion: 0.33
@@ -1307,28 +1336,32 @@ Cohesion: 0.18
 Nodes (11): ⚙️ Backend (Servicio y API), Caso 1: Invitar a un Colega Comerciante por WhatsApp, Caso 2: Aplicación del Descuento en tu Factura, 🗺️ Diagrama del Flujo de Recomendación y Recompensas, 📍 Flujo de Navegación, 🖥️ Frontend (Interfaz de Usuario), 📋 Guía Visual de Campos y Paneles, 🎁 Manual de Uso: Programa de Referidos (Recomendá y Ganá) (+3 more)
 
 ### Community 244 - "prisma-lotes.repository.ts"
-Cohesion: 0.17
-Nodes (9): aFechaSolo(), CrearLoteInput, ResultadoCrearLote, etiquetaVariante(), includeJoins, isoDate(), LoteConJoins, PrismaLotesRepository (+1 more)
+Cohesion: 0.12
+Nodes (10): CrearLoteInput, LotesRepository, ResultadoCrearLote, Inject, etiquetaVariante(), includeJoins, isoDate(), LoteConJoins (+2 more)
 
 ### Community 245 - "limite-pedidos.guard.ts"
 Cohesion: 0.27
 Nodes (5): GENERAL, LimitePedidosGuard, POR_RUTA, quien(), Injectable
 
-### Community 246 - "admin-saas.controller.ts"
-Cohesion: 0.24
-Nodes (8): ListarPagosQuery, listarPagosQuerySchema, periodoYYYYMM, CotizarCobroDto, cotizarCobroSchema, devolverPagoSchema, RegistrarCobroDto, registrarCobroSchema
+### Community 246 - "urlWhatsApp"
+Cohesion: 0.29
+Nodes (7): WhatsAppFlotante(), ConfirmacionPedido(), leerUltimoPedido(), parsearUltimoPedido(), sinSuscripcion(), Footer(), urlWhatsApp()
 
-### Community 248 - "features/variantes README"
-Cohesion: 0.83
-Nodes (4): features/variantes README, CU-005 Desactivar variante sin perder historial, HU-003 Producto con variantes, Tabla producto_variantes
+### Community 247 - "probar-datalake.ts"
+Cohesion: 0.20
+Nodes (8): adapter, __dirname, prisma, adapter, __dirname, prisma, ref_dotenv, ref_node_url
+
+### Community 248 - "suscripcion.util.ts"
+Cohesion: 0.31
+Nodes (5): SuscripcionGuard, Injectable, diasRestantes(), estaEnTrial(), trialVencido()
 
 ### Community 249 - "providers.tsx"
 Cohesion: 0.19
 Nodes (8): Providers(), ThemeProvider(), Toaster(), Tooltip(), TooltipContent(), TooltipProvider(), TooltipTrigger(), ApiError
 
-### Community 253 - "AdminSaasService"
-Cohesion: 0.20
-Nodes (6): AdminTablaTamano, AdminSaasService, Inject, Injectable, PrismaAdminClientesRepository, Injectable
+### Community 253 - "PrismaService"
+Cohesion: 0.08
+Nodes (11): Env, envSchema, obligatorias, validateEnv(), PrismaService, Injectable, ClerkCuentasService, Injectable (+3 more)
 
 ### Community 256 - "backup-nube.sh"
 Cohesion: 0.25
@@ -1355,8 +1388,8 @@ Cohesion: 0.29
 Nodes (6): env, node, rules, @typescript-eslint/no-explicit-any, @typescript-eslint/no-floating-promises, $schema
 
 ### Community 268 - "src/app/page.tsx"
-Cohesion: 0.60
-Nodes (3): Home(), metadata, preciosVigentes()
+Cohesion: 0.38
+Nodes (5): Home(), metadata, PRECIO_MENSUAL, PreciosLista, preciosVigentes()
 
 ### Community 271 - "nest-cli.json"
 Cohesion: 0.33
@@ -1374,9 +1407,21 @@ Nodes (3): APLICAR, db, empresa
 Cohesion: 0.33
 Nodes (3): db, email, empresaId
 
+### Community 276 - "inflacion.controller.ts"
+Cohesion: 0.24
+Nodes (7): InflacionController, Controller, Get, Query, fechaIso, InflacionQuery, inflacionQuerySchema
+
 ### Community 280 - "recorrido-tienda.mjs"
 Cohesion: 0.40
 Nodes (5): ref_node_child_process, [carpeta, subArg, emailArg, cupon = ''], foto(), paso(), problemas
+
+### Community 281 - "admin-suscripcion.controller.ts"
+Cohesion: 0.29
+Nodes (9): AsignarSuscripcionDto, asignarSuscripcionSchema, CambiarEstadoSuscripcionDto, cambiarEstadoSuscripcionSchema, estadoValues, fechaIso, MarcarDemoDto, marcarDemoSchema (+1 more)
+
+### Community 283 - "CategoriasService"
+Cohesion: 0.22
+Nodes (5): GuardarCategoriaInput, CategoriasService, desempacar(), Inject, Injectable
 
 ### Community 290 - "proxy.ts"
 Cohesion: 0.29
@@ -1386,25 +1431,49 @@ Nodes (5): apiOrigins, config, dominiosConexion, dominiosImagenes, isPublicRoute
 Cohesion: 0.67
 Nodes (3): CotizacionesModule, Global, Module
 
+### Community 339 - "archivo.module.ts"
+Cohesion: 0.29
+Nodes (4): ArchivoModule, Module, ArchivoProgramador, Injectable
+
+### Community 340 - "TicketRespuesta"
+Cohesion: 0.32
+Nodes (3): toRespuesta(), ResultadoTicket, TicketRespuesta
+
+### Community 342 - "esViolacionUnica"
+Cohesion: 0.40
+Nodes (3): esViolacionUnica(), GuardarListaPrecio, ListaPrecioRecord
+
+### Community 343 - "alianzas.e2e-spec.ts"
+Cohesion: 0.33
+Nodes (3): hoy, mesActual, sufijo
+
+### Community 346 - "suscripcion.e2e-spec.ts"
+Cohesion: 0.40
+Nodes (3): Clave, EMPRESAS, hoy
+
+### Community 347 - "DatabaseModule"
+Cohesion: 0.67
+Nodes (3): DatabaseModule, Global, Module
+
 ## Knowledge Gaps
-- **1581 isolated node(s):** `$schema`, `collection`, `sourceRoot`, `deleteOutDir`, `$schema` (+1576 more)
+- **1582 isolated node(s):** `$schema`, `collection`, `sourceRoot`, `deleteOutDir`, `$schema` (+1577 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **63 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **57 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `PrismaService` connect `PrismaService` to `UsuarioContext`, `analytics.util.ts`, `prisma-estados-contables.repository.ts`, `objetivos.service.ts`, `prisma-movimientos.repository.ts`, `mp-tienda.service.ts`, `gasto.repository.ts`, `abonos.service.ts`, `insights.util.ts`, `prisma-devoluciones.repository.ts`, `contabilidad.service.ts`, `proveedores.service.ts`, `fechaHoyAR`, `Env`, `documentos.service.ts`, `alianzas.util.ts`, `envios.service.ts`, `alianzas-admin.service.ts`, `presupuestos.service.ts`, `usuarios.module.ts`, `CotizacionesService`, `prisma-ventas.repository.ts`, `registro.service.ts`, `productos.module.ts`, `rol.types.ts`, `analytics.module.ts`, `compras.module.ts`, `AccesoCuentaService`, `pasarelas-coordinador.service.ts`, `prisma-ubicaciones.repository.ts`, `prisma-clientes.repository.ts`, `produccion.service.ts`, `cuentas-tienda.ts`, `uso.service.ts`, `prisma-variantes.repository.ts`, `esViolacionUnica`, `archivo.controller.ts`, `combos.service.ts`, `cotizaciones.service.ts`, `ordenes-trabajo.service.ts`, `categorizar-productos.ts`, `DescuentosTiendaService`, `atributos.service.ts`, `monotributo.service.ts`, `descuentos-admin.ts`, `vencimientos.service.ts`, `agenda-online.service.ts`, `clientes.controller.ts`, `prisma-productos.repository.ts`, `prisma-ordenes-compra.repository.ts`, `informes.util.ts`, `pedidos.repository.ts`, `tienda-admin.service.ts`, `bajas.service.ts`, `arca.util.ts`, `ArmadoresComprasPedidos`, `PasarelaAdapter`, `MpTiendaCliente`, `libro-diario.service.ts`, `auditoria.util.ts`, `auditoria.service.ts`, `import-export.module.ts`, `notificaciones.module.ts`, `contexto-auditoria.ts`, `admin-saas.service.ts`, `AgendaService`, `comisiones.service.ts`, `AgendaOnlineService`, `fechaLocalAR`, `movimientos-generales.service.ts`, `prisma-tienda.repository.ts`, `AlmacenArchivosService`, `kardex.service.ts`, `RadarPreciosService`, `ProduccionService`, `prisma-admin-clientes.repository.ts`, `LakeService`, `CacheLecturasService`, `precios-masivos.service.ts`, `Result`, `prisma-ticket.repository.ts`, `PrismaTicketRepository`, `AdminAvisosController`, `prisma-lotes.repository.ts`, `AdminSaasService`, `AdminAccesoController`?**
-  _High betweenness centrality (0.122) - this node is a cross-community bridge._
-- **Why does `registrar()` connect `uso.service.ts` to `formatoPesos`, `ref_lucide_react`?**
-  _High betweenness centrality (0.111) - this node is a cross-community bridge._
+- **Why does `n()` connect `uso.service.ts` to `formato.ts`, `ConfiguracionVista.tsx`?**
+  _High betweenness centrality (0.150) - this node is a cross-community bridge._
+- **Why does `PrismaService` connect `PrismaService` to `UsuarioContext`, `prisma.service.ts`, `prisma-estados-contables.repository.ts`, `prisma-movimientos.repository.ts`, `mp-tienda.service.ts`, `contabilidad.module.ts`, `abonos.service.ts`, `prisma-devoluciones.repository.ts`, `proveedores.service.ts`, `precios-plan.service.ts`, `mercadopago.service.ts`, `documentos.service.ts`, `fechaHoyAR`, `envios.service.ts`, `AlianzasAdminService`, `presupuestos.service.ts`, `usuarios.repository.ts`, `rendimiento.service.ts`, `prisma-ventas.repository.ts`, `registro.service.ts`, `productos.module.ts`, `rol.types.ts`, `inflacion.util.ts`, `compras.module.ts`, `AccesoCuentaService`, `prisma-ubicaciones.repository.ts`, `prisma-clientes.repository.ts`, `produccion.service.ts`, `cuentas-tienda.ts`, `uso.service.ts`, `cotizaciones.service.ts`, `prisma-variantes.repository.ts`, `categorias.service.ts`, `archivo.controller.ts`, `analytics.module.ts`, `Conversor`, `configuracion.controller.ts`, `categorizar-productos.ts`, `DescuentosTiendaService`, `variantes.module.ts`, `InsightsRepository`, `monotributo.service.ts`, `vencimientos.service.ts`, `agenda-online.service.ts`, `clientes.controller.ts`, `prisma-productos.repository.ts`, `prisma-ordenes-compra.repository.ts`, `informes.util.ts`, `pedidos.repository.ts`, `objetivos.service.ts`, `tienda-admin.service.ts`, `bajas.service.ts`, `arca.util.ts`, `documentos.module.ts`, `pasarelas-coordinador.service.ts`, `libro-diario.service.ts`, `auditoria.util.ts`, `AuditoriaService`, `import-export.module.ts`, `notificaciones.module.ts`, `ordenes-trabajo.controller.ts`, `GastoRepository`, `admin-saas.service.ts`, `AgendaService`, `comisiones.service.ts`, `fechaLocalAR`, `alianzas.module.ts`, `CurrentUser`, `movimientos-generales.service.ts`, `prisma-tienda.repository.ts`, `kardex.service.ts`, `RadarPreciosService`, `VentasService`, `LakeService`, `CacheLecturasService`, `precios-masivos.service.ts`, `copilot-ia.controller.ts`, `prisma-ticket.repository.ts`, `PrismaTicketRepository`, `exportar-datos.repository.ts`, `PrismaSuscripcionRepository`, `AdminAvisosController`, `prisma-lotes.repository.ts`, `esViolacionUnica`?**
+  _High betweenness centrality (0.117) - this node is a cross-community bridge._
+- **Why does `registrar()` connect `ConfiguracionVista.tsx` to `formatoPesos`, `uso.service.ts`?**
+  _High betweenness centrality (0.112) - this node is a cross-community bridge._
 - **What connects `$schema`, `collection`, `sourceRoot` to the rest of the system?**
-  _1581 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `VentasPeriodo.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.020401323781994888 - nodes in this community are weakly interconnected._
+  _1582 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `formato.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.03746442633815446 - nodes in this community are weakly interconnected._
+- **Should `RecetaEditor.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.0636734693877551 - nodes in this community are weakly interconnected._
 - **Should `ref_react` be split into smaller, more focused modules?**
-  _Cohesion score 0.06428363847718686 - nodes in this community are weakly interconnected._
-- **Should `input.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.035507985049269455 - nodes in this community are weakly interconnected._
-- **Should `ConfiguracionVista.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.03300058719906048 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02861111111111111 - nodes in this community are weakly interconnected._

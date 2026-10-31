@@ -1,21 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { CartesianGrid, Line, LineChart, PolarAngleAxis, PolarGrid, Radar, RadarChart, XAxis, YAxis } from "recharts";
+import { PolarAngleAxis, PolarGrid, Radar, RadarChart } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
-import { formatoMoneda } from "@/lib/formato";
-import { etiquetaFecha, hoyAR } from "@/lib/periodos";
+import { hoyAR } from "@/lib/periodos";
 import { useInsights } from "../hooks/use-analytics";
 import { InsightsMercado } from "./InsightsMercado";
+import { PronosticoCard } from "./PronosticoCard";
 
 const GRAFICO_SALUD = { valor: { label: "Puntaje", color: "var(--chart-1)" } } satisfies ChartConfig;
-const GRAFICO_PRONOSTICO = {
-  historico: { label: "Real", color: "var(--chart-1)" },
-  proyeccion: { label: "Proyección", color: "var(--chart-3)" },
-} satisfies ChartConfig;
 
 const BADGE: Record<string, { etiqueta: string; clase: string }> = {
   inelastica: { etiqueta: "Poco sensible al precio", clase: "bg-emerald-500/15 text-emerald-600" },
@@ -23,7 +18,6 @@ const BADGE: Record<string, { etiqueta: string; clase: string }> = {
   elastica: { etiqueta: "Muy sensible al precio", clase: "bg-red-500/15 text-red-600" },
   otros_factores: { etiqueta: "Otros factores", clase: "bg-muted text-muted-foreground" },
 };
-const TENDENCIA = { positiva: "📈 en alza", negativa: "📉 en baja", neutra: "➡️ estable" } as const;
 
 export function InsightsVista() {
   const [pronostico, setPronostico] = useState<"semana" | "mes">("semana");
@@ -66,39 +60,12 @@ export function InsightsVista() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <CardTitle>Pronóstico de ventas {data.forecast ? TENDENCIA[data.forecast.tendencia] : ""}</CardTitle>
-                  <div className="flex gap-1" role="group" aria-label="Pronóstico por">
-                    {(["semana", "mes"] as const).map((g) => (
-                      <Button key={g} size="xs" variant={pronostico === g ? "secondary" : "ghost"} aria-pressed={pronostico === g} onClick={() => setPronostico(g)}>
-                        {g === "semana" ? "Semanal" : "Mensual"}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                <CardDescription>
-                  {data.forecast
-                    ? `${data.forecast.etiquetaProyeccion}: ${formatoMoneda(data.forecast.totalProyeccion)} (tendencia de ${pronostico === "semana" ? "las últimas semanas completas" : "los últimos meses completos"})`
-                    : (data.errores.forecast ?? "Hacen falta al menos 30 días de ventas para proyectar.")}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-64">
-                {data.forecast && (
-                  <ChartContainer config={GRAFICO_PRONOSTICO} className="aspect-auto h-full w-full">
-                    <LineChart data={data.forecast.puntos} margin={{ left: 8, right: 8 }}>
-                      <CartesianGrid vertical={false} />
-                      <XAxis dataKey="clave" tickFormatter={etiquetaFecha} tickLine={false} axisLine={false} fontSize={12} />
-                      <YAxis tickFormatter={(v: number) => formatoMoneda(v)} tickLine={false} axisLine={false} fontSize={12} width={80} />
-                      <ChartTooltip content={<ChartTooltipContent valueFormatter={(v) => formatoMoneda(Number(v))} labelFormatter={(l) => (pronostico === "semana" ? `Semana del ${etiquetaFecha(String(l))}` : etiquetaFecha(String(l).slice(0, 7)))} />} />
-                      <Line dataKey="historico" stroke="var(--color-historico)" strokeWidth={2} dot={false} connectNulls={false} />
-                      <Line dataKey="proyeccion" stroke="var(--color-proyeccion)" strokeDasharray="5 5" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ChartContainer>
-                )}
-              </CardContent>
-            </Card>
+            <PronosticoCard
+              forecast={data.forecast}
+              pronostico={pronostico}
+              onPronostico={setPronostico}
+              error={data.errores.forecast}
+            />
           </div>
 
           <Card>

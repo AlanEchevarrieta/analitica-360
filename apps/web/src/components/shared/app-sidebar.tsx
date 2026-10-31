@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { useOrganization, UserButton } from "@clerk/nextjs";
 import { SoloCliente } from "@/components/shared/solo-cliente";
 import { useAcceso } from "@/hooks/use-acceso";
+import { Logo } from "@/features/sitio/components/Logo";
 import {
   BarChart3,
   BookOpen,
@@ -165,9 +166,15 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="print:hidden">
       <SidebarHeader>
-        <div className="flex flex-col gap-0.5 overflow-hidden px-2 py-1.5 group-data-[collapsible=icon]:hidden">
-          <span className="text-sm font-semibold">Analítica 360</span>
-          <span className="truncate text-xs text-muted-foreground">{organization?.name ?? ""}</span>
+        <div className="flex items-center gap-2.5 overflow-hidden px-2 py-1.5">
+          <Logo conNombre={false} className="size-7 shrink-0" />
+          <div className="flex flex-col gap-0.5 overflow-hidden group-data-[collapsible=icon]:hidden">
+            <span className="text-sm font-semibold tracking-tight">
+              <span className="text-cyan-600 dark:text-cyan-400">Analítica</span>{" "}
+              <span className="text-sky-600 dark:text-sky-400">360</span>
+            </span>
+            <span className="truncate text-xs text-muted-foreground">{organization?.name ?? ""}</span>
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent className="gap-0">
