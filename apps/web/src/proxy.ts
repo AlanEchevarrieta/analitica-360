@@ -10,6 +10,8 @@ const isPublicRoute = createRouteMatcher([
   "/privacidad",
   "/robots.txt",
   "/sitemap.xml",
+  "/manifest.json",
+  "/sw.js",
   // Imagen para compartir el link (la piden WhatsApp y las redes, sin sesión).
   "/opengraph-image(.*)",
   // Estas dos validan la sesión en la propia página: con la sesión "pendiente"

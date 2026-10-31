@@ -22,6 +22,21 @@ export function Providers({ children, nonce }: { children: React.ReactNode; nonc
       }),
   );
 
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      const registrar = () => {
+        navigator.serviceWorker.register("/sw.js").catch((err) => {
+          console.debug("PWA service worker:", err);
+        });
+      };
+      if (document.readyState === "complete") {
+        registrar();
+      } else {
+        window.addEventListener("load", registrar, { once: true });
+      }
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange nonce={nonce}>
