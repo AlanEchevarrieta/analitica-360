@@ -40,19 +40,33 @@ export default async function Image() {
         {/* Texto */}
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", width: 640 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <svg width="56" height="56" viewBox="0 0 32 32">
+            <svg width="56" height="56" viewBox="0 0 120 120" fill="none">
               <defs>
-                <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stopColor="#6366f1" />
-                  <stop offset="1" stopColor="#8b5cf6" />
+                <linearGradient id="og-ring" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#00e5c9" />
+                  <stop offset="60%" stopColor="#00d2b4" />
+                  <stop offset="85%" stopColor="#0ea5e9" />
+                  <stop offset="100%" stopColor="#2563eb" />
+                </linearGradient>
+                <linearGradient id="og-apex" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#00e5c9" />
+                  <stop offset="100%" stopColor="#00d2b4" />
+                </linearGradient>
+                <linearGradient id="og-left" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#00e5c9" />
+                  <stop offset="100%" stopColor="#00b4d8" />
+                </linearGradient>
+                <linearGradient id="og-right" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#00d2b4" />
+                  <stop offset="60%" stopColor="#0ea5e9" />
+                  <stop offset="100%" stopColor="#2563eb" />
                 </linearGradient>
               </defs>
-              <rect width="32" height="32" rx="9" fill="url(#g)" />
-              <circle cx="16" cy="16" r="9" fill="none" stroke="#fff" strokeOpacity=".35" strokeWidth="2.5" />
-              <path d="M16 7a9 9 0 0 1 8.6 6.3" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-              <rect x="11" y="16" width="2.6" height="5" rx="1" fill="#fff" />
-              <rect x="14.7" y="13.5" width="2.6" height="7.5" rx="1" fill="#fff" />
-              <rect x="18.4" y="11" width="2.6" height="10" rx="1" fill="#fff" />
+              <path d="M 20,54 A 42 14.5 0 0 1 100,54" stroke="url(#og-ring)" strokeWidth="12" strokeLinecap="round" />
+              <path d="M 43,51 L 60,18 C 60.5,17 61.5,17 62,18 L 79,51" stroke="url(#og-apex)" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M 42,56 L 31,84" stroke="url(#og-left)" strokeWidth="12" strokeLinecap="round" />
+              <path d="M 78,56 L 89,84" stroke="url(#og-right)" strokeWidth="12" strokeLinecap="round" />
+              <path d="M 20,54 A 42 14.5 0 0 0 100,54" stroke="url(#og-ring)" strokeWidth="12" strokeLinecap="round" />
             </svg>
             <span style={{ ...NEGRITA, fontSize: 34, letterSpacing: -0.5 }}>Analítica 360</span>
           </div>

@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITIO_URL ?? "https://analitica360.app"),
   title: "Analítica 360",
   description: "Gestión comercial: stock, ventas, compras, clientes y analytics.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/icon-192.png",
+  },
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {

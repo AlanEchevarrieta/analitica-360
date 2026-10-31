@@ -59,11 +59,15 @@ export function Sitio({ precios }: { precios?: PreciosLista }) {
           <div className="pointer-events-none absolute inset-x-0 -top-40 -z-0 h-[36rem] bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)]" aria-hidden />
           <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pt-14 pb-16 sm:px-6 lg:grid-cols-[1fr_1.15fr] lg:pt-20 lg:pb-24">
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
-                <BadgeCheck className="size-3.5" /> Beneficio especial para socios de la UCIM
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3.5 py-1 text-xs font-semibold text-cyan-800 shadow-xs">
+                <Logo conNombre={false} className="size-4 shrink-0" />
+                <span>Analítica 360 · Plataforma de Gestión Comercial</span>
+              </div>
+              <p className="flex items-center gap-2 text-xs font-medium text-slate-500 mb-3">
+                <BadgeCheck className="size-4 text-emerald-600 shrink-0" /> Beneficio especial para socios de la UCIM
               </p>
-              <h1 className="mt-5 text-4xl font-bold tracking-tight text-balance text-slate-900 sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]">
-                Todo tu comercio, <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">en un solo lugar</span>
+              <h1 className="mt-2 text-4xl font-bold tracking-tight text-balance text-slate-900 sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]">
+                Todo tu comercio, <span className="bg-gradient-to-r from-cyan-500 via-teal-500 to-sky-600 bg-clip-text text-transparent">en un solo lugar</span>
               </h1>
               <p className="mt-5 max-w-xl text-lg text-pretty text-slate-600">
                 Ventas, stock, compras, clientes, números claros y tu tienda online, conectados entre sí. Desde la compu o el celular, pensado para comercios argentinos.
