@@ -153,6 +153,8 @@ graph TD
     - Definición de siglas y conceptos clave (CAE, SKU, BOM, Kardex, etc.) y resolución rápida de dudas.
 28. **[[28 - Integraciones API, SDK y Widgets para Sitios Externos]]**
     - Conexión de sitios web existentes, WordPress, Wix o SPAs a medida con el widget de turnos embebible y el SDK TypeScript oficial.
+29. **[[29 - Consola Superadmin y Control de Módulos por Usuario]]**
+    - Arquitectura de autorización en dos niveles: asignación de planes y vigencia por Superadmin en `/admin`, y alta/baja de módulos y acciones por colaborador en `/configuracion`.
 
 ---
 
