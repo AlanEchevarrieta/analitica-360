@@ -9,7 +9,12 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "dev:api": "pnpm --filter api dev",
+    "dev:web": "pnpm --filter web dev",
     "build": "turbo run build",
+    "build:api": "pnpm --filter api build",
+    "build:web": "NODE_OPTIONS='--max-old-space-size=2048' pnpm --filter web build",
+    "build:prod": "pnpm build:api && pnpm build:web",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
