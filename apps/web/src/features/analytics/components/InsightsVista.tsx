@@ -5,6 +5,7 @@ import { PolarAngleAxis, PolarGrid, Radar, RadarChart } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
+import { formatoMoneda } from "@/lib/formato";
 import { hoyAR } from "@/lib/periodos";
 import { useInsights } from "../hooks/use-analytics";
 import { InsightsMercado } from "./InsightsMercado";
