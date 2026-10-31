@@ -269,6 +269,61 @@ export class DocumentosService {
     return { url, vence, mensaje, telefono, whatsapp: `https://wa.me/${telefono ?? ''}?text=${encodeURIComponent(mensaje)}` };
   }
 
+  /** Datos estructurados del ticket térmico / digital (para modal en POS e impresión). */
+  async ticket(empresaId: string, tipo: TipoDocumento, id: string) {
+    const armador = this.armadores.get(tipo);
+    if (!armador) throw new NotFoundException('Tipo de documento desconocido');
+    const [datos, cabecera] = await Promise.all([armador(empresaId, id), this.negocio(empresaId)]);
+    const vence = new Date(Date.parse(`${fechaHoyAR()}T00:00:00Z`) + DIAS_LINK * 86_400_000).toISOString().slice(0, 10);
+    const token = tokenDocumento(this.secreto(), empresaId, tipo, id, vence);
+    const urlDigital = `${this.urlWeb()}/ticket/${token}`;
+    const totalFormateado = `${cabecera.simbolo} ${datos.totalNumero.toLocaleString('es-AR', { maximumFractionDigits: 2 })}`;
+    const mensaje = mensajeWhatsApp({
+      tipo,
+      numero: datos.numero,
+      cliente: datos.cliente?.nombre ?? null,
+      negocio: cabecera.negocio.nombre,
+      total: totalFormateado,
+      url: urlDigital,
+    });
+    const tel = telefonoWhatsApp(datos.cliente?.telefono);
+    const whatsappUrl = `https://wa.me/${tel ?? ''}?text=${encodeURIComponent(mensaje)}`;
+
+    return {
+      id,
+      tipo,
+      numero: datos.numero,
+      fecha: datos.fecha,
+      negocio: {
+        nombre: cabecera.negocio.nombre,
+        cuit: cabecera.negocio.cuit,
+        direccion: cabecera.negocio.direccion,
+        telefono: cabecera.negocio.telefono,
+        email: cabecera.negocio.email,
+        logoUrl: cabecera.negocio.logo ? `data:image/png;base64,${cabecera.negocio.logo.toString('base64')}` : null,
+      },
+      pie: cabecera.pie,
+      cliente: datos.cliente,
+      items: datos.items,
+      resumen: datos.resumen,
+      detalles: datos.detalles,
+      total: datos.totalNumero,
+      simbolo: cabecera.simbolo,
+      token,
+      linkPublico: urlDigital,
+      telefonoCliente: tel,
+      mensajeWhatsApp: mensaje,
+      whatsappUrl,
+    };
+  }
+
+  /** Ticket digital público para consultar desde WhatsApp con el token. */
+  async ticketPublico(token: string) {
+    const t = leerTokenDocumento(this.secreto(), token, fechaHoyAR());
+    if (!t) throw new NotFoundException('El link no es válido o ya venció.');
+    return this.ticket(t.empresaId, t.tipo, t.id);
+  }
+
   /** PDF desde el link público (sin sesión). */
   async publico(token: string): Promise<DocumentoArmado> {
     const t = leerTokenDocumento(this.secreto(), token, fechaHoyAR());
@@ -314,5 +369,9 @@ export class DocumentosService {
 
   private urlApi() {
     return (this.env.get('API_URL_PUBLICA', { infer: true }) ?? `http://localhost:${this.env.get('PORT', { infer: true })}`).replace(/\/$/, '');
+  }
+
+  private urlWeb() {
+    return (this.env.get('APP_URL_PUBLICA', { infer: true }) ?? 'https://analitica360.app').replace(/\/$/, '');
   }
 }

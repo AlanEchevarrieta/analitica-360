@@ -113,6 +113,8 @@ graph TD
     - Recepción de equipos, diagnóstico de falla, asignación de repuestos, estados de orden y entrega con cobro.
 11. **[[27 - Centro de Cobros y Pasarelas de Pago (Mercado Pago, Ualá y Stripe)]]**
     - Panel unificado de cobros digitales, generación instantánea de links y QR para WhatsApp o mostrador, configuración de pasarelas y auditoría de comisiones.
+12. **[[30 - Emisión de Tickets Térmicos y Comprobantes Digitales por WhatsApp]]**
+    - Modal automático post-venta, impresión térmica comanderas 80mm/58mm, envío directo por WhatsApp con token seguro HMAC y visor digital público sin login.
 
 ### 📦 3. Catálogo, Stock y Compras
 11. **[[11 - Catálogo de Productos, Servicios y Variantes]]**

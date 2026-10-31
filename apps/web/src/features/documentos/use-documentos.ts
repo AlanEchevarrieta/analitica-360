@@ -32,6 +32,54 @@ export interface CobroDeVenta {
   recibo: string | null;
 }
 
+export interface DatosTicket {
+  id: string;
+  tipo: TipoDocumento;
+  numero: string;
+  fecha: string;
+  negocio: {
+    nombre: string;
+    cuit: string | null;
+    direccion: string | null;
+    telefono: string | null;
+    email: string | null;
+    logoUrl: string | null;
+  };
+  pie: string | null;
+  cliente: {
+    nombre: string | null;
+    telefono: string | null;
+    email: string | null;
+  } | null;
+  items: Array<{
+    descripcion: string;
+    cantidad: number;
+    precio: number;
+  }>;
+  resumen: Array<{
+    etiqueta: string;
+    monto: number;
+  }>;
+  detalles: string[];
+  total: number;
+  simbolo: string;
+  token: string;
+  linkPublico: string;
+  telefonoCliente: string | null;
+  mensajeWhatsApp: string;
+  whatsappUrl: string;
+}
+
+export function useTicket(tipo: TipoDocumento, id: string | null) {
+  const api = useApiFetch();
+  const { orgId } = useAuth();
+  return useQuery({
+    queryKey: ["documentos", "ticket", tipo, id, orgId],
+    queryFn: () => api<DatosTicket>(`/documentos/ticket/${tipo}/${id}`),
+    enabled: Boolean(orgId && id),
+  });
+}
+
 export function useConfigDocumentos() {
   const api = useApiFetch();
   const { orgId } = useAuth();

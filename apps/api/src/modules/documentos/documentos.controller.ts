@@ -60,6 +60,23 @@ export class DocumentosController {
     return new StreamableFile(d.pdf, { type: 'application/pdf', disposition: `inline; filename="${d.archivo}"` });
   }
 
+  /** Datos del ticket térmico / digital para la pantalla de cobro y comandera. */
+  @Get('ticket/:tipo/:id')
+  ticket(
+    @CurrentEmpresa() empresa: EmpresaContext,
+    @Param('tipo', Tipo) tipo: TipoDocumento,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.documentos.ticket(empresa.id, tipo, id);
+  }
+
+  /** Vista pública del ticket digital desde el link de WhatsApp (sin login). */
+  @Get('ticket/ver/:token')
+  @Public()
+  ticketPublico(@Param('token') token: string) {
+    return this.documentos.ticketPublico(String(token).slice(0, 1000));
+  }
+
   @Get('venta/:id/cobros')
   cobrosDeVenta(@CurrentEmpresa() empresa: EmpresaContext, @Param('id', new ParseUUIDPipe()) id: string) {
     return this.documentos.cobrosDeVenta(empresa.id, id);

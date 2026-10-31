@@ -154,3 +154,31 @@
     color: var(--muted-foreground);
   }
 }
+
+/* Impresión térmica optimizada para comandera 80mm/58mm */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .ticket-imprimible,
+  .ticket-imprimible * {
+    visibility: visible;
+  }
+  .ticket-imprimible {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm !important;
+    max-width: 80mm !important;
+    margin: 0 !important;
+    padding: 3mm !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    color: #000000 !important;
+  }
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+}

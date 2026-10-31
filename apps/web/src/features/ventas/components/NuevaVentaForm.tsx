@@ -22,6 +22,7 @@ import { aNumero, calcularTotales, COBRO_INICIAL, CobroVenta, esClienteNuevo, ty
 import { useAccionesPresupuesto, usePresupuesto } from "@/features/presupuestos/use-presupuestos";
 import { useAccionesAgenda, useRecursos, useTurno } from "@/features/agenda/use-agenda";
 import { usePlan } from "@/hooks/use-plan";
+import { ModalTicketPostVenta } from "./ModalTicketPostVenta";
 
 // Medio de pago y ubicación se recuerdan por dispositivo (localStorage): en
 // un stand casi siempre se repiten, así no hay que elegirlos en cada venta.
@@ -83,6 +84,7 @@ export function NuevaVentaForm({ presupuestoId = null, turno: turnoRef = null }:
     ubicacion: eleccion.ubicacion || preferencias.ubicacion || config.data?.ubicacionDefault || "",
   };
   const [error, setError] = useState<string | null>(null);
+  const [ventaParaTicket, setVentaParaTicket] = useState<string | null>(null);
   // Se carga una sola vez, cuando llega el presupuesto: los precios quedan fijos (como se le pasaron al cliente).
   const p = presupuesto.data;
   if (p && cargado !== p.id && p.estado !== "aceptado") {
@@ -210,6 +212,7 @@ export function NuevaVentaForm({ presupuestoId = null, turno: turnoRef = null }:
       setListaElegida(undefined);
       setCobro({ ...COBRO_VACIO, formaPago: cobro.formaPago, ubicacion: cobro.ubicacion });
       setProfesional(undefined);
+      setVentaParaTicket(venta.id);
       toast.success(`Venta ${venta.numeroVenta ?? ""} registrada por ${formatoPesos(venta.total)}`, {
         action: { label: "Ver ventas", onClick: () => router.push("/ventas") },
       });
@@ -336,6 +339,11 @@ export function NuevaVentaForm({ presupuestoId = null, turno: turnoRef = null }:
         </div>
         {botonRegistrar()}
       </div>
+
+      <ModalTicketPostVenta
+        ventaId={ventaParaTicket}
+        onCerrar={() => setVentaParaTicket(null)}
+      />
     </div>
   );
 }
