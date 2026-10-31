@@ -23,6 +23,7 @@ import {
   Hammer,
   HandCoins,
   Home,
+  Landmark,
   Package,
   Settings,
   Sparkles,
@@ -117,6 +118,7 @@ export function AppSidebar() {
       titulo: "Ventas",
       items: [
         { href: "/ventas", label: "Ventas", icon: Wallet, modulo: "ventas" },
+        { href: "/caja", label: "Caja y Turnos", icon: Landmark, modulo: "ventas" },
         { href: "/cobros", label: "Cobros", icon: CreditCard, modulo: "ventas" },
         { href: "/clientes", label: "Clientes", icon: Users, modulo: "clientes" },
         { href: "/pedidos", label: "Pedidos", icon: Truck, modulo: "pedidos", para: ["productos", "produccion"] },

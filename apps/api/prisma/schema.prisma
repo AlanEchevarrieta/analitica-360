@@ -135,6 +135,8 @@ model Empresa {
   copilotInsightsCache CopilotInsightCache[]
   pasarelasConfig      EmpresaPasarelaConfig[]
   pasarelaTransacciones PasarelaTransaccion[]
+  cajaSesiones          CajaSesion[]
+  cajaMovimientos       CajaMovimiento[]
 
   @@unique([camaraId, ordenCamara])
   @@map("empresas")
@@ -276,6 +278,9 @@ model Usuario {
   eventosUso             EventoUso[]
   objetivos              Objetivo[]             @relation("ObjetivoUsuario")
   objetivoAvisos         ObjetivoAviso[]        @relation("ObjetivoAvisoUsuario")
+  cajasApertura          CajaSesion[]           @relation("CajaUsuarioApertura")
+  cajasCierre            CajaSesion[]           @relation("CajaUsuarioCierre")
+  cajaMovimientos        CajaMovimiento[]
 
   @@index([empresaId])
   @@map("usuarios")
@@ -470,7 +475,8 @@ model Ubicacion {
   activo      Boolean  @default(true)
   createdAt   DateTime @default(now()) @map("created_at")
 
-  empresa Empresa @relation(fields: [empresaId], references: [id])
+  empresa      Empresa      @relation(fields: [empresaId], references: [id])
+  cajaSesiones CajaSesion[]
 
   @@unique([empresaId, nombre])
   @@map("ubicaciones")
@@ -574,6 +580,7 @@ model Venta {
   costoEnvio         Decimal   @default(0) @map("costo_envio") @db.Decimal(12, 2)
   /// Profesional que atendió (agenda_recursos): para las comisiones (pieza 5 de servicios).
   profesionalId      String?   @map("profesional_id") @db.Uuid
+  cajaSesionId       String?   @map("caja_sesion_id") @db.Uuid
   deletedAt          DateTime? @map("deleted_at")
 
   empresa         Empresa           @relation(fields: [empresaId], references: [id])
@@ -587,10 +594,12 @@ model Venta {
 
   pedido       Pedido?
   comprobantes Comprobante[]
+  cajaSesion   CajaSesion?   @relation(fields: [cajaSesionId], references: [id])
 
   @@index([empresaId, fecha])
   @@index([clienteId]) // historial de compras de un cliente
   @@index([empresaId, profesionalId])
+  @@index([cajaSesionId])
   @@map("ventas")
 }
 
@@ -2498,4 +2507,62 @@ model PasarelaTransaccion {
   @@index([proveedor, idExterno])
   @@map("pasarela_transacciones")
 }
+
+// ==== Control de Cajas, Turnos y Arqueos (Cierre X y Z) ====
+
+model CajaSesion {
+  id                  String           @id @default(uuid()) @db.Uuid
+  empresaId           String           @map("empresa_id") @db.Uuid
+  usuarioAperturaId   String           @map("usuario_apertura_id") @db.Uuid
+  usuarioCierreId     String?          @map("usuario_cierre_id") @db.Uuid
+  ubicacionId         String?          @map("ubicacion_id") @db.Uuid
+  nombreCaja          String           @default("Caja Principal") @map("nombre_caja") @db.VarChar(50)
+  estado              String           @default("abierta") @db.VarChar(20) // abierta | cerrada
+  montoInicial        Decimal          @default(0) @map("monto_inicial") @db.Decimal(12, 2)
+  fechaApertura       DateTime         @default(now()) @map("fecha_apertura")
+  fechaCierre         DateTime?        @map("fecha_cierre")
+  montoDeclarado      Decimal?         @map("monto_declarado") @db.Decimal(12, 2)
+  montoEsperado       Decimal?         @map("monto_esperado") @db.Decimal(12, 2)
+  diferencia          Decimal?         @db.Decimal(12, 2)
+  totalVentasEfectivo Decimal?         @map("total_ventas_efectivo") @db.Decimal(12, 2)
+  totalVentasDigital  Decimal?         @map("total_ventas_digital") @db.Decimal(12, 2)
+  totalIngresos       Decimal?         @map("total_ingresos") @db.Decimal(12, 2)
+  totalEgresos        Decimal?         @map("total_egresos") @db.Decimal(12, 2)
+  notasApertura       String?          @map("notas_apertura")
+  notasCierre         String?          @map("notas_cierre")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("actualizado_en")
+
+  empresa         Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuarioApertura Usuario          @relation("CajaUsuarioApertura", fields: [usuarioAperturaId], references: [id])
+  usuarioCierre   Usuario?         @relation("CajaUsuarioCierre", fields: [usuarioCierreId], references: [id])
+  ubicacion       Ubicacion?       @relation(fields: [ubicacionId], references: [id])
+  movimientos     CajaMovimiento[]
+  ventas          Venta[]
+
+  @@index([empresaId, estado])
+  @@index([empresaId, fechaApertura])
+  @@map("cajas_sesiones")
+}
+
+model CajaMovimiento {
+  id             String     @id @default(uuid()) @db.Uuid
+  cajaSesionId   String     @map("caja_sesion_id") @db.Uuid
+  empresaId      String     @map("empresa_id") @db.Uuid
+  usuarioId      String     @map("usuario_id") @db.Uuid
+  tipo           String     @db.VarChar(20) // ingreso | egreso
+  monto          Decimal    @db.Decimal(12, 2)
+  concepto       String
+  comprobanteRef String?    @map("comprobante_ref")
+  fecha          DateTime   @default(now())
+
+  cajaSesion CajaSesion @relation(fields: [cajaSesionId], references: [id], onDelete: Cascade)
+  empresa    Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario    Usuario    @relation(fields: [usuarioId], references: [id])
+
+  @@index([cajaSesionId])
+  @@index([empresaId, fecha])
+  @@map("cajas_movimientos")
+}
+
 

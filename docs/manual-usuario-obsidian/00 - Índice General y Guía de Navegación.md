@@ -115,6 +115,8 @@ graph TD
     - Panel unificado de cobros digitales, generación instantánea de links y QR para WhatsApp o mostrador, configuración de pasarelas y auditoría de comisiones.
 12. **[[30 - Emisión de Tickets Térmicos y Comprobantes Digitales por WhatsApp]]**
     - Modal automático post-venta, impresión térmica comanderas 80mm/58mm, envío directo por WhatsApp con token seguro HMAC y visor digital público sin login.
+13. **[[31 - Control de Cajas, Turnos y Arqueo de Efectivo]]**
+    - Apertura de turno con fondo inicial, registro de sangrías/egresos, arqueo ciego sin revelar saldo teórico y emisión de Reportes X y Z en 80mm.
 
 ### 📦 3. Catálogo, Stock y Compras
 11. **[[11 - Catálogo de Productos, Servicios y Variantes]]**

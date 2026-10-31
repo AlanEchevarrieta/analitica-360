@@ -372,10 +372,16 @@ export async function confirmarVentaEnTx(
     const saldoPendiente = esSenia ? totalConInteres - montoSenia : 0;
     const estadoCobro: EstadoCobro = aCuenta ? 'saldo_pendiente' : esSenia ? 'señado' : 'pagado';
 
+    const cajaActiva = await tx.cajaSesion.findFirst({
+      where: { empresaId, estado: 'abierta' },
+      select: { id: true },
+    });
+
     const venta = await tx.venta.create({
       data: {
         empresaId,
         usuarioId: input.usuarioId,
+        cajaSesionId: cajaActiva?.id ?? null,
         clienteId: input.clienteId ?? null,
         listaPrecioId: input.listaPrecioId ?? null,
         clienteNombre: input.clienteNombre,
