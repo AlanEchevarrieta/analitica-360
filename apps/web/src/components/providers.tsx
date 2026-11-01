@@ -2,10 +2,37 @@
 
 import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useAuth } from "@clerk/nextjs";
+import { usePathname } from "next/navigation";
 import { ApiError } from "@/lib/api-client";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+
+/** Observa el estado de sesión de Clerk: si el usuario pierde la sesión o limpia storage en una ruta privada, redirige al login. */
+function ObservadorSesion() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const pathname = usePathname();
+
+  React.useEffect(() => {
+    if (!isLoaded || typeof window === "undefined") return;
+    const esPublica =
+      pathname === "/" ||
+      pathname.startsWith("/sign-in") ||
+      pathname.startsWith("/sign-up") ||
+      pathname.startsWith("/terminos") ||
+      pathname.startsWith("/privacidad") ||
+      pathname.startsWith("/ticket") ||
+      pathname.startsWith("/guias");
+
+    if (!isSignedIn && !esPublica) {
+      const destino = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/sign-in?redirect_url=${destino}`;
+    }
+  }, [isLoaded, isSignedIn, pathname]);
+
+  return null;
+}
 
 export function Providers({ children, nonce }: { children: React.ReactNode; nonce?: string }) {
   const [queryClient] = React.useState(
@@ -73,6 +100,7 @@ export function Providers({ children, nonce }: { children: React.ReactNode; nonc
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange nonce={nonce}>
         <TooltipProvider>
+          <ObservadorSesion />
           {children}
           <Toaster />
         </TooltipProvider>

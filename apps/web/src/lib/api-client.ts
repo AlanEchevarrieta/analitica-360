@@ -22,6 +22,14 @@ export async function apiFetch<T>(path: string, token: string | null, init?: Req
     },
   });
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined") {
+      const pathname = window.location.pathname;
+      if (!pathname.startsWith("/sign-in") && !pathname.startsWith("/sign-up") && pathname !== "/") {
+        const dest = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = `/sign-in?redirect_url=${dest}`;
+        return new Promise(() => {}) as Promise<T>;
+      }
+    }
     const body = await res.json().catch(() => null);
     throw new ApiError(res.status, body?.message ?? `Error ${res.status} al llamar ${path}`);
   }
@@ -33,6 +41,14 @@ export async function apiFetch<T>(path: string, token: string | null, init?: Req
 export async function apiArchivo(path: string, token: string | null): Promise<Blob> {
   const res = await fetch(`${API_URL}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined") {
+      const pathname = window.location.pathname;
+      if (!pathname.startsWith("/sign-in") && !pathname.startsWith("/sign-up") && pathname !== "/") {
+        const dest = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = `/sign-in?redirect_url=${dest}`;
+        return new Promise(() => {}) as Promise<Blob>;
+      }
+    }
     const body = await res.json().catch(() => null);
     throw new ApiError(res.status, body?.message ?? `Error ${res.status} al descargar`);
   }

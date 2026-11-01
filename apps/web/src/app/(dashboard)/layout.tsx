@@ -12,8 +12,9 @@ import { CopilotFloatingWidget } from "@/features/copilot/components/copilot-flo
 import { Logo } from "@/features/sitio/components/Logo";
 
 export default async function DashboardLayout({ children }: LayoutProps<"/">) {
-  // Sin empresa activa la API responde 403 en todo: pedirla antes de entrar.
-  const { orgId } = await auth();
+  // Sin sesión activa o sin empresa activa: redirigir a donde corresponde
+  const { orgId, userId } = await auth();
+  if (!userId) redirect("/sign-in");
   if (!orgId) redirect("/elegir-empresa");
 
   return (
