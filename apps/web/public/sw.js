@@ -1,4 +1,4 @@
-const CACHE_NAME = 'analitica-360-v2';
+const CACHE_NAME = 'analitica-360-v3';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -30,9 +30,10 @@ self.addEventListener('fetch', (event) => {
   // Solo peticiones GET
   if (req.method !== 'GET') return;
 
-  // No interceptar llamadas a la API backend ni proveedores de autenticación
+  // No interceptar llamadas a la API backend, proveedores de autenticación ni assets de Next.js (_next)
   if (
     url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/_next/') ||
     url.hostname.includes('clerk') ||
     url.hostname !== self.location.hostname
   ) {
@@ -75,8 +76,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Resto de peticiones: Red primero con fallback a caché
+  // Resto de peticiones: Red primero con fallback a caché (si existe)
   event.respondWith(
-    fetch(req).catch(() => caches.match(req))
+    fetch(req).catch(async (err) => {
+      const hit = await caches.match(req);
+      if (hit) return hit;
+      throw err;
+    })
   );
 });
