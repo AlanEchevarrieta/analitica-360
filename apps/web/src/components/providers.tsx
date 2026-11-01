@@ -47,22 +47,19 @@ export function Providers({ children, nonce }: { children: React.ReactNode; nonc
     window.addEventListener("error", handleChunkError);
     window.addEventListener("unhandledrejection", handleChunkError);
 
-    // Registro y actualización forzada del Service Worker PWA
+    // Limpieza activa de cualquier Service Worker previo para evitar bloqueos de red
     if ("serviceWorker" in navigator) {
-      const registrar = () => {
-        navigator.serviceWorker
-          .register("/sw.js")
-          .then((reg) => {
-            void reg.update();
-          })
-          .catch((err) => {
-            console.debug("PWA service worker:", err);
-          });
-      };
-      if (document.readyState === "complete") {
-        registrar();
-      } else {
-        window.addEventListener("load", registrar, { once: true });
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const reg of registrations) {
+          void reg.unregister();
+        }
+      });
+      if ("caches" in window) {
+        caches.keys().then((keys) => {
+          for (const key of keys) {
+            void caches.delete(key);
+          }
+        });
       }
     }
 
