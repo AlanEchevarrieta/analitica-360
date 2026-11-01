@@ -23,11 +23,41 @@ export function Providers({ children, nonce }: { children: React.ReactNode; nonc
   );
 
   React.useEffect(() => {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+    if (typeof window === "undefined") return;
+
+    // Recuperación automática ante nuevos despliegues: si un chunk viejo ya no existe en el servidor,
+    // se fuerza una recarga limpia para cargar los bundles de la versión actualizada.
+    const handleChunkError = (event: ErrorEvent | PromiseRejectionEvent) => {
+      const error = "reason" in event ? event.reason : event.error;
+      const message = error?.message || "";
+      if (
+        message.includes("ChunkLoadError") ||
+        message.includes("Failed to load chunk") ||
+        message.includes("Failed to fetch dynamically imported module")
+      ) {
+        const clave = "a360_ultimo_chunk_reload";
+        const ultimo = sessionStorage.getItem(clave);
+        const ahora = Date.now();
+        if (!ultimo || ahora - Number(ultimo) > 10_000) {
+          sessionStorage.setItem(clave, String(ahora));
+          window.location.reload();
+        }
+      }
+    };
+    window.addEventListener("error", handleChunkError);
+    window.addEventListener("unhandledrejection", handleChunkError);
+
+    // Registro y actualización forzada del Service Worker PWA
+    if ("serviceWorker" in navigator) {
       const registrar = () => {
-        navigator.serviceWorker.register("/sw.js").catch((err) => {
-          console.debug("PWA service worker:", err);
-        });
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((reg) => {
+            void reg.update();
+          })
+          .catch((err) => {
+            console.debug("PWA service worker:", err);
+          });
       };
       if (document.readyState === "complete") {
         registrar();
@@ -35,6 +65,11 @@ export function Providers({ children, nonce }: { children: React.ReactNode; nonc
         window.addEventListener("load", registrar, { once: true });
       }
     }
+
+    return () => {
+      window.removeEventListener("error", handleChunkError);
+      window.removeEventListener("unhandledrejection", handleChunkError);
+    };
   }, []);
 
   return (
