@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { useApiFetch } from "@/hooks/use-api";
 import { ORIGENES, RUBROS, type Actividad } from "@/lib/rubros";
 import { SelectorActividades } from "@/components/shared/selector-actividades";
+import { MODULOS_CATALOGO, aplicarDependenciasModulos, calcularModulosEfectivos, type ModuloToggleId } from "@analitica360/shared-types";
+import { cn } from "@/lib/utils";
 import { CampoCodigo, useVerificarCodigo } from "./CampoCodigo";
 import { codigoGuardado, olvidarCodigo } from "./codigo-guardado";
 
@@ -29,8 +31,16 @@ export function BienvenidaForm() {
   const [d, setD] = useState({ nombre: "", rubro: "", telefono: "", origen: "", codigo: "", cuit: "", acepta: false });
   // Qué hace el negocio: se tilda solo según el rubro, hasta que la persona lo toque.
   const [actividades, setActividades] = useState<Actividad[] | null>(null);
+  const [modulosPersonalizados, setModulosPersonalizados] = useState<Record<string, boolean>>({});
+  const [mostrarModulos, setMostrarModulos] = useState(false);
   const sugeridas = RUBROS.find((r) => r.valor === d.rubro)?.sugiere ?? [];
   const elegidas = actividades ?? sugeridas;
+  const modulosEfectivos = calcularModulosEfectivos(elegidas, modulosPersonalizados);
+  const alternarModulo = (id: ModuloToggleId) => {
+    const proximo = !modulosEfectivos[id];
+    const res = aplicarDependenciasModulos(elegidas, modulosPersonalizados, { [id]: proximo });
+    setModulosPersonalizados(res.modulos);
+  };
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   // Vino con un link de recomendación: el código ya aparece puesto (hasta que lo cambie).
@@ -68,6 +78,7 @@ export function BienvenidaForm() {
           nombreNegocio: d.nombre,
           rubro: d.rubro,
           actividades: elegidas,
+          ...(Object.keys(modulosPersonalizados).length > 0 ? { modulos: modulosPersonalizados } : {}),
           telefono: d.telefono,
           origen: d.origen || null,
           codigo: textoCodigo.trim() || null,
@@ -121,6 +132,51 @@ export function BienvenidaForm() {
                 }}
               />
               <span className="text-xs text-muted-foreground">Con esto armamos tu menú. Lo podés cambiar cuando quieras en Configuración.</span>
+
+              <div className="mt-1 rounded-lg border bg-muted/30 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold">Esto es lo que vas a usar</span>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarModulos((v) => !v)}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    {mostrarModulos ? "Listo" : "Cambiar módulos"}
+                  </button>
+                </div>
+                {!mostrarModulos ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {MODULOS_CATALOGO.filter((m) => modulosEfectivos[m.id]).map((m) => (
+                      <span
+                        key={m.id}
+                        className="rounded-full border bg-background px-2.5 py-0.5 text-xs font-medium"
+                      >
+                        {m.nombre}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                    {MODULOS_CATALOGO.map((m) => {
+                      const activo = Boolean(modulosEfectivos[m.id]);
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => alternarModulo(m.id)}
+                          className={cn(
+                            "flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors",
+                            activo ? "border-primary/40 bg-primary/10 font-medium" : "text-muted-foreground hover:bg-muted",
+                          )}
+                        >
+                          <span className="truncate">{m.nombre}</span>
+                          <span className={cn("size-2 rounded-full", activo ? "bg-primary" : "bg-muted-foreground/30")} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
           <div className="grid gap-4 sm:grid-cols-2">

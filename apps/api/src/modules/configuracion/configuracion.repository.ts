@@ -31,6 +31,8 @@ export interface ConfiguracionRecord {
   valorHora: number | null;
   categoriaMonotributo: string | null;
   actividades: string[];
+  modulos: Record<string, boolean>;
+  modulosEfectivos: Record<string, boolean>;
 }
 
 export type ResultadoActualizarConfiguracion =

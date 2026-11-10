@@ -27,6 +27,7 @@ import {
   GUIA_A_TOUR_MAP,
   TOURS_MODULOS,
 } from "@/lib/tour";
+import { GuiaMarkdown } from "./GuiaMarkdown";
 
 const CATEGORIA_COLOR: Record<CategoriaGuia, string> = {
   "Arranque y Configuración": "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
@@ -38,14 +39,13 @@ const CATEGORIA_COLOR: Record<CategoriaGuia, string> = {
 
 interface GuiaDetalleVistaProps {
   guia: GuiaItem;
-  htmlContenido: string;
+  htmlContenido?: string;
   anterior?: GuiaItem;
   siguiente?: GuiaItem;
 }
 
 export function GuiaDetalleVista({
   guia,
-  htmlContenido,
   anterior,
   siguiente,
 }: GuiaDetalleVistaProps) {
@@ -176,10 +176,7 @@ export function GuiaDetalleVista({
 
           {/* Cuerpo Markdown procesado con estilos .guia-prose */}
           <div className="rounded-2xl border border-border/70 bg-card p-4 sm:p-8 md:p-10 shadow-xs overflow-hidden min-w-0 max-w-full">
-            <div
-              className="guia-prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: htmlContenido }}
-            />
+            <GuiaMarkdown contenido={guia.contenido} />
           </div>
 
           {/* Navegación Inferior: Guía Anterior y Siguiente */}

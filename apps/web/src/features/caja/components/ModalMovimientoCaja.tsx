@@ -48,8 +48,8 @@ export function ModalMovimientoCaja({ abierto, cajaId, onCerrar }: Props) {
           : "Ingreso extraordinario registrado correctamente",
       );
       onCerrar();
-    } catch (err: any) {
-      toast.error(err.message || "Error al registrar el movimiento.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error al registrar el movimiento.");
     }
   }
 

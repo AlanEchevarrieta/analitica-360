@@ -4,14 +4,16 @@ import Link from "next/link";
 import { Target, TriangleAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useConfiguracion } from "@/features/configuracion/hooks/use-configuracion";
 import { useAvisosObjetivos, useObjetivos } from "../hooks/use-objetivos";
 import { adjetivoPeriodo, alcance, formatoValor, nombreTipo, SEMAFORO } from "../objetivos";
 
 /** Inicio: lista compacta de los objetivos que peor van (hasta 4) y los avisos en una sola línea. */
 export function ObjetivosInicio() {
+  const modulosEfectivos = useConfiguracion().data?.modulosEfectivos;
   const { data } = useObjetivos();
   const avisos = useAvisosObjetivos();
-  if (!data || data.length === 0) return null;
+  if (modulosEfectivos?.objetivos === false || !data || data.length === 0) return null;
   const orden = { mal: 0, justo: 1, bien: 2, sin_datos: 3 };
   const primeros = [...data].sort((a, b) => orden[a.actual.semaforo] - orden[b.actual.semaforo]).slice(0, 4);
   const pendientes = avisos.data ?? [];

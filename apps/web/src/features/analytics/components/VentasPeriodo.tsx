@@ -123,7 +123,7 @@ export function VentasPeriodo() {
         <SinDatos mensaje={`El período tiene ${formatoNumero(data.avisoLimite ?? 0)} ventas: elegí uno más corto.`} />
       ) : (
         <div className={`flex flex-col gap-4 ${isFetching ? "opacity-60 transition-opacity" : ""}`}>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             <Kpi titulo="Cobrado" valor={formatoMoneda(data.data.total)} detalle={data.data.devoluciones.ingreso ? `Neto de devoluciones (${formatoMoneda(data.data.devoluciones.ingreso)})` : undefined} />
             <Kpi titulo="Ventas" valor={formatoNumero(data.data.cantidad)} />
             <Kpi titulo="Ticket promedio" valor={formatoMoneda(data.data.cantidad ? data.data.total / data.data.cantidad : 0)} />

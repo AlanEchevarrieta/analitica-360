@@ -1,10 +1,11 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import type { Env } from '../../config/env.validation.js';
 import type { UsuarioContext } from '../../common/auth/request-context.types.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
+import { EventosService } from '../eventos/eventos.service.js';
 import { ArcaCliente } from './arca.cliente.js';
 import { CONDICION_IVA, cuitValido, DOC, NOMBRE_TIPO, numeroCompleto, TIPO, type DatosComprobante } from './arca.util.js';
 import { asuntoFactura, htmlFactura, textoFactura } from './factura.email.js';
@@ -49,6 +50,7 @@ export class FacturacionService {
     private readonly prisma: PrismaService,
     private readonly arca: ArcaCliente,
     private readonly config_: ConfigService<Env, true>,
+    @Optional() private readonly eventos?: EventosService,
   ) {}
 
   async estado(empresaId: string) {
@@ -247,6 +249,26 @@ export class FacturacionService {
       receptor: comp.receptorNombre,
       prueba: comp.ambiente !== 'produccion',
     };
+    if (this.eventos) {
+      const actualizado = await this.prisma.$transaction(async (tx) => {
+        await this.eventos!.emitir(tx, {
+          empresaId,
+          tipo: 'correo.enviar',
+          payload: {
+            para,
+            asunto: asuntoFactura(datos),
+            html: htmlFactura(datos),
+            texto: textoFactura(datos),
+            adjuntos: [{ filename: nombre, content: contenido.toString('base64') }],
+          },
+        });
+        return tx.comprobante.update({
+          where: { id: comp.id },
+          data: { emailEnviadoA: para, emailEnviadoEn: new Date() },
+        });
+      });
+      return this.resumen(actualizado, comp.venta?.cliente?.email ?? null);
+    }
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${clave}`, 'Content-Type': 'application/json' },

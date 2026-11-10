@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import type { Configuracion } from "../hooks/use-configuracion";
 import { useConfiguracion } from "../hooks/use-configuracion";
 import { ActividadesConfig } from "./ActividadesConfig";
+import { ModulosConfig } from "./ModulosConfig";
 import { AparienciaConfig } from "./AparienciaConfig";
 import { EquipoConfig, ExportarConfig } from "./EquipoExportarConfig";
 import { AtributosConfig, CategoriasConfig, UbicacionesConfig } from "./ListasConfig";
@@ -26,6 +27,7 @@ import { EnviosConfig } from "@/features/envios/EnviosConfig";
 import { MercadoPagoTiendaConfig } from "@/features/mercadopago-tienda/MercadoPagoTiendaConfig";
 import { WidgetWebConfig } from "./WidgetWebConfig";
 import { BorrarCuentaConfig } from "./BorrarCuentaConfig";
+import { PlantillasProyectoConfig } from "@/features/proyectos/PlantillasProyectoConfig";
 import { CandadoPlan, MejorarPlan } from "@/components/shared/mejorar-plan";
 import { usePlan } from "@/hooks/use-plan";
 
@@ -74,6 +76,8 @@ const GRUPOS: { titulo: string; opciones: Opcion[] }[] = [
     titulo: "Mi negocio",
     opciones: [
       { clave: "actividades", icono: "🧭", titulo: "Qué hace mi negocio", subtitulo: "Vendo productos, fabrico o doy servicios: arma el menú", panel: (c) => <ActividadesConfig config={c} /> },
+      { clave: "modulos", icono: "🧩", titulo: "Módulos", subtitulo: "Prendé o escondé módulos del menú según lo que uses", panel: (c) => <ModulosConfig config={c} /> },
+      { clave: "proyectos", icono: "📋", titulo: "Proyectos", subtitulo: "Plantillas de etapas, plazos y aprobaciones para tus proyectos", panel: () => <PlantillasProyectoConfig />, funcion: "proyectos" },
       { clave: "remitente", icono: "📬", titulo: "Datos del remitente", subtitulo: "Quién figura en el remito y en los documentos", panel: (c) => <RemitenteConfig config={c} /> },
       { clave: "documentos", icono: "📄", titulo: "Documentos", subtitulo: "Logo y textos del comprobante, el recibo y el presupuesto", panel: () => <DocumentosConfig /> },
       { clave: "fiscal", icono: "🌎", titulo: "Configuración fiscal", subtitulo: "País, moneda e IVA", panel: (c) => <FiscalConfig config={c} /> },

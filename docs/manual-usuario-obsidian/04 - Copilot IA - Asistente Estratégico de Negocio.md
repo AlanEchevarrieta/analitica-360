@@ -7,10 +7,10 @@ tags:
   - modulo/analytics
   - caso-de-uso
 created: 2026-10-26
-updated: 2026-10-26
+updated: 2026-11-05
 author: Antigravity Assistant
 status: publicado
-version: "1.0"
+version: "1.1"
 aliases:
   - "Copilot IA"
   - "Asistente Inteligente"
@@ -23,9 +23,11 @@ aliases:
 > [!info] Objetivo de la Funcionalidad
 > **Analítica Copilot** es tu asesor estratégico de inteligencia artificial integrado en la plataforma. Potenciado por **Analítica IA**, analiza en tiempo real todas las transacciones de tu negocio (ventas, compras, rotación de stock, cuentas corrientes y márgenes) para responder tus dudas operativas y estratégicas en lenguaje natural, tal como si hablaras con un consultor financiero personal.
 
-> [!abstract] Requisitos Previos y Permisos
+> [!abstract] Requisitos Previos, Privacidad y Límites
 > - **Rol de Usuario Requerido:** `Dueño` o colaborador con acceso a métricas analíticas.
-> - Plan de suscripción con módulo IA activo (disponible en planes Pro y E-commerce).
+> - **Plan requerido:** Disponible a partir del **Plan Pro** (y **E-commerce**). En planes **Starter** y **Básico** el ítem del menú y el widget flotante muestran el candado **"Disponible en Pro"**.
+> - **Privacidad de datos personales (Ley 25.326):** Antes de procesar cualquier consulta con el motor externo, el servidor anonimiza los nombres de los deudores (usando alias como *"Cliente 1"*, *"Cliente 2"*), omite números de teléfono, emails y CUITs, y vuelve a colocar el nombre real únicamente dentro de tu sesión privada.
+> - **Límite de uso responsable:** Hasta **20 consultas por minuto** y **100 preguntas por día** por empresa. Al alcanzar el tope diario, el asistente informa: *"Llegaste al límite de hoy, mañana seguimos"*.
 
 ---
 

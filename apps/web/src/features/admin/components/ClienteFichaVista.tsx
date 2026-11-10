@@ -16,6 +16,7 @@ import { EtiquetaAlerta, EtiquetaEstado, EtiquetaPlan, Indicador, Panel, variaci
 import { OrigenClientePanel } from "./alianzas/OrigenClientePanel";
 import { CuotasClientePanel } from "./alianzas/CuotasCliente";
 import { BajaClientePanel, ReferidosClientePanel } from "./ReferidosBajaPaneles";
+import { ModulosClientePanel } from "./ModulosAdminPanel";
 
 const G_VENTAS = { monto: { label: "Vendido", color: "var(--chart-1)" } } satisfies ChartConfig;
 const selectClase = "h-8 rounded-lg border bg-transparent px-2 text-sm";
@@ -150,6 +151,8 @@ export function ClienteFichaVista({ id }: { id: string }) {
       </div>
 
       <OrigenClientePanel empresaId={id} />
+
+      <ModulosClientePanel empresaId={id} configuracion={data.configuracion} />
 
       <CuotasClientePanel empresaId={id} />
 

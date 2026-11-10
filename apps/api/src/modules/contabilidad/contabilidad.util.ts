@@ -46,9 +46,11 @@ export interface GastoParaContabilidad {
   tipoCosto?: 'fijo' | 'variable';
   recurrente: boolean;
   frecuencia?: 'mensual' | 'quincenal' | 'semanal' | null;
+  /** Hasta qué día inclusive se repite (null/undefined = sin fecha de fin). */
+  fechaFin?: string | null;
 }
 
-function sumarDiasISO(iso: string, dias: number): string {
+export function sumarDiasISO(iso: string, dias: number): string {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d + dias)).toISOString().slice(0, 10);
 }
@@ -61,8 +63,7 @@ function sumarMesISO(iso: string, meses: number): string {
 
 /**
  * Un gasto recurrente se carga una vez y se repite cada semana / 15 días /
- * mes desde su fecha hasta `hasta` (en el legacy la frecuencia era solo una
- * etiqueta y el gasto contaba una única vez, lo que inflaba el resultado).
+ * mes desde su fecha hasta `hasta` (o hasta `fechaFin`, si terminó antes).
  */
 export function expandirRecurrentes<T extends GastoParaContabilidad>(gastos: T[], hasta: string): T[] {
   const out: T[] = [];
@@ -71,7 +72,8 @@ export function expandirRecurrentes<T extends GastoParaContabilidad>(gastos: T[]
       out.push(g);
       continue;
     }
-    for (let i = 0, fecha = g.fecha; fecha <= hasta && i < 1000; i++) {
+    const tope = g.fechaFin && g.fechaFin < hasta ? g.fechaFin : hasta;
+    for (let i = 0, fecha = g.fecha; fecha <= tope && i < 1000; i++) {
       out.push({ ...g, fecha });
       fecha =
         g.frecuencia === 'semanal'

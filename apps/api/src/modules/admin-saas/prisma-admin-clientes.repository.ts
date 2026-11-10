@@ -2,6 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import { diaAR } from '../analytics/fecha-sql.js';
+import {
+  MODULOS_CATALOGO,
+  aplicarDependenciasModulos,
+  calcularModulosEfectivos,
+  esModuloToggleId,
+} from '../configuracion/modulos.util.js';
+import { TASAS_DEFAULT } from '../configuracion/prisma-configuracion.repository.js';
 import type { AdminEmpresaDetalle, AdminEmpresaFila, AdminEvolucionMes, AdminTablaTamano } from './admin-clientes.types.js';
 
 type FilaEmpresaSql = {
@@ -132,7 +139,7 @@ export class PrismaAdminClientesRepository {
   async detalle(id: string): Promise<Omit<AdminEmpresaDetalle, 'empresa'> | null> {
     const existe = await this.prisma.empresa.findUnique({ where: { id }, select: { id: true } });
     if (!existe) return null;
-    const [ventasPorMes, usuarios, pagos, tickets, historial, uso] = await Promise.all([
+    const [ventasPorMes, usuarios, pagos, tickets, historial, uso, configFila] = await Promise.all([
       this.prisma.$queryRaw<{ mes: string; ventas: bigint; monto: string }[]>(Prisma.sql`
         WITH meses AS (
           SELECT generate_series(date_trunc('month', CURRENT_DATE) - interval '11 months', date_trunc('month', CURRENT_DATE), interval '1 month')::date AS mes
@@ -167,8 +174,15 @@ export class PrismaAdminClientesRepository {
           (SELECT COUNT(*) FROM ventas v WHERE v.empresa_id = ${id}::uuid AND v.deleted_at IS NULL) AS ventas,
           (SELECT ${diaAR(Prisma.raw('MIN(v.fecha)'))}::text FROM ventas v WHERE v.empresa_id = ${id}::uuid AND v.deleted_at IS NULL) AS primera
       `),
+      this.prisma.configuracionEmpresa.findUnique({ where: { empresaId: id }, select: { actividades: true, modulos: true } }),
     ]);
     const u = uso[0];
+    const act = configFila?.actividades?.length ? configFila.actividades : ['productos', 'produccion'];
+    const modRaw = (configFila?.modulos ?? {}) as Record<string, unknown>;
+    const modGuardados: Record<string, boolean> = {};
+    for (const [k, v] of Object.entries(modRaw)) {
+      if (esModuloToggleId(k) && typeof v === 'boolean') modGuardados[k] = v;
+    }
     return {
       ventasPorMes: ventasPorMes.map((v) => ({ mes: v.mes, ventas: Number(v.ventas), monto: Number(v.monto) })),
       usuarios,
@@ -176,6 +190,73 @@ export class PrismaAdminClientesRepository {
       tickets: tickets.map((t) => ({ id: t.id, numeroTicket: t.numero_ticket, asunto: t.asunto, estado: t.estado, prioridad: t.prioridad, fecha: t.fecha })),
       historialPlanes: historial.map((h) => ({ fecha: h.fecha, planAnterior: h.plan_anterior, planNuevo: h.plan_nuevo, motivo: h.motivo })),
       uso: { clientes: Number(u?.clientes ?? 0), compras: Number(u?.compras ?? 0), pedidos: Number(u?.pedidos ?? 0), ventasTotales: Number(u?.ventas ?? 0), primeraVenta: u?.primera ?? null },
+      configuracion: {
+        actividades: act,
+        modulos: modGuardados,
+        modulosEfectivos: calcularModulosEfectivos(act, modGuardados),
+      },
+    };
+  }
+
+  async actualizarModulosEmpresa(empresaId: string, cambios: Record<string, boolean>) {
+    const actual = await this.prisma.configuracionEmpresa.findUnique({
+      where: { empresaId },
+      select: { actividades: true, modulos: true },
+    });
+    const act = actual?.actividades?.length ? actual.actividades : ['productos', 'produccion'];
+    const modGuardados: Record<string, boolean> = {};
+    if (actual?.modulos && typeof actual.modulos === 'object' && !Array.isArray(actual.modulos)) {
+      for (const [k, v] of Object.entries(actual.modulos as Record<string, unknown>)) {
+        if (esModuloToggleId(k) && typeof v === 'boolean') modGuardados[k] = v;
+      }
+    }
+    const res = aplicarDependenciasModulos(act, modGuardados, cambios);
+    await this.prisma.configuracionEmpresa.upsert({
+      where: { empresaId },
+      create: {
+        empresaId,
+        tasasCuotas: TASAS_DEFAULT as unknown as Prisma.InputJsonValue,
+        actividades: act,
+        modulos: res.modulos as Prisma.InputJsonValue,
+      },
+      update: { modulos: res.modulos as Prisma.InputJsonValue },
+    });
+    return {
+      actividades: act,
+      modulos: res.modulos,
+      modulosEfectivos: res.modulosEfectivos,
+      prendidosPorDependencia: res.prendidosPorDependencia,
+    };
+  }
+
+  async resumenModulosUso() {
+    const empresas = await this.prisma.empresa.findMany({
+      where: { deletedAt: null, esDemo: false },
+      select: { id: true, configuracion: { select: { actividades: true, modulos: true } } },
+    });
+    const conteo = new Map<string, { prendidas: number; prendidasManual: number; apagadasManual: number }>();
+    for (const m of MODULOS_CATALOGO) {
+      conteo.set(m.id, { prendidas: 0, prendidasManual: 0, apagadasManual: 0 });
+    }
+    for (const e of empresas) {
+      const act = e.configuracion?.actividades?.length ? e.configuracion.actividades : ['productos', 'produccion'];
+      const raw = (e.configuracion?.modulos ?? {}) as Record<string, unknown>;
+      const efectivos = calcularModulosEfectivos(act, raw);
+      for (const m of MODULOS_CATALOGO) {
+        const c = conteo.get(m.id)!;
+        if (efectivos[m.id]) c.prendidas += 1;
+        if (raw[m.id] === true) c.prendidasManual += 1;
+        if (raw[m.id] === false) c.apagadasManual += 1;
+      }
+    }
+    return {
+      totalEmpresas: empresas.length,
+      modulos: MODULOS_CATALOGO.map((m) => ({
+        id: m.id,
+        nombre: m.nombre,
+        grupo: m.grupo,
+        ...(conteo.get(m.id) ?? { prendidas: 0, prendidasManual: 0, apagadasManual: 0 }),
+      })),
     };
   }
 

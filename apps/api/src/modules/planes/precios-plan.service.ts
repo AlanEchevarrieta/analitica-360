@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, type OnModuleInit, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import type { Env } from '../../config/env.validation.js';
@@ -6,6 +6,7 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { BcraInflacionClient } from '../analytics/bcra-inflacion.client.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
 import { INFLACION_INDEC } from '../analytics/inflacion.util.js';
+import { EventosService } from '../eventos/eventos.service.js';
 import { PLANES, PLANES_PAGOS, idPlan, type PlanPagoId } from './planes.util.js';
 import {
   aplicarPorcentaje,
@@ -38,14 +39,31 @@ export interface ProgramarAumentoInput {
  * proceso diario avisa por email a los clientes con 30 días de anticipación.
  */
 @Injectable()
-export class PreciosPlanService {
+export class PreciosPlanService implements OnModuleInit {
   private readonly logger = new Logger('Precios');
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
     private readonly bcra: BcraInflacionClient,
+    @Optional() private readonly eventos?: EventosService,
   ) {}
+
+  onModuleInit() {
+    this.eventos?.registrar<{ para: string[]; asunto: string; texto: string; html: string; desde: string }>(
+      'precio.aviso',
+      async (ev, payload) => {
+        if (!this.eventos) return;
+        const n = await this.eventos.emitirCorreo(
+          this.prisma,
+          ev.empresaId,
+          { para: payload.para, asunto: payload.asunto, texto: payload.texto, html: payload.html },
+          `precio:${payload.desde}`,
+        );
+        return { resultado: n ? 'ok' : 'omitido', detalle: `correo encolado (${n} destinatarios)` };
+      },
+    );
+  }
 
   private async filas(db: Db = this.prisma): Promise<(FilaPrecio & { id: string; motivo: string | null; avisados: number })[]> {
     const f = await db.precioPlan.findMany({ orderBy: [{ vigenteDesde: 'asc' }, { plan: 'asc' }] });
@@ -151,7 +169,7 @@ export class PreciosPlanService {
    */
   async avisarPendientes(): Promise<number> {
     const clave = this.config.get('RESEND_API_KEY', { infer: true });
-    if (!clave) return 0;
+    if (!clave && !this.eventos) return 0;
     const hoy = fechaHoyAR();
     const filas = await this.filas();
     const pendientes = filas.filter((f) => !f.avisadoEl);
@@ -178,8 +196,21 @@ export class PreciosPlanService {
         const s = e.suscripciones[0];
         const plan = s && s.estado !== 'periodo_prueba' ? idPlan(s.plan?.nombre) : null;
         const contenido = emailAumento({ empresa: e.nombre, vigenteDesde: desde, cambios, motivo: delDia[0].motivo, planActual: plan === 'starter' ? null : (plan as PlanPagoId | null), urlPlanes });
-        for (const para of new Set(e.usuarios.map((u) => u.email.trim().toLowerCase()).filter((x) => x.includes('@')))) {
-          if (await this.mandar(clave, para, contenido)) enviadosDia++;
+        const destinatarios = [...new Set(e.usuarios.map((u) => u.email.trim().toLowerCase()).filter((x) => x.includes('@')))];
+        if (this.eventos) {
+          if (destinatarios.length > 0) {
+            await this.eventos.emitir(this.prisma, {
+              empresaId: e.id,
+              tipo: 'precio.aviso',
+              clave: `precio:aviso:${desde}`,
+              payload: { para: destinatarios, asunto: contenido.asunto, texto: contenido.texto, html: contenido.html, desde },
+            });
+            enviadosDia += destinatarios.length;
+          }
+        } else if (clave) {
+          for (const para of destinatarios) {
+            if (await this.mandar(clave, para, contenido)) enviadosDia++;
+          }
         }
       }
       await this.prisma.precioPlan.updateMany({ where: { id: { in: delDia.map((f) => f.id) } }, data: { avisoEnviadoEn: new Date(`${hoy}T12:00:00Z`), avisados: enviadosDia } });

@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, Post, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { z } from 'zod';
 import { ACTIVIDADES } from '../configuracion/configuracion.dto.js';
+import { MODULO_IDS, type ModuloToggleId } from '../configuracion/modulos.util.js';
 import type { EmpresaContext } from '../../common/auth/request-context.types.js';
 import { CurrentEmpresa } from '../../common/decorators/current-empresa.decorator.js';
 import { SinEmpresa } from '../../common/decorators/sin-empresa.decorator.js';
@@ -13,6 +14,7 @@ const registroSchema = z.object({
   rubro: z.string().trim().min(1, 'Elegí el rubro').max(60),
   // Si una versión vieja de la web no lo manda, queda como hasta ahora (vende productos).
   actividades: z.array(z.enum(ACTIVIDADES)).min(1, 'Elegí qué hace tu negocio').max(3).default(['productos']),
+  modulos: z.record(z.enum(MODULO_IDS as unknown as [ModuloToggleId, ...ModuloToggleId[]]), z.boolean()).optional(),
   telefono: z.string().trim().min(6, 'Dejanos un WhatsApp para ayudarte').max(30),
   origen: z.string().trim().max(80).nullable().default(null),
   codigo: z.string().trim().max(40).nullable().default(null),
@@ -32,7 +34,16 @@ export class RegistroController {
   registrar(@Req() request: Request, @Body(new ZodValidationPipe(registroSchema)) body: RegistroBody) {
     return this.service.registrar(
       request.clerkAuth!.clerkUserId,
-      { nombreNegocio: body.nombreNegocio, rubro: body.rubro, actividades: body.actividades, telefono: body.telefono, origen: body.origen || null, codigo: body.codigo || null, cuit: body.cuit || null },
+      {
+        nombreNegocio: body.nombreNegocio,
+        rubro: body.rubro,
+        actividades: body.actividades,
+        modulos: body.modulos,
+        telefono: body.telefono,
+        origen: body.origen || null,
+        codigo: body.codigo || null,
+        cuit: body.cuit || null,
+      },
       request.headers['user-agent'] ?? null,
     );
   }

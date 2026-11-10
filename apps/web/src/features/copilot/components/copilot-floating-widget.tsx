@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
+import { Lock } from 'lucide-react';
 import { cn } from 'cn';
+import { usePlan } from '@/hooks/use-plan';
 import { CopilotChatView } from './copilot-chat-view';
 
 export const CopilotFloatingWidget: React.FC = () => {
@@ -11,6 +13,8 @@ export const CopilotFloatingWidget: React.FC = () => {
   const [posicion, setPosicion] = useState<{ x: number; y: number } | null>(null);
   const pathname = usePathname();
   const { isLoaded, isSignedIn, orgId } = useAuth();
+  const plan = usePlan();
+  const bloqueadoPorPlan = !plan.incluye('copilot');
 
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const dragInfo = useRef<{
@@ -177,7 +181,13 @@ export const CopilotFloatingWidget: React.FC = () => {
           // Posición fija por defecto en la esquina inferior si no fue arrastrado
           !posicion && 'bottom-4 right-4 sm:bottom-6 sm:right-6'
         )}
-        title={abierto ? 'Cerrar Copilot IA' : 'Copilot IA (arrastrá para mover, ⌘J)'}
+        title={
+          abierto
+            ? 'Cerrar Copilot IA'
+            : bloqueadoPorPlan
+              ? 'Copilot IA — Disponible en Pro'
+              : 'Copilot IA (arrastrá para mover, ⌘J)'
+        }
         aria-label="Abrir Copilot IA"
       >
         {abierto ? (
@@ -186,11 +196,17 @@ export const CopilotFloatingWidget: React.FC = () => {
           </span>
         ) : (
           <div className="relative flex items-center justify-center pointer-events-none">
-            {/* Indicador pulsante de estado activo */}
-            <span className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 flex h-3 w-3 sm:h-4 sm:w-4 items-center justify-center">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-80" />
-              <span className="relative inline-flex h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-primary-foreground border border-primary" />
-            </span>
+            {bloqueadoPorPlan ? (
+              <span className="absolute -top-2 -right-2 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-amber-500 text-black shadow-xs">
+                <Lock className="size-2.5 sm:size-3" aria-hidden />
+              </span>
+            ) : (
+              /* Indicador pulsante de estado activo */
+              <span className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 flex h-3 w-3 sm:h-4 sm:w-4 items-center justify-center">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-80" />
+                <span className="relative inline-flex h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-primary-foreground border border-primary" />
+              </span>
+            )}
             <span className="text-lg sm:text-2xl transition-transform duration-300 group-hover:scale-110">
               ✨
             </span>

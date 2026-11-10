@@ -36,8 +36,8 @@ export function ModalArqueoCierre({ abierto, cajaId, onCerrar }: Props) {
       });
       setReporteFinal(z);
       toast.success("Turno cerrado y Reporte Z generado con éxito.");
-    } catch (err: any) {
-      toast.error(err.message || "Error al cerrar el turno.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error al cerrar el turno.");
     }
   }
 

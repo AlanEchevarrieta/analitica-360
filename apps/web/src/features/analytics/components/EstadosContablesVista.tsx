@@ -245,7 +245,7 @@ export function EstadosContablesVista() {
             </div>
           )}
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             <Kpi titulo="Liquidez" valor={veces(e.indicadores.liquidez)} detalle={e.indicadores.liquidez == null ? "Sin deudas: no aplica" : "Activo corriente por cada $1 de deuda"} />
             <Kpi titulo="Prueba ácida" valor={veces(e.indicadores.pruebaAcida)} detalle="Igual, sin contar la mercadería" />
             <Kpi titulo="Endeudamiento" valor={veces(e.indicadores.endeudamiento)} detalle="Deuda por cada $1 de patrimonio" />

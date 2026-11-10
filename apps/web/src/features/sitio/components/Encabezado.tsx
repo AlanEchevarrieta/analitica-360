@@ -7,6 +7,7 @@ import { Logo } from "./Logo";
 
 const ENLACES = [
   ["Funciones", "#funciones"],
+  ["📲 App", "#app"],
   ["Planes", "#planes"],
   ["Socios UCIM", "#ucim"],
   ["Preguntas", "#preguntas"],

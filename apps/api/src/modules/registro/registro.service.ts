@@ -1,12 +1,14 @@
-import { BadGatewayException, BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, ConflictException, Injectable, Logger, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.validation.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
+import { EventosService } from '../eventos/eventos.service.js';
 import { ClerkCuentasService } from './clerk-cuentas.service.js';
 import { CuponesService, normalizarCuit, type Verificacion } from '../alianzas/cupones.service.js';
 import { TASAS_DEFAULT } from '../configuracion/prisma-configuracion.repository.js';
+import { aplicarDependenciasModulos } from '../configuracion/modulos.util.js';
 import { finDePrueba, limpiarNombre, normalizarTelefono, PLAN_PRUEBA, resumenPrimerosPasos, type PrimerosPasos } from './registro.util.js';
 
 export interface RegistroInput {
@@ -14,6 +16,7 @@ export interface RegistroInput {
   rubro: string;
   /** productos | produccion | servicios (al menos una). */
   actividades: string[];
+  modulos?: Record<string, boolean>;
   telefono: string;
   origen: string | null;
   /** Código de una cámara o cupón (opcional). */
@@ -40,6 +43,7 @@ export class RegistroService {
     private readonly clerk: ClerkCuentasService,
     private readonly config: ConfigService<Env, true>,
     private readonly cupones: CuponesService,
+    @Optional() private readonly eventos?: EventosService,
   ) {}
 
   /**
@@ -109,10 +113,13 @@ export class RegistroService {
         });
         // Qué hace el negocio: con eso se arma su menú.
         const actividades = [...new Set(input.actividades)];
+        const modulos = input.modulos
+          ? (aplicarDependenciasModulos(actividades, {}, input.modulos).modulos as Prisma.InputJsonValue)
+          : ({} as Prisma.InputJsonValue);
         await tx.configuracionEmpresa.upsert({
           where: { empresaId: empresa.id },
-          create: { empresaId: empresa.id, tasasCuotas: TASAS_DEFAULT as unknown as Prisma.InputJsonValue, actividades },
-          update: { actividades },
+          create: { empresaId: empresa.id, tasasCuotas: TASAS_DEFAULT as unknown as Prisma.InputJsonValue, actividades, modulos },
+          update: { actividades, ...(input.modulos ? { modulos } : {}) },
         });
         const plan = await tx.plan.findFirst({ where: { nombre: PLAN_PRUEBA }, select: { id: true } });
         if (!(await tx.suscripcion.findFirst({ where: { empresaId: empresa.id }, select: { id: true } }))) {
@@ -145,29 +152,35 @@ export class RegistroService {
     return { clerkOrgId, empresaId, finPrueba, yaExistia: false, cupon };
   }
 
-  /** Aviso por email (opcional, con Resend). Nunca hace fallar el registro. */
+  /** Aviso por email (en la cola de eventos o con Resend). Nunca hace fallar el registro. */
   private async avisarPorEmail(nombre: string, input: RegistroInput, telefono: string, datos: { nombre: string; email: string }, finPrueba: string, codigo: string | null) {
     const clave = this.config.get('RESEND_API_KEY', { infer: true });
-    if (!clave) return;
+    if (!clave && !this.eventos) return;
     try {
       const destino = this.config.get('AVISOS_EMAIL', { infer: true });
       const para = destino ? destino.split(',').map((e) => e.trim()) : (await this.prisma.adminEmail.findMany({ select: { email: true } })).map((a) => a.email);
       if (para.length === 0) return;
+      const asunto = `Nuevo registro en Analítica 360: ${nombre}`;
+      const texto = [
+        `Negocio: ${nombre} (${input.rubro})`,
+        `Dueño: ${datos.nombre} <${datos.email}>`,
+        `WhatsApp: https://wa.me/${telefono.replace(/\D/g, '')}`,
+        `Nos conoció por: ${input.origen ?? '—'}`,
+        `Código: ${codigo ?? '—'}`,
+        `La prueba termina el ${finPrueba.split('-').reverse().join('/')}.`,
+      ].join('\n');
+      if (this.eventos) {
+        await this.eventos.emitirCorreo(this.prisma, null, { para, asunto, texto }, `registro:${datos.email}`);
+        return;
+      }
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${clave}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           from: this.config.get('AVISOS_EMAIL_DESDE', { infer: true }),
           to: para,
-          subject: `Nuevo registro en Analítica 360: ${nombre}`,
-          text: [
-            `Negocio: ${nombre} (${input.rubro})`,
-            `Dueño: ${datos.nombre} <${datos.email}>`,
-            `WhatsApp: https://wa.me/${telefono.replace(/\D/g, '')}`,
-            `Nos conoció por: ${input.origen ?? '—'}`,
-            `Código: ${codigo ?? '—'}`,
-            `La prueba termina el ${finPrueba.split('-').reverse().join('/')}.`,
-          ].join('\n'),
+          subject: asunto,
+          text: texto,
         }),
       });
       if (!r.ok) this.logger.warn(`Resend respondió ${r.status}`);

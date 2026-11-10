@@ -8,10 +8,10 @@ tags:
   - modulo/monotributo
   - caso-de-uso
 created: 2026-10-26
-updated: 2026-10-26
+updated: 2026-11-05
 author: Antigravity Assistant
 status: publicado
-version: "1.0"
+version: "1.1"
 aliases:
   - "Analytics"
   - "Rentabilidad"
@@ -95,12 +95,26 @@ graph TD
    - 🔴 **Rojo:** Facturación superior al 90% del límite de la categoría máxima. ¡Riesgo inminente de pase a Responsable Inscripto!
 3. Podés compartir el informe con tu contador (`[[02 - Roles, Permisos y Gestión de Equipo]]`) para planificar ventas o emitir comprobantes a nombre de socios si corresponde.
 
-### Caso 3: Carga de Gastos Fijos (Alquiler, Servicios, Sueldos)
+### Caso 3: Carga y Gestión de Gastos Recurrentes (Alquiler, Servicios, Sueldos)
 
-1. En la pestaña **"Gastos y Finanzas"**, presioná **"+ Registrar Gasto"**.
-2. Seleccioná la categoría: *Alquiler, Servicios públicos (Luz/Gas), Sueldos, Impuestos*.
-3. Ingresá el importe abonado y la forma de pago (Caja local o Banco).
-4. El sistema restará este gasto de la ganancia bruta de ventas para mostrarte la **Ganancia Neta Real de la Empresa**.
+1. En **Analytics → Contabilidad → Gastos**, presioná **"+ Registrar Gasto"**.
+2. Seleccioná la categoría (*Alquiler, Servicios, Sueldos, Impuestos*), el tipo de costo (**Fijo** o **Variable**) y marcá **"Se repite"** (*Mensual*, *Cada 15 días* o *Semanal*). Si ya sabés cuándo termina, podés indicar la fecha **"Hasta"**.
+3. **Si un gasto recurrente aumentó de precio (ej. nuevo alquiler desde noviembre):**
+   - En la lista de gastos, tocá el ícono de **Editar (lápiz)** y elegí **"Cambiar el monto desde…"**.
+   - El sistema cierra automáticamente el gasto anterior el día previo y crea el nuevo desde la fecha elegida, sin alterar los meses ya cerrados.
+4. **Si un gasto recurrente dejó de existir:**
+   - Usá el botón **"Dejar de repetir"** para que deje de contarse hacia adelante conservando el historial pasado (a diferencia de **Anular**, que lo quita de todos los meses).
+5. **Detalle por mes y vista en dólares:**
+   - En la tabla de **Resultado mes a mes**, al pasar el mouse o tocar el monto de gastos se despliega el desglose exacto de recurrentes del mes (ej. `Alquiler: 1 × $300.000`, `Sueldos: 5 sem × $50.000 = $250.000`) y el mes actual se identifica con **`(en curso)`**.
+
+### Caso 4: Pronóstico de Ventas con Banda de Rango Probable
+
+1. En **Analytics → Insights**, la tarjeta **Pronóstico de Ventas** proyecta los próximos días, semanas o meses a partir de tu historia real.
+2. El gráfico muestra únicamente lo necesario para decidir rápido:
+   - **Línea verde sólida:** Ventas reales cerradas.
+   - **Línea azul punteada:** Proyección esperada.
+   - **Banda celeste sombreada:** Rango probable (**entre $X y $Y**) calculado según la variación histórica de tus ventas.
+   - Al pie se informa en una sola línea la desviación histórica promedio del pronóstico.
 
 ---
 

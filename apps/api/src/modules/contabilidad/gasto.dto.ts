@@ -24,5 +24,24 @@ export const crearGastoSchema = z
   .transform((v) => ({ ...v, frecuencia: v.recurrente ? v.frecuencia : null, tipoCosto: v.tipoCosto ?? (v.recurrente ? 'fijo' : 'variable') }));
 export type CrearGastoDto = z.infer<typeof crearGastoSchema>;
 
+export const editarGastoSchema = z
+  .object({
+    categoria: categoriaSchema.optional(),
+    descripcion: z.string().trim().min(1).optional(),
+    monto: z.number().positive().optional(),
+    fecha: fechaIso.optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'Indicá al menos un campo para actualizar' });
+export type EditarGastoDto = z.infer<typeof editarGastoSchema>;
+
+export const dejarDeRepetirSchema = z.object({ desde: fechaIso });
+export type DejarDeRepetirDto = z.infer<typeof dejarDeRepetirSchema>;
+
+export const cambiarMontoGastoSchema = z.object({
+  desde: fechaIso,
+  monto: z.number().positive(),
+});
+export type CambiarMontoGastoDto = z.infer<typeof cambiarMontoGastoSchema>;
+
 export const tipoCostoSchema = z.object({ tipoCosto: z.enum(TIPOS_COSTO as [TipoCosto, ...TipoCosto[]]) });
 export type TipoCostoDto = z.infer<typeof tipoCostoSchema>;

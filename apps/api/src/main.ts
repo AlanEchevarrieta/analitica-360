@@ -1,3 +1,4 @@
+import './instrument.js';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
 import type { NestExpressApplication } from '@nestjs/platform-express';

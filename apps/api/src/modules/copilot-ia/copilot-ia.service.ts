@@ -4,10 +4,35 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { LakeService } from '../lake/lake.service.js';
 import type { CopilotChatDto, CopilotRespuesta } from './dto/copilot-chat.dto.js';
 import { Result } from '../../common/result/result.js';
+import { fechaHoyAR } from '../analytics/analytics.util.js';
+
+const LIMITE_DIARIO_POR_EMPRESA = Number(process.env.COPILOT_LIMITE_DIARIO ?? 100);
+const MENSAJE_LIMITE_DIARIO = 'Llegaste al límite de hoy, mañana seguimos';
+
+/** Limpia emails, CUITs y números de teléfono (8+ dígitos seguidos) de cualquier texto libre antes de enviarlo al modelo externo. */
+export function sanitizarTextoPii(texto: string): string {
+  return texto
+    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[email]')
+    .replace(/\b\d{2}-\d{8}-\d\b/g, '[cuit]')
+    .replace(/\b\d{8,15}\b/g, '[telefono]');
+}
+
+/** Reemplaza los alias ("Cliente 1", "Cliente 2", …) por el nombre real en el servidor antes de devolver la respuesta al usuario. */
+export function desanonimizarRespuesta(texto: string, aliasACliente: Record<string, string>): string {
+  let salida = texto;
+  // Ordenar de mayor a menor longitud de alias para que "Cliente 10" no sea pisado por "Cliente 1".
+  const pares = Object.entries(aliasACliente).sort((a, b) => b[0].length - a[0].length);
+  for (const [alias, nombreReal] of pares) {
+    salida = salida.replaceAll(alias, nombreReal);
+  }
+  return salida;
+}
 
 @Injectable()
 export class CopilotIaService {
   private readonly logger = new Logger('CopilotIA');
+  /** Respaldo en memoria por día cuando la tabla de eventos de uso no está disponible en pruebas unitarias. */
+  private readonly conteoDiarioMemoria = new Map<string, number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -15,32 +40,102 @@ export class CopilotIaService {
   ) {}
 
   /**
-   * Procesa la consulta del usuario combinando métricas en vivo con OpenAI / LLM o heurística contextual.
-   * Alimenta a GPT-6 Luna con un Dossier 360° integral de todo el negocio (ventas, compras, gastos, stock, cta cte, dólar y Lake Feature Store).
+   * Verifica y registra el uso diario de Copilot por empresa (tope por defecto: 100 preguntas/día).
    */
-  async procesarMensaje(empresaId: string, input: CopilotChatDto): Promise<Result<CopilotRespuesta>> {
+  private async verificarYRegistrarUsoDiario(empresaId: string, usuarioId?: string): Promise<boolean> {
+    const hoy = fechaHoyAR();
+    const inicioDiaAR = new Date(`${hoy}T00:00:00-03:00`);
+    const claveMemoria = `${empresaId}:${hoy}`;
+
+    const tablaEventoUso = (this.prisma as unknown as {
+      eventoUso?: {
+        count: (args: unknown) => Promise<number>;
+        create: (args: unknown) => Promise<unknown>;
+      };
+    }).eventoUso;
+
+    if (tablaEventoUso?.count) {
+      try {
+        const usadosHoy = await tablaEventoUso.count({
+          where: {
+            empresaId,
+            tipo: 'copilot',
+            ruta: '/copilot/chat',
+            creadoEn: { gte: inicioDiaAR },
+          },
+        });
+        if (usadosHoy >= LIMITE_DIARIO_POR_EMPRESA) {
+          return false;
+        }
+        if (usuarioId && tablaEventoUso.create) {
+          await tablaEventoUso
+            .create({
+              data: {
+                empresaId,
+                usuarioId,
+                sesion: 'copilot-api',
+                tipo: 'copilot',
+                ruta: '/copilot/chat',
+                objetivo: 'consulta',
+              },
+            })
+            .catch(() => undefined);
+          return true;
+        }
+      } catch {
+        // Si falla la consulta, cae al respaldo en memoria.
+      }
+    }
+
+    const actual = this.conteoDiarioMemoria.get(claveMemoria) ?? 0;
+    if (actual >= LIMITE_DIARIO_POR_EMPRESA) {
+      return false;
+    }
+    this.conteoDiarioMemoria.set(claveMemoria, actual + 1);
+    return true;
+  }
+
+  /**
+   * Procesa la consulta del usuario combinando métricas en vivo con el proveedor de IA o heurística contextual.
+   * Alimenta el modelo con un Dossier 360° integral anonimizado (sin teléfonos, nombres de clientes, emails ni CUITs).
+   */
+  async procesarMensaje(
+    empresaId: string,
+    input: CopilotChatDto,
+    usuarioId?: string,
+  ): Promise<Result<CopilotRespuesta>> {
     try {
+      const permitido = await this.verificarYRegistrarUsoDiario(empresaId, usuarioId);
+      if (!permitido) {
+        return Result.ok<CopilotRespuesta>({
+          respuesta: MENSAJE_LIMITE_DIARIO,
+          proveedor: 'heuristico',
+          modelo: 'analitica-ia',
+          sugerenciasSiguientes: [],
+        });
+      }
+
       const topicoDeterminado = this.determinarTopico(input.topico, input.mensaje);
 
-      // 1. Recopilar Dossier 360° completo del negocio en tiempo real (Anti-BOLA/IDOR con aislamiento de tenant)
-      const dossierCompleto = await this.recopilarDossierNegocio360(empresaId, topicoDeterminado);
+      // 1. Recopilar Dossier 360° completo del negocio en tiempo real (aislado por empresaId y anonimizado para el proveedor externo)
+      const { dossierAnonimo, aliasACliente } = await this.recopilarDossierNegocio360(empresaId, topicoDeterminado);
 
       const metricasUtilizadas = {
-        totalVentasPeriodo: (dossierCompleto.ventas as any)?.totalUltimos30Dias ?? 0,
-        ticketPromedio: (dossierCompleto.ventas as any)?.ticketPromedio ?? 0,
-        productosLideres: (dossierCompleto.rentabilidad as any)?.topVendidos ?? [],
-        stockCriticoCount: Math.min((dossierCompleto.inventario as any)?.totalProductosActivos ?? 0, 3),
-        deudaClientesTotal: (dossierCompleto.cuentasCorrientes as any)?.totalAdeudado ?? 0,
+        totalVentasPeriodo: (dossierAnonimo.ventas as any)?.totalUltimos30Dias ?? 0,
+        ticketPromedio: (dossierAnonimo.ventas as any)?.ticketPromedio ?? 0,
+        productosLideres: (dossierAnonimo.rentabilidad as any)?.topVendidos ?? [],
+        stockCriticoCount: Math.min((dossierAnonimo.inventario as any)?.totalProductosActivos ?? 0, 3),
+        deudaClientesTotal: (dossierAnonimo.cuentasCorrientes as any)?.totalAdeudado ?? 0,
         dolarReferencia: {
           tipo: 'Dólar Blue',
-          valor: (dossierCompleto.macroeconomia as any)?.dolarBlue ?? 1200,
+          valor: (dossierAnonimo.macroeconomia as any)?.dolarBlue ?? 1200,
         },
-        patronesOcultos: dossierCompleto.patronesOcultosFeatureStore ?? [],
+        patronesOcultos: dossierAnonimo.patronesOcultosFeatureStore ?? [],
         topicoAnalizado: topicoDeterminado,
-        detalleTopico: dossierCompleto,
+        detalleTopico: dossierAnonimo,
       };
 
-      // 2. Ejecutar inferencia con GPT-6 Luna u OpenAI si está disponible la clave, o motor heurístico experto
+      // 2. Ejecutar inferencia con el proveedor de IA si está disponible la clave, o motor heurístico experto
       const apiKey = process.env.OPENAI_API_KEY || process.env.COPILOT_API_KEY;
       const modelo = process.env.COPILOT_MODEL || 'gpt-6-luna';
 
@@ -51,19 +146,26 @@ export class CopilotIaService {
       if (apiKey) {
         this.logger.log(`Consultando Copilot IA para empresa ${empresaId} [tópico: ${topicoDeterminado}]`);
         try {
-          respuestaTexto = await this.consultarLlm(apiKey, modelo, input, dossierCompleto, topicoDeterminado);
+          const respuestaCruda = await this.consultarLlm(apiKey, modelo, input, dossierAnonimo, topicoDeterminado);
+          respuestaTexto = desanonimizarRespuesta(respuestaCruda, aliasACliente);
           proveedor = 'openai';
           respuestaTexto += `\n\n> ✨ *Generado por Analítica IA*`;
         } catch (err) {
           errorLlm = (err as Error).message;
           this.logger.warn(`Fallo llamada a LLM, usando motor heurístico: ${errorLlm}`);
-          respuestaTexto = this.generarRespuestaHeuristica(input.mensaje, metricasUtilizadas, topicoDeterminado);
+          respuestaTexto = desanonimizarRespuesta(
+            this.generarRespuestaHeuristica(input.mensaje, metricasUtilizadas, topicoDeterminado),
+            aliasACliente,
+          );
           respuestaTexto += `\n\n> ℹ️ *Generado por Analítica IA (Diagnóstico local)*`;
         }
       } else {
         errorLlm = 'Sin COPILOT_API_KEY configurada en .env';
         this.logger.log(`Sin API Key configurada. Usando motor heurístico financiero para empresa ${empresaId}`);
-        respuestaTexto = this.generarRespuestaHeuristica(input.mensaje, metricasUtilizadas, topicoDeterminado);
+        respuestaTexto = desanonimizarRespuesta(
+          this.generarRespuestaHeuristica(input.mensaje, metricasUtilizadas, topicoDeterminado),
+          aliasACliente,
+        );
         respuestaTexto += `\n\n> ℹ️ *Generado por Analítica IA (Diagnóstico local)*`;
       }
 
@@ -119,14 +221,14 @@ export class CopilotIaService {
   }
 
   /**
-   * Construye el Dossier 360° más exhaustivo del negocio para alimentar la IA:
-   * Ventas, Márgenes, Gastos fijos/variables, Compras, Stock, Deudores, Tipo de cambio
-   * y Patrones Ocultos precalculados por el Data Lake & Feature Store.
+   * Construye el Dossier 360° del negocio para alimentar la IA.
+   * Los deudores van sin teléfono y con un alias ("Cliente 1", "Cliente 2"); el mapa
+   * `aliasACliente` permite restaurar los nombres reales únicamente en el servidor antes de responder.
    */
-  private async recopilarDossierNegocio360(
+  async recopilarDossierNegocio360(
     empresaId: string,
     topicoDeterminado: string,
-  ): Promise<Record<string, unknown>> {
+  ): Promise<{ dossierAnonimo: Record<string, unknown>; aliasACliente: Record<string, string> }> {
     const ahora = new Date();
     const hace30Dias = new Date(ahora.getTime() - 30 * 24 * 3600_000);
     const hace60Dias = new Date(ahora.getTime() - 60 * 24 * 3600_000);
@@ -191,12 +293,12 @@ export class CopilotIaService {
 
       this.prisma.gasto.findMany({
         where: { empresaId, deletedAt: null, fecha: { gte: hace30Dias } },
-        select: { categoria: true, monto: true, descripcion: true, tipoCosto: true },
+        select: { categoria: true, monto: true, tipoCosto: true },
       }).catch(() => []),
 
       this.prisma.compra.findMany({
         where: { empresaId, deletedAt: null, fecha: { gte: hace30Dias } },
-        select: { total: true, proveedorNombre: true },
+        select: { total: true },
       }).catch(() => []),
 
       this.prisma.venta.findMany({
@@ -206,7 +308,8 @@ export class CopilotIaService {
           clienteNombre: true,
           saldoPendiente: true,
           fecha: true,
-          cliente: { select: { nombre: true, telefono: true } },
+          // Nunca seleccionamos teléfono ni email para enviar al proveedor externo.
+          cliente: { select: { nombre: true } },
         },
         orderBy: { saldoPendiente: 'desc' },
         take: 10,
@@ -263,9 +366,9 @@ export class CopilotIaService {
       totalDescuentos += Number(v.descuento ?? 0);
     }
 
-    // 2. Productos y Rentabilidad (Con totales exactos de facturación y margen)
+    // 2. Productos y Rentabilidad
     const topVendidos = productosLideresRaw.map((p) => ({
-      nombre: p.nombre,
+      nombre: sanitizarTextoPii(p.nombre),
       unidadesVendidas: Number(p.cantidad),
       totalRecaudadoExacto: Number(p.total_recaudado ?? 0),
       gananciaBrutaExacta: Number(p.ganancia_bruta ?? 0),
@@ -276,7 +379,7 @@ export class CopilotIaService {
       const costo = Number(p.costo ?? 0);
       const margenBrutoPct = precio > 0 && costo > 0 ? Number((((precio - costo) / precio) * 100).toFixed(1)) : null;
       return {
-        producto: p.nombre,
+        producto: sanitizarTextoPii(p.nombre),
         categoria: p.categoria || 'General',
         precioVenta: precio,
         costo,
@@ -294,17 +397,29 @@ export class CopilotIaService {
 
     const totalComprasMercaderia = comprasMesRaw.reduce((acc, c) => acc + Number(c.total ?? 0), 0);
 
-    // 4. Créditos y Cuentas Corrientes
-    const deudores = ventasImpagasRaw.map((v) => {
+    // 4. Créditos y Cuentas Corrientes (Anonimizados con alias "Cliente 1", "Cliente 2", sin teléfono)
+    const aliasACliente: Record<string, string> = {};
+    const clienteAAlias = new Map<string, string>();
+    let proximoIndiceAlias = 1;
+
+    const deudoresAnonimos = ventasImpagasRaw
+      .filter((v) => Number(v.saldoPendiente ?? 0) > 0)
+      .map((v) => {
+        const nombreReal = (v.cliente?.nombre || v.clienteNombre || 'Cliente mostrador').trim();
+      let alias = clienteAAlias.get(nombreReal);
+      if (!alias) {
+        alias = `Cliente ${proximoIndiceAlias++}`;
+        clienteAAlias.set(nombreReal, alias);
+        aliasACliente[alias] = nombreReal;
+      }
       const diasAtraso = Math.max(0, Math.floor((ahora.getTime() - new Date(v.fecha).getTime()) / (24 * 3600_000)));
       return {
-        cliente: v.cliente?.nombre || v.clienteNombre || 'Cliente mostrador',
-        telefono: v.cliente?.telefono ?? null,
+        cliente: alias,
         saldoPendiente: Number(v.saldoPendiente),
         diasAtraso,
       };
     });
-    const totalDeudaCtaCte = deudores.reduce((acc, d) => acc + d.saldoPendiente, 0);
+    const totalDeudaCtaCte = deudoresAnonimos.reduce((acc, d) => acc + d.saldoPendiente, 0);
 
     // 5. Macroeconomía y Tipo de Cambio
     const dolarBlue = cotizacionesDolarRaw.find((c) => c.casa.toLowerCase().includes('blue'))?.venta ?? null;
@@ -315,9 +430,17 @@ export class CopilotIaService {
     const numOficial = dolarOficial ? Number(dolarOficial) : 1000;
     const brechaCambiariaPct = numOficial > 0 ? Number((((numBlue - numOficial) / numOficial) * 100).toFixed(1)) : 0;
 
-    return {
+    const insightsSanitizados = insightsOcultosLake.map((ins) => ({
+      categoria: ins.categoria,
+      prioridad: ins.prioridad,
+      titulo: sanitizarTextoPii(String(ins.titulo ?? '')),
+      descripcionTecnica: sanitizarTextoPii(String(ins.descripcionTecnica ?? '')),
+      sugerenciaAccionable: sanitizarTextoPii(String(ins.sugerenciaAccionable ?? '')),
+    }));
+
+    const dossierAnonimo: Record<string, unknown> = {
       identidad: {
-        nombre: empresa?.nombre || 'Mi Comercio / Pyme',
+        nombre: sanitizarTextoPii(empresa?.nombre || 'Mi Comercio / Pyme'),
         rubro: empresa?.categoria || 'Comercio General',
         condicionIva: empresa?.condicionIva || 'Monotributo / Resp. Inscripto',
       },
@@ -346,7 +469,7 @@ export class CopilotIaService {
       cuentasCorrientes: {
         totalAdeudado: totalDeudaCtaCte,
         cantidadVentasPendientes: ventasImpagasRaw.length,
-        rankingTopDeudores: deudores.slice(0, 5),
+        rankingTopDeudores: deudoresAnonimos.slice(0, 5),
       },
       macroeconomia: {
         dolarBlue: numBlue,
@@ -354,9 +477,11 @@ export class CopilotIaService {
         dolarMep: dolarMep ? Number(dolarMep) : null,
         brechaCambiariaPct,
       },
-      patronesOcultosFeatureStore: insightsOcultosLake,
+      patronesOcultosFeatureStore: insightsSanitizados,
       focoActual: topicoDeterminado,
     };
+
+    return { dossierAnonimo, aliasACliente };
   }
 
   private determinarTopico(topicoDto?: string, mensaje = ''): string {
@@ -381,9 +506,8 @@ export class CopilotIaService {
     dossier: Record<string, unknown>,
     topico: string,
   ): Promise<string> {
-    try {
-      const nombreEmpresa = (dossier.identidad as any)?.nombre || 'este negocio';
-      const systemPrompt = `Sos Analítica Copilot, la inteligencia artificial financiera y comercial nativa de la plataforma Analítica 360, asignada al negocio "${nombreEmpresa}".
+    const nombreEmpresa = (dossier.identidad as any)?.nombre || 'este negocio';
+    const systemPrompt = `Sos Analítica Copilot, la inteligencia artificial financiera y comercial nativa de la plataforma Analítica 360, asignada al negocio "${nombreEmpresa}".
 Tu función exclusiva es actuar como Director Financiero (CFO) digital y consultor de inteligencia de negocios para este comercio.
 
 =======================================================
@@ -394,7 +518,7 @@ REGLAS ESTRICTAS DE ALCANCE Y SEGURIDAD (OBLIGATORIAS):
 - Sos una IA propietaria desarrollada internamente para Analítica 360.
 - NUNCA menciones modelos de lenguaje subyacentes ni empresas externas (está terminantemente prohibido mencionar OpenAI, GPT, GPT-4, GPT-6, ChatGPT, Claude, Llama, Anthropic, Gemini, etc.).
 - Si el usuario te pregunta "¿qué modelo sos?", "¿quién te creó?" o "¿sos ChatGPT/OpenAI?", respondé categóricamente:
-  "Soy Analítica Copilot, la inteligencia artificial nativa de Analítica 360, diseñada y entrenada exclusivamente para la gestión financiera y comercial de tu negocio."
+  "Soy Analítica Copilot, la inteligencia artificial nativa de Analítica 360, diseñada para la gestión financiera y comercial de tu negocio."
 
 2. ALCANCE 100% CERRADO A ANALÍTICA 360:
 - Estás programada con restricciones estrictas para operar ÚNICAMENTE dentro del contexto de este negocio y de Analítica 360: ventas, productos, catálogo, stock, compras a proveedores, gastos operativos, rentabilidad, margen bruto, cuentas corrientes, cobranzas, deudores, punto de equilibrio y patrones de consumo.
@@ -406,6 +530,7 @@ REGLAS ESTRICTAS DE ALCANCE Y SEGURIDAD (OBLIGATORIAS):
 
 3. ANÁLISIS DE DATOS REALES Y FEATURE STORE:
 - Conocés exhaustivamente cada número real de este comercio provisto en el dossier (ventas, ticket promedio, formas de cobro, márgenes, gastos y cta cte).
+- Cuando menciones a un deudor del ranking (por ejemplo "Cliente 1", "Cliente 2"), usá exactamente ese identificador tal cual figura en el dossier para que el sistema muestre su nombre al usuario.
 - Integrá los "patronesOcultosFeatureStore" del Data Lakehouse (afinidad de canasta/combos, alerta temprana de churn, fugas de rentabilidad por cuotas y radar de precios de mercado frente a la competencia) para dar recomendaciones de alto impacto monetario.
 - Estilo: ejecutivo, profesional, conciso, directo y aplicado a la economía real argentina, usando formato Markdown limpio con cifras en pesos argentinos.
 
@@ -418,87 +543,96 @@ ${JSON.stringify(dossier, null, 2)}
 =======================================================
 `;
 
-      const messages = [
-        { role: 'system', content: systemPrompt },
-        ...(input.historial ?? []).map((h) => ({
-          role: h.rol === 'user' ? 'user' : 'assistant',
-          content: h.contenido,
-        })),
-        { role: 'user', content: input.mensaje },
-      ];
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...(input.historial ?? []).map((h) => ({
+        role: h.rol === 'user' ? 'user' : 'assistant',
+        content: sanitizarTextoPii(h.contenido),
+      })),
+      { role: 'user', content: sanitizarTextoPii(input.mensaje) },
+    ];
 
-      const apiUrl = process.env.COPILOT_API_URL
-        || (apiKey.startsWith('sk-or-') ? 'https://openrouter.ai/api/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions');
+    const apiUrl = process.env.COPILOT_API_URL
+      || (apiKey.startsWith('sk-or-') ? 'https://openrouter.ai/api/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions');
 
-      const modelId = apiUrl.includes('openrouter.ai') && modelo === 'gpt-6-luna' ? 'openai/gpt-6-luna' : modelo;
+    const modelId = apiUrl.includes('openrouter.ai') && modelo === 'gpt-6-luna' ? 'openai/gpt-6-luna' : modelo;
 
-      const payload: Record<string, unknown> = {
-        model: modelId,
-        messages,
-        max_completion_tokens: 1000,
-      };
+    const payload: Record<string, unknown> = {
+      model: modelId,
+      messages,
+      max_completion_tokens: 1000,
+    };
 
-      const esModeloRazonamiento = modelo.startsWith('o1') || modelo.startsWith('o3') || modelo.includes('luna');
-      if (!esModeloRazonamiento) {
-        payload.temperature = 0.3;
+    const esModeloRazonamiento = modelo.startsWith('o1') || modelo.startsWith('o3') || modelo.includes('luna');
+    if (!esModeloRazonamiento) {
+      payload.temperature = 0.3;
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    };
+    if (apiUrl.includes('openrouter.ai')) {
+      headers['HTTP-Referer'] = 'https://analitica360.app';
+      headers['X-Title'] = 'Analitica 360 Copilot';
+    }
+
+    let res = await fetch(apiUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(25000),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      if (errorText.includes('max_completion_tokens') && !errorText.includes('Use \'max_completion_tokens\'')) {
+        delete payload.max_completion_tokens;
+        payload.max_tokens = 1000;
+        res = await fetch(apiUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(25000),
+        });
+      } else if (errorText.includes('temperature')) {
+        delete payload.temperature;
+        res = await fetch(apiUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(25000),
+        });
       }
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      };
-      if (apiUrl.includes('openrouter.ai')) {
-        headers['HTTP-Referer'] = 'https://analitica360.app';
-        headers['X-Title'] = 'Analitica 360 Copilot';
-      }
-
-      let res = await fetch(apiUrl, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(25000),
-      });
 
       if (!res.ok) {
-        const errorText = await res.text();
-        if (errorText.includes('max_completion_tokens') && !errorText.includes('Use \'max_completion_tokens\'')) {
-          delete payload.max_completion_tokens;
-          payload.max_tokens = 1000;
-          res = await fetch(apiUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload),
-            signal: AbortSignal.timeout(25000),
-          });
-        } else if (errorText.includes('temperature')) {
-          delete payload.temperature;
-          res = await fetch(apiUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload),
-            signal: AbortSignal.timeout(25000),
-          });
-        }
-
-        if (!res.ok) {
-          const finalError = await res.text();
-          throw new Error(`Error API LLM (${res.status}): ${finalError}`);
-        }
+        const finalError = await res.text();
+        throw new Error(`Error API LLM (${res.status}): ${finalError}`);
       }
-
-      const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-      const respuesta = data.choices?.[0]?.message?.content?.trim();
-      if (!respuesta) {
-        throw new Error('La respuesta de OpenAI vino vacía');
-      }
-      return respuesta;
-    } catch (e) {
-      throw e;
     }
+
+    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const respuesta = data.choices?.[0]?.message?.content?.trim();
+    if (!respuesta) {
+      throw new Error('La respuesta del proveedor vino vacía');
+    }
+    return respuesta;
   }
 
   private generarRespuestaHeuristica(mensaje: string, metricas: any, topico: string): string {
     const q = mensaje.toLowerCase().trim();
+
+    // Guard contra consultas sobre otras empresas o intentos de prompt injection
+    if (
+      q.includes('ignorá las instrucciones') ||
+      q.includes('ignora las instrucciones') ||
+      q.includes('otra empresa') ||
+      /empresa\s+[b-z]\b/i.test(q)
+    ) {
+      return `🔒 **Aislamiento de seguridad activo**
+
+Solo tengo acceso a las métricas de tu empresa actual en **Analítica 360**. No puedo consultar ni mostrar información de otras empresas ni omitir las reglas de privacidad.`;
+    }
 
     // Guard de alcance estricto: declinar consultas ajenas a Analítica 360
     const temasAjenos = [
@@ -591,7 +725,7 @@ Cotizá tu mercadería según el costo de reposición actual y evitá financiar 
 Aún estamos procesando y clusterizando suficientes eventos históricos para tu comercio. A medida que registres más ventas, nuestro algoritmo de Market Basket y detección de Churn te sugerirá combos de alta conversión y clientes en riesgo.`;
       }
 
-      const lista = insights.map((ins, i) => {
+      const lista = insights.map((ins) => {
         const icon = ins.categoria === 'afinidad_canasta' ? '🧺' : ins.categoria === 'riesgo_churn' ? '👥' : '⚠️';
         return `### ${icon} ${ins.titulo} (Prioridad: ${ins.prioridad.toUpperCase()})
 - **Diagnóstico:** ${ins.descripcionTecnica}

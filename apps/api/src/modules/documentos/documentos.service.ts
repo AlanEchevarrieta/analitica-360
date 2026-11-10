@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import sharp from 'sharp';
@@ -7,6 +7,7 @@ import { optimizarImagen } from '../../common/archivos/optimizar-imagen.js';
 import type { Env } from '../../config/env.validation.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
+import { EventosService } from '../eventos/eventos.service.js';
 import { VentasService } from '../ventas/ventas.service.js';
 import { pdfDocumento, type DatosDocumentoPdf, type NegocioDoc } from './documento.pdf.js';
 import {
@@ -61,6 +62,7 @@ export class DocumentosService {
     private readonly env: ConfigService<Env, true>,
     private readonly almacen: AlmacenArchivosService,
     private readonly ventas: VentasService,
+    @Optional() private readonly eventos?: EventosService,
   ) {
     this.armadores.set('venta', (e, id) => this.datosVenta(e, id));
     this.armadores.set('recibo', (e, id) => this.datosRecibo(e, id));
@@ -338,16 +340,35 @@ export class DocumentosService {
     const para = (email ?? d.cliente?.email ?? '').trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(para)) throw new BadRequestException(d.cliente?.email ? 'El email no es válido' : 'El cliente no tiene email: escribilo para mandarlo');
     const titulo = `${TITULO[tipo]} ${d.numero}`;
+    const desde = `${d.negocio.replace(/[<>"]/g, '')} <${this.remitenteEmail()}>`;
+    const asunto = `${titulo} · ${d.negocio}`;
+    const texto = `Hola${d.cliente?.nombre ? ` ${d.cliente.nombre.split(' ')[0]}` : ''}:\n\nTe mandamos ${TITULO[tipo].toLowerCase()} ${d.numero} (${dmy(fechaHoyAR())}) en el PDF adjunto.\n\n${d.negocio}`;
+    const adjuntos = [{ filename: d.archivo, content: d.pdf.toString('base64') }];
+    if (this.eventos) {
+      await this.eventos.emitir(this.prisma, {
+        empresaId,
+        tipo: 'correo.enviar',
+        payload: {
+          desde,
+          para,
+          ...(d.emailNegocio ? { responderA: d.emailNegocio } : {}),
+          asunto,
+          texto,
+          adjuntos,
+        },
+      });
+      return { para };
+    }
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${clave}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: `${d.negocio.replace(/[<>"]/g, '')} <${this.remitenteEmail()}>`,
+        from: desde,
         to: [para],
         ...(d.emailNegocio ? { reply_to: d.emailNegocio } : {}),
-        subject: `${titulo} · ${d.negocio}`,
-        text: `Hola${d.cliente?.nombre ? ` ${d.cliente.nombre.split(' ')[0]}` : ''}:\n\nTe mandamos ${TITULO[tipo].toLowerCase()} ${d.numero} (${dmy(fechaHoyAR())}) en el PDF adjunto.\n\n${d.negocio}`,
-        attachments: [{ filename: d.archivo, content: d.pdf.toString('base64') }],
+        subject: asunto,
+        text: texto,
+        attachments: adjuntos,
       }),
     });
     if (!r.ok) {

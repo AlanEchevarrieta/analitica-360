@@ -1,8 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.validation.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
+import { EventosService } from '../eventos/eventos.service.js';
 import { AccesoCuentaService } from '../planes/acceso-cuenta.service.js';
 import { AgendaService } from './agenda.service.js';
 import { aHoraAR, cuandoTexto, desdeHoraAR, DURACION_POR_DEFECTO, horariosLibres, leerTokenTurno, OCUPAN, tokenTurno } from './agenda.util.js';
@@ -41,6 +42,7 @@ export class AgendaOnlineService {
     private readonly agenda: AgendaService,
     private readonly acceso: AccesoCuentaService,
     private readonly env: ConfigService<Env, true>,
+    @Optional() private readonly eventos?: EventosService,
   ) {}
 
   private secreto() {
@@ -53,7 +55,7 @@ export class AgendaOnlineService {
    */
   private async avisarDuenos(empresaId: string, tipo: 'reserva' | 'cancelacion', t: { clienteNombre: string | null; clienteTelefono: string | null; servicio: string | null; profesional: string; inicio: Date }) {
     const clave = this.env.get('RESEND_API_KEY', { infer: true });
-    if (!clave) return;
+    if (!clave && !this.eventos) return;
     try {
       const duenos = await this.prisma.usuario.findMany({ where: { empresaId, rolCrudo: { in: ['dueno', 'administrador'] }, activo: true, deletedAt: null }, select: { email: true } });
       const para = duenos.map((d) => d.email).filter((e): e is string => Boolean(e));
@@ -61,21 +63,27 @@ export class AgendaOnlineService {
       const cuando = cuandoTexto(t.inicio);
       const link = `${this.env.get('APP_URL_PUBLICA', { infer: true }).replace(/\/$/, '')}/agenda?fecha=${aHoraAR(t.inicio).slice(0, 10)}`;
       const que = `${t.servicio ?? 'Turno'} con ${t.profesional} ${cuando}`;
+      const asunto = tipo === 'reserva' ? `Nueva reserva online: ${t.clienteNombre ?? 'un cliente'}, ${cuando}` : `Turno cancelado: ${t.clienteNombre ?? 'un cliente'}, ${cuando}`;
+      const texto = [
+        tipo === 'reserva' ? `${t.clienteNombre ?? 'Un cliente'} reservó desde la tienda:` : `${t.clienteNombre ?? 'Un cliente'} canceló su turno desde la tienda (el horario quedó libre):`,
+        '',
+        `• ${que}`,
+        ...(t.clienteTelefono ? [`• Teléfono: ${t.clienteTelefono}`] : []),
+        '',
+        `Miralo en la agenda: ${link}`,
+      ].join('\n');
+      if (this.eventos) {
+        await this.eventos.emitirCorreo(this.prisma, empresaId, { para, asunto, texto });
+        return;
+      }
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${clave}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           from: this.env.get('AVISOS_EMAIL_DESDE', { infer: true }),
           to: para,
-          subject: tipo === 'reserva' ? `Nueva reserva online: ${t.clienteNombre ?? 'un cliente'}, ${cuando}` : `Turno cancelado: ${t.clienteNombre ?? 'un cliente'}, ${cuando}`,
-          text: [
-            tipo === 'reserva' ? `${t.clienteNombre ?? 'Un cliente'} reservó desde la tienda:` : `${t.clienteNombre ?? 'Un cliente'} canceló su turno desde la tienda (el horario quedó libre):`,
-            '',
-            `• ${que}`,
-            ...(t.clienteTelefono ? [`• Teléfono: ${t.clienteTelefono}`] : []),
-            '',
-            `Miralo en la agenda: ${link}`,
-          ].join('\n'),
+          subject: asunto,
+          text: texto,
         }),
       });
       if (!r.ok) this.logger.warn(`Resend respondió ${r.status} al avisar una ${tipo}`);

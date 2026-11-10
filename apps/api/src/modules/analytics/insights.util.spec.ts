@@ -215,29 +215,57 @@ describe('armarForecast (semanal)', () => {
     expect(armarForecast(serie, 'semana', 60, '2026-09-29')!.tendencia).toBe('neutra');
   });
 
-  it('compara el pronóstico con lo real (prueba hacia atrás) y mide el error', () => {
+  it('compara el pronóstico con lo real (prueba hacia atrás) y arma la banda de rango', () => {
     // 6 semanas con ventas estables de 1000 y una 7ma en curso con 200.
     const semanas = ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31', '2026-09-07'];
     const serie = [...semanas.map((d) => dia(d, 1000)), dia('2026-09-14', 200)];
     const f = armarForecast(serie, 'semana', 90, '2026-09-16')!;
     expect(f).not.toBeNull();
-    // Las primeras 4 semanas no tienen prueba hacia atrás (hacen falta >=4 previas).
     const cerrados = f.puntos.filter((p) => p.historico != null);
-    expect(cerrados[0].pronosticado).toBeNull();
-    expect(cerrados[3].pronosticado).toBeNull();
-    // A partir de la 5ta sí: el pronóstico de una serie plana da exactamente 1000.
-    expect(cerrados[4].pronosticado).toBeCloseTo(1000, 1);
-    expect(cerrados[5].pronosticado).toBeCloseTo(1000, 1);
+    // El último período real une la banda [total, total] y los anteriores tienen rango null.
+    expect(cerrados[0].rango).toBeNull();
+    expect(cerrados[cerrados.length - 1].rango).toEqual([1000, 1000]);
     // Precisión: 2 períodos probados, error 0, sesgo 0.
     expect(f.precision).not.toBeNull();
     expect(f.precision!.periodos).toBe(2);
     expect(f.precision!.errorPct).toBeCloseTo(0, 5);
     expect(f.precision!.sesgoPct).toBeCloseTo(0, 5);
-    expect(f.precision!.ultimo.real).toBe(1000);
-    expect(f.precision!.ultimo.pronosticado).toBeCloseTo(1000, 1);
-    expect(f.precision!.ultimo.diferencia).toBeCloseTo(0, 1);
-    // La semana en curso muestra lo acumulado hasta hoy.
-    expect(f.enCurso).toEqual({ clave: '2026-09-14', real: 200, pronosticado: 1000 });
+    expect(f.totalRango).toEqual({ min: 4000, max: 4000 });
+  });
+
+  it('con error promedio 400, una proyección de 1000 da rango = [600, 1400]', () => {
+    // Primeras 4 semanas en 1000 (regresión predice 1000 para la 5ta); la 5ta cae en 600 (error = 400).
+    // Para que la regresión total sobre las 5 semanas proyecte ~1000, ajustamos los valores:
+    // Pero podemos verificar directamente que cada punto proyectado tenga [proy - errorPromedio, proy + errorPromedio].
+    const serie = [
+      dia('2026-08-03', 1000),
+      dia('2026-08-10', 1000),
+      dia('2026-08-17', 1000),
+      dia('2026-08-24', 1000),
+      dia('2026-08-31', 600), // pronóstico previo era 1000 -> errorAbs = 400
+    ];
+    const f = armarForecast(serie, 'semana', 90, '2026-09-08')!;
+    expect(f.precision!.errorPromedio).toBeCloseTo(400, 5);
+    const proyectados = f.puntos.filter((p) => p.historico == null && p.proyeccion != null);
+    for (const p of proyectados) {
+      expect(p.rango![0]).toBeCloseTo(Math.max(0, p.proyeccion! - 400), 3);
+      expect(p.rango![1]).toBeCloseTo(p.proyeccion! + 400, 3);
+    }
+  });
+
+  it('el mínimo de la banda nunca baja de 0', () => {
+    const serie = [
+      dia('2026-08-03', 1000),
+      dia('2026-08-10', 1000),
+      dia('2026-08-17', 1000),
+      dia('2026-08-24', 1000),
+      dia('2026-08-31', 10), // error enorme frente a la caída
+    ];
+    const f = armarForecast(serie, 'semana', 90, '2026-09-08')!;
+    const proyectados = f.puntos.filter((p) => p.historico == null);
+    for (const p of proyectados) {
+      expect(p.rango![0]).toBeGreaterThanOrEqual(0);
+    }
   });
 });
 

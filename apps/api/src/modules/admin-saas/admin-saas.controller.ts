@@ -1,6 +1,8 @@
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { z } from 'zod';
 import { RequireAdminApp } from '../../common/decorators/admin-app.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
+import { MODULO_IDS, type ModuloToggleId } from '../configuracion/modulos.util.js';
 import { AdminSaasService } from './admin-saas.service.js';
 import { listarPagosQuerySchema, type ListarPagosQuery } from './admin-saas.dto.js';
 import { CobrosService } from '../alianzas/cobros.service.js';
@@ -77,5 +79,21 @@ export class AdminSaasController {
   @HttpCode(200)
   devolverPago(@Param('id', new ParseUUIDPipe()) id: string, @Body(new ZodValidationPipe(devolverPagoSchema)) body: { motivo: string }) {
     return this.cobros.devolver(id, body.motivo);
+  }
+
+  /** Prender o apagar módulos de una empresa desde la Consola. */
+  @Patch('empresas/:id/modulos')
+  actualizarModulosEmpresa(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(z.object({ modulos: z.record(z.enum(MODULO_IDS as unknown as [ModuloToggleId, ...ModuloToggleId[]]), z.boolean()) })))
+    body: { modulos: Record<string, boolean> },
+  ) {
+    return this.adminSaasService.actualizarModulosEmpresa(id, body.modulos);
+  }
+
+  /** Qué módulos usan o apagan las empresas (para Consola → Uso). */
+  @Get('modulos-uso')
+  modulosUso() {
+    return this.adminSaasService.resumenModulosUso();
   }
 }

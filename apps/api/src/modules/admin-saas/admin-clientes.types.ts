@@ -51,6 +51,7 @@ export interface AdminEmpresaDetalle {
   tickets: { id: string; numeroTicket: string | null; asunto: string; estado: string; prioridad: string; fecha: string }[];
   historialPlanes: { fecha: string; planAnterior: string | null; planNuevo: string; motivo: string | null }[];
   uso: { clientes: number; compras: number; pedidos: number; ventasTotales: number; primeraVenta: string | null };
+  configuracion?: { actividades: string[]; modulos: Record<string, boolean>; modulosEfectivos: Record<string, boolean> };
 }
 
 export interface AdminTablaTamano {

@@ -74,12 +74,27 @@ export function useAccionesGastos() {
       api("/gastos", { method: "POST", body: JSON.stringify(g) }),
     onSuccess,
   });
+  const editar = useMutation({
+    mutationFn: ({ id, ...datos }: { id: string; categoria?: string; descripcion?: string; monto?: number; fecha?: string }) =>
+      api(`/gastos/${id}`, { method: "PATCH", body: JSON.stringify(datos) }),
+    onSuccess,
+  });
+  const dejarDeRepetir = useMutation({
+    mutationFn: ({ id, desde }: { id: string; desde: string }) =>
+      api(`/gastos/${id}/dejar-de-repetir`, { method: "POST", body: JSON.stringify({ desde }) }),
+    onSuccess,
+  });
+  const cambiarMontoDesde = useMutation({
+    mutationFn: ({ id, desde, monto }: { id: string; desde: string; monto: number }) =>
+      api(`/gastos/${id}/cambiar-monto`, { method: "POST", body: JSON.stringify({ desde, monto }) }),
+    onSuccess,
+  });
   const anular = useMutation({ mutationFn: (id: string) => api(`/gastos/${id}/anular`, { method: "POST" }), onSuccess });
   const cambiarTipo = useMutation({
     mutationFn: ({ id, tipoCosto }: { id: string; tipoCosto: "fijo" | "variable" }) => api(`/gastos/${id}/tipo-costo`, { method: "PATCH", body: JSON.stringify({ tipoCosto }) }),
     onSuccess,
   });
-  return { crear, anular, cambiarTipo };
+  return { crear, editar, dejarDeRepetir, cambiarMontoDesde, anular, cambiarTipo };
 }
 
 export const useEstadosContables = (desde: string, hasta: string) =>

@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { GASTO_REPOSITORY, type CategoriaGasto, type Gasto, type GastoRepository, type TipoCosto } from './gasto.repository.js';
-import type { CrearGastoDto } from './gasto.dto.js';
+import type { CambiarMontoGastoDto, CrearGastoDto, EditarGastoDto } from './gasto.dto.js';
+import { sumarDiasISO } from './contabilidad.util.js';
 
 @Injectable()
 export class GastoService {
@@ -12,6 +13,26 @@ export class GastoService {
 
   crear(empresaId: string, usuarioId: string, input: CrearGastoDto): Promise<Gasto> {
     return this.repository.crear({ empresaId, usuarioId, ...input });
+  }
+
+  async editar(empresaId: string, id: string, input: EditarGastoDto): Promise<Gasto> {
+    const gasto = await this.repository.editar(empresaId, id, input);
+    if (!gasto) throw new NotFoundException('Gasto no encontrado');
+    return gasto;
+  }
+
+  async dejarDeRepetir(empresaId: string, id: string, desde: string): Promise<Gasto> {
+    const fechaFin = sumarDiasISO(desde, -1);
+    const gasto = await this.repository.dejarDeRepetir(empresaId, id, fechaFin);
+    if (!gasto) throw new NotFoundException('Gasto no encontrado');
+    return gasto;
+  }
+
+  async cambiarMontoDesde(empresaId: string, usuarioId: string, id: string, body: CambiarMontoGastoDto): Promise<Gasto> {
+    const fechaFinViejo = sumarDiasISO(body.desde, -1);
+    const nuevo = await this.repository.cambiarMontoDesde(empresaId, usuarioId, id, body.desde, fechaFinViejo, body.monto);
+    if (!nuevo) throw new NotFoundException('Gasto no encontrado');
+    return nuevo;
   }
 
   async cambiarTipoCosto(empresaId: string, id: string, tipoCosto: TipoCosto): Promise<void> {

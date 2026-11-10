@@ -93,10 +93,8 @@ export interface PuntoForecast {
   clave: string;
   historico: number | null;
   proyeccion: number | null;
-  /** Lo que el pronóstico decía de ese período con los datos de antes (prueba hacia atrás). */
-  pronosticado: number | null;
-  /** Período en curso: lo vendido hasta hoy (incompleto). */
-  realEnCurso: number | null;
+  /** Banda [min, max] del rango probable en los períodos proyectados (y el último real para unir la franja). */
+  rango: [number, number] | null;
 }
 
 /** Cuánto le erró el pronóstico a los períodos ya cerrados. */
@@ -116,11 +114,11 @@ export interface InsightForecast {
   periodosHistorial: number;
   puntos: PuntoForecast[];
   totalProyeccion: number;
+  totalRango: { min: number; max: number } | null;
   tendencia: 'positiva' | 'negativa' | 'neutra';
   granularidad: GranularidadForecast;
   etiquetaProyeccion: string;
   precision: PrecisionForecast | null;
-  enCurso: { clave: string; real: number; pronosticado: number } | null;
 }
 
 export interface DistAtributo {
@@ -425,9 +423,7 @@ export function armarForecast(
     agregados = completos;
   }
   // El período en curso (ej. la semana de hoy) está incompleto: no entra en la regresión.
-  let realEnCurso = 0;
   if (hoy && claveDe && agregados.length > 0 && agregados[agregados.length - 1].clave === claveDe(hoy)) {
-    realEnCurso = agregados[agregados.length - 1].total;
     agregados = agregados.slice(0, -1);
   }
   const primero = agregados.findIndex((p) => Number.isFinite(p.total) && p.total !== 0);
@@ -443,7 +439,7 @@ export function armarForecast(
   if (!Number.isFinite(reg.m) || !Number.isFinite(reg.b)) return null;
 
   // Prueba hacia atrás: para cada período ya cerrado, el mismo modelo con solo
-  // los datos de antes (misma ventana máxima). Así se ve cuánto le viene errando.
+  // los datos de antes (misma ventana máxima). Así se mide cuánto le viene errando.
   const inicioReg = puntos.length - puntosReg.length;
   const pronosticoDe = (j: number): number | null => {
     const previos = puntos.slice(Math.max(0, j - maxPeriodos), j);
@@ -453,14 +449,22 @@ export function armarForecast(
     return Number.isFinite(y) ? Math.max(0, y) : null;
   };
 
-  const chart: PuntoForecast[] = puntosReg.map((p, i) => ({
+  const backtest = puntosReg.map((p, i) => ({
     clave: p.clave,
     historico: p.total,
-    proyeccion: i === puntosReg.length - 1 ? p.total : null,
     pronosticado: pronosticoDe(inicioReg + i),
-    realEnCurso: null,
   }));
-  const precision = medirPrecision(chart);
+  const precision = medirPrecision(backtest);
+
+  const chart: PuntoForecast[] = puntosReg.map((p, i) => {
+    const esUltimoReal = i === puntosReg.length - 1;
+    return {
+      clave: p.clave,
+      historico: p.total,
+      proyeccion: esUltimoReal ? p.total : null,
+      rango: esUltimoReal && precision ? [p.total, p.total] : null,
+    };
+  });
 
   const pasos = granularidad === 'dia' ? 14 : granularidad === 'semana' ? 4 : granularidad === 'mes' ? 3 : 2;
   const stepIso = (clave: string, k: number) => {
@@ -476,21 +480,25 @@ export function armarForecast(
   };
 
   let totalProyeccion = 0;
+  let minTotal = 0;
+  let maxTotal = 0;
   const lastClave = puntosReg[puntosReg.length - 1].clave;
   for (let k = 1; k <= pasos; k++) {
     const x = puntosReg.length - 1 + k;
     const y = Math.max(0, linea(x));
     totalProyeccion += y;
-    chart.push({ clave: stepIso(lastClave, k), historico: null, proyeccion: y, pronosticado: null, realEnCurso: null });
+    let rango: [number, number] | null = null;
+    if (precision) {
+      const rMin = Math.max(0, y - precision.errorPromedio);
+      const rMax = y + precision.errorPromedio;
+      rango = [rMin, rMax];
+      minTotal += rMin;
+      maxTotal += rMax;
+    }
+    chart.push({ clave: stepIso(lastClave, k), historico: null, proyeccion: y, rango });
   }
 
-  // El primer período proyectado es el que está corriendo: se muestra lo vendido hasta hoy.
-  let enCurso: InsightForecast['enCurso'] = null;
-  const primerFuturo = chart[puntosReg.length];
-  if (hoy && claveDe && primerFuturo && primerFuturo.clave === claveDe(hoy)) {
-    primerFuturo.realEnCurso = realEnCurso;
-    enCurso = { clave: primerFuturo.clave, real: realEnCurso, pronosticado: primerFuturo.proyeccion ?? 0 };
-  }
+  const totalRango = precision ? { min: minTotal, max: maxTotal } : null;
 
   const etiquetaProyeccion =
     granularidad === 'dia'
@@ -505,12 +513,12 @@ export function armarForecast(
   const promedio = puntosReg.reduce((a, p) => a + p.total, 0) / puntosReg.length;
   const relativa = promedio > 0 ? reg.m / promedio : 0;
   const tendencia: InsightForecast['tendencia'] = relativa > 0.02 ? 'positiva' : relativa < -0.02 ? 'negativa' : 'neutra';
-  return { diasHistorial, periodosHistorial: puntosReg.length, puntos: chart, totalProyeccion, tendencia, granularidad, etiquetaProyeccion, precision, enCurso };
+  return { diasHistorial, periodosHistorial: puntosReg.length, puntos: chart, totalProyeccion, totalRango, tendencia, granularidad, etiquetaProyeccion, precision };
 }
 
 /** Compara lo pronosticado con lo real en los períodos cerrados que tienen las dos cosas. */
-export function medirPrecision(puntos: PuntoForecast[]): PrecisionForecast | null {
-  const pares = puntos.filter((p) => p.historico != null && p.pronosticado != null) as (PuntoForecast & { historico: number; pronosticado: number })[];
+export function medirPrecision(puntos: { clave: string; historico: number | null; pronosticado: number | null }[]): PrecisionForecast | null {
+  const pares = puntos.filter((p) => p.historico != null && p.pronosticado != null) as { clave: string; historico: number; pronosticado: number }[];
   if (pares.length === 0) return null;
   const totalReal = pares.reduce((a, p) => a + p.historico, 0);
   const errorAbs = pares.reduce((a, p) => a + Math.abs(p.pronosticado - p.historico), 0);

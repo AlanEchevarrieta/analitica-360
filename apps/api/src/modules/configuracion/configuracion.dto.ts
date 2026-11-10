@@ -1,8 +1,11 @@
 import { z } from 'zod';
+import { MODULO_IDS, type ModuloToggleId } from './modulos.util.js';
 
 export const ACTIVIDADES = ['productos', 'produccion', 'servicios'] as const;
 
 export const MEDIOS_PAGO_CONFIG = ['efectivo', 'transferencia', 'debito', 'credito', 'mp_qr'] as const;
+
+const moduloClaveSchema = z.enum(MODULO_IDS as unknown as [ModuloToggleId, ...ModuloToggleId[]]);
 
 const tasaCuotaSchema = z.object({
   cuotas: z.number().int().min(0).max(60),
@@ -42,6 +45,8 @@ export const actualizarConfiguracionSchema = z
     valorHora: z.number().min(0).max(10_000_000).nullable().optional(),
     /** Qué hace el negocio: ordena el menú. */
     actividades: z.array(z.enum(ACTIVIDADES)).min(1, 'Elegí al menos una actividad').max(3).optional(),
+    /** Módulos que el dueño o el admin prendió o apagó a mano. */
+    modulos: z.record(moduloClaveSchema, z.boolean()).optional(),
     categoriaMonotributo: z.enum(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']).nullable().optional(),
   })
   .refine((c) => !c.tasasCuotas || new Set(c.tasasCuotas.map((t) => t.cuotas)).size === c.tasasCuotas.length, {

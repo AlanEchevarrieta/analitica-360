@@ -41,6 +41,8 @@ export class ClerkAuthGuard implements CanActivate {
     try {
       const claims = await verifyToken(token, {
         secretKey: this.config.get('CLERK_SECRET_KEY', { infer: true }),
+        // Tolerancia de 30s ante desfases de reloj o rotación de tokens de 60s al despertar el celular/pestaña.
+        clockSkewInMs: 30_000,
       });
       request.clerkAuth = {
         clerkUserId: claims.sub,

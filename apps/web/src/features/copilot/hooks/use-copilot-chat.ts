@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@clerk/nextjs';
+import { usePlan } from '@/hooks/use-plan';
 import { enviarMensajeCopilot, obtenerSugerenciasCopilot } from '../services/copilot.api';
 import type { CopilotMensaje, MetricasNegocio, CopilotTopico } from '../types/copilot.types';
 
 export function useCopilotChat() {
   const { getToken, isLoaded, isSignedIn, orgId } = useAuth();
+  const plan = usePlan();
   const tieneAccesoEmpresa = Boolean(isLoaded && isSignedIn && orgId);
+  const disponibleEnPlan = plan.disponible('copilot');
 
   const [mensajes, setMensajes] = useState<CopilotMensaje[]>([
     {
@@ -28,7 +31,7 @@ export function useCopilotChat() {
 
   useEffect(() => {
     let montado = true;
-    if (!isLoaded || !isSignedIn || !orgId) return;
+    if (!isLoaded || !isSignedIn || !orgId || !disponibleEnPlan) return;
 
     (async () => {
       try {
@@ -45,7 +48,7 @@ export function useCopilotChat() {
     return () => {
       montado = false;
     };
-  }, [getToken, isLoaded, isSignedIn, orgId]);
+  }, [getToken, isLoaded, isSignedIn, orgId, disponibleEnPlan]);
 
   const enviar = useCallback(
     async (texto: string, topico?: CopilotTopico) => {

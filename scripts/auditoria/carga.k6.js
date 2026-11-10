@@ -31,8 +31,16 @@ const BOLSA = PANTALLAS.flatMap((p) => Array(p[2]).fill(p));
 
 export const options = {
   scenarios: {
+    // Entrada en calor de 20 s antes de medir para que el arranque en frío no dispare falsas alarmas.
+    calentamiento: {
+      executor: 'constant-vus',
+      vus: Math.min(5, VUS),
+      duration: '20s',
+      tags: { fase: 'calentamiento' },
+    },
     navegacion: {
       executor: 'ramping-vus',
+      startTime: '20s',
       startVUs: 1,
       stages: [
         { duration: '15s', target: VUS },

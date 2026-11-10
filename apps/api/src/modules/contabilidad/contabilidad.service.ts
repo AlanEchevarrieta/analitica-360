@@ -21,6 +21,16 @@ import {
 import { fechaHoyAR, sumarDiasIso } from '../analytics/analytics.util.js';
 import { CotizacionesService, type Moneda } from '../cotizaciones/cotizaciones.service.js';
 
+export interface DetalleRecurrenteMes {
+  id: string;
+  descripcion: string;
+  categoria: string;
+  frecuencia: 'mensual' | 'quincenal' | 'semanal';
+  veces: number;
+  montoOriginal: number;
+  total: number;
+}
+
 export interface ContabilidadRespuesta {
   totales: TotalesPeriodo;
   serie6: ReturnType<typeof serieMensual>;
@@ -31,6 +41,7 @@ export interface ContabilidadRespuesta {
   proyeccion: ReturnType<typeof proyectarFlujo>;
   flujoHistorico: PuntoMesAcumulado[];
   flujoProyectado: PuntoMesAcumulado[];
+  recurrentesDetallePorMes: Record<string, DetalleRecurrenteMes[]>;
 }
 
 @Injectable()
@@ -43,6 +54,7 @@ export class ContabilidadService {
 
   async contabilidad(empresaId: string, desde: string, hasta: string, moneda?: Moneda): Promise<ContabilidadRespuesta> {
     const hoy = fechaHoyAR();
+    const mesActual = hoy.slice(0, 7);
     const claves6 = mesesAtras(hoy, 6);
     const desdeHist = `${claves6[0]}-01`;
 
@@ -96,11 +108,44 @@ export class ContabilidadService {
     const [y, m] = hoy.split('-').map(Number);
     const finProyeccion = new Date(Date.UTC(y, m + 3, 0)).toISOString().slice(0, 10);
     const recurrentesPorMes: Record<string, number> = {};
+    const detalleMap = new Map<string, Map<string, DetalleRecurrenteMes>>();
+
     for (const g of expandirRecurrentes(gastosCargados.filter((x) => x.recurrente && x.frecuencia), finProyeccion)) {
       if (g.fecha < desdeHist) continue;
       const clave = g.fecha.slice(0, 7);
-      recurrentesPorMes[clave] = (recurrentesPorMes[clave] ?? 0) + conv.a(g.monto, g.fecha > hoy ? hoy : g.fecha);
+      const montoConv = conv.a(g.monto, g.fecha > hoy ? hoy : g.fecha);
+      recurrentesPorMes[clave] = (recurrentesPorMes[clave] ?? 0) + montoConv;
+
+      // En el mes actual dentro de serie6 solo cuentan las ocurrencias hasta hoy.
+      if (clave === mesActual && g.fecha > hoy) continue;
+      let porGasto = detalleMap.get(clave);
+      if (!porGasto) {
+        porGasto = new Map();
+        detalleMap.set(clave, porGasto);
+      }
+      const gastoKey = g.id ?? `${g.categoria}:${g.descripcion}:${g.monto}`;
+      const prev = porGasto.get(gastoKey);
+      if (prev) {
+        prev.veces += 1;
+        prev.total += montoConv;
+      } else {
+        porGasto.set(gastoKey, {
+          id: gastoKey,
+          descripcion: g.descripcion ?? g.categoria ?? 'Gasto recurrente',
+          categoria: g.categoria ?? 'otro',
+          frecuencia: g.frecuencia!,
+          veces: 1,
+          montoOriginal: g.monto,
+          total: montoConv,
+        });
+      }
     }
+
+    const recurrentesDetallePorMes: Record<string, DetalleRecurrenteMes[]> = {};
+    for (const [clave, porGasto] of detalleMap.entries()) {
+      recurrentesDetallePorMes[clave] = [...porGasto.values()];
+    }
+
     const proyeccion = proyectarFlujo(serie6, 3, { hoy, recurrentesPorMes });
     const flujoHistorico = acumuladoSerie(serie6);
     const flujoProyectado = acumuladoSerie([...serie6, ...proyeccion]);
@@ -115,6 +160,7 @@ export class ContabilidadService {
       proyeccion,
       flujoHistorico,
       flujoProyectado,
+      recurrentesDetallePorMes,
     };
   }
 

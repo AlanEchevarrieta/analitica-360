@@ -111,7 +111,7 @@ export function EquilibrioInicio() {
           <summary className="cursor-pointer list-none text-xs font-medium text-primary hover:underline">
             Ver detalle <span className="inline-block transition-transform group-open:rotate-180">⌄</span>
           </summary>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <div className="mt-2 grid grid-cols-2 gap-2">
             <div>
               <p className="text-xs text-muted-foreground">Costos fijos del mes</p>
               <p className="font-semibold tabular-nums">{formatoMoneda(e.fijos)}</p>

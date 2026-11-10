@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.validation.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
+import { EventosService } from '../eventos/eventos.service.js';
 import { vencimientoDolar, vencimientoTopes, type Vencimiento } from './vencimientos.util.js';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class VencimientosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
+    @Optional() private readonly eventos?: EventosService,
   ) {}
 
   async estado(hoy: string = fechaHoyAR()): Promise<Vencimiento[]> {
@@ -38,23 +40,38 @@ export class VencimientosService {
   }
 
   private async enviarEmail(vencidos: Vencimiento[]): Promise<boolean> {
+    const destino = this.config.get('AVISOS_EMAIL', { infer: true });
+    const para = destino ? destino.split(',').map((e) => e.trim()) : (await this.prisma.adminEmail.findMany({ select: { email: true } })).map((a) => a.email);
+    if (para.length === 0) return false;
+    const asunto = `Analítica 360: ${vencidos.map((v) => v.titulo.toLowerCase()).join(' y ')} sin actualizar`;
+    const texto = [
+      ...vencidos.flatMap((v) => [`• ${v.titulo}`, `  ${v.detalle}`, `  Qué hacer: ${v.queHacer}`, '']),
+      'Lo ves también en la consola: Sistema → Vencimientos.',
+    ].join('\n');
+
+    if (this.eventos) {
+      const hoy = fechaHoyAR();
+      const claves = vencidos.map((v) => v.clave).sort().join('+');
+      await this.eventos.emitir(this.prisma, {
+        empresaId: null,
+        tipo: 'vencimiento.aviso',
+        clave: `sistema:vencimiento:${hoy}:${claves}`,
+        payload: { origen: 'sistema', empresaId: null, para, asunto, texto, claveBase: `sistema:vencimiento:${hoy}:${claves}` },
+      });
+      return true;
+    }
+
     const clave = this.config.get('RESEND_API_KEY', { infer: true });
     if (!clave) return false;
     try {
-      const destino = this.config.get('AVISOS_EMAIL', { infer: true });
-      const para = destino ? destino.split(',').map((e) => e.trim()) : (await this.prisma.adminEmail.findMany({ select: { email: true } })).map((a) => a.email);
-      if (para.length === 0) return false;
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${clave}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           from: this.config.get('AVISOS_EMAIL_DESDE', { infer: true }),
           to: para,
-          subject: `Analítica 360: ${vencidos.map((v) => v.titulo.toLowerCase()).join(' y ')} sin actualizar`,
-          text: [
-            ...vencidos.flatMap((v) => [`• ${v.titulo}`, `  ${v.detalle}`, `  Qué hacer: ${v.queHacer}`, '']),
-            'Lo ves también en la consola: Sistema → Vencimientos.',
-          ].join('\n'),
+          subject: asunto,
+          text: texto,
         }),
       });
       if (!r.ok) this.logger.warn(`Resend respondió ${r.status}`);

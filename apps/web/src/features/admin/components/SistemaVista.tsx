@@ -5,6 +5,7 @@ import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { formatoNumero } from "@/lib/formato";
 import { useCapacidadAdmin } from "../hooks/use-admin";
 import { Indicador, Panel } from "./comunes";
+import { EventosSistemaPanel } from "./EventosSistemaPanel";
 import { TopesMonotributo } from "./TopesMonotributo";
 import { VencimientosPanel } from "./Vencimientos";
 
@@ -26,8 +27,9 @@ export function SistemaVista() {
     <>
       <div>
         <h1 className="text-xl font-semibold">Sistema</h1>
-        <p className="text-sm text-muted-foreground">Datos que vencen, cuánto ocupa la base de datos y a qué ritmo crece.</p>
+        <p className="text-sm text-muted-foreground">Cola de eventos, datos que vencen, cuánto ocupa la base de datos y a qué ritmo crece.</p>
       </div>
+      <EventosSistemaPanel />
       <VencimientosPanel />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Indicador etiqueta="Base de datos" valor={tamano(c.baseBytes)} detalle="Tamaño total en disco" />

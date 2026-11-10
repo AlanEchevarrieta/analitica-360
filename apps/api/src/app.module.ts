@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { validateEnv } from './config/env.validation.js';
@@ -17,6 +18,7 @@ import { DocumentosModule } from './modules/documentos/documentos.module.js';
 import { PresupuestosModule } from './modules/presupuestos/presupuestos.module.js';
 import { ArchivoModule } from './modules/archivo/archivo.module.js';
 import { OrdenesTrabajoModule } from './modules/ordenes-trabajo/ordenes-trabajo.module.js';
+import { ProyectosModule } from './modules/proyectos/proyectos.module.js';
 import { AgendaModule } from './modules/agenda/agenda.module.js';
 import { AbonosModule } from './modules/abonos/abonos.module.js';
 import { ComisionesModule } from './modules/comisiones/comisiones.module.js';
@@ -32,7 +34,7 @@ import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module.js';
 import { ArcaModule } from './modules/arca/arca.module.js';
 import { EnviosModule } from './modules/envios/envios.module.js';
 import { MpTiendaModule } from './modules/mercadopago-tienda/mp-tienda.module.js';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { LimitePedidosGuard } from './common/limites/limite-pedidos.guard.js';
 import { ArchivosModule } from './common/archivos/archivos.module.js';
 import { CuentaCorrienteModule } from './modules/cuenta-corriente/cuenta-corriente.module.js';
@@ -57,9 +59,11 @@ import { LakeModule } from './modules/lake/lake.module.js';
 import { RadarPreciosModule } from './modules/radar-precios/radar-precios.module.js';
 import { PasarelasModule } from './modules/pasarelas/pasarelas.module.js';
 import { CajasModule } from './modules/cajas/cajas.module.js';
+import { EventosModule } from './modules/eventos/eventos.module.js';
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     DatabaseModule,
     UsuariosModule,
@@ -75,6 +79,7 @@ import { CajasModule } from './modules/cajas/cajas.module.js';
     PresupuestosModule,
     ArchivoModule,
     OrdenesTrabajoModule,
+    ProyectosModule,
     AgendaModule,
     AbonosModule,
     ComisionesModule,
@@ -113,9 +118,14 @@ import { CajasModule } from './modules/cajas/cajas.module.js';
     RadarPreciosModule,
     PasarelasModule,
     CajasModule,
+    EventosModule,
   ],
   controllers: [AppController],
-  // Límite general de pedidos por cliente (ver LimitePedidosGuard).
-  providers: [{ provide: APP_GUARD, useClass: LimitePedidosGuard }, AppService],
+  // Filtro global de Sentry (solo envía si SENTRY_DSN está configurado) + límite general de pedidos.
+  providers: [
+    { provide: APP_FILTER, useClass: SentryGlobalFilter },
+    { provide: APP_GUARD, useClass: LimitePedidosGuard },
+    AppService,
+  ],
 })
 export class AppModule {}

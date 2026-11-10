@@ -3,8 +3,8 @@ import type { Request, Response } from 'express';
 
 /** Pedidos por minuto y por cliente (IP real; detrás de la tienda, la IP del comprador). LIMITE_PEDIDOS_POR_MINUTO=0 lo apaga. */
 const GENERAL = Number(process.env.LIMITE_PEDIDOS_POR_MINUTO ?? 600);
-/** Rutas que se llaman solas (ej. métricas de uso): más ajustado. */
-const POR_RUTA: Record<string, number> = { 'POST /uso/eventos': 60 };
+/** Rutas que se llaman solas o consumen IA externa: más ajustado. */
+const POR_RUTA: Record<string, number> = { 'POST /uso/eventos': 60, 'POST /copilot/chat': 20 };
 const VENTANA_MS = 60_000;
 
 /**

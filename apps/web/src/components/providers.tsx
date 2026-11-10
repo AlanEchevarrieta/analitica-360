@@ -4,32 +4,76 @@ import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
-import { ApiError } from "@/lib/api-client";
+import {
+  ApiError,
+  EVENTO_SESION_EXPIRADA,
+  esRutaPublica,
+  obtenerTokenFresco,
+  registrarRefrescadorSesion,
+} from "@/lib/api-client";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
-/** Observa el estado de sesión de Clerk: si el usuario pierde la sesión o limpia storage en una ruta privada, redirige al login. */
+/**
+ * Observa y mantiene viva la sesión de Clerk:
+ * 1) Registra el refrescador global (`getToken({ skipCache: true })`) para `apiFetch` y `apiArchivo`.
+ * 2) Al volver a la pestaña (`visibilitychange`) o recuperar conexión (`online`), renueva el JWT en segundo plano.
+ * 3) Escucha `EVENTO_SESION_EXPIRADA` y valida si la sesión realmente se cerró antes de redirigir al login.
+ */
 function ObservadorSesion() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const pathname = usePathname();
+  const redirigiendoRef = React.useRef(false);
+
+  const redirigirLogin = React.useCallback(() => {
+    if (typeof window === "undefined" || redirigiendoRef.current) return;
+    if (esRutaPublica(window.location.pathname)) return;
+    redirigiendoRef.current = true;
+    const destino = encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.href = `/sign-in?redirect_url=${destino}`;
+  }, []);
+
+  React.useEffect(() => {
+    registrarRefrescadorSesion(() => getToken({ skipCache: true }));
+    return () => registrarRefrescadorSesion(null);
+  }, [getToken]);
 
   React.useEffect(() => {
     if (!isLoaded || typeof window === "undefined") return;
-    const esPublica =
-      pathname === "/" ||
-      pathname.startsWith("/sign-in") ||
-      pathname.startsWith("/sign-up") ||
-      pathname.startsWith("/terminos") ||
-      pathname.startsWith("/privacidad") ||
-      pathname.startsWith("/ticket") ||
-      pathname.startsWith("/guias");
-
-    if (!isSignedIn && !esPublica) {
-      const destino = encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.href = `/sign-in?redirect_url=${destino}`;
+    if (!isSignedIn && !esRutaPublica(pathname)) {
+      redirigirLogin();
     }
-  }, [isLoaded, isSignedIn, pathname]);
+  }, [isLoaded, isSignedIn, pathname, redirigirLogin]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const alExpirarSesion = async () => {
+      if (navigator.onLine === false || esRutaPublica(window.location.pathname)) return;
+      // Última verificación sin caché: si Clerk sigue entregando un token válido, no desconectamos al usuario.
+      const token = await obtenerTokenFresco();
+      if (!token) {
+        redirigirLogin();
+      }
+    };
+
+    const alRecuperarFocoORed = () => {
+      if (document.visibilityState === "visible" && isSignedIn && navigator.onLine !== false) {
+        void obtenerTokenFresco();
+      }
+    };
+
+    window.addEventListener(EVENTO_SESION_EXPIRADA, alExpirarSesion);
+    document.addEventListener("visibilitychange", alRecuperarFocoORed);
+    window.addEventListener("online", alRecuperarFocoORed);
+
+    return () => {
+      window.removeEventListener(EVENTO_SESION_EXPIRADA, alExpirarSesion);
+      document.removeEventListener("visibilitychange", alRecuperarFocoORed);
+      window.removeEventListener("online", alRecuperarFocoORed);
+    };
+  }, [isSignedIn, redirigirLogin]);
 
   return null;
 }

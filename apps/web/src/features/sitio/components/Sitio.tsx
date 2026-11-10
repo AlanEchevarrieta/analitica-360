@@ -2,7 +2,8 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck, Building2, Check, ClipboardList, DatabaseBackup, Factory, FileSpreadsheet, History, KeyRound, Lock, Megaphone, MessageCircle, ShieldCheck, Smartphone, Tags, UserCog, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PRECIO_MENSUAL } from "@/features/planes/planes";
-import { DESTACADAS, DIAS_PRUEBA, EXTRAS, linkWhatsApp, PASOS, PREGUNTAS, SEGURIDAD, UCIM, WHATSAPP, type PreciosLista } from "../contenido";
+import { APP_DESCARGA, DESTACADAS, DIAS_PRUEBA, EXTRAS, linkWhatsApp, PASOS, PREGUNTAS, SEGURIDAD, UCIM, WHATSAPP, type PreciosLista } from "../contenido";
+import { BotonDescargarApp } from "@/features/descargar-app/BotonDescargarApp";
 import { Encabezado } from "./Encabezado";
 import { Logo } from "./Logo";
 import { MaquetaDestacada, MaquetaInicio, MaquetaVentaCelular } from "./Maquetas";
@@ -166,6 +167,30 @@ export function Sitio({ precios }: { precios?: PreciosLista }) {
           </div>
         </section>
 
+        {/* Descargar la app */}
+        <section id="app" className="scroll-mt-20 border-t border-slate-100 bg-slate-50/60 py-20 sm:py-24">
+          <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-[1.15fr_0.85fr]">
+            <div>
+              <p className="text-sm font-semibold tracking-wide text-indigo-600 uppercase">{APP_DESCARGA.etiqueta}</p>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight text-balance text-slate-900 sm:text-4xl">{APP_DESCARGA.titulo}</h2>
+              <p className="mt-4 text-lg text-pretty text-slate-600">{APP_DESCARGA.texto}</p>
+              <ul className="mt-6 flex flex-col gap-2.5">
+                {APP_DESCARGA.puntos.map((p) => (
+                  <li key={p} className="flex items-center gap-2.5 text-sm text-slate-700">
+                    <Check className="size-4 shrink-0 text-emerald-600" /> {p}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-8">
+                <BotonDescargarApp />
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <MaquetaVentaCelular />
+            </div>
+          </div>
+        </section>
+
         {/* Cómo empezás */}
         <section className="bg-gradient-to-b from-violet-50/80 to-white py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -286,6 +311,7 @@ export function Sitio({ precios }: { precios?: PreciosLista }) {
             <p>Sistema de gestión para comercios · Mendoza, Argentina</p>
           </div>
           <nav className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Pie de página">
+            <a href="#app" className="hover:text-slate-900">Descargar la app</a>
             <a href="#planes" className="hover:text-slate-900">Planes</a>
             <Link prefetch={false} href="/terminos" className="hover:text-slate-900">Términos y condiciones</Link>
             <Link prefetch={false} href="/privacidad" className="hover:text-slate-900">Privacidad</Link>

@@ -5,6 +5,7 @@ import { FileWarning } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePlan } from "@/hooks/use-plan";
 import { useRol } from "@/hooks/use-rol";
+import { useConfiguracion } from "@/features/configuracion/hooks/use-configuracion";
 import { cn } from "@/lib/utils";
 import { nombreCategoria, usePorVencer } from "./use-archivo";
 
@@ -12,7 +13,8 @@ import { nombreCategoria, usePorVencer } from "./use-archivo";
 export function PorVencerCard() {
   const rol = useRol();
   const plan = usePlan();
-  const habilitado = (rol === "dueno" || rol === "contador") && plan.disponible("archivo");
+  const modulosEfectivos = useConfiguracion().data?.modulosEfectivos;
+  const habilitado = (rol === "dueno" || rol === "contador") && plan.disponible("archivo") && modulosEfectivos?.documentos !== false;
   const { data } = usePorVencer(habilitado);
   if (!habilitado || !data || data.length === 0) return null;
   return (

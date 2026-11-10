@@ -25,6 +25,8 @@ export const NOMBRE_FUNCION: Record<string, string> = {
   agenda: "Agenda y turnos",
   abonos: "Abonos y cuotas mensuales",
   comisiones: "Comisiones por profesional",
+  copilot: "Analítica Copilot IA",
+  proyectos: "Proyectos con etapas y aprobaciones",
 };
 
 /**

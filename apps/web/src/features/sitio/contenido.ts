@@ -128,6 +128,18 @@ export const PASOS = [
   { titulo: "Vendé y mirá tus números", texto: "Desde el primer día ves ventas, stock y ganancia, en la compu o en el celular." },
 ];
 
+export const APP_DESCARGA = {
+  etiqueta: "App para el celular y la compu",
+  titulo: "Llevala en tu celular",
+  texto: "Instalala gratis en Android, iPhone o tu compu. No ocupa lugar y se actualiza sola.",
+  puntos: [
+    "Acceso directo desde tu pantalla de inicio",
+    "Cámara del celular lista para leer códigos de barras",
+    "Sin tiendas ni descargas pesadas: siempre al día",
+  ],
+  urlQr: "https://analitica360.app/?descargar=1",
+} as const;
+
 export const SEGURIDAD = [
   { titulo: "Copias de seguridad diarias", texto: "Tus datos se respaldan todos los días, también fuera del servidor." },
   { titulo: "Bitácora que no se puede alterar", texto: "Queda registrado quién hizo cada cambio y nadie puede borrarlo." },

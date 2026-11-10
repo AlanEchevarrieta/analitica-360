@@ -312,6 +312,8 @@ model ConfiguracionEmpresa {
   /// Qué hace el negocio: productos (compra y venta), produccion (fabrica), servicios.
   /// Ordena el menú (lo que no usa queda escondido, no bloqueado). Se elige al registrarse.
   actividades             String[] @default(["productos", "produccion"])
+  /// Módulos prendidos o apagados a mano por el dueño o desde la Consola (ej. {"produccion": false, "agenda": true}).
+  modulos                 Json     @default("{}")
   usaVariantes            Boolean  @default(false) @map("usa_variantes")
   /// Costo de una hora de trabajo (para el costo de fabricar; no suma al valor del stock).
   valorHora               Decimal? @map("valor_hora") @db.Decimal(12, 2)
@@ -1082,6 +1084,8 @@ model Gasto {
   fecha       DateTime  @default(now()) @db.Date
   recurrente  Boolean   @default(false)
   frecuencia  String? // mensual | quincenal | semanal
+  /// Hasta qué día inclusive se repite un gasto recurrente (null = sigue vigente).
+  fechaFin    DateTime? @map("fecha_fin") @db.Date
   /// fijo | variable: para el punto de equilibrio (por defecto, recurrente = fijo).
   tipoCosto   String    @default("variable") @map("tipo_costo") @db.VarChar(10)
   deletedAt   DateTime? @map("deleted_at")
@@ -2563,6 +2567,203 @@ model CajaMovimiento {
   @@index([cajaSesionId])
   @@index([empresaId, fecha])
   @@map("cajas_movimientos")
+}
+
+// ==== Automatizaciones · Etapa 1: Cola de eventos con reintentos (outbox) ====
+
+/// Cola de eventos (outbox): lo que hay que hacer en segundo plano. Se escribe en la misma transacción que el cambio que lo origina.
+model Evento {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// null = evento del sistema (no de una empresa)
+  empresaId        String?   @map("empresa_id") @db.Uuid
+  /// p. ej. correo.enviar, informe.enviar, vencimiento.aviso, objetivo.aviso, precio.aviso
+  tipo             String    @db.VarChar(60)
+  payload          Json
+  /// Para no duplicar: el mismo (empresa, tipo, clave) se guarda una sola vez. Ej.: "informe:semanal:2026-10-26"
+  clave            String?   @db.VarChar(200)
+  /// pendiente | procesando | hecho | fallo | descartado
+  estado           String    @default("pendiente") @db.VarChar(12)
+  intentos         Int       @default(0)
+  maxIntentos      Int       @default(6) @map("max_intentos")
+  /// Cuándo se puede tomar (para reintentos con espera y para eventos programados a futuro)
+  disponibleDesde  DateTime  @default(now()) @map("disponible_desde")
+  /// Si un trabajador lo tomó y se cayó, después de esto otro lo puede retomar
+  bloqueadoHasta   DateTime? @map("bloqueado_hasta")
+  ultimoError      String?   @map("ultimo_error") @db.VarChar(1000)
+  creadoEn         DateTime  @default(now()) @map("creado_en")
+  procesadoEn      DateTime? @map("procesado_en")
+  ejecuciones      EventoEjecucion[]
+  @@unique([empresaId, tipo, clave])
+  @@index([estado, disponibleDesde])
+  @@index([empresaId, creadoEn])
+  @@map("eventos")
+}
+
+/// Historial de cada intento (para la Consola y, en la Etapa 2, para "Automatizaciones → Historial" del comercio)
+model EventoEjecucion {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventoId   String   @map("evento_id") @db.Uuid
+  intento    Int
+  /// ok | error | omitido
+  resultado  String   @db.VarChar(8)
+  /// Ej.: "email a dueño@x.com", "sin destinatarios"
+  detalle    String?  @db.VarChar(500)
+  error      String?  @db.VarChar(1000)
+  duracionMs Int      @map("duracion_ms")
+  creadoEn   DateTime @default(now()) @map("creado_en")
+  evento     Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  @@index([eventoId])
+  @@map("eventos_ejecuciones")
+}
+
+/// Recetas prendidas por empresa (se llena en la Etapa 2; en esta etapa solo se crea la tabla)
+model Automatizacion {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresaId String   @map("empresa_id") @db.Uuid
+  receta    String   @db.VarChar(60)
+  activa    Boolean  @default(false)
+  config    Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@unique([empresaId, receta])
+  @@map("automatizaciones")
+}
+
+// ==== Proyectos · Fase 1: etapas, responsables, aprobaciones y atrasos ====
+
+model PlantillaProyecto {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresaId   String   @map("empresa_id") @db.Uuid
+  nombre      String   @db.VarChar(120)
+  descripcion String?  @db.VarChar(500)
+  activa      Boolean  @default(true)
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  etapas      PlantillaEtapa[]
+  @@index([empresaId])
+  @@map("plantillas_proyecto")
+}
+
+model PlantillaEtapa {
+  id                  String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  plantillaId         String  @map("plantilla_id") @db.Uuid
+  orden               Int
+  nombre              String  @db.VarChar(120)
+  /// Días corridos que debería durar (para calcular la fecha objetivo). null = sin plazo.
+  diasObjetivo        Int?    @map("dias_objetivo")
+  /// ninguna | interna | cliente | ambas (primero interna y después cliente)
+  aprobacion          String  @default("ninguna") @db.VarChar(10)
+  /// Quién aprueba adentro por defecto (si es null, cualquier usuario con permiso o el dueño).
+  aprobadorInternoId  String? @map("aprobador_interno_id") @db.Uuid
+  plantilla           PlantillaProyecto @relation(fields: [plantillaId], references: [id], onDelete: Cascade)
+  @@index([plantillaId])
+  @@map("plantillas_etapa")
+}
+
+model Proyecto {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresaId         String    @map("empresa_id") @db.Uuid
+  numero            Int
+  nombre            String    @db.VarChar(200)
+  clienteId         String?   @map("cliente_id") @db.Uuid
+  clienteNombre     String?   @map("cliente_nombre")
+  descripcion       String?   @map("descripcion") @db.VarChar(4000)
+  /// activo | pausado | terminado | cancelado
+  estado            String    @default("activo") @db.VarChar(12)
+  responsableId     String?   @map("responsable_id") @db.Uuid
+  plantillaId       String?   @map("plantilla_id") @db.Uuid
+  plantillaNombre   String?   @map("plantilla_nombre") @db.VarChar(120)
+  fechaInicio       DateTime  @map("fecha_inicio") @db.Date
+  fechaComprometida DateTime? @map("fecha_comprometida") @db.Date
+  /// Solo informativo en la Fase 1 (no genera ventas ni cobros).
+  montoAcordado     Decimal?  @map("monto_acordado") @db.Decimal(14, 2)
+  presupuestoId     String?   @unique @map("presupuesto_id") @db.Uuid
+  terminadoEn       DateTime? @map("terminado_en")
+  motivoCancelacion String?   @map("motivo_cancelacion") @db.VarChar(300)
+  usuarioId         String    @map("usuario_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  etapas            ProyectoEtapa[]
+  miembros          ProyectoMiembro[]
+  eventos           ProyectoEvento[]
+  @@unique([empresaId, numero])
+  @@index([empresaId, estado])
+  @@map("proyectos")
+}
+
+model ProyectoMiembro {
+  proyectoId String @map("proyecto_id") @db.Uuid
+  usuarioId  String @map("usuario_id") @db.Uuid
+  proyecto   Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  @@id([proyectoId, usuarioId])
+  @@map("proyectos_miembros")
+}
+
+model ProyectoEtapa {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  proyectoId         String    @map("proyecto_id") @db.Uuid
+  orden              Int
+  nombre             String    @db.VarChar(120)
+  /// pendiente | en_curso | en_revision | aprobada | omitida
+  estado             String    @default("pendiente") @db.VarChar(12)
+  aprobacion         String    @default("ninguna") @db.VarChar(10)
+  /// Dentro de en_revision con aprobacion = ambas: interna | cliente (qué aprobación falta).
+  falta              String?   @db.VarChar(8)
+  responsableId      String?   @map("responsable_id") @db.Uuid
+  aprobadorInternoId String?   @map("aprobador_interno_id") @db.Uuid
+  fechaObjetivo      DateTime? @map("fecha_objetivo") @db.Date
+  version            Int       @default(1)
+  iniciadaEn         DateTime? @map("iniciada_en")
+  enRevisionDesde    DateTime? @map("en_revision_desde")
+  cerradaEn          DateTime? @map("cerrada_en")
+  /// Acumulados para las métricas (en minutos), se suman en cada cambio de estado.
+  minutosTrabajo     Int       @default(0) @map("minutos_trabajo")
+  minutosEspera      Int       @default(0) @map("minutos_espera")
+  rondasCambios      Int       @default(0) @map("rondas_cambios")
+  proyecto           Proyecto  @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  aprobaciones       ProyectoAprobacion[]
+  @@index([proyectoId])
+  @@map("proyectos_etapas")
+}
+
+model ProyectoAprobacion {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  etapaId            String   @map("etapa_id") @db.Uuid
+  /// interna | cliente
+  tipo               String   @db.VarChar(8)
+  /// aprobada | cambios
+  resultado          String   @db.VarChar(8)
+  version            Int
+  /// Interna: el usuario que aprobó. Cliente: null (se guarda el nombre).
+  aprobadorUsuarioId String?  @map("aprobador_usuario_id") @db.Uuid
+  aprobadorNombre    String   @map("aprobador_nombre") @db.VarChar(160)
+  /// en_sistema | whatsapp | email | reunion | en_persona | link (Fase 3)
+  medio              String   @db.VarChar(12)
+  comentario         String?  @db.VarChar(2000)
+  evidenciaUrl       String?  @map("evidencia_url") @db.VarChar(500)
+  /// Fecha y hora en que el cliente aprobó (puede ser anterior a la carga).
+  aprobadoEn         DateTime @map("aprobado_en")
+  registradoPorId    String   @map("registrado_por_id") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at")
+  etapa              ProyectoEtapa @relation(fields: [etapaId], references: [id], onDelete: Cascade)
+  @@index([etapaId])
+  @@map("proyectos_aprobaciones")
+}
+
+/// Historial inalterable del proyecto (solo se agregan filas, nunca se editan ni se borran).
+model ProyectoEvento {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  proyectoId String   @map("proyecto_id") @db.Uuid
+  etapaId    String?  @map("etapa_id") @db.Uuid
+  /// creado | editado | etapa_iniciada | enviada_revision | aprobada | cambios | omitida | responsable | pausado | reanudado | terminado | cancelado
+  tipo       String   @db.VarChar(20)
+  detalle    Json?
+  usuarioId  String?  @map("usuario_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+  proyecto   Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  @@index([proyectoId, createdAt])
+  @@map("proyectos_eventos")
 }
 
 

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import * as Sentry from "@sentry/nextjs";
 import { ArrowLeft, Home, RefreshCw } from "lucide-react";
 import { Logo } from "@/features/sitio/components/Logo";
 
@@ -13,6 +14,9 @@ export default function GlobalError({
 }) {
   React.useEffect(() => {
     console.error("Error global de aplicación capturado:", error);
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      Sentry.captureException(error);
+    }
   }, [error]);
 
   const recargar = () => {

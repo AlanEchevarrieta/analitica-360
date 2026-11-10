@@ -39,6 +39,7 @@ export interface EmpresaDetalleAdmin {
   tickets: { id: string; numeroTicket: string | null; asunto: string; estado: string; prioridad: string; fecha: string }[];
   historialPlanes: { fecha: string; planAnterior: string | null; planNuevo: string; motivo: string | null }[];
   uso: { clientes: number; compras: number; pedidos: number; ventasTotales: number; primeraVenta: string | null };
+  configuracion?: { actividades: string[]; modulos: Record<string, boolean>; modulosEfectivos: Record<string, boolean> };
 }
 
 export interface MetricasAdmin {
@@ -163,6 +164,54 @@ export const useAvisosAdmin = () => useConsulta<{ sinLeer: number; avisos: Aviso
 export const useTicketsAdmin = () => useConsulta<TicketAdmin[]>(["tickets"], "/tickets/admin");
 export const useTicketAdmin = (id: string) => useConsulta<TicketAdminFicha>(["ticket", id], `/tickets/admin/${id}`);
 
+export interface ResumenEventosAdmin {
+  pendientes: number;
+  fallos24h: number;
+  hechos24h: number;
+}
+
+export interface EventoAdmin {
+  id: string;
+  empresaId: string | null;
+  empresaNombre: string | null;
+  tipo: string;
+  datos: Record<string, unknown>;
+  estado: "pendiente" | "procesando" | "hecho" | "fallo";
+  intentos: number;
+  maxIntentos: number;
+  proximoIntento: string;
+  ultimoError: string | null;
+  procesadoEn: string | null;
+  creadoEn: string;
+}
+
+export const useResumenEventosAdmin = () =>
+  useConsulta<ResumenEventosAdmin>(["eventos-resumen"], "/admin/eventos/resumen", { staleTime: 30_000 });
+
+export interface ModuloUsoAdmin {
+  id: string;
+  nombre: string;
+  grupo: string;
+  prendidas: number;
+  prendidasManual: number;
+  apagadasManual: number;
+}
+
+export const useModulosUsoAdmin = () =>
+  useConsulta<{ totalEmpresas: number; modulos: ModuloUsoAdmin[] }>(["modulos-uso"], "/admin/modulos-uso", { staleTime: 60_000 });
+
+export const useEventosAdmin = (filtros: { estado?: string; tipo?: string; empresaId?: string } = {}) => {
+  const params = new URLSearchParams();
+  if (filtros.estado && filtros.estado !== "todos") params.set("estado", filtros.estado);
+  if (filtros.tipo && filtros.tipo !== "todos") params.set("tipo", filtros.tipo);
+  if (filtros.empresaId) params.set("empresaId", filtros.empresaId);
+  const qs = params.toString();
+  return useConsulta<EventoAdmin[]>(
+    ["eventos", filtros.estado ?? "", filtros.tipo ?? "", filtros.empresaId ?? ""],
+    `/admin/eventos${qs ? `?${qs}` : ""}`,
+  );
+};
+
 export function useAccionesAdmin() {
   const api = useApiFetch();
   const queryClient = useQueryClient();
@@ -191,6 +240,19 @@ export function useAccionesAdmin() {
     }),
     estadoTicket: useMutation({
       mutationFn: ({ id, estado }: { id: string; estado: string }) => post(`/tickets/admin/${id}/estado`, { estado }, "PATCH"),
+      onSuccess: refrescar,
+    }),
+    reintentarEvento: useMutation({
+      mutationFn: (id: string) => post(`/admin/eventos/${id}/reintentar`, {}),
+      onSuccess: refrescar,
+    }),
+    descartarEvento: useMutation({
+      mutationFn: (id: string) => post(`/admin/eventos/${id}/descartar`, {}),
+      onSuccess: refrescar,
+    }),
+    actualizarModulosEmpresa: useMutation({
+      mutationFn: ({ empresaId, modulos }: { empresaId: string; modulos: Record<string, boolean> }) =>
+        post(`/admin/empresas/${empresaId}/modulos`, { modulos }, "PATCH"),
       onSuccess: refrescar,
     }),
   };

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import * as Sentry from "@sentry/nextjs";
 import { ArrowLeft, Home, RefreshCw } from "lucide-react";
 import { Logo } from "@/features/sitio/components/Logo";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -15,8 +16,11 @@ export default function ErrorBoundary({
   reset: () => void;
 }) {
   React.useEffect(() => {
-    // Registro del error en consola para diagnóstico
+    // Registro del error en consola y en Sentry (si hay DSN configurado)
     console.error("Error capturado por Analítica 360 ErrorBoundary:", error);
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      Sentry.captureException(error);
+    }
   }, [error]);
 
   const recargar = () => {

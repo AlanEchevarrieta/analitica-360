@@ -10,6 +10,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -26,6 +27,7 @@ import { Public } from '../../common/decorators/public.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import type { Env } from '../../config/env.validation.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { CorreoService } from '../eventos/correo.service.js';
 import { TiendaThrottlerGuard } from './tienda-throttler.guard.js';
 import { TIENDA_REPOSITORY, type TiendaRepository } from './tienda.repository.js';
 import {
@@ -84,6 +86,7 @@ export class CuentasTiendaService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
     @Inject(TIENDA_REPOSITORY) private readonly tienda: TiendaRepository,
+    @Optional() private readonly correo?: CorreoService,
   ) {}
 
   private secreto() {
@@ -125,11 +128,24 @@ export class CuentasTiendaService {
     const tienda = await this.prisma.tiendaConfig.findUnique({ where: { empresaId }, select: { nombre: true } });
     const nombre = tienda?.nombre ?? 'la tienda';
     const desde = this.config.get('AVISOS_EMAIL_DESDE', { infer: true }).replace(/^[^<]*</, `${nombre} <`);
+    const from = desde.includes('<') ? desde : `${nombre} <${desde}>`;
+    if (this.correo) {
+      const res = await this.correo.enviar({
+        desde: from,
+        para,
+        asunto: `Tu código para entrar a ${nombre}: ${codigo}`,
+        texto: `Tu código es ${codigo}.\n\nVence en 10 minutos. Si no lo pediste, ignorá este email.`,
+      });
+      if (!res.ok) {
+        throw new ServiceUnavailableException('No pudimos mandarte el código. Probá de nuevo en unos minutos.');
+      }
+      return;
+    }
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${clave}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: desde.includes('<') ? desde : `${nombre} <${desde}>`,
+        from,
         to: [para],
         subject: `Tu código para entrar a ${nombre}: ${codigo}`,
         text: `Tu código es ${codigo}.\n\nVence en 10 minutos. Si no lo pediste, ignorá este email.`,

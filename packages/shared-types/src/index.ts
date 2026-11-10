@@ -3,3 +3,4 @@
 // (cada módulo NestJS exporta su DTO acá, y apps/web lo reusa para
 // react-hook-form + validación de formularios).
 export * from "./planes";
+export * from "./modulos";

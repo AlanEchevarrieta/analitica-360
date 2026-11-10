@@ -1,10 +1,11 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, PayloadTooLargeException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, type OnModuleInit, Optional, PayloadTooLargeException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { ArchivoDocumento } from '@prisma/client';
 import { AlmacenArchivosService } from '../../common/archivos/almacen-archivos.service.js';
 import type { Env } from '../../config/env.validation.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { fechaHoyAR } from '../analytics/analytics.util.js';
+import { EventosService } from '../eventos/eventos.service.js';
 import {
   avisoQueToca,
   diasEntre,
@@ -43,14 +44,35 @@ const dmy = (f: string) => f.split('-').reverse().join('/');
  * Los archivos van a la carpeta privada: solo se bajan con sesión.
  */
 @Injectable()
-export class ArchivoService {
+export class ArchivoService implements OnModuleInit {
   private readonly logger = new Logger('Archivo');
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly almacen: AlmacenArchivosService,
     private readonly env: ConfigService<Env, true>,
+    @Optional() private readonly eventos?: EventosService,
   ) {}
+
+  onModuleInit() {
+    this.eventos?.registrar<{
+      origen?: 'archivo' | 'sistema';
+      empresaId?: string | null;
+      para: string[];
+      asunto: string;
+      texto: string;
+      claveBase?: string;
+    }>('vencimiento.aviso', async (ev, payload) => {
+      if (!this.eventos) return;
+      const n = await this.eventos.emitirCorreo(
+        this.prisma,
+        ev.empresaId,
+        { para: payload.para, asunto: payload.asunto, texto: payload.texto },
+        payload.claveBase ?? `vencimiento:${ev.id}`,
+      );
+      return { resultado: n ? 'ok' : 'omitido', detalle: `correo encolado (${n} destinatarios)` };
+    });
+  }
 
   private vista(a: ArchivoDocumento, hoy = fechaHoyAR()) {
     const vence = fecha(a.vence);
@@ -202,11 +224,11 @@ export class ArchivoService {
 
   /**
    * Avisos por email a los dueños y administradores: a los 30 días y a los 7.
-   * Uno por empresa con todo lo que toca. Sin Resend no hace nada (sale en Inicio igual).
+   * Uno por empresa con todo lo que toca. Se encola como evento con reintentos.
    */
   async avisarVencimientos(): Promise<number> {
     const clave = this.env.get('RESEND_API_KEY', { infer: true });
-    if (!clave) return 0;
+    if (!clave && !this.eventos) return 0;
     const hoy = fechaHoyAR();
     const hasta = new Date(Date.parse(`${hoy}T00:00:00Z`) + 30 * 86_400_000);
     const candidatos = await this.prisma.archivoDocumento.findMany({
@@ -232,12 +254,32 @@ export class ArchivoService {
         const faltan = diasEntre(hoy, fecha(doc.vence)!);
         return `• ${NOMBRE_CATEGORIA[doc.categoria] ?? 'Documento'}: ${doc.titulo} — vence el ${dmy(fecha(doc.vence)!)} (${faltan === 0 ? 'hoy' : faltan === 1 ? 'mañana' : `en ${faltan} días`})`;
       });
+      const asunto = `${docs.length === 1 ? 'Un documento vence' : `${docs.length} documentos vencen`} pronto · ${empresa.nombre}`;
       const texto = [`Hola, ${empresa.nombre}:`, '', 'Estos documentos están por vencer:', ...lineas, '', `Cuando los renueves, subí el nuevo y cambiá la fecha en Documentos: ${urlApp}/documentos`, '', 'Analítica 360'].join('\n');
+      if (this.eventos) {
+        const ahora = new Date();
+        await this.prisma.$transaction(async (tx) => {
+          await this.eventos!.emitir(tx, {
+            empresaId,
+            tipo: 'vencimiento.aviso',
+            clave: `archivo:vencimiento:${hoy}`,
+            payload: { origen: 'archivo', empresaId, para, asunto, texto, claveBase: `archivo:vencimiento:${hoy}` },
+          });
+          for (const { doc, aviso } of docs) {
+            await tx.archivoDocumento.update({
+              where: { id: doc.id },
+              data: aviso === '7' ? { avisado7: ahora, avisado30: doc.avisado30 ?? ahora } : { avisado30: ahora },
+            });
+          }
+        });
+        enviados++;
+        continue;
+      }
       try {
         const r = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: { Authorization: `Bearer ${clave}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from: this.env.get('AVISOS_EMAIL_DESDE', { infer: true }), to: para, subject: `${docs.length === 1 ? 'Un documento vence' : `${docs.length} documentos vencen`} pronto · ${empresa.nombre}`, text: texto }),
+          body: JSON.stringify({ from: this.env.get('AVISOS_EMAIL_DESDE', { infer: true }), to: para, subject: asunto, text: texto }),
         });
         if (!r.ok) {
           this.logger.warn(`Resend respondió ${r.status} al avisar vencimientos de ${empresaId}`);

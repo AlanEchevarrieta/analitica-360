@@ -32,8 +32,8 @@ export function ModalAbrirCaja({ abierto, onCerrar }: Props) {
       });
       toast.success("¡Turno de caja abierto con éxito!");
       onCerrar();
-    } catch (err: any) {
-      toast.error(err.message || "Error al abrir la caja");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error al abrir la caja");
     }
   }
 

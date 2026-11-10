@@ -51,5 +51,11 @@ export class AdminSaasService {
     return this.repository.listarPagos(estado || null, periodo || null);
   }
 
+  actualizarModulosEmpresa(empresaId: string, modulos: Record<string, boolean>) {
+    return this.clientes.actualizarModulosEmpresa(empresaId, modulos);
+  }
 
+  resumenModulosUso() {
+    return this.clientes.resumenModulosUso();
+  }
 }

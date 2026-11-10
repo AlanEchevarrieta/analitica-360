@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --canvas: #F7F6F2;
+    --stone-light: #E5E5E1;
+    --stone-mid: #D6D6D0;
+    --charcoal: #1C1D1F;
+    --charcoal-soft: #282A2D;
+    --olive-deep: #2B302A;
+    --earth-warm: #8A5A2B;
+    --embers: #D9532F;
+    --brass: #C5A059;
+    --text-main: #1C1D1F;
+    --text-muted: #6B6D69;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    background-color: var(--canvas);
+    color: var(--text-main);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  body {
+    background-color: var(--canvas);
+    color: var(--text-main);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Tipografías editoriales */
+.font-editorial {
+  font-family: var(--font-cormorant), "Times New Roman", serif;
+  letter-spacing: -0.02em;
+}
+
+.font-mono-spec {
+  font-family: var(--font-mono), monospace;
+  letter-spacing: 0.08em;
+}
+
+/* Sutil textura orgánica de grano táctil */
+.grain-overlay {
+  background-image: radial-gradient(rgba(28, 29, 31, 0.04) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Bordes táctiles de precisión */
+.border-subtle {
+  border-color: rgba(28, 29, 31, 0.12);
+}
+
+.border-subtle-light {
+  border-color: rgba(247, 246, 242, 0.18);
+}
+
+/* Transiciones ponderadas Snow Peak */
+.transition-weighted {
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Ocultar barra de scroll en contenedores táctiles */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

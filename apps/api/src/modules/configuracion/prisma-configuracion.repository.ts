@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, type ConfiguracionEmpresa } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { ActualizarConfiguracionInput } from './configuracion.dto.js';
+import { aplicarDependenciasModulos, calcularModulosEfectivos, esModuloToggleId } from './modulos.util.js';
 import type {
   ConfiguracionRecord,
   ConfiguracionRepository,
@@ -57,7 +58,21 @@ export function aRecord(c: ConfiguracionEmpresa | null): ConfiguracionRecord {
     valorHora: c?.valorHora?.toNumber() ?? null,
     categoriaMonotributo: c?.categoriaMonotributo ?? null,
     actividades: c?.actividades?.length ? c.actividades : ['productos', 'produccion'],
+    modulos: extraerModulosGuardados(c?.modulos),
+    modulosEfectivos: calcularModulosEfectivos(
+      c?.actividades?.length ? c.actividades : ['productos', 'produccion'],
+      extraerModulosGuardados(c?.modulos),
+    ),
   };
+}
+
+function extraerModulosGuardados(raw: unknown): Record<string, boolean> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out: Record<string, boolean> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (esModuloToggleId(k) && typeof v === 'boolean') out[k] = v;
+  }
+  return out;
 }
 
 @Injectable()
@@ -91,6 +106,16 @@ export class PrismaConfiguracionRepository implements ConfiguracionRepository {
       if (input.mostrarCliente !== undefined) flujo.mostrar_cliente = input.mostrarCliente;
       if (input.crearClienteDesdeVenta !== undefined) flujo.crear_desde_venta = input.crearClienteDesdeVenta;
 
+      const actividadesEfectivas = input.actividades
+        ? [...new Set(input.actividades)]
+        : actual?.actividades?.length
+          ? actual.actividades
+          : ['productos', 'produccion'];
+      const modulosActuales = extraerModulosGuardados(actual?.modulos);
+      const modulosNuevos = input.modulos
+        ? aplicarDependenciasModulos(actividadesEfectivas, modulosActuales, input.modulos as Record<string, boolean>).modulos
+        : undefined;
+
       const datos = {
         ...(input.mediosPago ? { mediosPago: input.mediosPago } : {}),
         ...(input.tasasCuotas ? { tasasCuotas: [...input.tasasCuotas].sort((a, b) => a.cuotas - b.cuotas) as unknown as Prisma.InputJsonValue } : {}),
@@ -109,6 +134,7 @@ export class PrismaConfiguracionRepository implements ConfiguracionRepository {
         ...(input.valorHora !== undefined ? { valorHora: input.valorHora } : {}),
         ...(input.categoriaMonotributo !== undefined ? { categoriaMonotributo: input.categoriaMonotributo } : {}),
         ...(input.actividades ? { actividades: [...new Set(input.actividades)] } : {}),
+        ...(modulosNuevos !== undefined ? { modulos: modulosNuevos as Prisma.InputJsonValue } : {}),
         inventario: inventario as Prisma.InputJsonValue,
         flujoVentas: flujo as Prisma.InputJsonValue,
       };

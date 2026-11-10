@@ -69,6 +69,8 @@ const envSchema = z.object({
   ARCA_URL_WSFE: z.string().url().optional(),
   /** Informes semanales y mensuales por email: '0' apaga el programador (ej. en una segunda instancia o en pruebas). */
   INFORMES_AUTOMATICOS: z.enum(['0', '1']).default('1'),
+  /** Trabajador de la cola de eventos (1c): '0' apaga el procesamiento en segundo plano. */
+  EVENTOS_TRABAJADOR: z.enum(['0', '1']).default('1'),
   /** Copilot IA: API Key de OpenAI o proveedor LLM compatible (opcional) */
   OPENAI_API_KEY: z.string().optional(),
   COPILOT_API_KEY: z.string().optional(),

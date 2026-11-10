@@ -38,6 +38,10 @@ export interface Configuracion {
   dolarTipo: string;
   /** Qué hace el negocio: arma el menú. */
   actividades: Actividad[];
+  /** Módulos que el dueño o el admin prendió o apagó a mano. */
+  modulos?: Record<string, boolean>;
+  /** Mapa efectivo de módulos prendidos o apagados. */
+  modulosEfectivos?: Record<string, boolean>;
 }
 
 export interface Ubicacion {
@@ -65,7 +69,12 @@ export interface AtributoConfig {
 export function useConfiguracion() {
   const api = useApiFetch();
   const { orgId } = useAuth();
-  return useQuery({ queryKey: ["configuracion", orgId], queryFn: () => api<Configuracion>("/configuracion"), enabled: Boolean(orgId) });
+  return useQuery({
+    queryKey: ["configuracion", orgId],
+    queryFn: () => api<Configuracion>("/configuracion"),
+    enabled: Boolean(orgId),
+    staleTime: 60_000,
+  });
 }
 
 /** Guardado parcial: cada sección manda solo lo suyo. Refresca todo lo que depende de la configuración. */
@@ -86,7 +95,12 @@ export function useListaConfig<T extends { id: string }>(recurso: "ubicaciones" 
   const { orgId } = useAuth();
   const queryClient = useQueryClient();
   const ruta = recurso === "atributos" ? "/atributos" : `/${recurso}?soloActivas=false`;
-  const lista = useQuery({ queryKey: [`config-${recurso}`, orgId], queryFn: () => api<T[]>(ruta), enabled: Boolean(orgId) });
+  const lista = useQuery({
+    queryKey: [`config-${recurso}`, orgId],
+    queryFn: () => api<T[]>(ruta),
+    enabled: Boolean(orgId),
+    staleTime: 60_000,
+  });
   const onSuccess = () => {
     // Otras pantallas usan estas listas con sus propias claves (venta, producto, stock).
     for (const k of [`config-${recurso}`, recurso, "productos", "configuracion"]) void queryClient.invalidateQueries({ queryKey: [k] });

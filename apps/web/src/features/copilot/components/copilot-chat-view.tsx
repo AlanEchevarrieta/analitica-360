@@ -8,6 +8,8 @@ import { CopilotMessageBubble } from './copilot-message-bubble';
 import { CopilotTopicsGrid } from './copilot-topics-grid';
 import type { CopilotTopico } from '../types/copilot.types';
 import { Sparkles, Send, Cpu, LayoutGrid, X, ShieldAlert, Building2 } from 'lucide-react';
+import { MejorarPlan } from '@/components/shared/mejorar-plan';
+import { usePlan } from '@/hooks/use-plan';
 
 interface CopilotChatViewProps {
   onCerrar?: () => void;
@@ -17,6 +19,7 @@ interface CopilotChatViewProps {
 export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esModal = false }) => {
   const { mensajes, sugerencias, metricasActivas, cargando, enviar, tieneAccesoEmpresa, isLoaded, isSignedIn, orgId } =
     useCopilotChat();
+  const plan = usePlan();
   const [inputTexto, setInputTexto] = useState('');
   const [mostrarTopicos, setMostrarTopicos] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -86,6 +89,27 @@ export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esMo
             </button>
           )}
         </div>
+      </div>
+    );
+  }
+
+  if (!plan.incluye('copilot')) {
+    return (
+      <div
+        className={`flex flex-col items-center justify-center p-4 sm:p-6 bg-card/70 backdrop-blur-xl ${
+          esModal ? 'h-full w-full' : 'h-full w-full flex-1 min-h-[360px]'
+        }`}
+      >
+        <MejorarPlan funcion="copilot" compacto={esModal} />
+        {onCerrar && (
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
+          >
+            Cerrar
+          </button>
+        )}
       </div>
     );
   }

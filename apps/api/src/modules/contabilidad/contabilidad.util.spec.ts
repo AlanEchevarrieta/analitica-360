@@ -1,4 +1,4 @@
-import { acumuladoSerie, equilibrioDelMes, expandirRecurrentes, mesesAtras, proyectarFlujo, ratiosFinancieros, semaforoMargenBruto, semaforoMargenNeto, serieMensual, sumarPeriodo, type PuntoMes } from './contabilidad.util.js';
+import { acumuladoSerie, equilibrioDelMes, expandirRecurrentes, mesesAtras, proyectarFlujo, ratiosFinancieros, semaforoMargenBruto, semaforoMargenNeto, serieMensual, sumarDiasISO, sumarPeriodo, type PuntoMes } from './contabilidad.util.js';
 
 describe('mesesAtras', () => {
   it('devuelve las últimas N claves YYYY-MM terminando en el mes de hoy', () => {
@@ -152,6 +152,47 @@ describe('expandirRecurrentes', () => {
 
   it('los no recurrentes quedan igual', () => {
     expect(expandirRecurrentes([g('2026-09-01', null, false)], '2026-12-31')).toHaveLength(1);
+  });
+
+  it('semanal desde el 1/9: septiembre 5 veces y octubre 4', () => {
+    const exp = expandirRecurrentes([{ fecha: '2026-09-01', monto: 50_000, recurrente: true, frecuencia: 'semanal' as const }], '2026-10-31');
+    const sep = exp.filter((x) => x.fecha.startsWith('2026-09'));
+    const oct = exp.filter((x) => x.fecha.startsWith('2026-10'));
+    expect(sep).toHaveLength(5);
+    expect(oct).toHaveLength(4);
+  });
+
+  it('con fechaFin el 31/10: noviembre 0 y octubre igual que antes', () => {
+    const exp = expandirRecurrentes(
+      [{ fecha: '2026-09-01', monto: 50_000, recurrente: true, frecuencia: 'semanal' as const, fechaFin: '2026-10-31' }],
+      '2026-11-30',
+    );
+    const oct = exp.filter((x) => x.fecha.startsWith('2026-10'));
+    const nov = exp.filter((x) => x.fecha.startsWith('2026-11'));
+    expect(oct).toHaveLength(4);
+    expect(nov).toHaveLength(0);
+  });
+
+  it('cambiar monto desde el 1/11: octubre con el monto viejo y noviembre con el nuevo, sin superposición', () => {
+    const viejo = { fecha: '2026-09-01', monto: 50_000, recurrente: true, frecuencia: 'semanal' as const, fechaFin: sumarDiasISO('2026-11-01', -1) };
+    const nuevo = { fecha: '2026-11-01', monto: 65_000, recurrente: true, frecuencia: 'semanal' as const, fechaFin: null };
+    const exp = expandirRecurrentes([viejo, nuevo], '2026-11-30');
+    const oct = exp.filter((x) => x.fecha.startsWith('2026-10'));
+    const nov = exp.filter((x) => x.fecha.startsWith('2026-11'));
+    expect(oct.every((x) => x.monto === 50_000)).toBe(true);
+    expect(nov.length).toBeGreaterThan(0);
+    expect(nov.every((x) => x.monto === 65_000)).toBe(true);
+  });
+
+  it('dejar de repetir desde 2026-12-01 no cambia los meses anteriores (septiembre y octubre)', () => {
+    const sinFin = expandirRecurrentes([{ fecha: '2026-09-01', monto: 50_000, recurrente: true, frecuencia: 'semanal' as const }], '2026-12-31');
+    const conFin = expandirRecurrentes(
+      [{ fecha: '2026-09-01', monto: 50_000, recurrente: true, frecuencia: 'semanal' as const, fechaFin: sumarDiasISO('2026-12-01', -1) }],
+      '2026-12-31',
+    );
+    expect(conFin.filter((x) => x.fecha.startsWith('2026-09')).map((x) => x.fecha)).toEqual(sinFin.filter((x) => x.fecha.startsWith('2026-09')).map((x) => x.fecha));
+    expect(conFin.filter((x) => x.fecha.startsWith('2026-10')).map((x) => x.fecha)).toEqual(sinFin.filter((x) => x.fecha.startsWith('2026-10')).map((x) => x.fecha));
+    expect(conFin.filter((x) => x.fecha.startsWith('2026-12'))).toHaveLength(0);
   });
 });
 

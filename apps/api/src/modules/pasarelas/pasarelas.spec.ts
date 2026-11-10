@@ -12,7 +12,7 @@ describe('Pasarelas Adapters - Pruebas Unitarias', () => {
 
   it('Mercado Pago valida firmas de webhook HMAC-SHA256 con manifiesto oficial y rechaza firmas inválidas o expiradas', () => {
     const adapter = new MercadoPagoAdapter();
-    const webhookSecret = 'mp_secret_key_prod_test_987654';
+    const webhookSecret = 'TEST-no-es-una-clave-mp';
     const dataId = '1234567890';
     const xRequestId = '550e8400-e29b-41d4-a716-446655440000';
     const ahora = Math.floor(Date.now() / 1000);
@@ -53,7 +53,7 @@ describe('Pasarelas Adapters - Pruebas Unitarias', () => {
 
   it('Stripe valida firmas de webhook HMAC-SHA256 y descarta firmas inválidas', async () => {
     const adapter = new StripeAdapter();
-    const webhookSecret = 'whsec_test_secret_key_123';
+    const webhookSecret = 'TEST-no-es-una-clave-stripe';
     const payload = {
       type: 'checkout.session.completed',
       data: {
@@ -75,7 +75,7 @@ describe('Pasarelas Adapters - Pruebas Unitarias', () => {
     };
 
     const resultadoValido = await adapter.procesarWebhook(
-      { secretKey: 'sk_test_123' },
+      { secretKey: 'TEST-no-es-una-clave' },
       webhookSecret,
       rawPayload,
       headersValidos,
@@ -92,7 +92,7 @@ describe('Pasarelas Adapters - Pruebas Unitarias', () => {
     };
 
     const resultadoFalso = await adapter.procesarWebhook(
-      { secretKey: 'sk_test_123' },
+      { secretKey: 'TEST-no-es-una-clave' },
       webhookSecret,
       rawPayload,
       headersFalsos,

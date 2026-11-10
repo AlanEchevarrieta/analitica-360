@@ -1,8 +1,11 @@
-import { ForbiddenException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, type OnModuleInit, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import type { Env } from '../../config/env.validation.js';
 import { PrismaService } from '../../database/prisma.service.js';
+import { CorreoService } from '../eventos/correo.service.js';
+import { EventosService } from '../eventos/eventos.service.js';
+import { DIAS_MAX_SIN_SERVICIO } from '../eventos/eventos.util.js';
 import { AccesoCuentaService } from '../planes/acceso-cuenta.service.js';
 import { InformesDatosService } from './informes-datos.service.js';
 import { asuntoInforme, htmlInforme, textoInforme } from './informe.email.js';
@@ -36,7 +39,7 @@ export interface ConfigInformes {
 }
 
 @Injectable()
-export class InformesService {
+export class InformesService implements OnModuleInit {
   private readonly logger = new Logger('Informes');
 
   constructor(
@@ -44,7 +47,18 @@ export class InformesService {
     private readonly datos: InformesDatosService,
     private readonly acceso: AccesoCuentaService,
     private readonly config: ConfigService<Env, true>,
+    @Optional() private readonly eventos?: EventosService,
+    @Optional() private readonly correo?: CorreoService,
   ) {}
+
+  onModuleInit() {
+    this.eventos?.registrar<{ informeId: string; empresaId: string; tipo: TipoInforme; periodo: Periodo }>(
+      'informe.enviar',
+      async (_ev, payload) => {
+        return this.procesarEventoInforme(payload.informeId, payload.empresaId, payload.tipo, payload.periodo);
+      },
+    );
+  }
 
   // --- Configuración (Configuración → Informes) ---
 
@@ -135,8 +149,9 @@ export class InformesService {
 
   // --- Envío programado ---
 
-  /** Una vuelta del programador: manda lo que toca y reintenta lo que falló. Devuelve cuántos informes procesó. */
+  /** Una vuelta del programador: manda lo que toca y reintenta lo que falló (incluidos los sin_servicio de <35 días). Devuelve cuántos informes procesó. */
   async ciclo(ahora: Date = new Date()): Promise<number> {
+    await this.encolarSinServicioPendientes(ahora);
     let n = 0;
     for (const tipo of TIPOS_INFORME) {
       const p = informePendiente(tipo, ahora);
@@ -149,6 +164,35 @@ export class InformesService {
       }
     }
     return n;
+  }
+
+  /** Pasa a eventos pendientes los informes `sin_servicio` de menos de 35 días para que salgan solos al cargar la clave. */
+  async encolarSinServicioPendientes(ahora: Date = new Date()): Promise<number> {
+    if (!this.eventos) return 0;
+    const tope = new Date(ahora.getTime() - DIAS_MAX_SIN_SERVICIO * 86_400_000);
+    const pendientes = await this.prisma.informeEnviado.findMany({
+      where: { estado: 'sin_servicio', creadoEn: { gte: tope } },
+      select: { id: true, empresaId: true, tipo: true, desde: true, hasta: true },
+    });
+    let encolados = 0;
+    for (const inf of pendientes) {
+      const desdeIso = inf.desde.toISOString().slice(0, 10);
+      const hastaIso = inf.hasta.toISOString().slice(0, 10);
+      const tipo = inf.tipo as TipoInforme;
+      const ev = await this.eventos.emitir(this.prisma, {
+        empresaId: inf.empresaId,
+        tipo: 'informe.enviar',
+        clave: `informe:${tipo}:${desdeIso}`,
+        payload: {
+          informeId: inf.id,
+          empresaId: inf.empresaId,
+          tipo,
+          periodo: { desde: desdeIso, hasta: hastaIso },
+        },
+      });
+      if (ev) encolados++;
+    }
+    return encolados;
   }
 
   /** Empresas que deberían recibir este informe y todavía no lo tienen enviado. */
@@ -193,24 +237,67 @@ export class InformesService {
   }
 
   private async enviarRegistro(id: string, empresaId: string, tipo: TipoInforme, p: Periodo) {
+    if (this.eventos) {
+      await this.eventos.emitir(this.prisma, {
+        empresaId,
+        tipo: 'informe.enviar',
+        clave: `informe:${tipo}:${p.desde}`,
+        payload: { informeId: id, empresaId, tipo, periodo: p },
+      });
+      return;
+    }
+    await this.procesarEventoInforme(id, empresaId, tipo, p);
+  }
+
+  async procesarEventoInforme(
+    id: string,
+    empresaId: string,
+    tipo: TipoInforme,
+    p: Periodo,
+  ): Promise<{ resultado: 'ok' | 'omitido' | 'sin_servicio'; detalle?: string }> {
     try {
       const config = await this.verConfig(empresaId);
       const para = destinatarios(config.duenos, config.emailsExtra, config.bajas.map((b) => `${b.tipo}:${b.email}`), tipo);
       if (!para.length) {
         await this.prisma.informeEnviado.update({ where: { id }, data: { estado: 'sin_destinatarios' } });
-        return;
+        return { resultado: 'omitido', detalle: 'sin destinatarios' };
       }
       if (!this.config.get('RESEND_API_KEY', { infer: true })) {
-        this.logger.warn(`[sin RESEND_API_KEY] ${tipo} ${p.desde} de ${empresaId} no se mandó (${para.length} destinatarios)`);
+        this.logger.warn(`[sin RESEND_API_KEY] ${tipo} ${p.desde} de ${empresaId} queda pendiente (${para.length} destinatarios)`);
         await this.prisma.informeEnviado.update({ where: { id }, data: { estado: 'sin_servicio', destinatarios: para } });
-        return;
+        return { resultado: 'sin_servicio', detalle: `sin RESEND_API_KEY (${para.length} destinatarios)` };
       }
       const d = await this.datos.armar(empresaId, tipo, p);
       const contenido = await pdfInforme(d);
+      const archivo = nombreArchivo(tipo, p);
+      if (this.eventos) {
+        for (const email of para) {
+          const urlApp = `${this.urlWeb()}/inicio`;
+          const urlBaja = `${this.urlApi()}/informes/baja?t=${encodeURIComponent(tokenBaja(this.secreto(), empresaId, tipo, email))}`;
+          await this.eventos.emitir(this.prisma, {
+            empresaId,
+            tipo: 'correo.enviar',
+            clave: `informe:${tipo}:${p.desde}:${email}`,
+            payload: {
+              para: email,
+              asunto: asuntoInforme(d),
+              html: htmlInforme(d, urlApp, urlBaja),
+              texto: textoInforme(d, urlApp, urlBaja),
+              adjuntos: [{ filename: archivo, content: contenido.toString('base64') }],
+              headers: { 'List-Unsubscribe': `<${urlBaja}>` },
+            },
+          });
+        }
+        await this.prisma.informeEnviado.update({
+          where: { id },
+          data: { estado: 'enviado', destinatarios: para, enviadoEn: new Date(), error: null },
+        });
+        return { resultado: 'ok', detalle: `encolado para ${para.join(', ')}` };
+      }
       const fallidos: string[] = [];
       for (const email of para) {
         try {
-          await this.mandar(empresaId, tipo, email, d, contenido, nombreArchivo(tipo, p));
+          await this.mandar(empresaId, tipo, email, d, contenido, archivo);
         } catch {
           fallidos.push(email);
         }
@@ -222,15 +309,31 @@ export class InformesService {
           ? { estado: 'enviado', destinatarios: enviados, enviadoEn: new Date(), error: fallidos.length ? `No llegó a: ${fallidos.join(', ')}`.slice(0, 300) : null }
           : { estado: 'error', destinatarios: para, error: 'No se pudo mandar a ningún destinatario' },
       });
+      return { resultado: enviados.length ? 'ok' : 'omitido', detalle: enviados.join(', ') };
     } catch (e) {
       this.logger.error(`Informe ${tipo} ${p.desde} de ${empresaId}: ${(e as Error).message}`);
       await this.prisma.informeEnviado.update({ where: { id }, data: { estado: 'error', error: String((e as Error).message).slice(0, 300) } }).catch(() => {});
+      throw e;
     }
   }
 
   private async mandar(empresaId: string, tipo: TipoInforme, para: string, d: Awaited<ReturnType<InformesDatosService['armar']>>, pdf: Buffer, archivo: string) {
     const urlApp = `${this.urlWeb()}/inicio`;
     const urlBaja = `${this.urlApi()}/informes/baja?t=${encodeURIComponent(tokenBaja(this.secreto(), empresaId, tipo, para))}`;
+    if (this.correo) {
+      const res = await this.correo.enviar({
+        para,
+        asunto: asuntoInforme(d),
+        html: htmlInforme(d, urlApp, urlBaja),
+        texto: textoInforme(d, urlApp, urlBaja),
+        adjuntos: [{ filename: archivo, content: pdf.toString('base64') }],
+        headers: { 'List-Unsubscribe': `<${urlBaja}>` },
+      });
+      if (!res.ok) {
+        throw new ServiceUnavailableException('No se pudo mandar el email. Probá de nuevo en unos minutos.');
+      }
+      return;
+    }
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${this.config.get('RESEND_API_KEY', { infer: true })}`, 'Content-Type': 'application/json' },

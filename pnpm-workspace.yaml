@@ -7,9 +7,12 @@ allowBuilds:
   esbuild: true
   prisma: true
   unrs-resolver: true
-# Parches de seguridad en dependencias indirectas (pnpm audit, 2026-10-03).
+# Parches de seguridad en dependencias indirectas (pnpm audit, 2026-11-04).
 overrides:
   dompurify: ">=3.4.16"
   mysql2: ">=3.23.1"
   deepmerge-ts: ">=8.0.0"
   source-map-js: ">=1.2.2"
+  multer: ">=2.5.0"
+  body-parser: ">=2.4.0"
+  node-forge: ">=1.4.1"

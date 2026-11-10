@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException, type OnModuleInit, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, type Objetivo } from '@prisma/client';
 import type { Env } from '../../config/env.validation.js';
@@ -9,6 +9,7 @@ import { fechaHoyAR } from '../analytics/analytics.util.js';
 import { dineroDevolucionesPorDia } from '../analytics/devoluciones-dinero.js';
 import { diaAR } from '../analytics/fecha-sql.js';
 import { CotizacionesService } from '../cotizaciones/cotizaciones.service.js';
+import { EventosService } from '../eventos/eventos.service.js';
 import { AccesoCuentaService } from '../planes/acceso-cuenta.service.js';
 import type { GuardarObjetivoInput } from './objetivos.dto.js';
 import {
@@ -65,7 +66,7 @@ const sumar = (m: PorDia, r: Rango) => {
 };
 
 @Injectable()
-export class ObjetivosService {
+export class ObjetivosService implements OnModuleInit {
   private readonly logger = new Logger('Objetivos');
 
   constructor(
@@ -73,7 +74,28 @@ export class ObjetivosService {
     private readonly cotizaciones: CotizacionesService,
     private readonly acceso: AccesoCuentaService,
     private readonly config: ConfigService<Env, true>,
+    @Optional() private readonly eventos?: EventosService,
   ) {}
+
+  onModuleInit() {
+    this.eventos?.registrar<{ para: string; mensaje: string; objetivoId?: string; desde?: string }>(
+      'objetivo.aviso',
+      async (ev, payload) => {
+        if (!this.eventos || !payload.para) return { resultado: 'omitido', detalle: 'sin destinatario' };
+        await this.eventos.emitirCorreo(
+          this.prisma,
+          ev.empresaId,
+          {
+            para: payload.para,
+            asunto: 'Analítica 360: un objetivo no llega a este ritmo',
+            texto: `${payload.mensaje}\n\nLo ves en la app, en Objetivos.`,
+          },
+          `objetivo:${payload.objetivoId ?? ev.id}:${payload.desde ?? ''}`,
+        );
+        return { resultado: 'ok', detalle: `email a ${payload.para}` };
+      },
+    );
+  }
 
   /** En Básico solo hay objetivos de facturación de toda la empresa; el resto, desde Pro. */
   private async avanzados(empresaId: string): Promise<boolean> {
@@ -450,7 +472,16 @@ export class ObjetivosService {
               throw e;
             }
             nuevos++;
-            await this.enviarEmail(email, mensaje);
+            if (this.eventos && email) {
+              await this.eventos.emitir(this.prisma, {
+                empresaId,
+                tipo: 'objetivo.aviso',
+                clave: `objetivo:${o.id}:${o.actual.desde}:${usuarioId}`,
+                payload: { para: email, mensaje, objetivoId: o.id, desde: o.actual.desde },
+              });
+            } else {
+              await this.enviarEmail(email, mensaje);
+            }
           }
         }
       } catch (e) {

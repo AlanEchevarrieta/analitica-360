@@ -16,6 +16,7 @@ export interface Gasto {
   fecha: string;
   recurrente: boolean;
   frecuencia: FrecuenciaGasto | null;
+  fechaFin: string | null;
   tipoCosto: TipoCosto;
 }
 
@@ -31,6 +32,13 @@ export interface CrearGastoInput {
   tipoCosto: TipoCosto;
 }
 
+export interface EditarGastoInput {
+  categoria?: CategoriaGasto;
+  descripcion?: string;
+  monto?: number;
+  fecha?: string;
+}
+
 export type ResultadoAnularGasto = { ok: true } | { ok: false; motivo: 'no_encontrado' | 'ya_anulado' };
 
 export const GASTO_REPOSITORY = Symbol('GASTO_REPOSITORY');
@@ -39,6 +47,9 @@ export const GASTO_REPOSITORY = Symbol('GASTO_REPOSITORY');
 export interface GastoRepository {
   listar(empresaId: string, desde: string, hasta: string, categoria?: CategoriaGasto): Promise<Gasto[]>;
   crear(input: CrearGastoInput): Promise<Gasto>;
+  editar(empresaId: string, id: string, input: EditarGastoInput): Promise<Gasto | null>;
+  dejarDeRepetir(empresaId: string, id: string, fechaFin: string): Promise<Gasto | null>;
+  cambiarMontoDesde(empresaId: string, usuarioId: string, id: string, desde: string, fechaFinViejo: string, monto: number): Promise<Gasto | null>;
   anular(empresaId: string, id: string): Promise<ResultadoAnularGasto>;
   /** false si no existe. */
   cambiarTipoCosto(empresaId: string, id: string, tipoCosto: TipoCosto): Promise<boolean>;

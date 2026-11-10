@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useEmpresasAdmin } from "../hooks/use-admin";
 import { nombrePantalla, useResumenUso, type FiltrosUso } from "../hooks/use-uso";
 import { Indicador, Panel } from "./comunes";
+import { ModulosUsoPanel } from "./ModulosAdminPanel";
 
 const G_DIAS = {
   vistas: { label: "Pantallas abiertas", color: "var(--chart-2)" },
@@ -187,6 +188,7 @@ export function UsoVista() {
           </Panel>
         </>
       )}
+      <ModulosUsoPanel />
     </div>
   );
 }

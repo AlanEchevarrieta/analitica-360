@@ -29,6 +29,16 @@ export interface PuntoMes {
   acumulado?: number;
 }
 
+export interface DetalleRecurrenteMes {
+  id: string;
+  descripcion: string;
+  categoria: string;
+  frecuencia: "mensual" | "quincenal" | "semanal";
+  veces: number;
+  montoOriginal: number;
+  total: number;
+}
+
 export interface Contabilidad {
   totales: { ingresos: number; cogs: number; gastos: number; neto: number; cantidadVentas: number };
   serie6: PuntoMes[];
@@ -38,6 +48,7 @@ export interface Contabilidad {
   semaforoMargenNeto: Semaforo;
   proyeccion: PuntoMes[];
   flujoProyectado: PuntoMes[];
+  recurrentesDetallePorMes?: Record<string, DetalleRecurrenteMes[]>;
 }
 
 export interface Gasto {
@@ -48,14 +59,15 @@ export interface Gasto {
   fecha: string;
   recurrente: boolean;
   frecuencia: "mensual" | "quincenal" | "semanal" | null;
+  fechaFin?: string | null;
   /** Para el punto de equilibrio: fijo (alquiler, sueldos…) o variable (comisiones, envíos…). */
   tipoCosto: "fijo" | "variable";
 }
 
 export interface InsightForecast {
-  /** `pronosticado`: lo que decía el pronóstico de ese período con los datos de antes. `realEnCurso`: lo vendido en el período que corre. */
-  puntos: { clave: string; historico: number | null; proyeccion: number | null; pronosticado: number | null; realEnCurso: number | null }[];
+  puntos: { clave: string; historico: number | null; proyeccion: number | null; rango: [number, number] | null }[];
   totalProyeccion: number;
+  totalRango: { min: number; max: number } | null;
   tendencia: "positiva" | "negativa" | "neutra";
   etiquetaProyeccion: string;
   precision: {
@@ -65,7 +77,6 @@ export interface InsightForecast {
     sesgoPct: number;
     ultimo: { clave: string; real: number; pronosticado: number; diferencia: number; diferenciaPct: number | null };
   } | null;
-  enCurso: { clave: string; real: number; pronosticado: number } | null;
 }
 
 export interface Insights {
