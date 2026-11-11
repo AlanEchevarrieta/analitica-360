@@ -22,10 +22,10 @@
     "probar:scraper": "node scripts/probar-scraper.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0",
-    "dotenv": "^18.0.1",
+    "@playwright/test": "^1.65.0",
+    "dotenv": "^18.0.9",
     "tsx": "^4.23.15",
-    "turbo": "^2.5.0",
+    "turbo": "^2.11.10",
     "typescript": "^5.8.0"
   }
 }
