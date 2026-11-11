@@ -285,8 +285,8 @@ importers:
         specifier: ^0.35.5
         version: 0.35.5(@types/node@24.13.6)
       simple-statistics:
-        specifier: ^7.12.0
-        version: 7.12.0
+        specifier: ^8.0.0
+        version: 8.0.0
       svix:
         specifier: ^2.5.0
         version: 2.5.0
@@ -5900,8 +5900,8 @@ packages:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
 
-  simple-statistics@7.12.0:
-    resolution: {integrity: sha512-ESS3eJRxeQe8+p8R67nMGtl+vSziJLTqdnPcd+psKi2Xn/TX5PW5z0YwBxa8P3nSzgZzBI5sf7SvUdK8imL79Q==}
+  simple-statistics@8.0.0:
+    resolution: {integrity: sha512-LiiSF7yROeA/ppntYUT4u1BiSgRPyDktmuNXX6fWFGKMgD69BM7lTwfA8IYProO9BBXlNJNxtm++dIYdrO09Uw==}
 
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
@@ -11895,7 +11895,7 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
-  simple-statistics@7.12.0: {}
+  simple-statistics@8.0.0: {}
 
   sisteransi@1.0.5: {}
 
