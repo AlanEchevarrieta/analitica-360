@@ -1,7 +1,8 @@
 // Pruebas automáticas: unitarias de la API y de punta a punta (e2e) contra una
 // base descartable, que incluyen aislamiento entre empresas, permisos, la
 // bitácora inalterable y la concurrencia.
-import { control, correr } from './comun.mjs';
+import path from 'node:path';
+import { control, correr, leerJson } from './comun.mjs';
 
 const BASE_E2E = 'pg-e2e';
 const URL_E2E = 'postgresql://postgres:e2e@localhost:5499/postgres';
@@ -10,6 +11,12 @@ const resumenVitest = (salida) => {
   const tests = /Tests\s+(?:(\d+) failed \| )?(\d+) passed/.exec(salida.replace(/\x1b\[[0-9;]*m/g, ''));
   return tests ? { fallidos: Number(tests[1] ?? 0), pasados: Number(tests[2]) } : null;
 };
+
+// Nombres de las pruebas que fallaron, del reporte JSON de vitest (no depende de símbolos ni de la consola).
+const nombresFallidos = (archivo, tipo) =>
+  (leerJson(archivo)?.testResults ?? []).flatMap((f) =>
+    (f.assertionResults ?? []).filter((t) => t.status === 'failed').map((t) => `${tipo}: ${t.fullName} (${path.basename(f.name)})`),
+  );
 
 async function baseE2e() {
   const existe = await correr('docker', ['start', BASE_E2E]);
@@ -22,14 +29,17 @@ async function baseE2e() {
   return correr('pnpm', ['--filter', 'api', 'exec', 'prisma', 'migrate', 'deploy'], { env: { DATABASE_URL: URL_E2E } });
 }
 
-export async function pruebas() {
-  const unit = await correr('pnpm', ['--filter', 'api', 'exec', 'vitest', 'run'], { env: { FORCE_COLOR: '0' } });
+export async function pruebas(dir) {
+  const jsonUnit = path.join(dir, 'vitest-unitarias.json');
+  const jsonE2e = path.join(dir, 'vitest-e2e.json');
+  const reportes = (archivo) => ['--reporter=default', '--reporter=json', `--outputFile.json=${archivo}`];
+  const unit = await correr('pnpm', ['--filter', 'api', 'exec', 'vitest', 'run', ...reportes(jsonUnit)], { env: { FORCE_COLOR: '0' } });
   const migr = await baseE2e();
-  const e2e = migr.codigo === 0 ? await correr('pnpm', ['--filter', 'api', 'exec', 'vitest', 'run', '--config', 'vitest.config.e2e.ts'], { env: { E2E_DATABASE_URL: URL_E2E, FORCE_COLOR: '0' } }) : null;
+  const e2e = migr.codigo === 0 ? await correr('pnpm', ['--filter', 'api', 'exec', 'vitest', 'run', '--config', 'vitest.config.e2e.ts', ...reportes(jsonE2e)], { env: { E2E_DATABASE_URL: URL_E2E, FORCE_COLOR: '0' } }) : null;
   const u = resumenVitest(unit.salida);
   const e = e2e && resumenVitest(e2e.salida);
   const fallidas = (u?.fallidos ?? 1) + (e?.fallidos ?? 1);
-  const fallos = [...(unit.salida + (e2e?.salida ?? '')).matchAll(/(?:×|FAIL)\s+(.+)/g)].map((m) => m[1].trim()).slice(0, 10);
+  const fallos = [...nombresFallidos(jsonUnit, 'Unitaria'), ...nombresFallidos(jsonE2e, 'De punta a punta')].slice(0, 15);
   return control({
     id: 'TST-01',
     titulo: 'Pruebas automáticas (unitarias y de punta a punta)',

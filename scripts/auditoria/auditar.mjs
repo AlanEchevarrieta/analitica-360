@@ -35,7 +35,7 @@ const dir = path.join(RAIZ, '.auditorias', sello.replace(' ', '_'));
 fs.mkdirSync(dir, { recursive: true });
 
 const PASOS = [
-  ['pruebas', 'Pruebas automáticas', () => pruebas()],
+  ['pruebas', 'Pruebas automáticas', () => pruebas(dir)],
   ['seguridad', 'Secretos (Gitleaks)', () => gitleaks(dir)],
   ['seguridad', 'Código (Semgrep)', () => (rapido ? null : semgrep(dir))],
   ['seguridad', 'Imágenes Docker (Trivy)', () => trivy(dir)],

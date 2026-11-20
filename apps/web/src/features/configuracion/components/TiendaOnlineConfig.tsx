@@ -379,7 +379,7 @@ function Formulario({ inicial }: { inicial: Tienda }) {
                     />
                     <span className="text-muted-foreground">%</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">En el checkout el cliente elige &quot;Transferencia&quot; y ve el precio con este descuento (se aplica después del cupón). 0 = sin descuento. Los cupones están en Configuración → Cupones de la tienda.</span>
+                  <span className="text-xs text-muted-foreground">En el checkout el cliente elige &quot;Transferencia&quot; y ve el precio con este descuento (se aplica después del cupón). 0 = sin descuento. Los cupones están en la pestaña «Cupones de descuento».</span>
                 </div>
               </>
             )}

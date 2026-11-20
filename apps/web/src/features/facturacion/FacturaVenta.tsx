@@ -56,8 +56,8 @@ export function FacturaVenta({ ventaId, anulada, telefono }: { ventaId: string; 
         {!estado.config?.verificadoEn ? (
           <p className="text-muted-foreground">
             Para facturar, completá y verificá tus datos en{" "}
-            <Link href="/configuracion" className="text-primary hover:underline">
-              Configuración → Factura electrónica
+            <Link href="/configuracion?s=impuestos" className="text-primary hover:underline">
+              Configuración → Impuestos y facturación
             </Link>
             .
           </p>
