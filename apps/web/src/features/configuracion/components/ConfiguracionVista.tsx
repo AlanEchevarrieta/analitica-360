@@ -2,7 +2,36 @@
 
 import type { ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  BarChart2,
+  Blocks,
+  ChevronLeft,
+  ChevronRight,
+  Compass,
+  CreditCard,
+  DollarSign,
+  Download,
+  FileText,
+  Globe,
+  Hammer,
+  KanbanSquare,
+  Mail,
+  MapPin,
+  Package,
+  Palette,
+  Plug,
+  Receipt,
+  SearchCheck,
+  ShoppingBag,
+  SlidersHorizontal,
+  Store,
+  Tag,
+  Ticket,
+  Trash2,
+  Truck,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import { cn } from "@/lib/utils";
 import type { Configuracion } from "../hooks/use-configuracion";
@@ -33,7 +62,7 @@ import { usePlan } from "@/hooks/use-plan";
 
 interface Opcion {
   clave: string;
-  icono: string;
+  icono: LucideIcon;
   titulo: string;
   subtitulo: string;
   panel: (config: Configuracion) => ReactNode;
@@ -46,53 +75,53 @@ const GRUPOS: { titulo: string; opciones: Opcion[] }[] = [
   {
     titulo: "Ventas y cobros",
     opciones: [
-      { clave: "medios", icono: "💳", titulo: "Medios de pago", subtitulo: "Cómo aceptás pagos", panel: (c) => <MediosConfig config={c} /> },
-      { clave: "cuotas", icono: "📊", titulo: "Cuotas y tasas", subtitulo: "Intereses por cantidad de cuotas", panel: (c) => <CuotasConfig config={c} /> },
-      { clave: "flujo", icono: "💸", titulo: "Flujo de ventas", subtitulo: "Qué se pide al cargar una venta", panel: (c) => <FlujoVentasConfig config={c} /> },
-      { clave: "precios", icono: "💲", titulo: "Listas de precios", subtitulo: "Mayorista, revendedor: precios distintos por cliente", panel: () => <ListasPreciosConfig />, funcion: "listas_precios" },
+      { clave: "medios", icono: CreditCard, titulo: "Medios de pago", subtitulo: "Cómo aceptás pagos", panel: (c) => <MediosConfig config={c} /> },
+      { clave: "cuotas", icono: BarChart2, titulo: "Cuotas y tasas", subtitulo: "Intereses por cantidad de cuotas", panel: (c) => <CuotasConfig config={c} /> },
+      { clave: "flujo", icono: SlidersHorizontal, titulo: "Flujo de ventas", subtitulo: "Qué se pide al cargar una venta", panel: (c) => <FlujoVentasConfig config={c} /> },
+      { clave: "precios", icono: DollarSign, titulo: "Listas de precios", subtitulo: "Mayorista, revendedor: precios distintos por cliente", panel: () => <ListasPreciosConfig />, funcion: "listas_precios" },
     ],
   },
   {
     titulo: "Productos y stock",
     opciones: [
-      { clave: "inventario", icono: "📦", titulo: "Inventario y pedidos", subtitulo: "Stock bajo, ubicación de venta y asignación de pedidos", panel: (c) => <InventarioPedidosConfig config={c} /> },
-      { clave: "categorias", icono: "🏷️", titulo: "Categorías", subtitulo: "Organizá tus productos", panel: () => <CategoriasConfig /> },
-      { clave: "variantes", icono: "🎨", titulo: "Variantes", subtitulo: "Color, talle, material y más", panel: () => <AtributosConfig /> },
-      { clave: "ubicaciones", icono: "📍", titulo: "Ubicaciones", subtitulo: "Depósitos, locales y stands", panel: () => <UbicacionesConfig /> },
-      { clave: "produccion", icono: "🔨", titulo: "Producción", subtitulo: "Valor de la hora de trabajo para el costo de fabricar", panel: (c) => <ProduccionConfig config={c} /> },
+      { clave: "inventario", icono: Package, titulo: "Inventario y pedidos", subtitulo: "Stock bajo, ubicación de venta y asignación de pedidos", panel: (c) => <InventarioPedidosConfig config={c} /> },
+      { clave: "categorias", icono: Tag, titulo: "Categorías", subtitulo: "Organizá tus productos", panel: () => <CategoriasConfig /> },
+      { clave: "variantes", icono: Palette, titulo: "Variantes", subtitulo: "Color, talle, material y más", panel: () => <AtributosConfig /> },
+      { clave: "ubicaciones", icono: MapPin, titulo: "Ubicaciones", subtitulo: "Depósitos, locales y stands", panel: () => <UbicacionesConfig /> },
+      { clave: "produccion", icono: Hammer, titulo: "Producción", subtitulo: "Valor de la hora de trabajo para el costo de fabricar", panel: (c) => <ProduccionConfig config={c} /> },
     ],
   },
   {
     titulo: "Tienda online",
     opciones: [
-      { clave: "tienda", icono: "🛍️", titulo: "Tienda online", subtitulo: "Tu catálogo en internet: marca, contacto y datos para cobrar", panel: () => <TiendaOnlineConfig />, funcion: "tienda" },
-      { clave: "widget", icono: "🔌", titulo: "Integrar en mi web", subtitulo: "Widget de turnos, compras y SDK para tu WordPress, Wix o SPA", panel: () => <WidgetWebConfig /> },
-      { clave: "cupones", icono: "🎟️", titulo: "Cupones de la tienda", subtitulo: "Códigos de descuento para el checkout (ej. ACACIA10)", panel: () => <CuponesTiendaConfig />, funcion: "tienda" },
-      { clave: "mercadopago", icono: "💳", titulo: "Cobros con Mercado Pago", subtitulo: "Que tus clientes paguen la tienda con tarjeta o dinero en cuenta", panel: () => <MercadoPagoTiendaConfig />, funcion: "tienda" },
-      { clave: "envios", icono: "🚚", titulo: "Envíos", subtitulo: "Correo Argentino, Andreani y más con Zipnova: cotizar, etiqueta y seguimiento", panel: () => <EnviosConfig />, funcion: "pedidos" },
+      { clave: "tienda", icono: ShoppingBag, titulo: "Tienda online", subtitulo: "Tu catálogo en internet: marca, contacto y datos para cobrar", panel: () => <TiendaOnlineConfig />, funcion: "tienda" },
+      { clave: "widget", icono: Plug, titulo: "Integrar en mi web", subtitulo: "Widget de turnos, compras y SDK para tu WordPress, Wix o SPA", panel: () => <WidgetWebConfig /> },
+      { clave: "cupones", icono: Ticket, titulo: "Cupones de la tienda", subtitulo: "Códigos de descuento para el checkout (ej. ACACIA10)", panel: () => <CuponesTiendaConfig />, funcion: "tienda" },
+      { clave: "mercadopago", icono: CreditCard, titulo: "Cobros con Mercado Pago", subtitulo: "Que tus clientes paguen la tienda con tarjeta o dinero en cuenta", panel: () => <MercadoPagoTiendaConfig />, funcion: "tienda" },
+      { clave: "envios", icono: Truck, titulo: "Envíos", subtitulo: "Correo Argentino, Andreani y más con Zipnova: cotizar, etiqueta y seguimiento", panel: () => <EnviosConfig />, funcion: "pedidos" },
     ],
   },
   {
     titulo: "Mi negocio",
     opciones: [
-      { clave: "actividades", icono: "🧭", titulo: "Qué hace mi negocio", subtitulo: "Vendo productos, fabrico o doy servicios: arma el menú", panel: (c) => <ActividadesConfig config={c} /> },
-      { clave: "modulos", icono: "🧩", titulo: "Módulos", subtitulo: "Prendé o escondé módulos del menú según lo que uses", panel: (c) => <ModulosConfig config={c} /> },
-      { clave: "proyectos", icono: "📋", titulo: "Proyectos", subtitulo: "Plantillas de etapas, plazos y aprobaciones para tus proyectos", panel: () => <PlantillasProyectoConfig />, funcion: "proyectos" },
-      { clave: "remitente", icono: "📬", titulo: "Datos del remitente", subtitulo: "Quién figura en el remito y en los documentos", panel: (c) => <RemitenteConfig config={c} /> },
-      { clave: "documentos", icono: "📄", titulo: "Documentos", subtitulo: "Logo y textos del comprobante, el recibo y el presupuesto", panel: () => <DocumentosConfig /> },
-      { clave: "fiscal", icono: "🌎", titulo: "Configuración fiscal", subtitulo: "País, moneda e IVA", panel: (c) => <FiscalConfig config={c} /> },
-      { clave: "factura", icono: "🧾", titulo: "Factura electrónica", subtitulo: "Factura C de ARCA desde cada venta", panel: () => <FacturaElectronicaConfig /> },
-      { clave: "informes", icono: "📧", titulo: "Informes por email", subtitulo: "El resumen de la semana y del mes, en PDF, a tu email", panel: () => <InformesConfig /> },
-      { clave: "apariencia", icono: "🖌️", titulo: "Apariencia", subtitulo: "Modo claro u oscuro y colores de la app", panel: () => <AparienciaConfig /> },
+      { clave: "actividades", icono: Compass, titulo: "Qué hace mi negocio", subtitulo: "Vendo productos, fabrico o doy servicios: arma el menú", panel: (c) => <ActividadesConfig config={c} /> },
+      { clave: "modulos", icono: Blocks, titulo: "Módulos", subtitulo: "Prendé o escondé módulos del menú según lo que uses", panel: (c) => <ModulosConfig config={c} /> },
+      { clave: "proyectos", icono: KanbanSquare, titulo: "Proyectos", subtitulo: "Plantillas de etapas, plazos y aprobaciones para tus proyectos", panel: () => <PlantillasProyectoConfig />, funcion: "proyectos" },
+      { clave: "remitente", icono: Store, titulo: "Datos del remitente", subtitulo: "Quién figura en el remito y en los documentos", panel: (c) => <RemitenteConfig config={c} /> },
+      { clave: "documentos", icono: FileText, titulo: "Documentos", subtitulo: "Logo y textos del comprobante, el recibo y el presupuesto", panel: () => <DocumentosConfig /> },
+      { clave: "fiscal", icono: Globe, titulo: "Configuración fiscal", subtitulo: "País, moneda e IVA", panel: (c) => <FiscalConfig config={c} /> },
+      { clave: "factura", icono: Receipt, titulo: "Factura electrónica", subtitulo: "Factura C de ARCA desde cada venta", panel: () => <FacturaElectronicaConfig /> },
+      { clave: "informes", icono: Mail, titulo: "Informes por email", subtitulo: "El resumen de la semana y del mes, en PDF, a tu email", panel: () => <InformesConfig /> },
+      { clave: "apariencia", icono: Palette, titulo: "Apariencia", subtitulo: "Modo claro u oscuro y colores de la app", panel: () => <AparienciaConfig /> },
     ],
   },
   {
     titulo: "Equipo y datos",
     opciones: [
-      { clave: "equipo", icono: "👥", titulo: "Equipo", subtitulo: "Invitá al equipo y asigná roles", panel: () => <EquipoConfig /> },
-      { clave: "auditoria", icono: "🔍", titulo: "Auditoría", subtitulo: "Quién cambió qué y cuándo, con el antes y el después", panel: () => <AuditoriaConfig />, funcion: "auditoria" },
-      { clave: "exportar", icono: "📥", titulo: "Exportar mis datos", subtitulo: "Descargá tu historial. Tus datos son tuyos, siempre.", panel: () => <ExportarConfig /> },
-      { clave: "borrar", icono: "🗑️", titulo: "Borrar mi cuenta", subtitulo: "Todos los datos del negocio, con 30 días para arrepentirte", panel: () => <BorrarCuentaConfig /> },
+      { clave: "equipo", icono: Users, titulo: "Equipo", subtitulo: "Invitá al equipo y asigná roles", panel: () => <EquipoConfig /> },
+      { clave: "auditoria", icono: SearchCheck, titulo: "Auditoría", subtitulo: "Quién cambió qué y cuándo, con el antes y el después", panel: () => <AuditoriaConfig />, funcion: "auditoria" },
+      { clave: "exportar", icono: Download, titulo: "Exportar mis datos", subtitulo: "Descargá tu historial. Tus datos son tuyos, siempre.", panel: () => <ExportarConfig /> },
+      { clave: "borrar", icono: Trash2, titulo: "Borrar mi cuenta", subtitulo: "Todos los datos del negocio, con 30 días para arrepentirte", panel: () => <BorrarCuentaConfig /> },
     ],
   },
 ];
@@ -120,24 +149,27 @@ export function ConfiguracionVista() {
           <div key={g.titulo}>
             <p className="px-2 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{g.titulo}</p>
             <ul className="flex flex-col">
-              {g.opciones.map((o) => (
-                <li key={o.clave}>
-                  <button
-                    type="button"
-                    onClick={() => ir(o.clave)}
-                    aria-current={o.clave === actual.clave ? "page" : undefined}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted lg:py-1.5",
-                      o.clave === actual.clave && "lg:bg-muted lg:font-medium",
-                    )}
-                  >
-                    <span aria-hidden>{o.icono}</span>
-                    <span className="flex-1">{o.titulo}</span>
-                    {o.funcion && !plan.incluye(o.funcion) && <CandadoPlan funcion={o.funcion} />}
-                    <ChevronRight className="size-4 text-muted-foreground lg:hidden" aria-hidden />
-                  </button>
-                </li>
-              ))}
+              {g.opciones.map((o) => {
+                const Icono = o.icono;
+                return (
+                  <li key={o.clave}>
+                    <button
+                      type="button"
+                      onClick={() => ir(o.clave)}
+                      aria-current={o.clave === actual.clave ? "page" : undefined}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted lg:py-1.5",
+                        o.clave === actual.clave && "lg:bg-muted lg:font-medium",
+                      )}
+                    >
+                      <Icono className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                      <span className="flex-1">{o.titulo}</span>
+                      {o.funcion && !plan.incluye(o.funcion) && <CandadoPlan funcion={o.funcion} />}
+                      <ChevronRight className="size-4 text-muted-foreground lg:hidden" aria-hidden />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}
@@ -148,8 +180,8 @@ export function ConfiguracionVista() {
           <button type="button" onClick={() => ir(null)} className="-ml-1 rounded-md p-1 hover:bg-muted lg:hidden" aria-label="Volver a todas las opciones">
             <ChevronLeft className="size-5" aria-hidden />
           </button>
-          <span className="text-xl" aria-hidden>
-            {actual.icono}
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground" aria-hidden>
+            <actual.icono className="size-4" />
           </span>
           <div>
             <h2 id="config-titulo" className="font-medium">

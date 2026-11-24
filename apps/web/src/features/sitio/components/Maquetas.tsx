@@ -1,3 +1,4 @@
+import { ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -182,7 +183,9 @@ export function MaquetaDestacada({ id }: { id: string }) {
           </div>
         </div>
         <div className={cn(tarjeta, "relative mt-4 flex items-center gap-3 sm:-mt-5 sm:mr-8 sm:ml-auto sm:w-fit")}>
-          <span className="flex size-9 items-center justify-center rounded-full bg-emerald-100 text-sm">🛍️</span>
+          <span className="flex size-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <ShoppingBag className="size-4" aria-hidden />
+          </span>
           <div>
             <p className="text-xs font-semibold text-slate-900">Pedido nuevo · $ 36.300</p>
             <p className="text-[11px] text-slate-500">Ya descontado del stock</p>

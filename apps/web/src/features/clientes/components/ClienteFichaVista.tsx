@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
+import { Cake, Mail, MessageCircle, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,9 +60,9 @@ export function ClienteFichaVista({ id }: { id: string }) {
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-4 text-sm">
-          <p>📞 {c.telefono ?? "—"}</p>
-          <p>✉️ {c.email ?? "—"}</p>
-          <p>🎂 {c.cumpleanos ? c.cumpleanos.split("-").reverse().join("/") : "—"}</p>
+          <p className="flex items-center gap-2"><Phone className="size-4 shrink-0 text-muted-foreground" aria-hidden /> {c.telefono ?? "—"}</p>
+          <p className="flex items-center gap-2"><Mail className="size-4 shrink-0 text-muted-foreground" aria-hidden /> {c.email ?? "—"}</p>
+          <p className="flex items-center gap-2"><Cake className="size-4 shrink-0 text-muted-foreground" aria-hidden /> {c.cumpleanos ? c.cumpleanos.split("-").reverse().join("/") : "—"}</p>
           <p>
             {c.cantidadCompras} compras · {formatoPesos(c.totalGastado)}
           </p>

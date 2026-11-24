@@ -1,10 +1,12 @@
+import { Factory, Scissors, ShoppingBag, type LucideIcon } from "lucide-react";
+
 /** Qué hace el negocio: arma el menú (lo que no usa queda escondido, no bloqueado). Espejo de la API (configuracion.dto.ts). */
 export type Actividad = "productos" | "produccion" | "servicios";
 
-export const ACTIVIDADES: { valor: Actividad; icono: string; titulo: string; detalle: string }[] = [
-  { valor: "productos", icono: "🛒", titulo: "Vendo productos", detalle: "Compro y revendo, o vendo lo que hago. Stock, compras y proveedores." },
-  { valor: "produccion", icono: "🏭", titulo: "Fabrico o produzco", detalle: "Recetas, insumos y lo que cuesta fabricar." },
-  { valor: "servicios", icono: "✂️", titulo: "Doy servicios", detalle: "Turnos, trabajos por encargo o reparaciones." },
+export const ACTIVIDADES: { valor: Actividad; icono: LucideIcon; titulo: string; detalle: string }[] = [
+  { valor: "productos", icono: ShoppingBag, titulo: "Vendo productos", detalle: "Compro y revendo, o vendo lo que hago. Stock, compras y proveedores." },
+  { valor: "produccion", icono: Factory, titulo: "Fabrico o produzco", detalle: "Recetas, insumos y lo que cuesta fabricar." },
+  { valor: "servicios", icono: Scissors, titulo: "Doy servicios", detalle: "Turnos, trabajos por encargo o reparaciones." },
 ];
 
 /** Si todavía no se sabe (cargando o empresa sin dato), el menú se muestra como siempre. */

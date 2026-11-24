@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Clock, Lock } from "lucide-react";
+import { Clock, Lock } from "lucide-react";
 import type { EstadoCajaActiva } from "../types/caja.types";
 
 interface Props {

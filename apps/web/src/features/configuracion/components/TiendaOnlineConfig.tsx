@@ -3,9 +3,9 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
-import { ExternalLink, ImagePlus, Loader2, ShoppingCart, Trash2, Wand2 } from "lucide-react";
+import { ImagePlus, Loader2, ShoppingCart, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useApiFetch } from "@/hooks/use-api";
@@ -68,10 +68,7 @@ type Pestana = (typeof PESTANAS)[number]["v"];
 /** Colores que se leen bien en la tienda. */
 const SUGERIDOS = ["#8a5a2b", "#b4532a", "#8c1c3a", "#5b3fa0", "#1e4e8c", "#0f766e", "#2f6b3b", "#2b2b2b"];
 
-/** En desarrollo la tienda corre en el puerto 3010 (acacia.localhost:3010). */
-const TIENDA_LOCAL = process.env.NEXT_PUBLIC_TIENDA_LOCAL_URL ?? "";
-
-/* Mismos colores que arma la tienda a partir del color de marca (apps/tienda/app/globals.css). */
+/* Mismos colores que arma la tienda a partir del color de marca. */
 type Rgb = [number, number, number];
 const aRgb = (hex: string): Rgb => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) || 0) as Rgb;
 const aHex = (c: Rgb) => `#${c.map((x) => x.toString(16).padStart(2, "0")).join("")}`;
@@ -154,7 +151,6 @@ function Formulario({ inicial }: { inicial: Tienda }) {
     </div>
   );
   const direccion = `${t.subdominio}.${inicial.base}`;
-  const verLocal = TIENDA_LOCAL ? TIENDA_LOCAL.replace("{sub}", inicial.subdominio) : null;
   const colorOk = /^#[0-9a-f]{6}$/i.test(t.color) && seLeeBien(t.color);
   const faltaCobro = !t.alias && !t.cbu;
   const colores = coloresTienda(/^#[0-9a-f]{6}$/i.test(t.color) ? t.color : "#6366f1");
@@ -169,11 +165,6 @@ function Formulario({ inicial }: { inicial: Tienda }) {
         <span className="text-muted-foreground">
           {t.activa ? "Visible en" : "Oculta · será"} <b className="text-foreground">{direccion}</b>
         </span>
-        {inicial.existe && inicial.activa && verLocal && (
-          <a href={verLocal} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-auto")}>
-            <ExternalLink aria-hidden /> Ver mi tienda
-          </a>
-        )}
       </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_15rem]">
@@ -285,7 +276,7 @@ function Formulario({ inicial }: { inicial: Tienda }) {
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {campo("anuncio", "Barra de anuncios (opcional)", { placeholder: "🚚 Envío gratis desde $50.000", maxLength: 120 })}
+                  {campo("anuncio", "Barra de anuncios (opcional)", { placeholder: "Envío gratis desde $50.000", maxLength: 120 })}
                   {campo("tituloDestacados", "Título de los destacados", { placeholder: "Los más elegidos", maxLength: 60 })}
                 </div>
                 <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1.5">

@@ -10,6 +10,7 @@ export function SelectorActividades({ valor, onChange }: { valor: Actividad[]; o
     <div className="grid gap-2 sm:grid-cols-3">
       {ACTIVIDADES.map((a) => {
         const si = valor.includes(a.valor);
+        const Icono = a.icono;
         return (
           <button
             key={a.valor}
@@ -22,8 +23,8 @@ export function SelectorActividades({ valor, onChange }: { valor: Actividad[]; o
             <span className={cn("absolute top-2 right-2 flex size-4 items-center justify-center rounded border", si ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40")} aria-hidden>
               {si && <Check className="size-3" />}
             </span>
-            <span className="text-xl" aria-hidden>
-              {a.icono}
+            <span className="flex size-8 items-center justify-center rounded-lg bg-muted text-foreground" aria-hidden>
+              <Icono className="size-4" />
             </span>
             <span className="font-medium">{a.titulo}</span>
             <span className="text-xs text-muted-foreground">{a.detalle}</span>

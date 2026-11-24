@@ -5,40 +5,31 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth, useOrganization, UserButton } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
-import { calcularModulosEfectivos, type ModuloToggleId } from "@analitica360/shared-types";
+import { calcularModulosEfectivos } from "@analitica360/shared-types";
 import {
-  BarChart3,
   BookOpen,
-  CalendarDays,
-  ClipboardList,
-  CreditCard,
+  ChevronDown,
   Download,
-  Factory,
-  FolderOpen,
   Gift,
-  Hammer,
-  HandCoins,
   Home,
-  KanbanSquare,
-  Landmark,
-  Package,
-  Repeat,
+  Lock,
+  MoreHorizontal,
   Settings,
   Shield,
-  ShoppingCart,
   Sparkles,
   Star,
-  Target,
   Ticket,
-  Truck,
-  Users,
-  Wallet,
-  Wrench,
-  type LucideIcon,
 } from "lucide-react";
 import { CandadoPlan } from "@/components/shared/mejorar-plan";
 import { SelectorTema } from "@/components/shared/selector-tema";
 import { SoloCliente } from "@/components/shared/solo-cliente";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -63,32 +54,27 @@ import { useInstalarApp } from "@/hooks/use-instalar-app";
 import { usePlan } from "@/hooks/use-plan";
 import { useRol } from "@/hooks/use-rol";
 import { useTicketsNoLeidos } from "@/hooks/use-tickets-no-leidos";
-import type { ModuloClave } from "@/lib/rol";
-import { ACTIVIDADES_POR_DEFECTO, type Actividad } from "@/lib/rubros";
-
-interface Item {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  modulo?: ModuloClave;
-  moduloId?: ModuloToggleId;
-  funcion?: string;
-  para?: Actividad[];
-  visible?: boolean;
-  badge?: number;
-}
-
-interface Grupo {
-  titulo: string;
-  items: Item[];
-  abajo?: boolean;
-}
+import { GRUPOS_NAVEGACION, type NavGrupo, type NavItem } from "@/lib/navegacion";
+import { ACTIVIDADES_POR_DEFECTO } from "@/lib/rubros";
+import { cn } from "@/lib/utils";
 
 const PREFETCH_RUTAS: Record<string, { key: string; url: string }> = {
   "/productos": { key: "productos", url: "/productos" },
   "/clientes": { key: "clientes", url: "/clientes" },
   "/configuracion": { key: "configuracion", url: "/configuracion" },
 };
+
+const STORAGE_GRUPOS = "analitica360_sidebar_grupos";
+
+function leerGruposGuardados(): Record<string, boolean> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(STORAGE_GRUPOS);
+    return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+  } catch {
+    return {};
+  }
+}
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -119,8 +105,12 @@ export function AppSidebar() {
         modulosEfectivos.agenda !== false &&
         plan.disponible("agenda"),
     ).data?.length ?? 0;
+
   const vendeProductos = actividades.includes("productos") || actividades.includes("produccion");
   const activo = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  const [gruposAbiertos, setGruposAbiertos] = useState<Record<string, boolean>>(() => leerGruposGuardados());
+  const [mostrarBloqueados, setMostrarBloqueados] = useState(false);
 
   const { dispositivo, puedeInstalarDirecto, instalar } = useInstalarApp();
   const [modalInstalar, setModalInstalar] = useState<{ abierto: boolean; modo: ModoPasos }>({
@@ -154,66 +144,67 @@ export function AppSidebar() {
     });
   };
 
-  const grupos: Grupo[] = [
-    {
-      titulo: "Ventas",
-      items: [
-        { href: "/ventas", label: "Ventas", icon: Wallet, modulo: "ventas" },
-        { href: "/caja", label: "Caja y Turnos", icon: Landmark, modulo: "ventas", moduloId: "caja" },
-        { href: "/cobros", label: "Cobros", icon: CreditCard, modulo: "ventas", moduloId: "cobros" },
-        { href: "/clientes", label: "Clientes", icon: Users, modulo: "clientes", moduloId: "clientes" },
-        { href: "/pedidos", label: "Pedidos", icon: Truck, modulo: "pedidos", moduloId: "pedidos", para: ["productos", "produccion"] },
-        { href: "/agenda", label: "Agenda", icon: CalendarDays, modulo: "ventas", moduloId: "agenda", funcion: "agenda", para: ["servicios"], badge: nuevasOnline },
-        { href: "/abonos", label: "Abonos", icon: Repeat, modulo: "ventas", moduloId: "abonos", funcion: "abonos", para: ["servicios"] },
-        { href: "/ordenes-trabajo", label: "Órdenes de trabajo", icon: Wrench, modulo: "ventas", moduloId: "ordenes_trabajo", funcion: "ordenes_trabajo", para: ["servicios"] },
-        { href: "/proyectos", label: "Proyectos", icon: KanbanSquare, modulo: "ventas", moduloId: "proyectos", funcion: "proyectos", para: ["servicios"] },
-      ],
-    },
-    {
-      titulo: vendeProductos ? "Stock y compras" : "Catálogo",
-      items: [
-        { href: "/productos", label: vendeProductos ? "Productos" : "Servicios y productos", icon: Package, modulo: "productos" },
-        { href: "/inventario", label: "Inventario", icon: ClipboardList, modulo: "inventario", moduloId: "inventario", para: ["productos", "produccion"] },
-        { href: "/compras", label: "Compras", icon: ShoppingCart, modulo: "compras", moduloId: "compras", para: ["productos", "produccion"] },
-        { href: "/proveedores", label: "Proveedores", icon: Factory, modulo: "proveedores", moduloId: "proveedores", para: ["productos", "produccion"] },
-        { href: "/produccion", label: "Producción", icon: Hammer, modulo: "produccion", moduloId: "produccion", para: ["produccion"] },
-      ],
-    },
-    {
-      titulo: "Gestión",
-      items: [
-        { href: "/analytics", label: "Analytics", icon: BarChart3, modulo: "analytics", moduloId: "analytics" },
-        { href: "/objetivos", label: "Objetivos", icon: Target, moduloId: "objetivos", funcion: "objetivos" },
-        { href: "/comisiones", label: "Comisiones", icon: HandCoins, modulo: "ventas", moduloId: "comisiones", funcion: "comisiones", para: ["servicios"] },
-        { href: "/documentos", label: "Documentos", icon: FolderOpen, moduloId: "documentos", funcion: "archivo", visible: rol === "dueno" || rol === "contador" },
-      ],
-    },
-    {
-      titulo: "Cuenta",
-      abajo: true,
-      items: [
-        { href: "/guias", label: "Guías y Manuales", icon: BookOpen },
-        { href: "/soporte", label: "Soporte", icon: Ticket, badge: ticketsNoLeidos ?? 0 },
-        { href: "/planes", label: "Planes", icon: Star },
-        { href: "/recomendar", label: "Recomendá y ganá", icon: Gift, visible: verConfig },
-        { href: "/admin", label: "Consola", icon: Shield, visible: esAdmin },
-        { href: "/configuracion", label: "Configuración", icon: Settings, visible: verConfig },
-      ],
-    },
-  ];
-
-  const visibles = (g: Grupo) =>
-    g.items.filter((i) => {
-      if (i.visible === false) return false;
-      if (i.modulo && !puede(i.modulo)) return false;
-      if (i.moduloId) return modulosEfectivos[i.moduloId] !== false;
-      return !i.para || i.para.some((a) => actividades.includes(a));
+  const toggleGrupo = (id: string, estadoActual: boolean) => {
+    setGruposAbiertos((prev) => {
+      const siguiente = { ...prev, [id]: !estadoActual };
+      try {
+        localStorage.setItem(STORAGE_GRUPOS, JSON.stringify(siguiente));
+      } catch {
+        // Ignorar si localStorage no está disponible
+      }
+      return siguiente;
     });
+  };
+
+  const itemPermitido = (i: NavItem) => {
+    if (i.visible === false) return false;
+    if (i.href === "/documentos" && rol !== "dueno" && rol !== "contador") return false;
+    if (i.modulo && !puede(i.modulo)) return false;
+    if (i.moduloId) return modulosEfectivos[i.moduloId] !== false;
+    return !i.para || i.para.some((a) => actividades.includes(a));
+  };
+
+  const estaBloqueado = (i: NavItem) => {
+    const funcion = i.funcion ?? i.modulo;
+    return Boolean(funcion) && !plan.incluye(funcion!);
+  };
+
+  const etiquetaItem = (i: NavItem) => {
+    if (i.href === "/productos" && !vendeProductos) return "Servicios y productos";
+    return i.label;
+  };
+
+  const badgeItem = (i: NavItem) => {
+    if (i.href === "/agenda") return nuevasOnline;
+    return 0;
+  };
+
+  // Separamos los módulos bloqueados por plan para evitar ruido visual de candados en la operación diaria
+  const itemsBloqueados: NavItem[] = [];
+  const gruposFiltrados: { grupo: NavGrupo; items: NavItem[] }[] = [];
+
+  for (const g of GRUPOS_NAVEGACION) {
+    const permitidos = g.items.filter(itemPermitido);
+    const desbloqueados: NavItem[] = [];
+    for (const item of permitidos) {
+      if (estaBloqueado(item)) {
+        itemsBloqueados.push(item);
+      } else {
+        desbloqueados.push(item);
+      }
+    }
+    if (desbloqueados.length > 0) {
+      gruposFiltrados.push({ grupo: g, items: desbloqueados });
+    }
+  }
+
+  const copilotVisible = puede("inicio") && modulosEfectivos.copilot !== false;
+  const copilotBloqueado = !plan.incluye("copilot");
 
   return (
     <Sidebar collapsible="icon" className="print:hidden">
-      <SidebarHeader>
-        <div className="flex items-center gap-2.5 overflow-hidden px-2 py-1.5">
+      <SidebarHeader className="border-b border-sidebar-border/60">
+        <div className="flex items-center gap-2.5 overflow-hidden px-2 py-1">
           <Logo conNombre={false} className="size-7 shrink-0" />
           <div className="flex flex-col gap-0.5 overflow-hidden group-data-[collapsible=icon]:hidden">
             <span className="text-sm font-semibold tracking-tight">
@@ -224,32 +215,33 @@ export function AppSidebar() {
           </div>
         </div>
       </SidebarHeader>
-      <SidebarContent className="gap-0">
+
+      <SidebarContent className="gap-1 py-1">
         {puede("inicio") && (
           <SidebarGroup className="py-1">
-            <SidebarMenu>
+            <SidebarMenu className="gap-0.5">
               <SidebarMenuItem id="tour-inicio">
-                <SidebarMenuButton render={<Link href="/inicio" />} isActive={pathname === "/inicio"} tooltip="Inicio">
+                <SidebarMenuButton
+                  render={<Link href="/inicio" />}
+                  isActive={pathname === "/inicio"}
+                  tooltip="Inicio"
+                  className={cn(pathname === "/inicio" && "font-medium")}
+                >
                   <Home />
                   <span>Inicio</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {modulosEfectivos.copilot !== false && (
+              {copilotVisible && !copilotBloqueado && (
                 <SidebarMenuItem id="tour-copilot">
                   <SidebarMenuButton
                     render={<Link href="/ia" />}
-                    isActive={pathname === "/ia"}
+                    isActive={activo("/ia")}
                     tooltip="Copilot IA"
-                    className={!plan.incluye("copilot") ? "text-muted-foreground" : undefined}
                   >
-                    <Sparkles className="text-emerald-400" />
+                    <Sparkles className="text-emerald-500 dark:text-emerald-400" />
                     <span className="flex items-center gap-1.5 font-medium">
                       <span>Copilot IA</span>
-                      <span className="rounded-full border border-emerald-500/20 bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-400">
-                        IA
-                      </span>
                     </span>
-                    {!plan.incluye("copilot") && <CandadoPlan funcion="copilot" />}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
@@ -257,59 +249,212 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {grupos.map((g) => {
-          const items = visibles(g);
-          if (items.length === 0) return null;
+        {gruposFiltrados.map(({ grupo, items }) => {
+          const tieneRutaActiva = items.some((i) => activo(i.href));
+          const abierto = !grupo.colapsable
+            ? true
+            : tieneRutaActiva || (gruposAbiertos[grupo.id] ?? grupo.defaultAbierto ?? true);
+          const tituloGrupo =
+            grupo.id === "operativa" && !vendeProductos ? "Servicios y agenda" : grupo.titulo;
+
           return (
-            <SidebarGroup key={g.titulo} className={g.abajo ? "mt-auto py-1" : "py-1"}>
-              <SidebarGroupLabel>{g.titulo}</SidebarGroupLabel>
-              <SidebarMenu>
-                {items.map((item) => {
-                  const funcion = item.funcion ?? item.modulo;
-                  const bloqueado = Boolean(funcion) && !plan.incluye(funcion!);
-                  const tourId = `tour-${item.href.replace(/^\//, "")}`;
-                  return (
-                    <SidebarMenuItem
-                      key={item.href}
-                      id={tourId}
-                      onMouseEnter={() => precargar(item.href)}
-                      onTouchStart={() => precargar(item.href)}
-                    >
-                      <SidebarMenuButton
-                        render={<Link href={item.href} />}
-                        isActive={activo(item.href)}
-                        tooltip={item.label}
-                        className={bloqueado ? "text-muted-foreground" : undefined}
+            <SidebarGroup key={grupo.id} className="py-1">
+              {grupo.colapsable ? (
+                <button
+                  type="button"
+                  onClick={() => toggleGrupo(grupo.id, abierto)}
+                  aria-expanded={abierto}
+                  className="flex h-7 w-full items-center justify-between rounded-md px-2 text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/65 ring-sidebar-ring outline-hidden transition-colors hover:text-sidebar-foreground focus-visible:ring-2 group-data-[collapsible=icon]:hidden cursor-pointer"
+                >
+                  <span className="truncate">{tituloGrupo}</span>
+                  <ChevronDown
+                    className={cn("size-3.5 shrink-0 transition-transform duration-150", !abierto && "-rotate-90")}
+                    aria-hidden
+                  />
+                </button>
+              ) : (
+                <SidebarGroupLabel className="h-7 text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/65">
+                  {tituloGrupo}
+                </SidebarGroupLabel>
+              )}
+
+              {abierto && (
+                <SidebarMenu className="gap-0.5">
+                  {items.map((item) => {
+                    const Icono = item.icon;
+                    const tourId = `tour-${item.href.replace(/^\//, "")}`;
+                    const label = etiquetaItem(item);
+                    const badge = badgeItem(item);
+                    const esActivo = activo(item.href);
+
+                    return (
+                      <SidebarMenuItem
+                        key={item.href}
+                        id={tourId}
+                        onMouseEnter={() => precargar(item.href)}
+                        onTouchStart={() => precargar(item.href)}
                       >
-                        <item.icon />
-                        <span>{item.label}</span>
-                        {bloqueado && <CandadoPlan funcion={funcion!} />}
-                      </SidebarMenuButton>
-                      {Boolean(item.badge) && <SidebarMenuBadge>{item.badge! > 9 ? "9+" : item.badge}</SidebarMenuBadge>}
-                    </SidebarMenuItem>
-                  );
-                })}
-                {g.abajo && !dispositivo.instalada && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={tocarInstalar} tooltip="Instalar la app" data-rastreo="Descargar app: menu">
-                      <Download />
-                      <span>Instalar la app</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-              </SidebarMenu>
+                        <SidebarMenuButton
+                          render={<Link href={item.href} />}
+                          isActive={esActivo}
+                          tooltip={label}
+                        >
+                          <Icono />
+                          <span>{label}</span>
+                        </SidebarMenuButton>
+                        {badge > 0 && <SidebarMenuBadge>{badge > 9 ? "9+" : badge}</SidebarMenuBadge>}
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              )}
             </SidebarGroup>
           );
         })}
+
+        {(itemsBloqueados.length > 0 || (copilotVisible && copilotBloqueado)) && (
+          <SidebarGroup className="py-1 group-data-[collapsible=icon]:hidden">
+            <button
+              type="button"
+              onClick={() => setMostrarBloqueados((v) => !v)}
+              aria-expanded={mostrarBloqueados}
+              className="flex h-7 w-full items-center justify-between rounded-md px-2 text-[11px] font-medium text-muted-foreground ring-sidebar-ring outline-hidden transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground focus-visible:ring-2 cursor-pointer"
+            >
+              <span className="flex items-center gap-1.5 truncate">
+                <Lock className="size-3 shrink-0" aria-hidden />
+                <span>
+                  Otros planes ({itemsBloqueados.length + (copilotVisible && copilotBloqueado ? 1 : 0)})
+                </span>
+              </span>
+              <ChevronDown
+                className={cn("size-3.5 shrink-0 transition-transform duration-150", !mostrarBloqueados && "-rotate-90")}
+                aria-hidden
+              />
+            </button>
+            {mostrarBloqueados && (
+              <SidebarMenu className="mt-0.5 gap-0.5">
+                {copilotVisible && copilotBloqueado && (
+                  <SidebarMenuItem id="tour-copilot">
+                    <SidebarMenuButton
+                      render={<Link href="/ia" />}
+                      isActive={activo("/ia")}
+                      className="text-muted-foreground"
+                    >
+                      <Sparkles />
+                      <span>Copilot IA</span>
+                      <CandadoPlan funcion="copilot" />
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                {itemsBloqueados.map((item) => {
+                  const Icono = item.icon;
+                  const fn = item.funcion ?? item.modulo;
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        render={<Link href={item.href} />}
+                        isActive={activo(item.href)}
+                        className="text-muted-foreground"
+                      >
+                        <Icono />
+                        <span>{etiquetaItem(item)}</span>
+                        {fn && <CandadoPlan funcion={fn} />}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            )}
+          </SidebarGroup>
+        )}
+
+        {/* Utilidades compactas al pie del scroll */}
+        <SidebarGroup className="mt-auto border-t border-sidebar-border/60 py-1.5">
+          <SidebarMenu className="gap-0.5">
+            <SidebarMenuItem id="tour-soporte">
+              <SidebarMenuButton render={<Link href="/soporte" />} isActive={activo("/soporte")} tooltip="Soporte">
+                <Ticket />
+                <span>Soporte</span>
+              </SidebarMenuButton>
+              {(ticketsNoLeidos ?? 0) > 0 && (
+                <SidebarMenuBadge>{ticketsNoLeidos! > 9 ? "9+" : ticketsNoLeidos}</SidebarMenuBadge>
+              )}
+            </SidebarMenuItem>
+
+            {verConfig && (
+              <SidebarMenuItem id="tour-configuracion">
+                <SidebarMenuButton
+                  render={<Link href="/configuracion" />}
+                  isActive={activo("/configuracion")}
+                  tooltip="Configuración"
+                >
+                  <Settings />
+                  <span>Configuración</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
+
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <SidebarMenuButton
+                      isActive={activo("/guias") || activo("/planes") || activo("/recomendar") || activo("/admin")}
+                    />
+                  }
+                >
+                  <MoreHorizontal />
+                  <span>Ayuda y cuenta</span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="right" align="end" className="w-52">
+                  <DropdownMenuItem render={<Link href="/guias" />}>
+                    <BookOpen className="size-4" aria-hidden />
+                    Guías y manuales
+                  </DropdownMenuItem>
+                  <DropdownMenuItem render={<Link href="/planes" />}>
+                    <Star className="size-4" aria-hidden />
+                    Planes y suscripción
+                  </DropdownMenuItem>
+                  {verConfig && (
+                    <DropdownMenuItem render={<Link href="/recomendar" />}>
+                      <Gift className="size-4" aria-hidden />
+                      Recomendá y ganá
+                    </DropdownMenuItem>
+                  )}
+                  {esAdmin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem render={<Link href="/admin" />}>
+                        <Shield className="size-4" aria-hidden />
+                        Consola Superadmin
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {!dispositivo.instalada && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={tocarInstalar} data-rastreo="Descargar app: menu">
+                        <Download className="size-4" aria-hidden />
+                        Instalar la app
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <div className="flex items-center justify-between gap-2 px-1 py-1">
+
+      <SidebarFooter className="border-t border-sidebar-border/60">
+        <div className="flex items-center justify-between gap-2 px-1 py-0.5">
           <SoloCliente reserva={<span className="size-7 rounded-full bg-muted" aria-hidden />}>
             <UserButton />
           </SoloCliente>
           <SelectorTema />
         </div>
       </SidebarFooter>
+
       <PasosInstalacion
         abierto={modalInstalar.abierto}
         onOpenChange={(abierto) => setModalInstalar((m) => ({ ...m, abierto }))}

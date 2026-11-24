@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { CopilotChatView } from '@/features/copilot/components/copilot-chat-view';
-import { Sparkles, Bot, ShieldCheck } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Analítica Copilot IA · Analítica 360',

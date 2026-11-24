@@ -43,7 +43,7 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
     pasos: [
       {
         popover: {
-          title: "🚀 Bienvenido a Analítica 360",
+          title: "Bienvenido a Analítica 360",
           description:
             "Te guiaremos en 1 minuto por los módulos esenciales para operar tu comercio con agilidad.",
           popoverClass: "analitica-tour-popover",
@@ -52,7 +52,7 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       {
         element: "#tour-inicio",
         popover: {
-          title: "🏠 Panel de Inicio",
+          title: "Panel de Inicio",
           description: "Métricas del día: facturación, compras del mes, alertas de stock y gráfico semanal.",
           side: "right",
           align: "start",
@@ -62,7 +62,7 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       {
         element: "#tour-copilot",
         popover: {
-          title: "✨ Copilot IA (Analítica IA)",
+          title: "Copilot IA (Analítica IA)",
           description: "Asistente inteligente para análisis de rentabilidad, predicción de demanda y consultas comerciales.",
           side: "right",
           align: "start",
@@ -72,7 +72,7 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       {
         element: "#tour-ventas",
         popover: {
-          title: "💳 Punto de Venta y Cobranzas",
+          title: "Punto de Venta y Cobranzas",
           description: "Caja rápida, facturación electrónica ARCA, señas y cobro con múltiples medios de pago.",
           side: "right",
           align: "start",
@@ -82,7 +82,7 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       {
         element: "#tour-productos",
         popover: {
-          title: "📦 Stock y Catálogo",
+          title: "Stock y Catálogo",
           description: "Inventario en tiempo real, variantes de talles/colores y actualización masiva por Excel.",
           side: "right",
           align: "start",
@@ -92,7 +92,7 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       {
         element: "#tour-empresa",
         popover: {
-          title: "🏢 Selector de Organización",
+          title: "Selector de Organización",
           description: "Alterná entre sucursales o empresas manteniendo los datos fiscales e inventario 100% aislados.",
           side: "bottom",
           align: "end",
@@ -111,7 +111,7 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
     pasos: [
       {
         popover: {
-          title: "🛒 Módulo de Ventas y Facturación",
+          title: "Módulo de Ventas y Facturación",
           description: "Diseñado para cobrar a clientes en el mostrador en menos de 10 segundos.",
           popoverClass: "analitica-tour-popover",
         },
@@ -119,7 +119,7 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       {
         element: "#tour-ventas",
         popover: {
-          title: "1️⃣ Registro Ágil del Carrito",
+          title: "1. Registro Ágil del Carrito",
           description: "Buscá por nombre, código de barras con pistola lectora o elegí productos de favoritos.",
           side: "right",
           align: "start",
@@ -128,21 +128,21 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       },
       {
         popover: {
-          title: "2️⃣ Medios de Pago y Cuotas",
+          title: "2. Medios de Pago y Cuotas",
           description: "Combiná efectivo, tarjetas con coeficientes de recargo automático, transferencias o MercadoPago.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "3️⃣ Facturación ARCA y Tickets",
+          title: "3. Facturación ARCA y Tickets",
           description: "Emisión de comprobantes fiscales (Factura A, B, C o Nota de Crédito) con CAE oficial de ARCA.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "4️⃣ Señas y Cuenta Corriente",
+          title: "4. Señas y Cuenta Corriente",
           description: "Permite asentar señas de pedidos futuros o enviar la venta a la cuenta corriente del cliente.",
           popoverClass: "analitica-tour-popover",
         },
@@ -159,21 +159,21 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
     pasos: [
       {
         popover: {
-          title: "👥 Cartera de Clientes",
+          title: "Cartera de Clientes",
           description: "Centralizá los datos de contacto, CUIT/DNI, categoría fiscal y límites de crédito.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "1️⃣ Cuenta Corriente y Deuda",
+          title: "1. Cuenta Corriente y Deuda",
           description: "Visualizá los comprobantes adeudados, registrá entregas a cuenta y emití recibos de cobro.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "2️⃣ Difusión Directa por WhatsApp",
+          title: "2. Difusión Directa por WhatsApp",
           description: "Enviá promociones, novedades o estados de cuenta a tus clientes con un solo clic.",
           popoverClass: "analitica-tour-popover",
         },
@@ -190,21 +190,21 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
     pasos: [
       {
         popover: {
-          title: "🚚 Bandeja de Pedidos",
+          title: "Bandeja de Pedidos",
           description: "Monitoreá pedidos provenientes del mostrador, WhatsApp o tu Tienda Online.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "1️⃣ Picking en Depósito",
+          title: "1. Picking en Depósito",
           description: "Checklist digital para que los operarios armen paquetes sin errores de mercadería.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "2️⃣ Despacho y Remito Oficial",
+          title: "2. Despacho y Remito Oficial",
           description: "Generación automática del remito de entrega y actualización de stock en tiempo real.",
           popoverClass: "analitica-tour-popover",
         },
@@ -222,7 +222,7 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       {
         element: "#tour-productos",
         popover: {
-          title: "📦 Catálogo de Artículos y Servicios",
+          title: "Catálogo de Artículos y Servicios",
           description: "Administrá productos físicos, insumos de producción y servicios por hora o turno.",
           side: "right",
           align: "start",
@@ -231,14 +231,14 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       },
       {
         popover: {
-          title: "1️⃣ Variantes y Códigos SKU/EAN",
+          title: "1. Variantes y Códigos SKU/EAN",
           description: "Creá combinaciones de talles y colores con sus respectivos códigos de barras para escaneo.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "2️⃣ Actualización Masiva por Excel",
+          title: "2. Actualización Masiva por Excel",
           description: "Exportá e importá listas de precios completas para actualizar tus costos de venta en segundos.",
           popoverClass: "analitica-tour-popover",
         },
@@ -255,21 +255,21 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
     pasos: [
       {
         popover: {
-          title: "📊 Gestión de Stock en Tiempo Real",
+          title: "Gestión de Stock en Tiempo Real",
           description: "Control preciso de existencias disponibles, reservadas y por debajo del punto de pedido.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "1️⃣ Kardex Inmutable",
+          title: "1. Kardex Inmutable",
           description: "Trazabilidad completa: quién ingresó o dio de baja cada unidad con fecha y motivo.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "2️⃣ Transferencias entre Sucursales",
+          title: "2. Transferencias entre Sucursales",
           description: "Movilizá mercadería entre depósitos manteniendo los saldos contables sincronizados.",
           popoverClass: "analitica-tour-popover",
         },
@@ -286,21 +286,21 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
     pasos: [
       {
         popover: {
-          title: "📥 Registro de Compras",
+          title: "Registro de Compras",
           description: "Ingresá comprobantes de compras para alimentar el stock y mantener actualizados los costos.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "1️⃣ Prorrateo de Costos y Fletes",
+          title: "1. Prorrateo de Costos y Fletes",
           description: "Distribución del costo de envío sobre el precio unitario para un margen de ganancia exacto.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "2️⃣ Directorio de Proveedores",
+          title: "2. Directorio de Proveedores",
           description: "Seguimiento de cuentas corrientes de proveedores y pagos pendientes.",
           popoverClass: "analitica-tour-popover",
         },
@@ -318,7 +318,7 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       {
         element: "#tour-analytics",
         popover: {
-          title: "📈 Business Intelligence Comercial",
+          title: "Business Intelligence Comercial",
           description: "Visualizá los números reales de tu negocio sin necesidad de planillas de cálculo externas.",
           side: "right",
           align: "start",
@@ -327,14 +327,14 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       },
       {
         popover: {
-          title: "1️⃣ Matriz BCG de Rentabilidad",
+          title: "1. Matriz BCG de Rentabilidad",
           description: "Identificá tus productos Estrella (alta venta y alto margen) y detectá artículos estancados.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "2️⃣ Semáforo Fiscal de Monotributo",
+          title: "2. Semáforo Fiscal de Monotributo",
           description: "Monitoreá tu acumulado de facturación de los últimos 12 meses para prevenir recategorizaciones o exclusiones.",
           popoverClass: "analitica-tour-popover",
         },
@@ -352,7 +352,7 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       {
         element: "#tour-copilot",
         popover: {
-          title: "✨ Asistente Estratégico Analítica IA",
+          title: "Asistente Estratégico Analítica IA",
           description: "Inteligencia artificial especializada exclusivamente en finanzas, stock y rentabilidad de tu comercio.",
           side: "right",
           align: "start",
@@ -361,14 +361,14 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       },
       {
         popover: {
-          title: "1️⃣ Preguntá en Lenguaje Natural",
+          title: "1. Preguntá en Lenguaje Natural",
           description: "Escribí preguntas como: ¿Cuáles son mis 3 productos con mejor margen? o ¿Qué clientes redujeron sus compras este mes?",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "2️⃣ Privacidad y Multi-Tenant Estricto",
+          title: "2. Privacidad y Multi-Tenant Estricto",
           description: "Analítica IA consulta únicamente los datos de tu empresa con aislamiento por organización (RLS).",
           popoverClass: "analitica-tour-popover",
         },
@@ -385,14 +385,14 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
     pasos: [
       {
         popover: {
-          title: "📅 Calendario de Turnos y Citas",
+          title: "Calendario de Turnos y Citas",
           description: "Gestioná reservas de clientes, horarios de profesionales y disponibilidad de consultorios o boxes.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "1️⃣ Turnero Público Online",
+          title: "1. Turnero Público Online",
           description: "Tus clientes reservan directamente desde un enlace web público sin necesidad de llamadas telefónicas.",
           popoverClass: "analitica-tour-popover",
         },
@@ -409,14 +409,14 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
     pasos: [
       {
         popover: {
-          title: "🔁 Cuotas y Membresías Recurrentes",
+          title: "Cuotas y Membresías Recurrentes",
           description: "Ideal para gimnasios, clubes, servicios de mantenimiento o cuotas mensuales de clientes.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "1️⃣ Facturación y Cobro Masivo",
+          title: "1. Facturación y Cobro Masivo",
           description: "Generá las cuotas del mes para todos tus abonados con un solo clic y hacé seguimiento de morosos.",
           popoverClass: "analitica-tour-popover",
         },
@@ -433,14 +433,14 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
     pasos: [
       {
         popover: {
-          title: "🔧 Servicio Técnico y Reparaciones",
+          title: "Servicio Técnico y Reparaciones",
           description: "Registrá la entrada de equipos, asigná repuestos del depósito e indicá el costo de mano de obra.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "1️⃣ Estados de la Orden",
+          title: "1. Estados de la Orden",
           description: "Seguimiento visual: Recibido, En Diagnóstico, Aprobado, Finalizado y Entregado al cliente.",
           popoverClass: "analitica-tour-popover",
         },
@@ -457,14 +457,14 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
     pasos: [
       {
         popover: {
-          title: "⚙️ Fabricación y Recetas Maestras",
+          title: "Fabricación y Recetas Maestras",
           description: "Definí la lista de materiales e insumos necesarios para fabricar cada producto terminado.",
           popoverClass: "analitica-tour-popover",
         },
       },
       {
         popover: {
-          title: "1️⃣ Explosión Automática de Insumos",
+          title: "1. Explosión Automática de Insumos",
           description: "Al asentar una orden de elaboración, el sistema descuenta automáticamente los insumos consumidos.",
           popoverClass: "analitica-tour-popover",
         },
@@ -482,7 +482,7 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       {
         element: "#tour-configuracion",
         popover: {
-          title: "⚙️ Configuración del Comercio",
+          title: "Configuración del Comercio",
           description: "Parámetros impositivos, CUIT, certificados de facturación y rubros comerciales habilitados.",
           side: "right",
           align: "start",
@@ -491,7 +491,7 @@ export const TOURS_MODULOS: Record<string, DefinicionTourModulo> = {
       },
       {
         popover: {
-          title: "1️⃣ Roles y Equipo de Trabajo",
+          title: "1. Roles y Equipo de Trabajo",
           description: "Invitá a tu equipo asignando roles claros: Dueño, Colaborador de caja o Estudio Contable.",
           popoverClass: "analitica-tour-popover",
         },

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Sparkles } from "lucide-react";
+import { Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   haVistoTour,
@@ -21,6 +21,7 @@ export function BotonTour() {
   const detectarModuloActual = (): string => {
     if (!pathname) return "general";
     if (pathname.startsWith("/ventas")) return "ventas";
+    if (pathname.startsWith("/caja") || pathname.startsWith("/cobros")) return "ventas";
     if (pathname.startsWith("/clientes")) return "clientes";
     if (pathname.startsWith("/pedidos")) return "pedidos";
     if (pathname.startsWith("/productos")) return "productos";
@@ -30,7 +31,7 @@ export function BotonTour() {
     if (pathname.startsWith("/ia")) return "copilot";
     if (pathname.startsWith("/agenda")) return "agenda";
     if (pathname.startsWith("/abonos")) return "abonos";
-    if (pathname.startsWith("/ordenes-trabajo")) return "ordenes";
+    if (pathname.startsWith("/ordenes-trabajo") || pathname.startsWith("/proyectos")) return "ordenes";
     if (pathname.startsWith("/produccion")) return "produccion";
     if (pathname.startsWith("/configuracion")) return "configuracion";
     return "general";
@@ -76,17 +77,17 @@ export function BotonTour() {
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="ghost"
       size="sm"
       onClick={handleClick}
       title={`Iniciar tour guiado de ${defModulo ? defModulo.nombre : "la plataforma"}`}
-      className="gap-1.5 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-400 font-medium text-xs transition-colors shadow-xs cursor-pointer"
+      aria-label={`Tour guiado: ${defModulo ? defModulo.nombre : "plataforma"}`}
+      className="h-8 gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer"
     >
-      <Sparkles className="size-3.5 text-emerald-400" />
-      <span className="hidden sm:inline">
-        {moduloActual === "general" ? "Tour interactivo" : `Paso a paso (${defModulo?.nombre.split(" ")[0]})`}
+      <Compass className="size-3.5" aria-hidden />
+      <span className="hidden xl:inline">
+        {moduloActual === "general" ? "Guía interactiva" : `Guía (${defModulo?.nombre.split(" ")[0]})`}
       </span>
-      <span className="sm:hidden">Tour</span>
     </Button>
   );
 }

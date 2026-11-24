@@ -14,7 +14,6 @@ import {
   Search,
   Clock,
   Sparkles,
-  Compass,
   ArrowRight,
   HelpCircle,
   PlayCircle,

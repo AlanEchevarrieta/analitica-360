@@ -13,8 +13,9 @@ El repositorio está organizado como un monorepo administrado con **pnpm workspa
 ├── apps/
 │   ├── api/            # Backend NestJS + Prisma ORM + PostgreSQL (puerto 3001)
 │   ├── web/            # Panel de control / Dashboard en Next.js (puerto 4001)
-│   └── tienda/         # Storefront público multi-negocio en Next.js (puerto 3010)
+│   └── acacia_web/     # Storefront dedicado Acacia (Next.js, puerto 3020)
 ├── packages/
+│   ├── sdk/            # SDK oficial y widget embebible (@analitica360/sdk)
 │   └── shared-types/   # Contratos de tipos y validaciones compartidas (Zod)
 ├── deploy/             # Archivos de despliegue y scripts de backup (Caddyfile, etc.)
 └── scripts/            # Scripts de auditoría, pruebas de carga y utilidades
@@ -47,7 +48,6 @@ pnpm dev
 O de forma individual por aplicación:
 - **API**: `pnpm --filter api dev` (http://localhost:3001)
 - **Web**: `pnpm --filter web dev` (http://localhost:4001)
-- **Tienda**: `pnpm --filter tienda dev` (http://localhost:3010)
 
 ---
 
@@ -57,11 +57,11 @@ Desde la raíz del monorepo podés ejecutar:
 
 | Comando | Descripción |
 |---|---|
-| `pnpm build` | Compila todas las aplicaciones (`api`, `web`, `tienda`, `shared-types`) |
+| `pnpm build` | Compila todas las aplicaciones y paquetes (`api`, `web`, `acacia_web`, `sdk`, `shared-types`) |
 | `pnpm dev` | Inicia los entornos de desarrollo concurrentes con Turborepo |
-| `pnpm lint` | Corre el linter en todos los módulos (`oxlint` en API, `eslint` en Web y Tienda) |
+| `pnpm lint` | Corre el linter en los módulos configurados (`oxlint` en API, `eslint` en Web) |
 | `pnpm typecheck` | Valida tipos estáticos de TypeScript en todo el monorepo |
-| `pnpm test` | Ejecuta las pruebas unitarias (Vitest en API, Node test en Tienda) |
+| `pnpm test` | Ejecuta las pruebas unitarias (Vitest en API, Node test en SDK) |
 | `pnpm auditar` | Corre la suite completa de auditorías de seguridad, DAST y carga |
 
 ---
@@ -73,6 +73,6 @@ Para levantar la suite completa en contenedores Docker:
 # Copiar plantilla de entorno
 cp .env.docker.example .env.docker
 
-# Levantar todos los servicios (Postgres, API, Migraciones, Web, Tienda)
+# Levantar todos los servicios (Postgres, API, Migraciones, Web)
 docker compose --profile apps --env-file .env.docker up -d --build
 ```

@@ -39,7 +39,7 @@
   --brand-logout-fg: #4f46e5;
   --brand-nav-idle: #312e81;
   --brand-nav-idle-hover: #1e1b4b;
-  --brand-nav-active-bg: transparent;
+  --brand-nav-active-bg: rgba(99, 102, 241, 0.14);
   --brand-nav-active-fg: #4f46e5;
   --brand-surface: #f5f4ff;
   --brand-kpi-label: #3730a3;
@@ -63,7 +63,7 @@
   /* -- Dark (navy/índigo) - default de producción -- */
   --brand-canvas-from: #0f1b2d;
   --brand-canvas-to: #1a2f4a;
-  --brand-navbar-bg: transparent;
+  --brand-navbar-bg: rgba(0, 0, 0, 0.22);
   --brand-navbar-shadow: none;
   --brand-card-bg: rgba(15, 23, 41, 0.6);
   --brand-border: rgba(99, 102, 241, 0.15);

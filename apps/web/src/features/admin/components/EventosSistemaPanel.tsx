@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { RotateCcw, Trash2 } from "lucide-react";
+import { AlertTriangle, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
@@ -50,8 +50,9 @@ export function AvisoEventosFallidos() {
       href="/admin/sistema#eventos"
       className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200 hover:bg-red-500/15"
     >
-      <span className="font-medium">
-        ⚠️ {fallos} {fallos === 1 ? "tarea falló" : "tareas fallaron"} en las últimas 24 h.
+      <span className="inline-flex items-center gap-1.5 font-medium">
+        <AlertTriangle className="size-4 shrink-0" aria-hidden />
+        {fallos} {fallos === 1 ? "tarea falló" : "tareas fallaron"} en las últimas 24 h.
       </span>{" "}
       Ver en Eventos →
     </Link>

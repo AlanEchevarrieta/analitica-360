@@ -1,8 +1,7 @@
-# Levanta TODO dockerizado en esta computadora (misma base y mismas fotos que en desarrollo):
+﻿# Levanta TODO dockerizado en esta computadora (misma base y mismas fotos que en desarrollo):
 #   - Postgres                     localhost:5433
 #   - API (NestJS)                 http://localhost:3001
 #   - Web (gestion)                http://localhost:4001
-#   - Tienda modelo                http://acacia.localhost:3010
 #   - Tienda de Acacia             http://localhost:3002   (repo ~/acacia-store)
 # Uso: .\scripts\levantar-docker.ps1 [-Compilar] [-SinAbrir]   (-Compilar recompila las imagenes con el codigo actual;
 #      -SinAbrir no abre el navegador, ej. desde la auditoria semanal)
@@ -36,7 +35,7 @@ function Responde($url) {
 }
 
 # Los servidores de desarrollo (pnpm dev) usan los mismos puertos: avisar si estan prendidos.
-$ocupados = foreach ($p in 4001, 3001, 3002, 3010) {
+$ocupados = foreach ($p in 4001, 3001, 3002) {
   $c = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($c -and (Get-Process -Id $c.OwningProcess -ErrorAction SilentlyContinue).ProcessName -eq 'node') { $p }
 }

@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CargandoFilas } from "@/components/shared/estado-datos";
 import { useCajaActiva, useReporteX } from "../hooks/use-caja";
 import { CajaEstadoBadge } from "./CajaEstadoBadge";
 import { CajaMetricasResumen } from "./CajaMetricasResumen";
@@ -36,6 +37,8 @@ export function CajaVista() {
 
   const { data: reporteXData } = useReporteX(verReporteX && caja ? caja.id : null);
 
+  if (isPending) return <CargandoFilas filas={6} />;
+
   return (
     <div className="flex flex-col gap-6">
       {/* 1. Cabecera Principal */}
@@ -55,7 +58,7 @@ export function CajaVista() {
           {!caja ? (
             <Button
               onClick={() => setModalAbrir(true)}
-              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="gap-2"
             >
               <Plus className="size-4" /> Abrir Turno de Caja
             </Button>
@@ -80,7 +83,7 @@ export function CajaVista() {
               <Button
                 size="sm"
                 onClick={() => setModalCierre(true)}
-                className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
+                className="gap-1.5 shadow-xs"
               >
                 <Lock className="size-4" /> Cerrar Turno (Arqueo)
               </Button>

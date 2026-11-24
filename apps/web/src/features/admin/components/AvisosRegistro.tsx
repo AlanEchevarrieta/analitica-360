@@ -43,7 +43,15 @@ export function AvisosRegistro() {
                   <span className="font-medium">{d.nombre ?? a.titulo}</span>
                 )}
                 <span className="text-muted-foreground"> · {nombreRubro(d.rubro)}</span>
-                {d.actividades?.length ? <span className="text-muted-foreground"> · {ACTIVIDADES.filter((x) => d.actividades!.includes(x.valor)).map((x) => x.icono).join(" ")}</span> : null}
+                {d.actividades?.length ? (
+                  <span className="inline-flex items-center gap-1 text-muted-foreground">
+                    {" · "}
+                    {ACTIVIDADES.filter((x) => d.actividades!.includes(x.valor)).map((x) => {
+                      const Icono = x.icono;
+                      return <Icono key={x.valor} className="inline size-3.5" aria-label={x.titulo} />;
+                    })}
+                  </span>
+                ) : null}
                 <span className="block text-xs text-muted-foreground">
                   {[d.dueno, d.email, d.origen && `nos conoció por ${d.origen}`, formatoFechaHora(a.createdAt)].filter(Boolean).join(" · ")}
                 </span>

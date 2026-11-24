@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AlertTriangle, TrendingUp } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Label, Line, LineChart, Pie, PieChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Button } from "@/components/ui/button";
@@ -253,16 +254,22 @@ export function VentasPeriodo() {
                     </div>
                     <div className="flex flex-col gap-1 text-sm">
                       {ventasVsCompras.mejor && (
-                        <p>
-                          📈 Tu mejor {NOMBRE_PERIODO[granularidadVC]} fue {etiquetaGranularidad(ventasVsCompras.mejor.clave, granularidadVC)}:{" "}
-                          {ventasVsCompras.mejor.compras > 0
-                            ? `vendiste ${(ventasVsCompras.mejor.ventas / ventasVsCompras.mejor.compras).toLocaleString("es-AR", { maximumFractionDigits: 1 })} veces lo que compraste.`
-                            : `vendiste ${formatoMoneda(ventasVsCompras.mejor.ventas)} sin compras.`}
+                        <p className="flex items-center gap-1.5">
+                          <TrendingUp className="size-4 shrink-0 text-emerald-500" aria-hidden />
+                          <span>
+                            Tu mejor {NOMBRE_PERIODO[granularidadVC]} fue {etiquetaGranularidad(ventasVsCompras.mejor.clave, granularidadVC)}:{" "}
+                            {ventasVsCompras.mejor.compras > 0
+                              ? `vendiste ${(ventasVsCompras.mejor.ventas / ventasVsCompras.mejor.compras).toLocaleString("es-AR", { maximumFractionDigits: 1 })} veces lo que compraste.`
+                              : `vendiste ${formatoMoneda(ventasVsCompras.mejor.ventas)} sin compras.`}
+                          </span>
                         </p>
                       )}
                       {ventasVsCompras.peor && ventasVsCompras.peor.compras > ventasVsCompras.peor.ventas && (
-                        <p>
-                          ⚠️ En {etiquetaGranularidad(ventasVsCompras.peor.clave, granularidadVC)} compraste más de lo que vendiste (normal si repusiste stock).
+                        <p className="flex items-center gap-1.5">
+                          <AlertTriangle className="size-4 shrink-0 text-amber-500" aria-hidden />
+                          <span>
+                            En {etiquetaGranularidad(ventasVsCompras.peor.clave, granularidadVC)} compraste más de lo que vendiste (normal si repusiste stock).
+                          </span>
                         </p>
                       )}
                     </div>

@@ -4,13 +4,12 @@ import { OrganizationSwitcher } from "@clerk/nextjs";
 import { SoloCliente } from "./solo-cliente";
 
 /**
- * Cada Organization de Clerk = una "empresa" del sistema (ver plan, sección
- * "Por qué Clerk para auth"). Funcional sin pulir — el diseño real
- * (paleta, layout del shell) es Fase 5.
+ * Selector de organización (empresa/sucursal) de Clerk.
+ * Responsive sin truncado agresivo en pantallas medianas y grandes.
  */
 export function EmpresaSwitcher() {
   return (
-    <div id="tour-empresa" className="flex items-center min-w-0 max-w-[120px] sm:max-w-[180px] md:max-w-none">
+    <div id="tour-empresa" className="flex items-center min-w-0 max-w-[125px] sm:max-w-[200px] md:max-w-[240px]">
       <SoloCliente reserva={<span className="block h-8 w-20 sm:w-36 rounded-md bg-muted/50" aria-hidden />}>
         <OrganizationSwitcher
           hidePersonal
@@ -21,7 +20,7 @@ export function EmpresaSwitcher() {
               organizationSwitcherPopoverActionButton__createOrganization: { display: "none" },
               organizationSwitcherTrigger: { maxWidth: "100%", overflow: "hidden" },
               organizationPreview: { maxWidth: "100%", overflow: "hidden" },
-              organizationPreviewTextContainer: { maxWidth: "80px", overflow: "hidden", textOverflow: "ellipsis" },
+              organizationPreviewTextContainer: { maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" },
             },
           }}
         />

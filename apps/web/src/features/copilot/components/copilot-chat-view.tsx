@@ -17,7 +17,7 @@ interface CopilotChatViewProps {
 }
 
 export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esModal = false }) => {
-  const { mensajes, sugerencias, metricasActivas, cargando, enviar, tieneAccesoEmpresa, isLoaded, isSignedIn, orgId } =
+  const { mensajes, sugerencias, metricasActivas, cargando, enviar, tieneAccesoEmpresa, isLoaded, isSignedIn } =
     useCopilotChat();
   const plan = usePlan();
   const [inputTexto, setInputTexto] = useState('');
@@ -193,7 +193,7 @@ export const CopilotChatView: React.FC<CopilotChatViewProps> = ({ onCerrar, esMo
               <span className="h-2 w-2 rounded-full bg-indigo-500 copilot-node-3" />
             </div>
             <p className="text-[11px] font-mono font-medium text-foreground/80 tracking-wide">
-              ✦ Procesando análisis y métricas con Analítica IA...
+              Procesando análisis y métricas con Analítica IA...
             </p>
           </div>
         )}

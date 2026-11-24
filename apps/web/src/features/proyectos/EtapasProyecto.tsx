@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Circle, Clock } from "lucide-react";
+import { AlertCircle, CheckCircle2, Circle, Clock, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { AccionesEtapa } from "./AccionesEtapa";
@@ -70,8 +70,8 @@ export function EtapasProyecto({ proyecto }: { proyecto: ProyectoDetalle }) {
                       </span>
                     )}
                     {et.atrasada && (
-                      <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-medium text-red-600 dark:text-red-400">
-                        🔴 Atrasada
+                      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-medium text-red-600 dark:text-red-400">
+                        <AlertCircle className="size-3" aria-hidden /> Atrasada
                       </span>
                     )}
                   </div>
@@ -86,8 +86,12 @@ export function EtapasProyecto({ proyecto }: { proyecto: ProyectoDetalle }) {
                   <ul className="mt-1 flex flex-col gap-1 rounded-lg bg-muted/40 p-2.5 text-xs">
                     {et.aprobaciones.map((ap) => (
                       <li key={ap.id} className="flex flex-col gap-0.5">
-                        <span>
-                          {ap.resultado === "aprobada" ? "✅" : "✏️"}{" "}
+                        <span className="inline-flex flex-wrap items-center gap-1">
+                          {ap.resultado === "aprobada" ? (
+                            <CheckCircle2 className="size-3.5 text-emerald-500" aria-hidden />
+                          ) : (
+                            <Pencil className="size-3.5 text-amber-500" aria-hidden />
+                          )}
                           <b>{ap.tipo === "cliente" ? "Cliente" : "Interna"}</b> · {ap.aprobadorNombre} ·{" "}
                           {ap.medio.replace("_", " ")} · v{ap.version} · {fechaHoraAprobacion(ap.aprobadoEn)}
                         </span>

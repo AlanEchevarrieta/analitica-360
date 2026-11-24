@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { Lock } from 'lucide-react';
+import { Lock, Sparkles, X } from 'lucide-react';
 import { cn } from 'cn';
 import { usePlan } from '@/hooks/use-plan';
 import { CopilotChatView } from './copilot-chat-view';
@@ -158,7 +158,7 @@ export const CopilotFloatingWidget: React.FC = () => {
     <>
       {/* Ventana de Chat Flotante Adaptable para Mobile y Desktop */}
       {abierto && (
-        <div className="fixed bottom-16 sm:bottom-24 right-2 sm:right-6 z-[999999] w-[calc(100vw-1rem)] sm:w-[420px] h-[520px] sm:h-[580px] max-h-[80vh] rounded-2xl border border-border bg-card/95 text-card-foreground shadow-2xl shadow-black/60 flex flex-col overflow-hidden backdrop-blur-xl animate-in slide-in-from-bottom-5 fade-in duration-200">
+        <div className="fixed bottom-20 sm:bottom-24 right-2 sm:right-6 z-50 w-[calc(100vw-1rem)] sm:w-[420px] h-[520px] sm:h-[580px] max-h-[80vh] rounded-2xl border border-border bg-card/95 text-card-foreground shadow-2xl shadow-black/60 flex flex-col overflow-hidden backdrop-blur-xl animate-in slide-in-from-bottom-5 fade-in duration-200">
           <CopilotChatView esModal onCerrar={() => setAbierto(false)} />
         </div>
       )}
@@ -175,25 +175,23 @@ export const CopilotFloatingWidget: React.FC = () => {
         }}
         style={buttonStyle}
         className={cn(
-          'fixed z-[999999] flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/35 border-2 border-primary-foreground/20 cursor-grab active:cursor-grabbing select-none group transition-transform active:scale-95',
-          // Tamaño: más pequeño y discreto en mobile (44px / h-11 w-11), tamaño estándar en desktop (56px / h-14 w-14)
-          'h-11 w-11 sm:h-14 sm:w-14',
-          // Posición fija por defecto en la esquina inferior si no fue arrastrado
-          !posicion && 'bottom-4 right-4 sm:bottom-6 sm:right-6'
+          'fixed z-50 flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 border border-primary-foreground/20 cursor-grab active:cursor-grabbing select-none group transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          // Tamaño: más discreto en mobile (44px / h-11 w-11), estándar en desktop (52px / h-13 w-13)
+          'h-11 w-11 sm:h-13 sm:w-13',
+          // Por encima de la barra móvil inferior
+          !posicion && 'bottom-20 right-3 sm:bottom-6 sm:right-6'
         )}
         title={
           abierto
             ? 'Cerrar Copilot IA'
             : bloqueadoPorPlan
               ? 'Copilot IA — Disponible en Pro'
-              : 'Copilot IA (arrastrá para mover, ⌘J)'
+              : 'Copilot IA (arrastrá para mover, Ctrl+J)'
         }
         aria-label="Abrir Copilot IA"
       >
         {abierto ? (
-          <span className="text-base sm:text-xl font-bold transition-transform duration-200 group-hover:rotate-90 pointer-events-none">
-            ✕
-          </span>
+          <X className="size-5 transition-transform duration-200 group-hover:rotate-90 pointer-events-none" aria-hidden />
         ) : (
           <div className="relative flex items-center justify-center pointer-events-none">
             {bloqueadoPorPlan ? (
@@ -201,15 +199,13 @@ export const CopilotFloatingWidget: React.FC = () => {
                 <Lock className="size-2.5 sm:size-3" aria-hidden />
               </span>
             ) : (
-              /* Indicador pulsante de estado activo */
-              <span className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 flex h-3 w-3 sm:h-4 sm:w-4 items-center justify-center">
+              /* Indicador de estado activo */
+              <span className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 flex h-3 w-3 sm:h-3.5 sm:w-3.5 items-center justify-center">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-80" />
-                <span className="relative inline-flex h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-primary-foreground border border-primary" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary-foreground border border-primary" />
               </span>
             )}
-            <span className="text-lg sm:text-2xl transition-transform duration-300 group-hover:scale-110">
-              ✨
-            </span>
+            <Sparkles className="size-5 sm:size-6 transition-transform duration-300 group-hover:scale-110" aria-hidden />
           </div>
         )}
       </button>

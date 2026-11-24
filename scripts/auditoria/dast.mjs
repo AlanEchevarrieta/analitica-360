@@ -2,7 +2,7 @@
 // el sitio como un visitante y analiza las respuestas (cabeceras, cookies,
 // fugas de información). No manda ataques destructivos: es seguro en producción.
 import path from 'node:path';
-import { aceptado, API, control, correr, desdeDocker, leerJson, RAIZ, rutaDocker, TIENDA, WEB } from './comun.mjs';
+import { aceptado, API, control, correr, desdeDocker, leerJson, RAIZ, rutaDocker, WEB } from './comun.mjs';
 
 const RIESGO = ['informativo', 'bajo', 'medio', 'alto'];
 
@@ -10,7 +10,6 @@ export async function zap(dir, { minutos = 1 } = {}) {
   const objetivos = [
     ['web', `${WEB}/sign-in`],
     ['api', API],
-    ['tienda', TIENDA],
     // Sitios extra de esta compu (ej. acacia-store): .auditorias/config.json → "sitiosExtra": [["nombre", "url"]]
     ...(leerJson(path.join(RAIZ, '.auditorias/config.json'), {}).sitiosExtra ?? []),
   ];

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AlertCircle, Clock } from "lucide-react";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
@@ -64,8 +65,8 @@ export function ListaProyectos({ filtros }: { filtros: FiltrosProyectos }) {
                 <div className="flex flex-col gap-0.5">
                   <span className="text-sm">{p.etapaActual.nombre}</span>
                   {p.esperandoCliente && (
-                    <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                      🟡 Esperando al cliente · {p.diasEsperandoCliente} d
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                      <Clock className="size-3" aria-hidden /> Esperando al cliente · {p.diasEsperandoCliente} d
                     </span>
                   )}
                 </div>
@@ -97,7 +98,9 @@ export function ListaProyectos({ filtros }: { filtros: FiltrosProyectos }) {
             >
               {fechaCortaAR(p.fechaComprometida)}
               {p.atrasado && p.diasAtraso > 0 && (
-                <span className="block text-[11px]">🔴 +{p.diasAtraso} d</span>
+                <span className="inline-flex items-center gap-1 text-[11px]">
+                  <AlertCircle className="size-3" aria-hidden /> +{p.diasAtraso} d
+                </span>
               )}
             </TableCell>
             <TableCell>

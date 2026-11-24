@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { AlertTriangle, Cake } from "lucide-react";
+import { AlertTriangle, ArrowRight, Cake, Sparkles } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,33 +50,31 @@ export function InicioDashboard({ debajoDeCifras }: { debajoDeCifras?: React.Rea
     <div className="flex flex-col gap-4">
       <AvisoMonotributo />
 
-      {/* Banner de Acceso a Analítica Copilot con IA */}
-      <div className="relative overflow-hidden rounded-xl border border-emerald-500/20 bg-gradient-to-r from-emerald-950/40 via-zinc-900/60 to-zinc-900/60 p-4 sm:p-5 shadow-sm">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white font-bold text-lg shadow-md shadow-emerald-500/20">
-              ✨
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-semibold text-sm text-zinc-100">Analítica Copilot (Inteligencia de Negocios)</h4>
-                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">
-                  IA en vivo
-                </span>
-              </div>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Consultá en lenguaje natural tus ventas, rentabilidad real y proyecciones de stock.
-              </p>
-            </div>
+      {/* Acceso directo a Analítica Copilot */}
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Sparkles className="size-4" aria-hidden />
           </div>
-          <Link
-            href="/analytics/copilot"
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:scale-105 active:scale-95"
-          >
-            <span>Preguntar a la IA</span>
-            <span>→</span>
-          </Link>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-semibold text-foreground">Analítica Copilot</h4>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                IA en vivo
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Consultá tus ventas, rentabilidad real y proyecciones de stock en lenguaje natural.
+            </p>
+          </div>
         </div>
+        <Link
+          href="/ia"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90"
+        >
+          <span>Preguntar a la IA</span>
+          <ArrowRight className="size-3.5" aria-hidden />
+        </Link>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Kpi
@@ -168,8 +166,9 @@ export function InicioDashboard({ debajoDeCifras }: { debajoDeCifras?: React.Rea
                 ))}
               </ul>
               {data.alertasStock.length > MAX_STOCK_BAJO && (
-                <Link href="/inventario" className="mt-3 inline-block text-sm font-medium text-primary hover:underline">
-                  Ver {data.alertasStock.length - MAX_STOCK_BAJO} más en Inventario →
+                <Link href="/inventario" className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+                  <span>Ver {data.alertasStock.length - MAX_STOCK_BAJO} más en Inventario</span>
+                  <ArrowRight className="size-3.5" aria-hidden />
                 </Link>
               )}
               </>

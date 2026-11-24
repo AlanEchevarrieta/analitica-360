@@ -2,15 +2,25 @@
 
 import React from "react";
 import Link from "next/link";
+import {
+  AlertTriangle,
+  ClipboardList,
+  GitBranch,
+  HelpCircle,
+  Info,
+  Lightbulb,
+  Rocket,
+  type LucideIcon,
+} from "lucide-react";
 import { marked, type Token, type Tokens } from "marked";
 
-const CALLOUT_ICONS: Record<string, string> = {
-  info: "ℹ️",
-  tip: "💡",
-  warning: "⚠️",
-  abstract: "📋",
-  faq: "❓",
-  example: "🚀",
+const CALLOUT_ICONS: Record<string, LucideIcon> = {
+  info: Info,
+  tip: Lightbulb,
+  warning: AlertTriangle,
+  abstract: ClipboardList,
+  faq: HelpCircle,
+  example: Rocket,
 };
 
 const CALLOUT_TITLES: Record<string, string> = {
@@ -100,7 +110,10 @@ function renderizarTokensBloque(tokens: Token[]): React.ReactNode {
           return (
             <div key={idx} className="guia-mermaid-box">
               <div className="guia-mermaid-header">
-                <span>🔄 Diagrama de Proceso / Flujo</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <GitBranch className="size-3.5" aria-hidden />
+                  Diagrama de Proceso / Flujo
+                </span>
                 <span className="text-[10px] tracking-normal font-mono opacity-70">Mermaid Workflow</span>
               </div>
               <pre>
@@ -122,13 +135,13 @@ function renderizarTokensBloque(tokens: Token[]): React.ReactNode {
         );
         if (m) {
           const tipo = m[1].toLowerCase();
-          const icono = CALLOUT_ICONS[tipo] || "ℹ️";
+          const IconoCallout = CALLOUT_ICONS[tipo] || Info;
           const titulo = m[2].trim() || CALLOUT_TITLES[tipo] || "Nota";
           const cuerpoTokens = m[3] ? marked.lexer(m[3].trim()) : [];
           return (
             <div key={idx} className={`guia-callout guia-callout-${tipo}`}>
               <div className="guia-callout-header">
-                <span>{icono}</span>
+                <IconoCallout className="size-4 shrink-0" aria-hidden />
                 <span>{titulo}</span>
               </div>
               {cuerpoTokens.length > 0 && (

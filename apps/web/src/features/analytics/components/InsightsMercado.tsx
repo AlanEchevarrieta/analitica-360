@@ -20,9 +20,9 @@ const pct = (n: number | null) => (n == null ? "—" : `${n > 0 ? "+" : ""}${n.t
 /** Fuerza de un combo según el lift (cuántas veces más de lo esperable se compran juntos). */
 function fuerza(lift: number | null) {
   if (lift == null) return null;
-  if (lift > 2) return { etiqueta: "🔥 Muy fuerte", clase: "bg-emerald-500/15 text-emerald-600" };
-  if (lift >= 1.5) return { etiqueta: "💪 Fuerte", clase: "bg-primary/15 text-primary" };
-  if (lift >= 1) return { etiqueta: "👍 Moderado", clase: "bg-amber-500/15 text-amber-600" };
+  if (lift > 2) return { etiqueta: "Muy fuerte", clase: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" };
+  if (lift >= 1.5) return { etiqueta: "Fuerte", clase: "bg-primary/15 text-primary" };
+  if (lift >= 1) return { etiqueta: "Moderado", clase: "bg-amber-500/15 text-amber-600 dark:text-amber-400" };
   return { etiqueta: "Débil", clase: "bg-muted text-muted-foreground" };
 }
 

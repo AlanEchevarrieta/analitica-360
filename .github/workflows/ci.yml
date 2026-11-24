@@ -1,5 +1,5 @@
-# CI de Analítica 360 (apps/api, apps/web y apps/tienda).
-# - En cada PR y push: lint, tipos, tests y build de la API; lint y tipos de la web; lint, tipos y tests de la tienda.
+# CI de Analítica 360 (apps/api y apps/web).
+# - En cada PR y push: lint, tipos, tests y build de la API; lint y tipos de la web.
 # - Si eso pasa: compila las imágenes de Docker (api, migrate, web).
 # - En push a main: además las publica en GitHub Container Registry (ghcr.io).
 #
@@ -39,7 +39,7 @@ jobs:
 
       # Solo las apps nuevas y sus dependencias (la raíz tiene el sistema viejo).
       - name: Instalar dependencias
-        run: pnpm install --frozen-lockfile --filter api... --filter web... --filter tienda...
+        run: pnpm install --frozen-lockfile --filter api... --filter web...
 
       - name: API · cliente de Prisma
         working-directory: apps/api
@@ -63,15 +63,6 @@ jobs:
       # que no está en git: sin "next typegen" la revisión de tipos falla en CI.
       - name: Web · tipos
         run: pnpm --filter web typecheck
-
-      - name: Tienda · lint
-        run: pnpm --filter tienda lint
-
-      - name: Tienda · tipos
-        run: pnpm --filter tienda typecheck
-
-      - name: Tienda · tests
-        run: pnpm --filter tienda test
 
   imagenes:
     name: Imágenes Docker

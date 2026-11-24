@@ -74,7 +74,7 @@ export function UsoUsuarioVista({ id, dias }: { id: string; dias: FiltrosUso["di
                         Tocó <b>{r.objetivo}</b> <span className="text-muted-foreground">en {nombrePantalla(r.ruta)}</span>
                       </>
                     )}
-                    {r.dispositivo === "celular" && " 📱"}
+                    {r.dispositivo === "celular" && " · Celular"}
                   </span>
                 </li>
               ))}

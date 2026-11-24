@@ -3,15 +3,33 @@
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
+import { MejorarPlan } from "@/components/shared/mejorar-plan";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAcceso } from "@/hooks/use-acceso";
 import { usePlan } from "@/hooks/use-plan";
-import { MejorarPlan } from "@/components/shared/mejorar-plan";
 import type { ModuloClave } from "@/lib/rol";
+
+function CargandoModulo() {
+  return (
+    <div className="flex flex-col gap-4" aria-busy="true" aria-label="Cargando sección">
+      <div className="flex items-center justify-between gap-2">
+        <Skeleton className="h-7 w-44" />
+        <Skeleton className="h-8 w-28" />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-24 rounded-xl" />
+        ))}
+      </div>
+      <Skeleton className="h-64 rounded-xl" />
+    </div>
+  );
+}
 
 /** Pantalla de un módulo: si el usuario no lo tiene habilitado, un aviso claro en vez de errores. */
 export function RequiereModulo({ modulo, children }: { modulo: ModuloClave; children: ReactNode }) {
   const { puede, cargado } = useAcceso();
-  if (!cargado) return null;
+  if (!cargado) return <CargandoModulo />;
   if (!puede(modulo)) {
     return (
       <div className="flex flex-col items-center gap-2 rounded-xl p-10 text-center ring-1 ring-foreground/10">
@@ -32,10 +50,13 @@ const MODULO_DE_RUTA: [string, ModuloClave][] = [
   ["/analytics/insights", "insights"],
   ["/analytics", "analytics"],
   ["/ventas", "ventas"],
+  ["/caja", "ventas"],
+  ["/cobros", "ventas"],
   ["/agenda", "ventas"],
   ["/abonos", "ventas"],
   ["/comisiones", "ventas"],
   ["/ordenes-trabajo", "ventas"],
+  ["/proyectos", "ventas"],
   ["/productos", "productos"],
   ["/clientes", "clientes"],
   ["/compras", "compras"],
@@ -52,6 +73,7 @@ const FUNCION_DE_RUTA: [string, string][] = [
   ["/ventas/presupuestos", "presupuestos"],
   ["/documentos", "archivo"],
   ["/ordenes-trabajo", "ordenes_trabajo"],
+  ["/proyectos", "proyectos"],
   ["/agenda", "agenda"],
   ["/abonos", "abonos"],
   ["/comisiones", "comisiones"],
@@ -69,7 +91,7 @@ export function GuardaDeRuta({ children }: { children: ReactNode }) {
   const modulo = MODULO_DE_RUTA.find(([prefijo]) => coincide(pathname, prefijo))?.[1];
   const funcion = FUNCION_DE_RUTA.find(([prefijo]) => coincide(pathname, prefijo))?.[1] ?? (modulo !== "configuracion" ? modulo : undefined);
   // Hasta saber el plan no se monta la pantalla: si no, sus consultas salen antes del candado.
-  if (funcion && !listo) return null;
+  if (funcion && !listo) return <CargandoModulo />;
   if (funcion && !incluye(funcion)) return <MejorarPlan funcion={funcion} />;
   return modulo ? <RequiereModulo modulo={modulo}>{children}</RequiereModulo> : children;
 }

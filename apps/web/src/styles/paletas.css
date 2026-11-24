@@ -22,6 +22,7 @@
   --brand-input-focus: #c2410c;
   --brand-nav-idle: #7c2d12;
   --brand-nav-idle-hover: #3b2418;
+  --brand-nav-active-bg: rgba(194, 65, 12, 0.12);
   --brand-nav-active-fg: #c2410c;
   --brand-row-alt: #fbf1e7;
   --brand-table-head: rgba(194, 65, 12, 0.1);
@@ -81,6 +82,7 @@
   --brand-input-focus: #059669;
   --brand-nav-idle: #064e3b;
   --brand-nav-idle-hover: #052e22;
+  --brand-nav-active-bg: rgba(4, 120, 87, 0.12);
   --brand-nav-active-fg: #047857;
   --brand-row-alt: #ecf8f2;
   --brand-table-head: rgba(5, 150, 105, 0.1);
@@ -139,6 +141,7 @@
   --brand-input-focus: #0284c7;
   --brand-nav-idle: #0c4a6e;
   --brand-nav-idle-hover: #082f49;
+  --brand-nav-active-bg: rgba(3, 105, 161, 0.12);
   --brand-nav-active-fg: #0369a1;
   --brand-row-alt: #eaf4fd;
   --brand-table-head: rgba(2, 132, 199, 0.1);
@@ -193,6 +196,7 @@
   --brand-input-focus: #52525b;
   --brand-nav-idle: #3f3f46;
   --brand-nav-idle-hover: #18181b;
+  --brand-nav-active-bg: rgba(24, 24, 27, 0.08);
   --brand-nav-active-fg: #18181b;
   --brand-row-alt: #f7f7f8;
   --brand-table-head: rgba(24, 24, 27, 0.05);

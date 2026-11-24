@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, Eye, FileText, Loader2, X } from "lucide-react";
+import { Clock, FileText, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatoPesos } from "@/lib/formato";
 import { useHistorialCajas, useReporteZ } from "../hooks/use-caja";

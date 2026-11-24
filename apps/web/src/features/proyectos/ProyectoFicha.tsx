@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { AlertCircle, ArrowLeft, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,13 +66,13 @@ export function ProyectoFicha({ id }: { id: string }) {
               {NOMBRE_ESTADO_PROYECTO[p.estado]}
             </span>
             {p.atrasado && (
-              <span className="rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-medium text-red-600 dark:text-red-400">
-                🔴 Atrasado {p.diasAtraso > 0 ? `${p.diasAtraso} d` : ""}
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-medium text-red-600 dark:text-red-400">
+                <AlertCircle className="size-3" aria-hidden /> Atrasado {p.diasAtraso > 0 ? `${p.diasAtraso} d` : ""}
               </span>
             )}
             {p.esperandoCliente && (
-              <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
-                🟡 Esperando al cliente · {p.diasEsperandoCliente} d
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                <Clock className="size-3" aria-hidden /> Esperando al cliente · {p.diasEsperandoCliente} d
               </span>
             )}
           </div>

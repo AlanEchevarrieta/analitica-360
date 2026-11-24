@@ -61,7 +61,8 @@ export function BotonDescargarApp({ className }: { className?: string }) {
     abrirModo("qr");
   };
 
-  let textoBoton = "📱 Usala en tu celular";
+  let textoBoton = "Usala en tu celular";
+  let IconoPrincipal = Smartphone;
   let rastreo = "Descargar app: QR";
   if (dispositivo.navegador === "interno") {
     textoBoton =
@@ -70,16 +71,18 @@ export function BotonDescargarApp({ className }: { className?: string }) {
         : "Abrí esta página en Chrome para instalarla";
     rastreo = "Descargar app: navegador interno";
   } else if (dispositivo.plataforma === "android") {
-    textoBoton = "📲 Instalar en tu Android";
+    textoBoton = "Instalar en tu Android";
     rastreo = "Descargar app: Android";
   } else if (dispositivo.plataforma === "ios") {
-    textoBoton = "📲 Agregar a tu iPhone";
+    textoBoton = "Agregar a tu iPhone";
     rastreo = "Descargar app: iPhone";
   } else if (puedeInstalarDirecto) {
-    textoBoton = "💻 Instalar en la compu";
+    textoBoton = "Instalar en la compu";
+    IconoPrincipal = Laptop;
     rastreo = "Descargar app: compu";
   } else if (dispositivo.plataforma === "mac" && dispositivo.navegador === "safari") {
-    textoBoton = "💻 Agregar al Dock";
+    textoBoton = "Agregar al Dock";
+    IconoPrincipal = Laptop;
     rastreo = "Descargar app: Mac Dock";
   }
 
@@ -91,7 +94,8 @@ export function BotonDescargarApp({ className }: { className?: string }) {
         data-rastreo={rastreo}
         className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-indigo-600/25 transition-colors hover:bg-indigo-700"
       >
-        {textoBoton}
+        <IconoPrincipal className="size-4" aria-hidden />
+        <span>{textoBoton}</span>
       </button>
 
       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">

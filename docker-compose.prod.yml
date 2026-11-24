@@ -3,7 +3,7 @@
 #   cp .env.produccion.example .env.produccion   # completar las claves
 #   docker compose -f docker-compose.prod.yml --env-file .env.produccion up -d --build
 #
-# Orden de arranque: postgres (sano) → migrate (aplica migraciones y termina) → api → web y tienda → caddy.
+# Orden de arranque: postgres (sano) → migrate (aplica migraciones y termina) → api → web → caddy.
 # Caddy es la única entrada (puertos 80 y 443) y pone HTTPS solo (ver deploy/Caddyfile).
 # backup hace una copia diaria de la base (ver deploy/backup.sh).
 # Para usar imágenes ya publicadas por CI en vez de compilar: definir API_IMAGE / WEB_IMAGE
@@ -111,7 +111,6 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Falta NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?Falta NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
         NEXT_PUBLIC_WHATSAPP_CONTACT: ${NEXT_PUBLIC_WHATSAPP_CONTACT:-}
-        NEXT_PUBLIC_TIENDA_LOCAL_URL: ${NEXT_PUBLIC_TIENDA_LOCAL_URL:-}
     restart: unless-stopped
     environment:
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
@@ -122,23 +121,7 @@ services:
       api:
         condition: service_healthy
 
-  # Tienda modelo: cada negocio en su subdominio (acacia.DOMINIO) o su dominio propio.
-  tienda:
-    image: ${TIENDA_IMAGE:-analitica360-tienda}
-    build:
-      context: .
-      dockerfile: apps/tienda/Dockerfile
-      args:
-        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID_TIENDAS:-}
-    restart: unless-stopped
-    environment:
-      ANALITICA_API_URL: http://api:3001
-      ANALITICA_TIENDA_KEY: ${TIENDA_PROXY_KEY:?Falta TIENDA_PROXY_KEY}
-    depends_on:
-      api:
-        condition: service_healthy
-
-  # La única puerta de entrada: HTTPS automático para la app, la API y las tiendas.
+  # La única puerta de entrada: HTTPS automático para la app y la API.
   caddy:
     image: caddy:2
     restart: unless-stopped
@@ -156,7 +139,6 @@ services:
     depends_on:
       - web
       - api
-      - tienda
 
   # Copia diaria de la base (formato pg_dump), 14 días de historia en el volumen "backups".
   backup:

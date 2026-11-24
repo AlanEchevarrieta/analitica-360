@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { aceptado, API, control, correr, leerJson, RAIZ, rutaDocker, WEB } from './comun.mjs';
 
-const IMAGENES = ['analitica360-api', 'analitica360-web', 'analitica360-tienda'];
+const IMAGENES = ['analitica360-api', 'analitica360-web'];
 
 /** Separa hallazgos nuevos de los ya aceptados en riesgos-aceptados.json. */
 function clasificar(herramienta, hallazgos) {
@@ -37,7 +37,7 @@ export async function gitleaks(dir) {
 }
 
 export async function semgrep(dir) {
-  const archivos = ['apps/api/src', 'apps/web/src', 'apps/tienda/app', 'apps/tienda/lib', 'apps/tienda/components', 'apps/api/Dockerfile', 'apps/web/Dockerfile', 'apps/tienda/Dockerfile'];
+  const archivos = ['apps/api/src', 'apps/web/src', 'apps/api/Dockerfile', 'apps/web/Dockerfile'];
   // El código va por stdin (tar): montar la carpeta de Windows en el contenedor es lentísimo.
   const tar = spawn('tar', ['cf', '-', '--exclude=node_modules', '--exclude=.next', ...archivos], { cwd: RAIZ });
   const reglas = ['p/owasp-top-ten', 'p/typescript', 'p/nodejsscan', 'p/secrets', 'p/docker'].flatMap((c) => ['--config', c]);

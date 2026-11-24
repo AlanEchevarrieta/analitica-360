@@ -1,5 +1,6 @@
 "use client";
 
+import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { Area, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,11 @@ const GRAFICO_PRONOSTICO = {
   rango: { label: "Rango probable", color: "var(--chart-2)" },
 } satisfies ChartConfig;
 
-const TENDENCIA = { positiva: "📈 en alza", negativa: "📉 en baja", neutra: "➡️ estable" } as const;
+const TENDENCIA = {
+  positiva: { etiqueta: "en alza", icono: TrendingUp, clase: "text-emerald-600 dark:text-emerald-400" },
+  negativa: { etiqueta: "en baja", icono: TrendingDown, clase: "text-destructive" },
+  neutra: { etiqueta: "estable", icono: Minus, clase: "text-muted-foreground" },
+} as const;
 
 function calificar(errorPct: number): string {
   if (errorPct < 15) return "bastante certero";
@@ -42,11 +47,22 @@ export function PronosticoCard({
       ? `${HorizonteCorto}: entre ${formatoMoneda(forecast.totalRango.min)} y ${formatoMoneda(forecast.totalRango.max)}`
       : `${forecast.etiquetaProyeccion}: ${formatoMoneda(forecast.totalProyeccion)}`;
 
+  const tendencia = forecast ? TENDENCIA[forecast.tendencia] : null;
+  const IconoTendencia = tendencia?.icono;
+
   return (
     <Card className="flex flex-col">
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <CardTitle>Pronóstico de ventas {forecast ? TENDENCIA[forecast.tendencia] : ""}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <span>Pronóstico de ventas</span>
+            {tendencia && IconoTendencia && (
+              <span className={`inline-flex items-center gap-1 text-xs font-medium ${tendencia.clase}`}>
+                <IconoTendencia className="size-3.5" aria-hidden />
+                {tendencia.etiqueta}
+              </span>
+            )}
+          </CardTitle>
           <div className="flex gap-1" role="group" aria-label="Pronóstico por">
             {(["semana", "mes"] as const).map((g) => (
               <Button key={g} size="xs" variant={pronostico === g ? "secondary" : "ghost"} aria-pressed={pronostico === g} onClick={() => onPronostico(g)}>

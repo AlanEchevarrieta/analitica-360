@@ -3,7 +3,7 @@
 import { Cormorant_Garamond, Montserrat, Nunito, Playfair_Display } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-/* Mismas opciones que entiende la tienda (apps/tienda/app/globals.css). */
+/* Opciones visuales para la vista previa de la tienda online. */
 export type Fondo = "puntos" | "lienzo" | "papel" | "rayas" | "ondas" | "liso";
 export type Tipografia = "clasica" | "elegante" | "moderna" | "amigable";
 export type Bordes = "redondeados" | "suaves" | "rectos";

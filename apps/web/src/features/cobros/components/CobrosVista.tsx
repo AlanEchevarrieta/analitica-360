@@ -2,21 +2,30 @@
 
 import { useState } from "react";
 import {
-  AlertCircle,
   ArrowUpRight,
+  Calendar,
   CheckCircle2,
+  ClipboardList,
   Clock,
   Copy,
   CreditCard,
   DollarSign,
   ExternalLink,
+  Globe,
+  Laptop,
+  Lightbulb,
+  Link2,
   Percent,
   Plus,
   RefreshCw,
+  Repeat,
+  Rocket,
   Send,
   Settings,
   Share2,
   ShieldCheck,
+  ShoppingBag,
+  Sparkles,
   TrendingUp,
   XCircle,
   Zap,
@@ -49,7 +58,7 @@ export function CobrosVista() {
   const [filtroOrigen, setFiltroOrigen] = useState<string>("todos");
 
   // Queries
-  const { data: configData, isLoading: cargandoConfig } = usePasarelasConfig();
+  const { data: configData } = usePasarelasConfig();
   const { data: txData, isLoading: cargandoTx, refetch: refetchTx } = useTransaccionesCobros({
     proveedor: filtroProveedor,
     estado: filtroEstado,
@@ -162,17 +171,20 @@ export function CobrosVista() {
   };
 
   const badgeOrigen = (origen: OrigenCobroTipo) => {
-    const mapas: Record<OrigenCobroTipo, string> = {
-      pedido_tienda: "🛍️ Tienda Online",
-      venta_pos: "💻 POS Mostrador",
-      cobro_cuenta_corriente: "📋 Cuenta Corriente",
-      reserva_turno: "📅 Turno / Seña",
-      abono: "🔄 Abono Recurrente",
-      link_rapido: "⚡ Link Rápido",
+    const mapas: Record<OrigenCobroTipo, { label: string; icon: typeof ShoppingBag }> = {
+      pedido_tienda: { label: "Tienda Online", icon: ShoppingBag },
+      venta_pos: { label: "POS Mostrador", icon: Laptop },
+      cobro_cuenta_corriente: { label: "Cuenta Corriente", icon: ClipboardList },
+      reserva_turno: { label: "Turnos / Seña", icon: Calendar },
+      abono: { label: "Abono Recurrente", icon: Repeat },
+      link_rapido: { label: "Link Rápido", icon: Link2 },
     };
+    const info = mapas[origen];
+    const Icono = info?.icon;
     return (
-      <span className="rounded-md border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground">
-        {mapas[origen] || origen}
+      <span className="inline-flex items-center gap-1 rounded-md border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground">
+        {Icono && <Icono className="size-3" aria-hidden />}
+        <span>{info?.label ?? origen}</span>
       </span>
     );
   };
@@ -547,7 +559,7 @@ export function CobrosVista() {
                           : "border-border hover:bg-muted"
                       )}
                     >
-                      <span className="text-sm">💳</span>
+                      <CreditCard className="size-4" aria-hidden />
                       Mercado Pago
                     </button>
 
@@ -561,7 +573,7 @@ export function CobrosVista() {
                           : "border-border hover:bg-muted"
                       )}
                     >
-                      <span className="text-sm">🚀</span>
+                      <Rocket className="size-4" aria-hidden />
                       Ualá Bis
                     </button>
 
@@ -575,7 +587,7 @@ export function CobrosVista() {
                           : "border-border hover:bg-muted"
                       )}
                     >
-                      <span className="text-sm">🌐</span>
+                      <Globe className="size-4" aria-hidden />
                       Stripe (USD/Intl)
                     </button>
                   </div>
@@ -697,7 +709,7 @@ export function CobrosVista() {
             <CardHeader className="flex flex-row items-start justify-between">
               <div>
                 <CardTitle className="text-base text-sky-500 flex items-center gap-1.5">
-                  <span>💳</span> Mercado Pago
+                  <CreditCard className="size-4" aria-hidden /> Mercado Pago
                 </CardTitle>
                 <CardDescription className="text-xs mt-1">
                   Cobros con tarjeta, dinero en cuenta y QR interoperable.
@@ -821,7 +833,7 @@ export function CobrosVista() {
             <CardHeader className="flex flex-row items-start justify-between">
               <div>
                 <CardTitle className="text-base text-rose-500 flex items-center gap-1.5">
-                  <span>🚀</span> Ualá Bis
+                  <Rocket className="size-4" aria-hidden /> Ualá Bis
                 </CardTitle>
                 <CardDescription className="text-xs mt-1">
                   Comisiones más bajas de Argentina (~3.5% + IVA) y acreditación al instante.
@@ -919,7 +931,7 @@ export function CobrosVista() {
             <CardHeader className="flex flex-row items-start justify-between">
               <div>
                 <CardTitle className="text-base text-indigo-500 flex items-center gap-1.5">
-                  <span>🌐</span> Stripe (Internacional)
+                  <Globe className="size-4" aria-hidden /> Stripe (Internacional)
                 </CardTitle>
                 <CardDescription className="text-xs mt-1">
                   Cobros internacionales con Visa, Mastercard, Amex, Apple Pay y Google Pay.
@@ -1054,7 +1066,7 @@ export function CobrosVista() {
           <Card className="border-border/60">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <span className="text-emerald-500">✨</span> Recomendación de Copilot IA
+                <Sparkles className="size-4 text-emerald-500" aria-hidden /> Recomendación de Copilot IA
               </CardTitle>
               <CardDescription>
                 Optimización de márgenes y canales de cobro sugeridos para tu negocio.
@@ -1062,8 +1074,8 @@ export function CobrosVista() {
             </CardHeader>
             <CardContent className="flex flex-col gap-3 text-sm">
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-xs leading-relaxed">
-                <p className="font-semibold text-foreground text-sm mb-1">
-                  💡 Priorizá Ualá Bis para cobros de mostrador
+                <p className="font-semibold text-foreground text-sm mb-1 flex items-center gap-1.5">
+                  <Lightbulb className="size-4 text-primary" aria-hidden /> Priorizá Ualá Bis para cobros de mostrador
                 </p>
                 <p className="text-muted-foreground">
                   Ualá Bis tiene una tasa de comisión (~3.5% + IVA) inferior a Mercado Pago (~4.4% + IVA) para cobros presenciales y por link. Si derivás el 40% de tus cobros de mostrador a Ualá, podrías ahorrar aproximadamente un <strong>20% en comisiones bancarias mensuales</strong>.
@@ -1071,8 +1083,8 @@ export function CobrosVista() {
               </div>
 
               <div className="rounded-xl border border-border p-4 text-xs leading-relaxed">
-                <p className="font-semibold text-foreground text-sm mb-1">
-                  🌎 Habilitá Stripe solo para compradores internacionales
+                <p className="font-semibold text-foreground text-sm mb-1 flex items-center gap-1.5">
+                  <Globe className="size-4 text-muted-foreground" aria-hidden /> Habilitá Stripe solo para compradores internacionales
                 </p>
                 <p className="text-muted-foreground">
                   Stripe es ideal para transacciones transfronterizas en moneda extranjera (USD). Para compras locales en pesos argentinos, utilizá Mercado Pago o Ualá para evitar costos de conversión de divisas.

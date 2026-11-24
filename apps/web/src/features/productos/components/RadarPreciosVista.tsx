@@ -1,26 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   Radar,
   RefreshCw,
   TrendingDown,
   TrendingUp,
   CheckCircle2,
-  AlertTriangle,
   ExternalLink,
-  SlidersHorizontal,
   Search,
   Sparkles,
-  ArrowRight,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatoPesos } from "@/lib/formato";
-import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
+import { CargandoFilas, ErrorDatos } from "@/components/shared/estado-datos";
 import {
   useComparativasRadar,
   useEscanearLote,

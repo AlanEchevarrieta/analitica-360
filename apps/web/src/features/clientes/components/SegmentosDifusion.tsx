@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle } from "lucide-react";
+import { AlertTriangle, Cake, MessageCircle, Moon, Star, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,11 +9,11 @@ import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-
 import { formatoFechaHora, formatoPesos } from "@/lib/formato";
 import { linkWhatsApp, useAccionesClientes, useDifusiones, useSegmentos, type Segmentos } from "../hooks/use-clientes";
 
-const SEGMENTOS: { id: keyof Segmentos; titulo: string; descripcion: string; mensaje: string }[] = [
-  { id: "cumpleanos", titulo: "🎂 Cumpleaños cerca", descripcion: "Cumplen en los próximos días", mensaje: "¡Hola {nombre}! Se viene tu cumple 🎉 Tenemos un regalito para vos: 10% off en tu próxima compra." },
-  { id: "enRiesgo", titulo: "⚠️ En riesgo", descripcion: "Hace un tiempo que no compran", mensaje: "¡Hola {nombre}! Hace rato no te vemos. Te cuento que llegaron cosas nuevas que te pueden gustar 🧉" },
-  { id: "inactivos", titulo: "💤 Inactivos", descripcion: "Hace mucho que no compran", mensaje: "¡Hola {nombre}! Te extrañamos 🙂 Pasate cuando quieras, tenemos novedades." },
-  { id: "vip", titulo: "⭐ VIP", descripcion: "Los que más compran", mensaje: "¡Hola {nombre}! Por ser de nuestros mejores clientes, te avisamos antes que a nadie de las novedades ✨" },
+const SEGMENTOS: { id: keyof Segmentos; icono: LucideIcon; titulo: string; descripcion: string; mensaje: string }[] = [
+  { id: "cumpleanos", icono: Cake, titulo: "Cumpleaños cerca", descripcion: "Cumplen en los próximos días", mensaje: "¡Hola {nombre}! Se viene tu cumple. Tenemos un regalo para vos: 10% off en tu próxima compra." },
+  { id: "enRiesgo", icono: AlertTriangle, titulo: "En riesgo", descripcion: "Hace un tiempo que no compran", mensaje: "¡Hola {nombre}! Hace rato no te vemos. Te cuento que llegaron cosas nuevas que te pueden gustar." },
+  { id: "inactivos", icono: Moon, titulo: "Inactivos", descripcion: "Hace mucho que no compran", mensaje: "¡Hola {nombre}! Te extrañamos. Pasate cuando quieras, tenemos novedades." },
+  { id: "vip", icono: Star, titulo: "VIP", descripcion: "Los que más compran", mensaje: "¡Hola {nombre}! Por ser de nuestros mejores clientes, te avisamos antes que a nadie de las novedades." },
 ];
 
 export function SegmentosDifusion() {
@@ -32,19 +32,25 @@ export function SegmentosDifusion() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {SEGMENTOS.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => setElegido(s.id)}
-            aria-pressed={elegido === s.id}
-            className={`rounded-xl border p-3 text-left transition-colors ${elegido === s.id ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
-          >
-            <p className="font-medium">{s.titulo}</p>
-            <p className="text-2xl font-semibold tabular-nums">{data[s.id].length}</p>
-            <p className="text-xs text-muted-foreground">{s.descripcion}</p>
-          </button>
-        ))}
+        {SEGMENTOS.map((s) => {
+          const Icono = s.icono;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setElegido(s.id)}
+              aria-pressed={elegido === s.id}
+              className={`rounded-xl border p-3 text-left transition-colors ${elegido === s.id ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
+            >
+              <p className="flex items-center gap-1.5 font-medium">
+                <Icono className="size-4 text-muted-foreground" aria-hidden />
+                <span>{s.titulo}</span>
+              </p>
+              <p className="text-2xl font-semibold tabular-nums">{data[s.id].length}</p>
+              <p className="text-xs text-muted-foreground">{s.descripcion}</p>
+            </button>
+          );
+        })}
       </div>
 
       <Card>

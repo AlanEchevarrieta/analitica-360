@@ -2,7 +2,7 @@
 
 import React from 'react';
 import type { CopilotMensaje } from '../types/copilot.types';
-import { Bot, Sparkles, User } from 'lucide-react';
+import { Sparkles, User } from 'lucide-react';
 
 interface CopilotMessageBubbleProps {
   mensaje: CopilotMensaje;

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { AlertCircle, ChevronDown, ChevronRight, Clock } from "lucide-react";
 import { CargandoFilas, ErrorDatos, SinDatos } from "@/components/shared/estado-datos";
 import { cn } from "@/lib/utils";
 import {
@@ -42,13 +42,13 @@ function TarjetaProyecto({ p }: { p: ProyectoFila }) {
 
       <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
         {p.atrasado && (
-          <span className="rounded-full bg-red-500/15 px-2 py-0.5 font-medium text-red-600 dark:text-red-400">
-            🔴 Atrasado {p.diasAtraso > 0 ? `${p.diasAtraso} d` : ""}
+          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 font-medium text-red-600 dark:text-red-400">
+            <AlertCircle className="size-3" aria-hidden /> Atrasado {p.diasAtraso > 0 ? `${p.diasAtraso} d` : ""}
           </span>
         )}
         {p.esperandoCliente && (
-          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 font-medium text-amber-700 dark:text-amber-300">
-            🟡 Esperando al cliente · {p.diasEsperandoCliente} d
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 font-medium text-amber-700 dark:text-amber-300">
+            <Clock className="size-3" aria-hidden /> Esperando al cliente · {p.diasEsperandoCliente} d
           </span>
         )}
         {p.maxVersion > 1 && (

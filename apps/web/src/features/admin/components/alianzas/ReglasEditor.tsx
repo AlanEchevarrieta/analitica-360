@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NOMBRE_CICLO, type Ciclo, type ReglaCiclo, type ReglasCupon } from "../../hooks/use-alianzas";
@@ -48,8 +49,8 @@ export function ReglasEditor({ reglas, onChange }: { reglas: ReglasCupon; onChan
                     <Input className="h-8 w-16" type="number" min={0} max={100} aria-label="Porcentaje de descuento" value={t.porcentaje}
                       onChange={(e) => setRegla(ciclo, { ...r, entrada: r.entrada.map((x, j) => (j === i ? { ...x, porcentaje: numero(e.target.value) } : x)) })} />
                     %
-                    <Button size="sm" variant="ghost" onClick={() => setRegla(ciclo, { ...r, entrada: r.entrada.filter((_, j) => j !== i) })}>
-                      ✕
+                    <Button size="sm" variant="ghost" aria-label="Quitar tramo" onClick={() => setRegla(ciclo, { ...r, entrada: r.entrada.filter((_, j) => j !== i) })}>
+                      <X className="size-3.5" aria-hidden />
                     </Button>
                   </div>
                 ))}

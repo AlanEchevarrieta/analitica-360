@@ -86,7 +86,7 @@ export function UsoVista() {
         <Indicador etiqueta="Clics" valor={formatoNumero(t.clics)} />
         <Indicador
           etiqueta="Dispositivos"
-          valor={data.dispositivos.length ? data.dispositivos.map((d) => `${d.dispositivo === "celular" ? "📱" : "💻"} ${d.usuarios}`).join("  ") : "—"}
+          valor={data.dispositivos.length ? data.dispositivos.map((d) => `${d.dispositivo === "celular" ? "Cel." : "PC"} ${d.usuarios}`).join(" · ") : "—"}
           detalle="usuarios por dispositivo"
         />
       </div>
@@ -179,7 +179,7 @@ export function UsoVista() {
                     <TableCell className="hidden text-right tabular-nums lg:table-cell">{formatoNumero(u.sesiones)}</TableCell>
                     <TableCell className="hidden text-right tabular-nums lg:table-cell">{u.dias}</TableCell>
                     <TableCell className="hidden whitespace-nowrap text-sm text-muted-foreground md:table-cell">
-                      {formatoFechaHora(u.ultima)} {u.dispositivo === "celular" ? "📱" : u.dispositivo === "escritorio" ? "💻" : ""}
+                      {formatoFechaHora(u.ultima)}{u.dispositivo ? ` · ${u.dispositivo === "celular" ? "Celular" : "Escritorio"}` : ""}
                     </TableCell>
                   </TableRow>
                 ))}

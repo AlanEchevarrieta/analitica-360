@@ -1,11 +1,11 @@
 import { marked } from "marked";
 
 const CALLOUT_ICONS: Record<string, string> = {
-  info: "ℹ️",
-  tip: "💡",
-  warning: "⚠️",
-  abstract: "📋",
-  faq: "❓",
+  info: "Info",
+  tip: "Tip",
+  warning: "Atención",
+  abstract: "Requisitos",
+  faq: "FAQ",
 };
 
 const CALLOUT_TITLES: Record<string, string> = {
@@ -61,7 +61,7 @@ function preprocesarMermaid(markdown: string): string {
   return markdown.replace(mermaidRegex, (_match, diagrama) => {
     return `\n\n<div class="guia-mermaid-box">
 <div class="guia-mermaid-header">
-  <span>🔄 Diagrama de Proceso / Flujo</span>
+  <span>Diagrama de Proceso / Flujo</span>
   <span class="text-[10px] tracking-normal font-mono opacity-70">Mermaid Workflow</span>
 </div>
 <pre><code>${diagrama.trim()}</code></pre>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Code2, Copy, ExternalLink, Globe, Palette, Sparkles, Calendar, ShoppingBag, BookOpen } from "lucide-react";
+import { Check, Code2, Copy, Globe, Palette, Plug, Sparkles, Calendar, ShoppingBag, BookOpen, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,7 +88,7 @@ const reserva = await crm.turnos.reservar({
       {/* Encabezado */}
       <div>
         <div className="flex items-center gap-2">
-          <span className="text-2xl">🔌</span>
+          <Plug className="size-5 text-primary" aria-hidden />
           <h2 className="text-xl font-bold tracking-tight">Integrar en mi Sitio Web</h2>
         </div>
         <p className="text-sm text-muted-foreground mt-1">
@@ -350,7 +350,7 @@ const reserva = await crm.turnos.reservar({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-5 border border-border rounded-xl bg-card space-y-2">
             <h4 className="font-semibold text-sm flex items-center gap-2">
-              <span className="text-lg">🟦</span> En WordPress
+              <Globe className="size-4 text-sky-500" aria-hidden /> En WordPress
             </h4>
             <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal pl-4">
               <li>Ingresá a tu panel de WordPress.</li>
@@ -361,7 +361,7 @@ const reserva = await crm.turnos.reservar({
 
           <div className="p-5 border border-border rounded-xl bg-card space-y-2">
             <h4 className="font-semibold text-sm flex items-center gap-2">
-              <span className="text-lg">🟨</span> En Wix
+              <Globe className="size-4 text-amber-500" aria-hidden /> En Wix
             </h4>
             <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal pl-4">
               <li>Andá a tu panel de Wix y entrá en <strong>Ajustes &gt; Código Personalizado</strong>.</li>
@@ -372,7 +372,7 @@ const reserva = await crm.turnos.reservar({
 
           <div className="p-5 border border-border rounded-xl bg-card space-y-2">
             <h4 className="font-semibold text-sm flex items-center gap-2">
-              <span className="text-lg">🌐</span> En Webflow o Shopify
+              <ShoppingBag className="size-4 text-emerald-500" aria-hidden /> En Webflow o Shopify
             </h4>
             <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal pl-4">
               <li>En Webflow: entrá a <strong>Project Settings &gt; Custom Code</strong> y pegalo en el campo <em>Footer Code</em>.</li>
@@ -382,7 +382,7 @@ const reserva = await crm.turnos.reservar({
 
           <div className="p-5 border border-border rounded-xl bg-card space-y-2">
             <h4 className="font-semibold text-sm flex items-center gap-2">
-              <span className="text-lg">⚡</span> En SPAs / HTML Puro
+              <Zap className="size-4 text-primary" aria-hidden /> En SPAs / HTML Puro
             </h4>
             <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal pl-4">
               <li>Pegá la etiqueta <code>&lt;script&gt;</code> en tu archivo <code>index.html</code> antes de <code>&lt;/body&gt;</code>.</li>

@@ -8,7 +8,6 @@ export const RAIZ = path.resolve(path.dirname(new URL(import.meta.url).pathname.
 export const POSTGRES = process.env.AUDITORIA_POSTGRES ?? 'analitica-360-postgres-1';
 export const WEB = process.env.WEB_URL ?? 'http://localhost:4001';
 export const API = process.env.API_URL ?? 'http://localhost:3001';
-export const TIENDA = process.env.TIENDA_URL ?? 'http://localhost:3010';
 /** Desde un contenedor, la compu es host.docker.internal. */
 export const desdeDocker = (url) => url.replace('localhost', 'host.docker.internal').replace('127.0.0.1', 'host.docker.internal');
 /** Ruta del disco que entiende `docker -v` (C:/Users/... en Windows). */

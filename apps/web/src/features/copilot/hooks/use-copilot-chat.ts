@@ -16,7 +16,7 @@ export function useCopilotChat() {
     {
       rol: 'assistant',
       contenido:
-        '👋 ¡Hola! Soy **Analítica Copilot**, la inteligencia de negocios de Analítica 360. Estoy conectada a los datos en vivo de tu empresa para ayudarte a optimizar ventas, costos, rentabilidad y stock. ¿En qué te puedo ayudar hoy?',
+        'Hola. Soy **Analítica Copilot**, la inteligencia de negocios de Analítica 360. Estoy conectada a los datos en vivo de tu empresa para ayudarte a optimizar ventas, costos, rentabilidad y stock. ¿En qué te puedo ayudar hoy?',
       fecha: new Date().toISOString(),
     },
   ]);
@@ -102,7 +102,7 @@ export function useCopilotChat() {
           ...prev,
           {
             rol: 'assistant',
-            contenido: `⚠️ **Ocurrió un error temporal:** ${msg}. Por favor intentá nuevamente.`,
+            contenido: `**Ocurrió un error temporal:** ${msg}. Por favor intentá nuevamente.`,
             fecha: new Date().toISOString(),
           },
         ]);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CheckCircle2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,20 +81,22 @@ export function RespuestaClienteDialog({
             <button
               type="button"
               onClick={() => setResultado("aprobada")}
-              className={`rounded-lg border px-3 py-2 font-medium ${
+              className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 font-medium ${
                 resultado === "aprobada" ? "border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" : ""
               }`}
             >
-              ✅ Aprobó
+              <CheckCircle2 className="size-4" aria-hidden />
+              <span>Aprobó</span>
             </button>
             <button
               type="button"
               onClick={() => setResultado("cambios")}
-              className={`rounded-lg border px-3 py-2 font-medium ${
+              className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 font-medium ${
                 resultado === "cambios" ? "border-amber-500 bg-amber-500/15 text-amber-700 dark:text-amber-300" : ""
               }`}
             >
-              ✏️ Pidió cambios
+              <Pencil className="size-4" aria-hidden />
+              <span>Pidió cambios</span>
             </button>
           </div>
 
